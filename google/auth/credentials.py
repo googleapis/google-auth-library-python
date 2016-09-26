@@ -97,7 +97,7 @@ class Credentials(object):
         headers[b'authorization'] = 'Bearer {}'.format(
             _helpers.from_bytes(token or self.token))
 
-    def before_request(self, http, url, method, headers):
+    def before_request(self, http, method, url, headers):
         """Performs credential-specific before request logic.
 
         Refreshes the credentials if necessary, then calls :meth:`apply` to
