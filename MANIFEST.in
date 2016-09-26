@@ -1,0 +1,4 @@
+include README.md
+graft google
+graft tests
+global-exclude *.pyc __pycache__
