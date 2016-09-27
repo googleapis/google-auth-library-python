@@ -24,3 +24,8 @@ class RefreshError(GoogleAuthError):
     """Used to indicate that an error occurred while refreshing the
     credentials' access token."""
     pass
+
+
+class DefaultCredentialsError(GoogleAuthError):
+    """Used to indicate that acquiring default credentials failed."""
+    pass
