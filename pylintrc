@@ -51,6 +51,9 @@ load-plugins=pylint.extensions.check_docs
 # - locally-disabled: Allow us to make exceptions in edge cases, notably where
 #                     pylint doesn't recognize inherited properties and methods
 #                     and gives unused-argument errors.
+# TEMPORARILY DISABLE AND SHOULD BE REMOVED:
+# - fixme: disabled until 1.0
+#
 disable =
     import-star-module-level,
     old-octal-literal,
@@ -111,7 +114,8 @@ disable =
     import-error,
     wrong-import-position,
     no-name-in-module,
-    locally-disabled
+    locally-disabled,
+    fixme
 
 
 [REPORTS]
@@ -122,8 +126,15 @@ reports=no
 [BASIC]
 # Regular expression matching correct method names
 # DEFAULT:  method-rgx=[a-z_][a-z0-9_]{2,30}$
-# RATIONALE:  Some methods have longer names to be precise against wordy RFCs.
-method-rgx=[a-z_][a-z0-9_]{2,35}$
+# RATIONALE:  Some methods have longer names to be more descriptive or precise,
+# especially those that implemented wordy RFCs.
+method-rgx=[a-z_][a-z0-9_]{2,40}$
+
+# Regular expression matching correct function names
+# DEFAULT function-rgx=[a-z_][a-z0-9_]{2,30}$
+# RATIONALE:  Some methods have longer names to be more descriptive or precise,
+# especially those that implemented wordy RFCs.
+function-rgx=[a-z_][a-z0-9_]{2,40}$
 
 [TYPECHECK]
 # List of module names for which member attributes should not be checked
