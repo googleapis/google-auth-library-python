@@ -39,6 +39,27 @@ def mock_request():
         yield set_response
 
 
+def test_ping_success(mock_request):
+    request_mock = mock_request('')
+
+    assert _metadata.ping()
+
+    request_mock.assert_called_once_with(
+        None,
+        'GET',
+        _metadata._METADATA_IP_ROOT,
+        headers=_metadata._METADATA_HEADERS,
+        timeout=_metadata._METADATA_DEFAULT_TIMEOUT,
+        retries=False)
+
+
+def test_ping_failure(mock_request):
+    request_mock = mock_request('')
+    request_mock.side_effect = Exception()
+
+    assert not _metadata.ping()
+
+
 def test_get_success_json(mock_request):
     data = json.dumps({'foo': 'bar'})
     request_mock = mock_request(
@@ -48,6 +69,7 @@ def test_get_success_json(mock_request):
 
     request_mock.assert_called_once_with(
         HTTP_OBJECT,
+        'GET',
         _metadata._METADATA_ROOT + PATH,
         headers=_metadata._METADATA_HEADERS)
     assert result['foo'] == 'bar'
@@ -61,6 +83,7 @@ def test_get_success_text(mock_request):
 
     request_mock.assert_called_once_with(
         HTTP_OBJECT,
+        'GET',
         _metadata._METADATA_ROOT + PATH,
         headers=_metadata._METADATA_HEADERS)
     assert result == data
@@ -77,6 +100,7 @@ def test_get_failure(mock_request):
 
     request_mock.assert_called_once_with(
         HTTP_OBJECT,
+        'GET',
         _metadata._METADATA_ROOT + PATH,
         headers=_metadata._METADATA_HEADERS)
 
@@ -91,6 +115,7 @@ def test_get_service_account_token(now, mock_request):
 
     request_mock.assert_called_once_with(
         HTTP_OBJECT,
+        'GET',
         _metadata._METADATA_ROOT + PATH + '/token',
         headers=_metadata._METADATA_HEADERS)
     assert token == 'token'
@@ -106,6 +131,7 @@ def test_get_service_account_info(mock_request):
 
     request_mock.assert_called_once_with(
         HTTP_OBJECT,
+        'GET',
         _metadata._METADATA_ROOT + PATH + '/?recursive=True',
         headers=_metadata._METADATA_HEADERS)
 

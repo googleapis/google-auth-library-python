@@ -19,6 +19,7 @@ See https://cloud.google.com/compute/docs/metadata for more details.
 
 import datetime
 import json
+import os
 
 from six.moves import http_client
 from six.moves.urllib import parse as urlparse
@@ -27,7 +28,46 @@ from google.auth import _helpers
 from google.auth import transport
 
 _METADATA_ROOT = 'http://metadata.google.internal/computeMetadata/v1/'
+
+# This is used to ping the metadata server, it avoids the cost of a DNS
+# lookup.
+_METADATA_IP_ROOT = 'http://169.254.169.254'
 _METADATA_HEADERS = {'Metadata-Flavor': 'Google'}
+
+# Timeout in seconds to wait for the GCE metadata server when detecting the
+# GCE environment.
+try:
+    _METADATA_DEFAULT_TIMEOUT = int(os.getenv('GCE_METADATA_TIMEOUT', 3))
+except ValueError:  # pragma: NO COVER
+    _METADATA_DEFAULT_TIMEOUT = 3
+
+
+def ping(timeout=_METADATA_DEFAULT_TIMEOUT):
+    """Checks to see if the metadata server is available.
+
+    Args:
+        timeout (int): How long to wait for the metadata server to respond.
+
+    Returns:
+        bool: True if the metadata server is reachable, False otherwise.
+    """
+    # NOTE: The explicit ``timeout`` is a workaround. The underlying
+    #       issue is that resolving an unknown host on some networks will take
+    #       20-30 seconds; making this timeout short fixes the issue, but
+    #       could lead to false negatives in the event that we are on GCE, but
+    #       the metadata resolution was particularly slow. The latter case is
+    #       "unlikely".
+    try:
+        response = transport.request(
+            None, 'GET', _METADATA_IP_ROOT, headers=_METADATA_HEADERS,
+            timeout=timeout, retries=False)
+        return response.status == http_client.OK
+
+    # TODO: Remove bare except when transport has a unified exception.
+    # pylint: disable=bare-except
+    except:  # socket.timeout or socket.error(64, 'Host is down')
+        # logger.info('Timeout attempting to reach GCE metadata service.')
+        return False
 
 
 def get(http, path, root=_METADATA_ROOT, recursive=None):
@@ -54,7 +94,7 @@ def get(http, path, root=_METADATA_ROOT, recursive=None):
     url = urlparse.urljoin(root, path)
     url = _helpers.update_query(url, {'recursive': recursive})
 
-    response = transport.request(http, url, headers=_METADATA_HEADERS)
+    response = transport.request(http, 'GET', url, headers=_METADATA_HEADERS)
 
     if response.status == http_client.OK:
         content = _helpers.from_bytes(response.data)
