@@ -14,7 +14,16 @@
 
 """Temporary tansport module."""
 
+import urllib3
+
+
+def _default_http():
+    return urllib3.PoolManager()
+
 
 def request(http, *args, **kwargs):
     """Make a request using the transport."""
+    if http is None:
+        http = _default_http()
+
     return http.request(*args, **kwargs)

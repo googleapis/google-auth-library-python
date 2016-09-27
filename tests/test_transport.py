@@ -13,11 +13,27 @@
 # limitations under the License.
 
 import mock
+import urllib3
 
 from google.auth import transport
+
+
+def test__default_http():
+    http = transport._default_http()
+    assert isinstance(http, urllib3.PoolManager)
 
 
 def test_request():
     http = mock.Mock()
     transport.request(http, 'a', b='c')
     http.request.assert_called_with('a', b='c')
+
+
+@mock.patch('google.auth.transport._default_http')
+def test_request_no_http(default_http_mock):
+    http_mock = mock.Mock()
+    default_http_mock.return_value = http_mock
+
+    transport.request(None, 'a', b='c')
+
+    http_mock.request.assert_called_with('a', b='c')
