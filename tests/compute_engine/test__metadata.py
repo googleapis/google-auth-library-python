@@ -20,6 +20,7 @@ import pytest
 from six.moves import http_client
 
 from google.auth import _helpers
+from google.auth import exceptions
 from google.auth.compute_engine import _metadata
 
 PATH = 'instance/service-accounts/default'
@@ -91,7 +92,7 @@ def test_get_failure(mock_request):
     request_mock = mock_request(
         'Metadata error', status=http_client.NOT_FOUND)
 
-    with pytest.raises(http_client.HTTPException) as excinfo:
+    with pytest.raises(exceptions.TransportError) as excinfo:
         _metadata.get(request_mock, PATH)
 
     assert excinfo.match(r'Metadata error')
