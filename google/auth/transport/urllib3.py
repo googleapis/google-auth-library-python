@@ -46,6 +46,8 @@ class Request(transport.Request):
             timeout (Optional(int)): The number of seconds to wait for a
                 response from the server. If not specified or if None, the
                 urllib3 default timeout will be used.
+            kwargs: Additional arguments passed throught to the underlying
+                urllib3 :meth:`urlopen` method.
 
         Returns:
             Response: The HTTP response.

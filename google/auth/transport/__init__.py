@@ -19,9 +19,9 @@ as urllib3 and requests. In order to work across these libraries with different
 interfaces some abstraction is needed.
 
 This module provides two interfaces that are implemented by transport adapters
-to support HTTP libraries. :cls:`Request` defines the interface expected by
-:mod:`google.auth` to make requests. cls`Response` defines the interface for
-the return value of :cls:`Request`.
+to support HTTP libraries. :class:`Request` defines the interface expected by
+:mod:`google.auth` to make requests. :class:`Response` defines the interface
+for the return value of :class:`Request`.
 """
 
 import abc
@@ -68,6 +68,8 @@ class Request(object):
             timeout (Optional(int)): The number of seconds to wait for a
                 response from the server. If not specified or if None, the
                 transport-specific default timeout will be used.
+            kwargs: Additionally arguments passed on to the transport's
+                request method.
 
         Returns:
             Response: The HTTP response.
@@ -75,4 +77,6 @@ class Request(object):
         Raises:
             google.auth.exceptions.TransportError: If any exception occurred.
         """
+        # pylint: disable=redundant-returns-doc, missing-raises-doc
+        # (pylint doesn't play well with abstract docstrings.)
         raise NotImplementedError('__call__ must be implemented.')
