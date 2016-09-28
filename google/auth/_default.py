@@ -112,7 +112,9 @@ def _get_gae_credentials():
 
 
 def _get_gce_credentials():
-    if _metadata.ping():
+    # TODO: Ping now requires a request argument. Figure out how to deal with
+    # that.
+    if _metadata.ping(request=None):
         return compute_engine.Credentials()
 
 

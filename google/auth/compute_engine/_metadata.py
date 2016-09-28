@@ -25,7 +25,7 @@ from six.moves import http_client
 from six.moves.urllib import parse as urlparse
 
 from google.auth import _helpers
-from google.auth import transport
+from google.auth import exceptions
 
 _METADATA_ROOT = 'http://metadata.google.internal/computeMetadata/v1/'
 
@@ -42,10 +42,12 @@ except ValueError:  # pragma: NO COVER
     _METADATA_DEFAULT_TIMEOUT = 3
 
 
-def ping(timeout=_METADATA_DEFAULT_TIMEOUT):
+def ping(request, timeout=_METADATA_DEFAULT_TIMEOUT):
     """Checks to see if the metadata server is available.
 
     Args:
+        request (google.auth.transport.Request): A callable used to make
+            HTTP requests.
         timeout (int): How long to wait for the metadata server to respond.
 
     Returns:
@@ -58,8 +60,8 @@ def ping(timeout=_METADATA_DEFAULT_TIMEOUT):
     #       the metadata resolution was particularly slow. The latter case is
     #       "unlikely".
     try:
-        response = transport.request(
-            None, 'GET', _METADATA_IP_ROOT, headers=_METADATA_HEADERS,
+        response = request(
+            'GET', _METADATA_IP_ROOT, headers=_METADATA_HEADERS,
             timeout=timeout, retries=False)
         return response.status == http_client.OK
 
@@ -70,11 +72,12 @@ def ping(timeout=_METADATA_DEFAULT_TIMEOUT):
         return False
 
 
-def get(http, path, root=_METADATA_ROOT, recursive=None):
+def get(request, path, root=_METADATA_ROOT, recursive=None):
     """Fetch a resource from the metadata server.
 
     Args:
-        http (Any): The transport HTTP object.
+        request (google.auth.transport.Request): A callable used to make
+            HTTP requests.
         path (str): The resource to retrieve. For example,
             ``'instance/service-accounts/defualt'``.
         root (str): The full path to the metadata server root.
@@ -88,13 +91,13 @@ def get(http, path, root=_METADATA_ROOT, recursive=None):
             returned as a string.
 
     Raises:
-        http_client.HTTPException: if an error occurred while retrieving
-            metadata.
+        google.auth.exceptions.TransportError: if an error occurred while
+            retrieving metadata.
     """
     url = urlparse.urljoin(root, path)
     url = _helpers.update_query(url, {'recursive': recursive})
 
-    response = transport.request(http, 'GET', url, headers=_METADATA_HEADERS)
+    response = request('GET', url, headers=_METADATA_HEADERS)
 
     if response.status == http_client.OK:
         content = _helpers.from_bytes(response.data)
@@ -103,17 +106,18 @@ def get(http, path, root=_METADATA_ROOT, recursive=None):
         else:
             return content
     else:
-        raise http_client.HTTPException(
+        raise exceptions.TransportError(
             'Failed to retrieve {} from the Google Compute Engine'
             'metadata service. Status: {} Response:\n{}'.format(
-                url, response.status, response.data))
+                url, response.status, response.data), response)
 
 
-def get_service_account_info(http, service_account='default'):
+def get_service_account_info(request, service_account='default'):
     """Get information about a service account from the metadata server.
 
     Args:
-        http (Any): The transport HTTP object.
+        request (google.auth.transport.Request): A callable used to make
+            HTTP requests.
         service_account (str): The string 'default' or a service account email
             address. The determines which service account for which to acquire
             information.
@@ -128,20 +132,21 @@ def get_service_account_info(http, service_account='default'):
             }
 
     Raises:
-        http_client.HTTPException: if an error occurred while retrieving
-            metadata.
+        google.auth.exceptions.TransportError: if an error occurred while
+            retrieving metadata.
     """
     return get(
-        http,
+        request,
         'instance/service-accounts/{0}/'.format(service_account),
         recursive=True)
 
 
-def get_service_account_token(http, service_account='default'):
+def get_service_account_token(request, service_account='default'):
     """Get the OAuth 2.0 access token for a service account.
 
     Args:
-        http (Any): The transport HTTP object.
+        request (google.auth.transport.Request): A callable used to make
+            HTTP requests.
         service_account (str): The string 'default' or a service account email
             address. The determines which service account for which to acquire
             an access token.
@@ -150,11 +155,11 @@ def get_service_account_token(http, service_account='default'):
         Union[str, datetime]: The access token and its expiration.
 
     Raises:
-        http_client.HTTPException: if an error occurred while retrieving
-            metadata.
+        google.auth.exceptions.TransportError: if an error occurred while
+            retrieving metadata.
     """
     token_json = get(
-        http,
+        request,
         'instance/service-accounts/{0}/token'.format(service_account))
     token_expiry = _helpers.now() + datetime.timedelta(
         seconds=token_json['expires_in'])

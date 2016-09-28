@@ -20,6 +20,11 @@ class GoogleAuthError(Exception):
     pass
 
 
+class TransportError(Exception):
+    """Used to indicate an error occurred during an HTTP request."""
+    pass
+
+
 class RefreshError(GoogleAuthError):
     """Used to indicate that an error occurred while refreshing the
     credentials' access token."""

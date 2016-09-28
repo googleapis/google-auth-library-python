@@ -159,18 +159,17 @@ class TestCredentials:
         payload = jwt.decode(token, PUBLIC_CERT_BYTES)
         assert payload['sub'] == 'user@example.com'
 
-    @mock.patch('google.auth.transport.request')
-    def test_refresh_success(self, request_mock):
+    def test_refresh_success(self):
         response = mock.Mock()
         response.status = http_client.OK
         response.data = json.dumps({
             'access_token': 'token',
             'expires_in': 500
         }).encode('utf-8')
-        request_mock.return_value = response
+        request_mock = mock.Mock(return_value=response)
 
         # Refresh credentials
-        self.credentials.refresh(None)
+        self.credentials.refresh(request_mock)
 
         # Check request data
         assert request_mock.called
@@ -191,49 +190,46 @@ class TestCredentials:
         # expired)
         assert self.credentials.valid
 
-    @mock.patch('google.auth.transport.request')
-    def test_refresh_error(self, request_mock):
+    def test_refresh_error(self):
         response = mock.Mock()
         response.status = http_client.BAD_REQUEST
         response.data = json.dumps({
             'error': 'error',
             'error_description': 'error description'
         }).encode('utf-8')
-        request_mock.return_value = response
+        request_mock = mock.Mock(return_value=response)
 
         with pytest.raises(exceptions.RefreshError) as excinfo:
-            self.credentials.refresh(None)
+            self.credentials.refresh(request_mock)
 
         assert excinfo.match(r'error: error description')
 
-    @mock.patch('google.auth.transport.request')
-    def test_refresh_error_non_json(self, request_mock):
+    def test_refresh_error_non_json(self):
         response = mock.Mock()
         response.status = http_client.BAD_REQUEST
         response.data = 'non-json error'.encode('utf-8')
-        request_mock.return_value = response
+        request_mock = mock.Mock(return_value=response)
 
         with pytest.raises(exceptions.RefreshError) as excinfo:
-            self.credentials.refresh(None)
+            self.credentials.refresh(request_mock)
 
         assert excinfo.match(r'non-json error')
 
-    @mock.patch('google.auth.transport.request')
-    def test_before_request_refreshes(self, request_mock):
+    def test_before_request_refreshes(self):
         response = mock.Mock()
         response.status = http_client.OK
         response.data = json.dumps({
             'access_token': 'token',
             'expires_in': 500
         }).encode('utf-8')
-        request_mock.return_value = response
+        request_mock = mock.Mock(return_value=response)
 
         # Credentials should start as invalid
         assert not self.credentials.valid
 
         # before_request should cause a refresh
         self.credentials.before_request(
-            mock.Mock(), 'GET', 'http://example.com?a=1#3', {})
+            request_mock, 'GET', 'http://example.com?a=1#3', {})
 
         # The refresh endpoint should've been called.
         assert request_mock.called
