@@ -392,11 +392,11 @@ class Credentials(credentials.SigningCredentials,
         token, _ = self._make_jwt(audience=audience)
         return token
 
-    def refresh(self, http):
+    def refresh(self, request):
         """Refreshes the access token.
 
         Args:
-            http (Any): The transport http object.
+            request (Any): Unused.
         """
         # pylint: disable=unused-argument
         # (pylint doens't correctly recognize overriden methods.)
@@ -414,7 +414,7 @@ class Credentials(credentials.SigningCredentials,
         """
         return self._signer.sign(message)
 
-    def before_request(self, http, method, url, headers):
+    def before_request(self, request, method, url, headers):
         """Performs credential-specific before request logic.
 
         If an audience is specified it will refresh the credentials if
@@ -423,7 +423,7 @@ class Credentials(credentials.SigningCredentials,
         authorization header in headers to the token.
 
         Args:
-            http (Any): The transport http object.
+            request (Any): Unused.
             method (str): The request's HTTP method.
             url (str): The request's URI.
             headers (Mapping): The request's headers.
@@ -435,7 +435,7 @@ class Credentials(credentials.SigningCredentials,
         # there is a valid token and apply the auth headers.
         if self._audience:
             if not self.valid:
-                self.refresh(http)
+                self.refresh(request)
             self.apply(headers)
         # Otherwise, generate a one-time token using the URL
         # (without the query string and fragement) as the audience.

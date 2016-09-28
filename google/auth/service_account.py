@@ -81,7 +81,6 @@ from google.auth import crypt
 from google.auth import credentials
 from google.auth import exceptions
 from google.auth import jwt
-from google.auth import transport
 
 _DEFAULT_TOKEN_LIFETIME_SECS = 3600  # 1 hour in sections
 _JWT_TOKEN_GRANT_TYPE = 'urn:ietf:params:oauth:grant-type:jwt-bearer'
@@ -257,7 +256,7 @@ class Credentials(credentials.SigningCredentials,
         return token
 
     @_helpers.copy_docstring(credentials.Credentials)
-    def refresh(self, http):
+    def refresh(self, request):
         assertion = self._make_authorization_grant_assertion()
 
         body = urllib.parse.urlencode({
@@ -269,9 +268,8 @@ class Credentials(credentials.SigningCredentials,
             'content-type': 'application/x-www-form-urlencoded',
         }
 
-        response = transport.request(
-            http, method='POST', url=self._token_uri, headers=headers,
-            body=body)
+        response = request(
+            url=self._token_uri, method='POST', headers=headers, body=body)
 
         if response.status != http_client.OK:
             # Try to decode the response and extract details.

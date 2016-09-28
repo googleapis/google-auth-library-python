@@ -72,11 +72,12 @@ class Credentials(object):
             return True
 
     @abc.abstractmethod
-    def refresh(self, http):
+    def refresh(self, request):
         """Refreshes the access token.
 
         Args:
-            http (Any): The transport http object.
+            request (google.auth.transport.Request): A callable used to make
+                HTTP requests.
 
         Raises:
             google.auth.exceptions.RefreshError: If the credentials could
@@ -97,14 +98,15 @@ class Credentials(object):
         headers[b'authorization'] = 'Bearer {}'.format(
             _helpers.from_bytes(token or self.token))
 
-    def before_request(self, http, method, url, headers):
+    def before_request(self, request, method, url, headers):
         """Performs credential-specific before request logic.
 
         Refreshes the credentials if necessary, then calls :meth:`apply` to
         apply the token to the authentication header.
 
         Args:
-            http (Any): The transport HTTP object.
+            request (google.auth.transport.Request): A callable used to make
+                HTTP requests.
             method (str): The request's HTTP method.
             url (str): The request's URI.
             headers (Mapping): The request's headers.
@@ -113,7 +115,7 @@ class Credentials(object):
         # (Subclasses may use these arguments to ascertain information about
         # the http request.)
         if not self.valid:
-            self.refresh(http)
+            self.refresh(request)
         self.apply(headers)
 
 
