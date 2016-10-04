@@ -101,7 +101,7 @@ class Verifier(object):
             bool: True if message was signed by the private key associated
             with the public key that this object was constructed with.
         """
-        message = _helpers.to_bytes(message, encoding='utf-8')
+        message = _helpers.to_bytes(message)
         try:
             return rsa.pkcs1.verify(message, signature, self._pubkey)
         except (ValueError, rsa.pkcs1.VerificationError):
@@ -188,7 +188,7 @@ class Signer(object):
         Returns:
             bytes: The signature of the message for the given key.
         """
-        message = _helpers.to_bytes(message, encoding='utf-8')
+        message = _helpers.to_bytes(message)
         return rsa.pkcs1.sign(message, self._key, 'SHA-256')
 
     @classmethod
