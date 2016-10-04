@@ -12,14 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from setuptools import setup, find_packages
+from setuptools import find_packages
+from setuptools import setup
 
 
 DEPENDENCIES = (
     'pyasn1>=0.1.7',
     'pyasn1-modules>=0.0.5',
     'rsa>=3.1.4',
-    'six>=1.9.0',)
+    'six>=1.9.0',
+)
 
 
 with open('README.rst', 'r') as fh:
