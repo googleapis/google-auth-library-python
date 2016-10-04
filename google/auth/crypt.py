@@ -48,15 +48,6 @@ import six
 
 from google.auth import _helpers
 
-
-_PKCS12_ERROR = r"""\
-PKCS12 format is not supported by the RSA library.
-Please convert .p12 format to .pem format:
-    $ cat key.p12 | \
-    >   openssl pkcs12 -nodes -nocerts -passin pass:notasecret | \
-    >   openssl rsa > key.pem
-"""
-
 _POW2 = (128, 64, 32, 16, 8, 4, 2, 1)
 _PKCS1_MARKER = ('-----BEGIN RSA PRIVATE KEY-----',
                  '-----END RSA PRIVATE KEY-----')
