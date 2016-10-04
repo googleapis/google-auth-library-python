@@ -22,7 +22,7 @@ import six
 
 
 def now():
-    """Gets the current UTC datetime."""
+    """Returns the current UTC datetime."""
     return datetime.datetime.utcnow()
 
 

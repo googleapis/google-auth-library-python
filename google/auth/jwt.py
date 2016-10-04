@@ -61,12 +61,13 @@ def encode(signer, payload, header=None, key_id=None):
         header (Mapping): Additional JWT header payload.
         key_id (str): The key id to add to the JWT header. If the
             signer has a key id it will be used as the default. If this is
-            specified, it'll override the signer's key id.
+            specified, it'll override the signer's key id. If this is False,
+            no key id will be included.
 
     Returns:
         bytes: The encoded JWT.
     """
-    if not header:
+    if header is None:
         header = {}
 
     if key_id is None:
@@ -94,7 +95,7 @@ def _decode_jwt_segment(encoded_section):
     section_bytes = base64.urlsafe_b64decode(encoded_section)
     try:
         return json.loads(section_bytes.decode('utf-8'))
-    except:
+    except ValueError:
         raise ValueError('Can\'t parse segment: {0}'.format(section_bytes))
 
 
@@ -105,7 +106,7 @@ def _unverified_decode(token):
         token (Union[str, bytes]): The encoded JWT.
 
     Returns:
-        Tuple(str, str, str, str): header, payload, signed_setion, and
+        Tuple(str, str, str, str): header, payload, signed_section, and
             signature.
 
     Raises:
@@ -210,13 +211,15 @@ def decode(token, certs=None, verify=True, audience=None):
             if key_id not in certs:
                 raise ValueError(
                     'Certificate for key id {} not found.'.format(key_id))
-            certs = [certs[key_id]]
+            certs_to_check = [certs[key_id]]
         # If there's no key id in the header, check against all of the certs.
         else:
-            certs = certs.values()
+            certs_to_check = certs.values()
+    else:
+        certs_to_check = certs
 
     # Verify that the signature matches the message.
-    if not crypt.verify_signature(signed_section, signature, certs):
+    if not crypt.verify_signature(signed_section, signature, certs_to_check):
         raise ValueError('Could not verify token signature.')
 
     # Verify the issued at and created times in the payload.
