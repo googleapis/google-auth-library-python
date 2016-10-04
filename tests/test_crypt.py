@@ -52,11 +52,11 @@ def test_verify_signature():
     signature = signer.sign(to_sign)
 
     assert crypt.verify_signature(
-        to_sign, signature, PUBLIC_CERT_BYTES) is True
+        to_sign, signature, PUBLIC_CERT_BYTES)
 
     # List of certs
     assert crypt.verify_signature(
-        to_sign, signature, [OTHER_CERT_BYTES, PUBLIC_CERT_BYTES]) is True
+        to_sign, signature, [OTHER_CERT_BYTES, PUBLIC_CERT_BYTES])
 
 
 def test_verify_signature_failure():
@@ -64,18 +64,18 @@ def test_verify_signature_failure():
     signer = crypt.Signer.from_string(PRIVATE_KEY_BYTES)
     signature = signer.sign(to_sign)
 
-    assert crypt.verify_signature(
-        to_sign, signature, OTHER_CERT_BYTES) is False
+    assert not crypt.verify_signature(
+        to_sign, signature, OTHER_CERT_BYTES)
 
 
-class TestVerifier:
+class TestVerifier(object):
     def test_verify_success(self):
         to_sign = b'foo'
         signer = crypt.Signer.from_string(PRIVATE_KEY_BYTES)
         actual_signature = signer.sign(to_sign)
 
         verifier = crypt.Verifier.from_string(PUBLIC_KEY_BYTES)
-        assert verifier.verify(to_sign, actual_signature) is True
+        assert verifier.verify(to_sign, actual_signature)
 
     def test_verify_unicode_success(self):
         to_sign = u'foo'
@@ -83,14 +83,14 @@ class TestVerifier:
         actual_signature = signer.sign(to_sign)
 
         verifier = crypt.Verifier.from_string(PUBLIC_KEY_BYTES)
-        assert verifier.verify(to_sign, actual_signature) is True
+        assert verifier.verify(to_sign, actual_signature)
 
     def test_verify_failure(self):
         verifier = crypt.Verifier.from_string(PUBLIC_KEY_BYTES)
         bad_signature1 = b''
-        assert verifier.verify(b'foo', bad_signature1) is False
+        assert not verifier.verify(b'foo', bad_signature1)
         bad_signature2 = b'a'
-        assert verifier.verify(b'foo', bad_signature2) is False
+        assert not verifier.verify(b'foo', bad_signature2)
 
     def test_from_string_pub_key(self):
         verifier = crypt.Verifier.from_string(PUBLIC_KEY_BYTES)
@@ -124,7 +124,7 @@ class TestVerifier:
             load_pem.assert_called_once_with(cert_bytes, 'CERTIFICATE')
 
 
-class TestSigner:
+class TestSigner(object):
     def test_from_string_pkcs1(self):
         signer = crypt.Signer.from_string(PKCS1_KEY_BYTES)
         assert isinstance(signer, crypt.Signer)

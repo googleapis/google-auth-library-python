@@ -49,6 +49,7 @@ import six
 from google.auth import _helpers
 
 _POW2 = (128, 64, 32, 16, 8, 4, 2, 1)
+_CERTIFICATE_MARKER = b'-----BEGIN CERTIFICATE-----'
 _PKCS1_MARKER = ('-----BEGIN RSA PRIVATE KEY-----',
                  '-----END RSA PRIVATE KEY-----')
 _PKCS8_MARKER = ('-----BEGIN PRIVATE KEY-----',
@@ -122,7 +123,7 @@ class Verifier(object):
             ValueError: If the public_key can't be parsed.
         """
         public_key = _helpers.to_bytes(public_key)
-        is_x509_cert = b'-----BEGIN CERTIFICATE-----' in public_key
+        is_x509_cert = _CERTIFICATE_MARKER in public_key
 
         # If this is a certificate, extract the public key info.
         if is_x509_cert:
@@ -154,7 +155,7 @@ def verify_signature(message, signature, certs):
     Returns:
         bool: True if the signature is valid, otherwise False.
     """
-    if isinstance(certs, six.binary_type):
+    if isinstance(certs, (six.string_type, six.binary_type)):
         certs = [certs]
 
     for cert in certs:
