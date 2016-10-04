@@ -17,9 +17,6 @@
 Provides support for creating (encoding) and verifying (decoding) JWTs,
 especially JWTs generated and consumed by Google infrastructure.
 
-Also provides a :class:`Credentials` class that uses JWTs as authentication
-bearer tokens.
-
 See `rfc7519`_ for more details on JWTs.
 
 To encode a JWT::
