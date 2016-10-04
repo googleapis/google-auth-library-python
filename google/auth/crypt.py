@@ -155,7 +155,7 @@ def verify_signature(message, signature, certs):
     Returns:
         bool: True if the signature is valid, otherwise False.
     """
-    if isinstance(certs, (six.string_type, six.binary_type)):
+    if isinstance(certs, (six.text_type, six.binary_type)):
         certs = [certs]
 
     for cert in certs:
