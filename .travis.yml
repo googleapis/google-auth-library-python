@@ -20,6 +20,4 @@ cache:
 install:
 - pip install --upgrade tox
 script:
-- tox -e ${TOXENV}
-notifications:
-  email: false
+- tox

@@ -36,7 +36,7 @@ To test your changes, run unit tests with ``tox``::
 Coding Style
 ------------
 
-This library is PEP8 & Pylint compliant. Our pylint config is defined at
+This library is PEP8 & Pylint compliant. Our Pylint config is defined at
 ``pylintrc`` for package code and ``pylintrc.tests`` for test code. Use
 ``tox`` to check for non-compliant code::
 

@@ -19,7 +19,7 @@ DEPENDENCIES = (
     'pyasn1>=0.1.7',
     'pyasn1-modules>=0.0.5',
     'rsa>=3.1.4',
-    'six>=1.6.1',)
+    'six>=1.9.0',)
 
 
 with open('README.rst', 'r') as fh:
@@ -38,7 +38,7 @@ setup(
     install_requires=DEPENDENCIES,
     license='Apache 2.0',
     keywords='google auth oauth client',
-    classifiers=[
+    classifiers=(
         'Programming Language :: Python :: 2',
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
@@ -52,5 +52,5 @@ setup(
         'Operating System :: MacOS :: MacOS X',
         'Operating System :: OS Independent',
         'Topic :: Internet :: WWW/HTTP',
-    ],
+    ),
 )

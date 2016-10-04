@@ -1,25 +1,28 @@
 Google Auth Python Library (Experimental)
 =========================================
 
-.. image:: https://travis-ci.org/GoogleCloudPlatform/google-auth-library-python.png?branch=master
-        :alt: Build status on Travis
-        :target: https://travis-ci.org/GoogleCloudPlatform/google-auth-library-python
+|build| |docs| |pypi|
 
-.. image:: https://readthedocs.org/projects/google-auth/badge/?version=latest
-        :alt: Documentation Status
-        :target: https://google-auth.readthedocs.io/en/latest/
+This library simplifies using Google's various server-to-server authentication
+mechanisms to access Google APIs.
 
-This library simplifies using Google's various authentication mechanisms to
-access Google APIs.
+.. |build| image:: https://travis-ci.org/GoogleCloudPlatform/google-auth-library-python.svg?branch=master
+   :target: https://travis-ci.org/GoogleCloudPlatform//google-auth-library-python
+.. |docs| image:: https://readthedocs.org/projects/google-auth/badge/?version=latest
+   :target: https://google-auth.readthedocs.io/en/latest/
+.. |pypi| image:: https://img.shields.io/pypi/v//google-auth.svg
+   :target: https://pypi.python.org/pypi/google-auth
 
 Installing
 ----------
 
-You can install directly from `GitHub <https://github.com/GoogleCloudPlatform/google-auth-library-python>`_::
+You can install directly from `GitHub`_::
 
     $ pip install git+https://github.com/GoogleCloudPlatform/google-auth-library-python.git
 
 This package is not currently available from PyPI because it is experimental.
+
+.. _GitHub: https://github.com/GoogleCloudPlatform/google-auth-library-python
 
 Documentation
 -------------
