@@ -124,7 +124,7 @@ class ScopedCredentials(object):
     """Interface for scoped credentials.
 
     OAuth 2.0-based credentials allow limiting access using scopes as described
-    in `RFC6749 <https://tools.ietf.org/html/rfc6749#section-3.3>`__.
+    in `RFC6749 Section 3.3`_.
     If a credential class implements this interface then the credentials either
     require or use scopes in their implementation.
 
@@ -143,6 +143,7 @@ class ScopedCredentials(object):
         if credentials.requires_scopes:
             credentials = credentials.create_scoped(['one', 'two'])
 
+    .. _RFC6749 Section 3.3: https://tools.ietf.org/html/rfc6749#section-3.3
     """
     def __init__(self):
         super(ScopedCredentials, self).__init__()
