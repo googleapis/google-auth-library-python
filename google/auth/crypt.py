@@ -74,7 +74,7 @@ def _bit_list_to_bytes(bit_list):
     for start in six.moves.xrange(0, num_bits, 8):
         curr_bits = bit_list[start:start + 8]
         char_val = sum(val * digit
-                       for val, digit in zip(_POW2, curr_bits))
+                       for val, digit in six.moves.zip(_POW2, curr_bits))
         byte_vals.append(char_val)
     return bytes(byte_vals)
 
