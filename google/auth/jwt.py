@@ -156,7 +156,7 @@ def _verify_iat_and_exp(payload):
     Raises:
         ValueError: if any checks failed.
     """
-    now = _helpers.datetime_to_secs(_helpers.now())
+    now = _helpers.datetime_to_secs(_helpers.utcnow())
 
     # Make sure the iat and exp claims are present
     for key in ('iat', 'exp'):

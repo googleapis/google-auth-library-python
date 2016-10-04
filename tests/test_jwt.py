@@ -58,7 +58,7 @@ def test_encode_extra_headers(signer):
 @pytest.fixture
 def token_factory(signer):
     def factory(claims=None, key_id=None):
-        now = _helpers.datetime_to_secs(_helpers.now())
+        now = _helpers.datetime_to_secs(_helpers.utcnow())
         payload = {
             'aud': 'audience@example.com',
             'iat': now,
@@ -123,7 +123,7 @@ def test_decode_bad_token_no_iat_or_exp(signer):
 def test_decode_bad_token_too_early(token_factory):
     token = token_factory(claims={
         'iat': _helpers.datetime_to_secs(
-            _helpers.now() + datetime.timedelta(hours=1))
+            _helpers.utcnow() + datetime.timedelta(hours=1))
     })
     with pytest.raises(ValueError) as excinfo:
         jwt.decode(token, PUBLIC_CERT_BYTES)
@@ -133,7 +133,7 @@ def test_decode_bad_token_too_early(token_factory):
 def test_decode_bad_token_expired(token_factory):
     token = token_factory(claims={
         'exp': _helpers.datetime_to_secs(
-            _helpers.now() - datetime.timedelta(hours=1))
+            _helpers.utcnow() - datetime.timedelta(hours=1))
     })
     with pytest.raises(ValueError) as excinfo:
         jwt.decode(token, PUBLIC_CERT_BYTES)

@@ -19,8 +19,8 @@ import pytest
 from google.auth import _helpers
 
 
-def test_now():
-    assert isinstance(_helpers.now(), datetime.datetime)
+def test_utcnow():
+    assert isinstance(_helpers.utcnow(), datetime.datetime)
 
 
 def test_datetime_to_secs():
