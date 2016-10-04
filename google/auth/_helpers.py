@@ -14,7 +14,6 @@
 
 """Helper functions for commonly used utilities."""
 
-
 import calendar
 import datetime
 
@@ -135,3 +134,36 @@ def update_query(url, params, remove=None):
     # Unsplit the url.
     new_parts = parts._replace(query=new_query)
     return urllib.parse.urlunparse(new_parts)
+
+
+def scopes_to_string(scopes):
+    """Converts scope value to a string.
+    If scopes is a string then it is simply passed through. If scopes is an
+    iterable then a string is returned that is all the individual scopes
+    concatenated with spaces.
+    Args:
+        scopes (Union[Sequence, str])
+    Returns:
+        str: The scopes formatted as a single string.
+    """
+    if isinstance(scopes, six.string_types):
+        return scopes
+    else:
+        return ' '.join(scopes)
+
+
+def string_to_scopes(scopes):
+    """Converts stringifed scope value to a list.
+    If scopes is a list then it is simply passed through. If scopes is an
+    string then a list of each individual scope is returned.
+    Args:
+        scopes (Union[Sequence, str])
+    Returns:
+        list: The scopes in a list.
+    """
+    if not scopes:
+        return []
+    elif isinstance(scopes, six.string_types):
+        return scopes.split(' ')
+    else:
+        return scopes
