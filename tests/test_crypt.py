@@ -26,18 +26,32 @@ from google.auth import crypt
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), 'data')
 
+# To generate privatekey.pem, privatekey.pub, and public_cert.pem:
+#   $ openssl req -new -newkey rsa:1024 -x509 -nodes -out public_cert.pem \
+#       -keyout privatekey.pem
+#   $ openssl rsa -in privatekey.pem -pubout -out privatekey.pub
+
+with open(os.path.join(DATA_DIR, 'privatekey.pem'), 'rb') as fh:
+    PRIVATE_KEY_BYTES = fh.read()
+    PKCS1_KEY_BYTES = PRIVATE_KEY_BYTES
+
 with open(os.path.join(DATA_DIR, 'privatekey.pub'), 'rb') as fh:
     PUBLIC_KEY_BYTES = fh.read()
 
 with open(os.path.join(DATA_DIR, 'public_cert.pem'), 'rb') as fh:
     PUBLIC_CERT_BYTES = fh.read()
 
+# To generate other_cert.pem:
+#   $ openssl req -new -newkey rsa:1024 -x509 -nodes -out other_cert.pem
+
 with open(os.path.join(DATA_DIR, 'other_cert.pem'), 'rb') as fh:
     OTHER_CERT_BYTES = fh.read()
 
-with open(os.path.join(DATA_DIR, 'privatekey.pem'), 'rb') as fh:
-    PRIVATE_KEY_BYTES = fh.read()
-    PKCS1_KEY_BYTES = PRIVATE_KEY_BYTES
+# To generate pem_from_pkcs12.pem and privatekey.p12:
+#   $ openssl pkcs12 -export -out privatekey.p12 -inkey privatekey.pem \
+#       -in public_cert.pem
+#   $ openssl pkcs12 -in privatekey.p12 -nocerts -nodes \
+#       -out pem_from_pkcs12.pem
 
 with open(os.path.join(DATA_DIR, 'pem_from_pkcs12.pem'), 'rb') as fh:
     PKCS8_KEY_BYTES = fh.read()
