@@ -49,7 +49,7 @@ from google.auth import _helpers
 
 
 _DEFAULT_TOKEN_LIFETIME_SECS = 3600  # 1 hour in sections
-CLOCK_SKEW_SECS = 300  # 5 minutes in seconds
+_CLOCK_SKEW_SECS = 300  # 5 minutes in seconds
 
 
 def encode(signer, payload, header=None, key_id=None):
@@ -61,8 +61,7 @@ def encode(signer, payload, header=None, key_id=None):
         header (Mapping): Additional JWT header payload.
         key_id (str): The key id to add to the JWT header. If the
             signer has a key id it will be used as the default. If this is
-            specified, it'll override the signer's key id. If this is False,
-            no key id will be included.
+            specified it will override the signer's key id.
 
     Returns:
         bytes: The encoded JWT.
@@ -75,7 +74,7 @@ def encode(signer, payload, header=None, key_id=None):
 
     header.update({'typ': 'JWT', 'alg': 'RS256'})
 
-    if key_id is not None and key_id is not False:
+    if key_id is not None:
         header['kid'] = key_id
 
     segments = [
@@ -166,13 +165,13 @@ def _verify_iat_and_exp(payload):
 
     # Make sure the token wasn't issued in the future
     iat = payload['iat']
-    earliest = iat - CLOCK_SKEW_SECS
+    earliest = iat - _CLOCK_SKEW_SECS
     if now < earliest:
         raise ValueError('Token used too early, {} < {}'.format(now, iat))
 
     # Make sure the token wasn't issue in the past
     exp = payload['exp']
-    latest = exp + CLOCK_SKEW_SECS
+    latest = exp + _CLOCK_SKEW_SECS
     if latest < now:
         raise ValueError('Token expired, {} < {}'.format(latest, now))
 

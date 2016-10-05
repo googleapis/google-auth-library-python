@@ -67,6 +67,13 @@ def token_factory(signer):
             'metadata': {'meta': 'data'}
         }
         payload.update(claims or {})
+
+        # False is specified to remove the signer's key id for testing
+        # headers without key ids.
+        if key_id is False:
+            signer.key_id = None
+            key_id = None
+
         return jwt.encode(signer, payload, key_id=key_id)
     return factory
 
@@ -171,5 +178,12 @@ def test_decode_no_cert(token_factory):
 def test_decode_no_key_id(token_factory):
     token = token_factory(key_id=False)
     certs = {'2': PUBLIC_CERT_BYTES}
+    payload = jwt.decode(token, certs)
+    assert payload['user'] == 'billy bob'
+
+
+def test_roundtrip_explicit_key_id(token_factory):
+    token = token_factory(key_id='3')
+    certs = {'2': OTHER_CERT_BYTES, '3': PUBLIC_CERT_BYTES}
     payload = jwt.decode(token, certs)
     assert payload['user'] == 'billy bob'
