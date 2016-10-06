@@ -46,7 +46,7 @@ class Response(object):
     @abc.abstractproperty
     def data(self):
         """bytes: The response body."""
-        raise NotImplementedError('headers must be implemented.')
+        raise NotImplementedError('data must be implemented.')
 
 
 @six.add_metaclass(abc.ABCMeta)

@@ -17,20 +17,16 @@
 
 class GoogleAuthError(Exception):
     """Base class for all google.auth errors."""
-    pass
 
 
 class TransportError(Exception):
     """Used to indicate an error occurred during an HTTP request."""
-    pass
 
 
 class RefreshError(GoogleAuthError):
-    """Used to indicate that an error occurred while refreshing the
-    credentials' access token."""
-    pass
+    """Used to indicate that an refreshing the credentials' access token
+    failed."""
 
 
 class DefaultCredentialsError(GoogleAuthError):
     """Used to indicate that acquiring default credentials failed."""
-    pass
