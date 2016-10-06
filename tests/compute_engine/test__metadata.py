@@ -68,9 +68,9 @@ def test_ping_failure_connection_failed(mock_request):
 
 
 def test_get_success_json(mock_request):
-    foo, bar = 'foo', 'bar'
+    key, value = 'foo', 'bar'
 
-    data = json.dumps({foo: bar})
+    data = json.dumps({key: value})
     request_mock = mock_request(
         data, headers={'content-type': 'application/json'})
 
@@ -80,7 +80,7 @@ def test_get_success_json(mock_request):
         method='GET',
         url=_metadata._METADATA_ROOT + PATH,
         headers=_metadata._METADATA_HEADERS)
-    assert result[foo] == bar
+    assert result[key] == value
 
 
 def test_get_success_text(mock_request):
