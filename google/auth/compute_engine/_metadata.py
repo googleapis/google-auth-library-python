@@ -71,7 +71,6 @@ def ping(request, timeout=_METADATA_DEFAULT_TIMEOUT):
                 metadata_flavor == _METADATA_FLAVOR_VALUE)
 
     except exceptions.TransportError:
-        # logger.info('Timeout attempting to reach GCE metadata service.')
         return False
 
 

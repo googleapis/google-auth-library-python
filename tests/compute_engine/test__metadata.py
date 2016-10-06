@@ -144,9 +144,9 @@ def test_get_service_account_token(utcnow, mock_request):
 
 
 def test_get_service_account_info(mock_request):
-    foo, bar = 'foo', 'bar'
+    key, value = 'foo', 'bar'
     request_mock = mock_request(
-        json.dumps({foo: bar}),
+        json.dumps({key: value}),
         headers={'content-type': 'application/json'})
 
     info = _metadata.get_service_account_info(request_mock)
@@ -156,4 +156,4 @@ def test_get_service_account_info(mock_request):
         url=_metadata._METADATA_ROOT + PATH + '/?recursive=True',
         headers=_metadata._METADATA_HEADERS)
 
-    assert info[foo] == bar
+    assert info[key] == value
