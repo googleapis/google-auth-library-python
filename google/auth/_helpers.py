@@ -92,11 +92,16 @@ def from_bytes(value):
 
 
 def update_query(url, params):
-    """Updates a URL's query parameters
+    """Updates a URL's query parameters.
+
     Replaces any current values if they are already present in the URL.
+
     Args:
         url (str): The URL to update.
-        params (Mapping): A mapping of query parameter keys to values.
+        params (Mapping[str, Optional[str]]): A mapping of query parameter
+            keys to values. If the value of a parameter is `None`, the query
+            parameter will be removed from the query string.
+
     Returns:
         str: The URL with updated query parameters.
     """
@@ -114,5 +119,5 @@ def update_query(url, params):
     # Re-encoded the query string.
     new_query = urllib.parse.urlencode(query_params, doseq=True)
     # Unsplit the url.
-    new_parts = parts[:4] + (new_query,) + parts[5:]
+    new_parts = parts._replace(query=new_query)
     return urllib.parse.urlunparse(new_parts)

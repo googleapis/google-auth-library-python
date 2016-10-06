@@ -105,7 +105,12 @@ def get(request, path, root=_METADATA_ROOT, recursive=None):
     if response.status == http_client.OK:
         content = _helpers.from_bytes(response.data)
         if response.headers['content-type'] == 'application/json':
-            return json.loads(content)
+            try:
+                return json.loads(content)
+            except ValueError:
+                raise exceptions.TransportError(
+                    'Received invalid JSON from the Google Compute Engine'
+                    'metadata service: {:.20}'.format(content))
         else:
             return content
     else:

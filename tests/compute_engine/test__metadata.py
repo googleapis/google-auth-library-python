@@ -68,7 +68,9 @@ def test_ping_failure_connection_failed(mock_request):
 
 
 def test_get_success_json(mock_request):
-    data = json.dumps({'foo': 'bar'})
+    foo, bar = 'foo', 'bar'
+
+    data = json.dumps({foo: bar})
     request_mock = mock_request(
         data, headers={'content-type': 'application/json'})
 
@@ -78,7 +80,7 @@ def test_get_success_json(mock_request):
         method='GET',
         url=_metadata._METADATA_ROOT + PATH,
         headers=_metadata._METADATA_HEADERS)
-    assert result['foo'] == 'bar'
+    assert result[foo] == bar
 
 
 def test_get_success_text(mock_request):
@@ -109,10 +111,26 @@ def test_get_failure(mock_request):
         headers=_metadata._METADATA_HEADERS)
 
 
+def test_get_failure_bad_json(mock_request):
+    request_mock = mock_request(
+        '{', headers={'content-type': 'application/json'})
+
+    with pytest.raises(exceptions.TransportError) as excinfo:
+        _metadata.get(request_mock, PATH)
+
+    assert excinfo.match(r'invalid JSON')
+
+    request_mock.assert_called_once_with(
+        method='GET',
+        url=_metadata._METADATA_ROOT + PATH,
+        headers=_metadata._METADATA_HEADERS)
+
+
 @mock.patch('google.auth._helpers.utcnow', return_value=datetime.datetime.min)
 def test_get_service_account_token(utcnow, mock_request):
+    ttl = 500
     request_mock = mock_request(
-        json.dumps({'access_token': 'token', 'expires_in': 500}),
+        json.dumps({'access_token': 'token', 'expires_in': ttl}),
         headers={'content-type': 'application/json'})
 
     token, expiry = _metadata.get_service_account_token(request_mock)
@@ -122,12 +140,13 @@ def test_get_service_account_token(utcnow, mock_request):
         url=_metadata._METADATA_ROOT + PATH + '/token',
         headers=_metadata._METADATA_HEADERS)
     assert token == 'token'
-    assert expiry == utcnow() + datetime.timedelta(seconds=500)
+    assert expiry == utcnow() + datetime.timedelta(seconds=ttl)
 
 
 def test_get_service_account_info(mock_request):
+    foo, bar = 'foo', 'bar'
     request_mock = mock_request(
-        json.dumps({'foo': 'bar'}),
+        json.dumps({foo: bar}),
         headers={'content-type': 'application/json'})
 
     info = _metadata.get_service_account_info(request_mock)
@@ -137,4 +156,4 @@ def test_get_service_account_info(mock_request):
         url=_metadata._METADATA_ROOT + PATH + '/?recursive=True',
         headers=_metadata._METADATA_HEADERS)
 
-    assert info['foo'] == 'bar'
+    assert info[foo] == bar
