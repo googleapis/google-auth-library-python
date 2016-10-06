@@ -19,6 +19,7 @@ import calendar
 import datetime
 
 import six
+from six.moves import urllib
 
 
 def utcnow():
@@ -88,3 +89,30 @@ def from_bytes(value):
     else:
         raise ValueError(
             '{0!r} could not be converted to unicode'.format(value))
+
+
+def update_query(url, params):
+    """Updates a URL's query parameters
+    Replaces any current values if they are already present in the URL.
+    Args:
+        url (str): The URL to update.
+        params (Mapping): A mapping of query parameter keys to values.
+    Returns:
+        str: The URL with updated query parameters.
+    """
+    # Split the URL into parts.
+    parts = urllib.parse.urlparse(url)
+    # Parse the query string.
+    query_params = urllib.parse.parse_qs(parts.query)
+    # Update the query parameters with the new parameters.
+    query_params.update(params)
+    # Remove any None values.
+    query_params = {
+        key: value for key, value
+        in six.iteritems(query_params)
+        if value is not None}
+    # Re-encoded the query string.
+    new_query = urllib.parse.urlencode(query_params, doseq=True)
+    # Unsplit the url.
+    new_parts = parts[:4] + (new_query,) + parts[5:]
+    return urllib.parse.urlunparse(new_parts)
