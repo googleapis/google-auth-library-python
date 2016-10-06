@@ -27,9 +27,12 @@ class RequestResponseTests(object):
 
     @pytest.fixture
     def server(self):
-        """Provides a test HTTP server that is automatically created before
+        """Provides a test HTTP server.
+
+        The test server is automatically created before
         a test and destroyed at the end. The server is serving a test
-        application that can be used to verify requests."""
+        application that can be used to verify requests.
+        """
         # pylint: disable=unused-variable
         # (pylint thinks the flask routes are unusued.)
         app = flask.Flask(__name__)
@@ -37,9 +40,9 @@ class RequestResponseTests(object):
 
         @app.route('/basic')
         def index():
-            return 'Basic Content', http_client.OK, {
-                'X-Test-Header': flask.request.headers.get(
-                    'x-test-header', 'value')}
+            header_value = flask.request.headers.get('x-test-header', 'value')
+            headers = {'X-Test-Header': header_value}
+            return 'Basic Content', http_client.OK, headers
 
         @app.route('/server_error')
         def server_error():

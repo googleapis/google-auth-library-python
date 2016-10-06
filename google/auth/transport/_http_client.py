@@ -24,7 +24,11 @@ from google.auth import transport
 
 
 class Response(transport.Response):
-    """http.client transport request adapter."""
+    """http.client transport request adapter.
+
+    Args:
+        response (http.client.HTTPResponse): The raw http client response.
+    """
     def __init__(self, response):
         self._status = response.status
         self._headers = {
@@ -46,8 +50,6 @@ class Response(transport.Response):
 
 class Request(transport.Request):
     """http.client transport request adapter."""
-    def __init__(self):
-        pass
 
     def __call__(self, url, method='GET', body=None, headers=None,
                  timeout=None, **kwargs):
