@@ -124,8 +124,10 @@ reports=no
 # Good variable names which should always be accepted, separated by a comma
 # DEFAULT:  good-names=i,j,k,ex,Run,_
 # RATIONALE:  'fh' is a well-known file handle variable name.
+#             foo and bar are often used as test sentinels where mock.sentinel
+#             isn't appropriate.
 good-names = i, j, k, ex, Run, _,
-             fh,
+             fh, foo, bar
 
 # Regular expression matching correct method names
 # DEFAULT:  method-rgx=[a-z_][a-z0-9_]{2,30}$
