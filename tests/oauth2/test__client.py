@@ -17,6 +17,7 @@ import json
 
 import mock
 import pytest
+import six
 from six.moves import http_client
 from six.moves import urllib
 
@@ -54,11 +55,15 @@ def test__parse_expiry_none():
     assert _client._parse_expiry({}) is None
 
 
-def test__token_endpoint_request():
+def _make_request(response_data):
     response = mock.Mock()
     response.status = http_client.OK
-    response.data = json.dumps({'test': 'response'}).encode('utf-8')
-    request = mock.Mock(return_value=response)
+    response.data = json.dumps(response_data).encode('utf-8')
+    return mock.Mock(return_value=response)
+
+
+def test__token_endpoint_request():
+    request = _make_request({'test': 'response'})
 
     result = _client._token_endpoint_request(
         request, 'http://example.com', {'test': 'params'})
@@ -84,24 +89,29 @@ def test__token_endpoint_request_error():
         _client._token_endpoint_request(request, 'http://example.com', {})
 
 
-@mock.patch('google.auth._helpers.utcnow', return_value=datetime.datetime.min)
-def test_jwt_grant(now_mock):
-    response = mock.Mock()
-    response.status = http_client.OK
-    response.data = json.dumps({
-        'access_token': 'token',
-        'expires_in': 500,
-        'extra': 'data'}).encode('utf-8')
-    request = mock.Mock(return_value=response)
-
-    token, expiry, extra_data = _client.jwt_grant(
-        request, 'http://example.com', 'assertion')
-
-    # Check request call
+def _verify_request_params(request, params):
     request_body = request.call_args[1]['body']
     request_params = urllib.parse.parse_qs(request_body)
-    assert request_params['grant_type'][0] == _client._JWT_GRANT_TYPE
-    assert request_params['assertion'][0] == 'assertion'
+
+    for key, value in six.iteritems(params):
+        assert request_params[key][0] == value
+
+
+@mock.patch('google.auth._helpers.utcnow', return_value=datetime.datetime.min)
+def test_jwt_grant(now_mock):
+    request = _make_request({
+        'access_token': 'token',
+        'expires_in': 500,
+        'extra': 'data'})
+
+    token, expiry, extra_data = _client.jwt_grant(
+        request, 'http://example.com', 'assertion_value')
+
+    # Check request call
+    _verify_request_params(request, {
+        'grant_type': _client._JWT_GRANT_TYPE,
+        'assertion': 'assertion_value'
+    })
 
     # Check result
     assert token == 'token'
@@ -109,31 +119,51 @@ def test_jwt_grant(now_mock):
     assert extra_data['extra'] == 'data'
 
 
+def test_jwt_grant_no_access_token():
+    request = _make_request({
+        # No access token.
+        'expires_in': 500,
+        'extra': 'data'})
+
+    with pytest.raises(exceptions.RefreshError):
+        _client.jwt_grant(request, 'http://example.com', 'assertion_value')
+
+
 @mock.patch('google.auth._helpers.utcnow', return_value=datetime.datetime.min)
 def test_refresh_grant(now_mock):
-    response = mock.Mock()
-    response.status = http_client.OK
-    response.data = json.dumps({
+    request = _make_request({
         'access_token': 'token',
         'refresh_token': 'new_refresh_token',
         'expires_in': 500,
-        'extra': 'data'}).encode('utf-8')
-    request = mock.Mock(return_value=response)
+        'extra': 'data'})
 
     token, refresh_token, expiry, extra_data = _client.refresh_grant(
         request, 'http://example.com', 'refresh_token', 'client_id',
         'client_secret')
 
     # Check request call
-    request_body = request.call_args[1]['body']
-    request_params = urllib.parse.parse_qs(request_body)
-    assert request_params['grant_type'][0] == _client._REFRESH_GRANT_TYPE
-    assert request_params['refresh_token'][0] == 'refresh_token'
-    assert request_params['client_id'][0] == 'client_id'
-    assert request_params['client_secret'][0] == 'client_secret'
+    _verify_request_params(request, {
+        'grant_type': _client._REFRESH_GRANT_TYPE,
+        'refresh_token': 'refresh_token',
+        'client_id': 'client_id',
+        'client_secret': 'client_secret'
+    })
 
     # Check result
     assert token == 'token'
     assert refresh_token == 'new_refresh_token'
     assert expiry == datetime.datetime.min + datetime.timedelta(seconds=500)
     assert extra_data['extra'] == 'data'
+
+
+def test_refresh_grant_no_access_token():
+    request = _make_request({
+        # No access token.
+        'refresh_token': 'new_refresh_token',
+        'expires_in': 500,
+        'extra': 'data'})
+
+    with pytest.raises(exceptions.RefreshError):
+        _client.refresh_grant(
+            request, 'http://example.com', 'refresh_token', 'client_id',
+            'client_secret')
