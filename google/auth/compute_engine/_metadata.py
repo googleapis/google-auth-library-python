@@ -74,7 +74,7 @@ def ping(request, timeout=_METADATA_DEFAULT_TIMEOUT):
         return False
 
 
-def get(request, path, root=_METADATA_ROOT, recursive=None):
+def get(request, path, root=_METADATA_ROOT, recursive=False):
     """Fetch a resource from the metadata server.
 
     Args:
@@ -96,8 +96,13 @@ def get(request, path, root=_METADATA_ROOT, recursive=None):
         google.auth.exceptions.TransportError: if an error occurred while
             retrieving metadata.
     """
-    url = urlparse.urljoin(root, path)
-    url = _helpers.update_query(url, {'recursive': recursive})
+    base_url = urlparse.urljoin(root, path)
+    query_params = {}
+
+    if recursive:
+        query_params['recursive'] = 'true'
+
+    url = _helpers.update_query(base_url, query_params)
 
     response = request(url=url, method='GET', headers=_METADATA_HEADERS)
 

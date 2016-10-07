@@ -86,3 +86,10 @@ def test_update_query_replace_param():
     uri = base_uri + '?x=a'
     updated = _helpers.update_query(uri, {'x': 'b', 'y': 'c'})
     _assert_query(updated, {'x': ['b'], 'y': ['c']})
+
+
+def test_update_query_remove_param():
+    base_uri = 'http://www.google.com'
+    uri = base_uri + '?x=a'
+    updated = _helpers.update_query(uri, {'y': 'c'}, remove=['x'])
+    _assert_query(updated, {'y': ['c']})

@@ -153,7 +153,7 @@ def test_get_service_account_info(mock_request):
 
     request_mock.assert_called_once_with(
         method='GET',
-        url=_metadata._METADATA_ROOT + PATH + '/?recursive=True',
+        url=_metadata._METADATA_ROOT + PATH + '/?recursive=true',
         headers=_metadata._METADATA_HEADERS)
 
     assert info[key] == value
