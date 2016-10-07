@@ -86,6 +86,11 @@ class Request(transport.Request):
         path = urllib.parse.urlunsplit(
             ('', '', parts.path, parts.query, parts.fragment))
 
+        if parts.scheme != 'http':
+            raise exceptions.TransportError(
+                'http.client transport only supports the http scheme, {}'
+                'was specified'.format(parts.scheme))
+
         connection = http_client.HTTPConnection(parts.netloc)
 
         try:
