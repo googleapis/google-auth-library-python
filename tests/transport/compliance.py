@@ -33,11 +33,11 @@ class RequestResponseTests(object):
         a test and destroyed at the end. The server is serving a test
         application that can be used to verify requests.
         """
-        # pylint: disable=unused-variable
-        # (pylint thinks the flask routes are unusued.)
         app = flask.Flask(__name__)
         app.debug = True
 
+        # pylint: disable=unused-variable
+        # (pylint thinks the flask routes are unusued.)
         @app.route('/basic')
         def index():
             header_value = flask.request.headers.get('x-test-header', 'value')
@@ -47,6 +47,7 @@ class RequestResponseTests(object):
         @app.route('/server_error')
         def server_error():
             return 'Error', http_client.INTERNAL_SERVER_ERROR
+        # pylint: enable=unused-variable
 
         server = WSGIServer(application=app.wsgi_app)
         server.start()
