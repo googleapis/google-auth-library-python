@@ -104,6 +104,17 @@ def update_query(url, params):
 
     Returns:
         str: The URL with updated query parameters.
+
+    Examples:
+
+        >>> url = 'http://example.com?a=1'
+        >>> update_query(url, {'a': '2'})
+        http://example.com?a=2
+        >>> update_query(url, {'b': '3'})
+        http://example.com?a=1&b=3
+        >> update_query(url, {'a': None, 'b': '3'})
+        http://example.com?b=3
+
     """
     # Split the URL into parts.
     parts = urllib.parse.urlparse(url)
