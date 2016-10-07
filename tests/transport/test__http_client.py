@@ -12,9 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import pytest
+
 from google.auth import exceptions
 import google.auth.transport._http_client
-import pytest
 
 from tests.transport import compliance
 
