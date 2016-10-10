@@ -50,6 +50,16 @@ class Credentials(object):
         If this is None, the token is assumed to never expire."""
 
     @property
+    def expired(self):
+        """Checks if the credentials are expired.
+
+        Note that credentials can be invalid but not expired becaue Credentials
+        with :attr:`expiry` set to None is considered to never expire.
+        """
+        now = _helpers.utcnow()
+        return self.expiry is not None and self.expiry <= now
+
+    @property
     def valid(self):
         """Checks the validity of the credentials.
 
@@ -58,25 +68,12 @@ class Credentials(object):
         """
         return self.token is not None and not self.expired
 
-    @property
-    def expired(self):
-        """Checks if the credentials are expired.
-
-        Note that credentials can be invalid but not expired becaue Credentials
-        with :attr:`expiry` set to None is considered to never expire.
-        """
-        now = _helpers.utcnow()
-        if self.expiry is None or self.expiry > now:
-            return False
-        else:
-            return True
-
     @abc.abstractmethod
     def refresh(self, request):
         """Refreshes the access token.
 
         Args:
-            request (google.auth.transport.Request): A callable used to make
+            request (google.auth.transport.Request): The object used to make
                 HTTP requests.
 
         Raises:
@@ -105,7 +102,7 @@ class Credentials(object):
         apply the token to the authentication header.
 
         Args:
-            request (google.auth.transport.Request): A callable used to make
+            request (google.auth.transport.Request): the object used to make
                 HTTP requests.
             method (str): The request's HTTP method.
             url (str): The request's URI.
@@ -181,7 +178,7 @@ class ScopedCredentials(object):
     def has_scopes(self, scopes):
         """Checks if the credentials have the given scopes.
 
-        .. warning: This method is not guarenteed to be accurate if the
+        .. warning: This method is not guaranteed to be accurate if the
             credentials are :attr:`~Credentials.invalid`.
 
         Returns:
@@ -202,7 +199,7 @@ class SigningCredentials(object):
             message (bytes): The message to sign.
 
         Returns:
-            bytes: The messages cryptographic signature.
+            bytes: The message's cryptographic signature.
         """
         # pylint: disable=missing-raises-doc,redundant-returns-doc
         # (pylint doesn't recognize that this is abstract)
