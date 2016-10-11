@@ -81,14 +81,8 @@ def test_scoped_credentials_constructor():
 
 def test_scoped_credentials_scopes():
     credentials = ScopedCredentialsImpl()
-
     credentials._scopes = ['one', 'two']
-    assert credentials.has_scopes(['one'])
-    assert credentials.has_scopes(['two'])
-    assert credentials.has_scopes(['one', 'two'])
-    assert not credentials.has_scopes(['three'])
-
-    credentials._scopes = 'one two'
+    assert credentials.scopes == ['one', 'two']
     assert credentials.has_scopes(['one'])
     assert credentials.has_scopes(['two'])
     assert credentials.has_scopes(['one', 'two'])

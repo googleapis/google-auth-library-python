@@ -144,15 +144,12 @@ class ScopedCredentials(object):
     """
     def __init__(self):
         super(ScopedCredentials, self).__init__()
-        self.__scopes = None
+        self._scopes = None
 
     @property
-    def _scopes(self):
-        return self.__scopes
-
-    @_scopes.setter
-    def _scopes(self, value):
-        self.__scopes = _helpers.string_to_scopes(value)
+    def scopes(self):
+        """Sequence[str]: the credentials' current set of scopes."""
+        return self._scopes
 
     @abc.abstractproperty
     def requires_scopes(self):
@@ -165,8 +162,7 @@ class ScopedCredentials(object):
         """Create a copy of these credentials with the specified scopes.
 
         Args:
-            scopes (Union[str, Sequence]): The scope or list of scopes to
-                request.
+            scopes (Sequence[str]): The list of scopes to request.
 
         Raises:
             NotImplementedError: If the credentials' scopes can not be changed.
