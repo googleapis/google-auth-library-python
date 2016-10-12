@@ -27,6 +27,10 @@ for the return value of :class:`Request`.
 import abc
 
 import six
+from six.moves import http_client
+
+DEFAULT_REFRESH_STATUS_CODES = (http_client.UNAUTHORIZED,)
+DEFAULT_MAX_REFRESH_ATTEMPTS = 2
 
 
 @six.add_metaclass(abc.ABCMeta)
