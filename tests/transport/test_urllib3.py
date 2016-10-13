@@ -65,7 +65,7 @@ class MockHttp(object):
         self.headers = headers or {}
 
     def urlopen(self, method, url, body=None, headers=None, **kwargs):
-        self.requests.append((method, url, body, headers))
+        self.requests.append((method, url, body, headers, kwargs))
         return self.responses.pop(0)
 
 
@@ -99,7 +99,7 @@ class TestAuthorizedHttp(object):
         assert mock_credentials.before_request.called
         assert not mock_credentials.refresh.called
         assert mock_http.requests == [
-            ('GET', self.TEST_URL, None, {'authorization': 'token'})]
+            ('GET', self.TEST_URL, None, {'authorization': 'token'}, {})]
 
     def test_urlopen_refresh(self):
         mock_credentials = mock.Mock(wraps=MockCredentials())
@@ -118,8 +118,8 @@ class TestAuthorizedHttp(object):
         assert mock_credentials.before_request.call_count == 2
         assert mock_credentials.refresh.called
         assert mock_http.requests == [
-            ('GET', self.TEST_URL, None, {'authorization': 'token'}),
-            ('GET', self.TEST_URL, None, {'authorization': 'token1'})]
+            ('GET', self.TEST_URL, None, {'authorization': 'token'}, {}),
+            ('GET', self.TEST_URL, None, {'authorization': 'token1'}, {})]
 
     def test_proxies(self):
         mock_http = mock.MagicMock()
