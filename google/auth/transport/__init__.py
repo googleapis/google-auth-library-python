@@ -30,7 +30,12 @@ import six
 from six.moves import http_client
 
 DEFAULT_REFRESH_STATUS_CODES = (http_client.UNAUTHORIZED,)
+"""Sequence[int]:  Which HTTP status code indicate that credentials should be
+refreshed and a request should be retried.
+"""
+
 DEFAULT_MAX_REFRESH_ATTEMPTS = 2
+"""int: How many times to refresh the credentials and retry a request."""
 
 
 @six.add_metaclass(abc.ABCMeta)

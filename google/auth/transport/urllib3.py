@@ -18,6 +18,13 @@ from __future__ import absolute_import
 
 import logging
 
+
+# Certifi is Mozilla's certificate bundle. Urllib3 needs a certificate bundle
+# to verify HTTPS requests, and certifi is the recommended and most reliable
+# way to get a root certificate bundle. See
+# http://urllib3.readthedocs.io/en/latest/user-guide.html\
+#   #certificate-verification
+# For more details.
 try:
     import certifi
 except ImportError:  # pragma: NO COVER
@@ -119,7 +126,7 @@ class Request(transport.Request):
 
 
 def _make_default_http():
-    if certifi:
+    if certifi is not None:
         return urllib3.PoolManager(
             cert_reqs='CERT_REQUIRED',
             ca_certs=certifi.where())
@@ -153,7 +160,7 @@ class AuthorizedHttp(urllib3.request.RequestMethods):
             use to make requests. If not specified, a
             :class:`urllib3.PoolManager` instance will be constructed with
             sane defaults.
-        refresh_status_codes (Sequence[int]): Which HTTP status code indicate
+        refresh_status_codes (Sequence[int]): Which HTTP status codes indicate
             that credentials should be refreshed and the request should be
             retried.
         max_refresh_attempts (int): The maximum number of times to attempt to

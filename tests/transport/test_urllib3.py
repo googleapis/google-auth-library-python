@@ -38,7 +38,7 @@ def test__make_default_http_with_certfi():
     assert 'cert_reqs' in http.connection_pool_kw
 
 
-@mock.patch.object(google.auth.transport.urllib3, 'certifi', False)
+@mock.patch.object(google.auth.transport.urllib3, 'certifi', new=None)
 def test__make_default_http_without_certfi():
     http = google.auth.transport.urllib3._make_default_http()
     assert 'cert_reqs' not in http.connection_pool_kw
@@ -55,7 +55,7 @@ class MockCredentials(object):
         self.apply(headers)
 
     def refresh(self, request):
-        self.token = self.token + '1'
+        self.token += '1'
 
 
 class MockHttp(object):
@@ -83,7 +83,7 @@ class TestAuthorizedHttp(object):
             mock.sentinel.credentials)
 
         assert authed_http.credentials == mock.sentinel.credentials
-        assert authed_http.http is not None
+        assert isinstance(authed_http.http, urllib3.PoolManager)
 
     def test_urlopen_no_refresh(self):
         mock_credentials = mock.Mock(wraps=MockCredentials())
@@ -104,7 +104,7 @@ class TestAuthorizedHttp(object):
     def test_urlopen_refresh(self):
         mock_credentials = mock.Mock(wraps=MockCredentials())
         mock_final_response = MockResponse(status=http_client.OK)
-        # First request will 403, second request will succeed.
+        # First request will 401, second request will succeed.
         mock_http = MockHttp([
             MockResponse(status=http_client.UNAUTHORIZED),
             mock_final_response])
