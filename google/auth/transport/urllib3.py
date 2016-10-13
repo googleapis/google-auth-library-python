@@ -179,7 +179,7 @@ class AuthorizedHttp(urllib3.request.RequestMethods):
         self._max_refresh_attempts = max_refresh_attempts
         # Request instance used by internal methods (for example,
         # credentials.refresh).
-        self.__request = Request(self.http)
+        self._request = Request(self.http)
 
     def urlopen(self, method, url, body=None, headers=None, **kwargs):
         """Implementation of urllib3's urlopen."""
@@ -197,7 +197,7 @@ class AuthorizedHttp(urllib3.request.RequestMethods):
         request_headers = headers.copy()
 
         self.credentials.before_request(
-            self.__request, method, url, request_headers)
+            self._request, method, url, request_headers)
 
         response = self.http.urlopen(
             method, url, body=body, headers=request_headers, **kwargs)
@@ -217,7 +217,7 @@ class AuthorizedHttp(urllib3.request.RequestMethods):
                 response.status, _credential_refresh_attempt + 1,
                 self._max_refresh_attempts)
 
-            self.credentials.refresh(self.__request)
+            self.credentials.refresh(self._request)
 
             # Recurse. Pass in the original headers, not our modified set.
             return self.urlopen(
