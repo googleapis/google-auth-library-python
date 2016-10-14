@@ -92,7 +92,7 @@ class Credentials(object):
             token (Optional[str]): If specified, overrides the current access
                 token.
         """
-        headers[b'authorization'] = 'Bearer {}'.format(
+        headers['authorization'] = 'Bearer {}'.format(
             _helpers.from_bytes(token or self.token))
 
     def before_request(self, request, method, url, headers):

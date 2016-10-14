@@ -53,7 +53,7 @@ def test_before_request():
     credentials.before_request(request, 'http://example.com', 'GET', headers)
     assert credentials.valid
     assert credentials.token == 'token'
-    assert headers[b'authorization'] == 'Bearer token'
+    assert headers['authorization'] == 'Bearer token'
 
     request = 'token2'
     headers = {}
@@ -62,7 +62,7 @@ def test_before_request():
     credentials.before_request(request, 'http://example.com', 'GET', headers)
     assert credentials.valid
     assert credentials.token == 'token'
-    assert headers[b'authorization'] == 'Bearer token'
+    assert headers['authorization'] == 'Bearer token'
 
 
 class ScopedCredentialsImpl(credentials.Scoped, CredentialsImpl):
