@@ -65,7 +65,7 @@ def test_before_request():
     assert headers[b'authorization'] == 'Bearer token'
 
 
-class ScopedCredentialsImpl(credentials.ScopedCredentials, CredentialsImpl):
+class ScopedCredentialsImpl(credentials.Scoped, CredentialsImpl):
     @property
     def requires_scopes(self):
         return super(ScopedCredentialsImpl, self).requires_scopes

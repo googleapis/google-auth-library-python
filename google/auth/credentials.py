@@ -117,7 +117,7 @@ class Credentials(object):
 
 
 @six.add_metaclass(abc.ABCMeta)
-class ScopedCredentials(object):
+class Scoped(object):
     """Interface for scoped credentials.
 
     OAuth 2.0-based credentials allow limiting access using scopes as described
@@ -143,7 +143,7 @@ class ScopedCredentials(object):
     .. _RFC6749 Section 3.3: https://tools.ietf.org/html/rfc6749#section-3.3
     """
     def __init__(self):
-        super(ScopedCredentials, self).__init__()
+        super(Scoped, self).__init__()
         self._scopes = None
 
     @property
@@ -184,7 +184,7 @@ class ScopedCredentials(object):
 
 
 @six.add_metaclass(abc.ABCMeta)
-class SigningCredentials(object):
+class Signing(object):
     """Interface for credentials that can cryptographically sign messages."""
 
     @abc.abstractmethod
