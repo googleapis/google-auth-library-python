@@ -137,33 +137,28 @@ def update_query(url, params, remove=None):
 
 
 def scopes_to_string(scopes):
-    """Converts scope value to a string.
-    If scopes is a string then it is simply passed through. If scopes is an
-    iterable then a string is returned that is all the individual scopes
-    concatenated with spaces.
+    """Converts scope value to a string suitable for sending to OAuth 2.0
+    authorization servers.
+
     Args:
-        scopes (Union[Sequence, str])
+        scopes (Sequence[str]): The sequence of scopes to convert.
+
     Returns:
         str: The scopes formatted as a single string.
     """
-    if isinstance(scopes, six.string_types):
-        return scopes
-    else:
-        return ' '.join(scopes)
+    return ' '.join(scopes)
 
 
 def string_to_scopes(scopes):
-    """Converts stringifed scope value to a list.
-    If scopes is a list then it is simply passed through. If scopes is an
-    string then a list of each individual scope is returned.
+    """Converts stringifed scopes value to a list.
+
     Args:
-        scopes (Union[Sequence, str])
+        scopes (Union[Sequence, str]): The string of space-separated scopes
+            to convert.
     Returns:
-        list: The scopes in a list.
+        Sequence(str): The separated scopes.
     """
     if not scopes:
         return []
-    elif isinstance(scopes, six.string_types):
-        return scopes.split(' ')
-    else:
-        return scopes
+
+    return scopes.split(' ')

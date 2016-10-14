@@ -97,7 +97,6 @@ def test_update_query_remove_param():
 
 def test_scopes_to_string():
     cases = [
-        ('', ''),
         ('', ()),
         ('', []),
         ('', ('',)),
@@ -106,7 +105,6 @@ def test_scopes_to_string():
         ('b', ['b', ]),
         ('a b', ['a', 'b']),
         ('a b', ('a', 'b')),
-        ('a b', 'a b'),
         ('a b', (s for s in ['a', 'b'])),
     ]
     for expected, case in cases:
@@ -115,7 +113,6 @@ def test_scopes_to_string():
 
 def test_string_to_scopes():
     cases = [
-        (['a', 'b'], ['a', 'b']),
         ('', []),
         ('a', ['a']),
         ('a b c d e f', ['a', 'b', 'c', 'd', 'e', 'f']),

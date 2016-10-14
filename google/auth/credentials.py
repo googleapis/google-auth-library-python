@@ -123,10 +123,16 @@ class Scoped(object):
     OAuth 2.0-based credentials allow limiting access using scopes as described
     in `RFC6749 Section 3.3`_.
     If a credential class implements this interface then the credentials either
-    require or use scopes in their implementation.
+    use scopes in their implementation.
 
-    Credentials that require scopes to obtain access tokens must either be
-    constructed with scopes::
+    Some credentials require scopes in order to obtain a token. You can check
+    if scoping is necessary with :attr:`requires_scopes`::
+
+        if credentials.requires_scopes:
+            # Scoping is required.
+            credentials = credentials.create_scoped(['one', 'two'])
+
+    Credentials that require scopes must either be constructed with scopes::
 
         credentials = SomeScopedCredentials(scopes=['one', 'two'])
 
@@ -134,11 +140,8 @@ class Scoped(object):
 
         scoped_credentials = credentials.with_scopes(scopes=['one', 'two'])
 
-    Some credentials have scopes but do not allow or require scopes to be set.
-    You can check if scoping is necessary with :attr:`requires_scopes`::
-
-        if credentials.requires_scopes:
-            credentials = credentials.create_scoped(['one', 'two'])
+    Some credentials have scopes but do not allow or require scopes to be set,
+    these credentials can be used as-is.
 
     .. _RFC6749 Section 3.3: https://tools.ietf.org/html/rfc6749#section-3.3
     """
