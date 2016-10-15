@@ -322,6 +322,9 @@ class Credentials(credentials.Signing,
 
         Returns:
             google.auth.jwt.Credentials: The constructed credentials.
+
+        Raises:
+            ValueError: If the info is not in the expected format.
         """
 
         try:
