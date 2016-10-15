@@ -21,15 +21,18 @@ from google.auth import _helpers
 from google.oauth2 import credentials
 
 
-class TestCredentials:
-    token_uri = 'https://example.com/oauth2/token'
+class TestCredentials(object):
+    TOKEN_URI = 'https://example.com/oauth2/token'
+    REFRESH_TOKEN = 'refresh_token'
+    CLIENT_ID = 'client_id'
+    CLIENT_SECRET = 'client_secret'
 
     @pytest.fixture(autouse=True)
     def credentials(self):
         self.credentials = credentials.Credentials(
-            token=None, refresh_token='refresh_token',
-            token_uri=self.token_uri, client_id='client_id',
-            client_secret='client_secret')
+            token=None, refresh_token=self.REFRESH_TOKEN,
+            token_uri=self.TOKEN_URI, client_id=self.CLIENT_ID,
+            client_secret=self.CLIENT_SECRET)
 
     def test_default_state(self):
         assert not self.credentials.valid
@@ -40,16 +43,17 @@ class TestCredentials:
 
     def test_create_scoped(self):
         with pytest.raises(NotImplementedError):
-            assert credentials == self.credentials.with_scopes('email')
+            self.credentials.with_scopes(['email'])
 
     @mock.patch('google.oauth2._client.refresh_grant')
     @mock.patch(
         'google.auth._helpers.utcnow', return_value=datetime.datetime.min)
     def test_refresh_success(self, now_mock, refresh_grant_mock):
+        token = 'token'
         expiry = _helpers.utcnow() + datetime.timedelta(seconds=500)
         refresh_grant_mock.return_value = (
             # Access token
-            'token',
+            token,
             # New refresh token
             None,
             # Expiry,
@@ -63,11 +67,11 @@ class TestCredentials:
 
         # Check jwt grant call.
         refresh_grant_mock.assert_called_with(
-            request_mock, self.token_uri, 'refresh_token', 'client_id',
-            'client_secret')
+            request_mock, self.TOKEN_URI, self.REFRESH_TOKEN, self.CLIENT_ID,
+            self.CLIENT_SECRET)
 
         # Check that the credentials have the token and expiry
-        assert self.credentials.token == 'token'
+        assert self.credentials.token == token
         assert self.credentials.expiry == expiry
 
         # Check that the credentials are valid (have a token and are not

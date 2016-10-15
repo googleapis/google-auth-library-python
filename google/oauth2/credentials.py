@@ -23,8 +23,8 @@ Specifically, this is intended to use access tokens acquired using the
 optional `refresh token`_.
 
 Obtaining the initial access and refresh token is outside of the scope of this
-module. Consult `rfc6749 section 4.1` for complete details on the Authorization
-Code grant flow.
+module. Consult `rfc6749 section 4.1`_ for complete details on the
+Authorization Code grant flow.
 
 .. _Authorization Code grant: https://tools.ietf.org/html/rfc6749#section-1.3.1
 .. _refresh token: https://tools.ietf.org/html/rfc6749#section-6
@@ -55,7 +55,7 @@ class Credentials(credentials.Scoped, credentials.Credentials):
             client_secret(str): The OAuth 2.0 client secret. Must be specified
                 for refresh, can be left as None if the token can not be
                 refreshed.
-            scopes (Union[str, Sequence]): The scopes that were originally used
+            scopes (Sequence[str]): The scopes that were originally used
                 to obtain authorization. This is a purely informative parameter
                 that can be used by :meth:`has_scopes`. OAuth 2.0 credentials
                 can not request additional scopes after authorization.
