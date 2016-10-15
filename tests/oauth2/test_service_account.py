@@ -42,19 +42,19 @@ with open(SERVICE_ACCOUNT_JSON_FILE, 'r') as fh:
     SERVICE_ACCOUNT_INFO = json.load(fh)
 
 
-@pytest.fixture
+@pytest.fixture(scope='module')
 def signer():
     return crypt.Signer.from_string(PRIVATE_KEY_BYTES, '1')
 
 
-class TestCredentials:
-    service_account_email = 'service-account@example.com'
-    token_uri = 'https://example.com/oauth2/token'
+class TestCredentials(object):
+    SERVICE_ACCOUNT_EMAIL = 'service-account@example.com'
+    TOKEN_URI = 'https://example.com/oauth2/token'
 
     @pytest.fixture(autouse=True)
     def credentials(self, signer):
         self.credentials = service_account.Credentials(
-            signer, self.service_account_email, self.token_uri)
+            signer, self.SERVICE_ACCOUNT_EMAIL, self.TOKEN_URI)
 
     def test_from_service_account_info(self):
         with open(SERVICE_ACCOUNT_JSON_FILE, 'r') as fh:
@@ -68,21 +68,24 @@ class TestCredentials:
         assert credentials._token_uri == info['token_uri']
 
     def test_from_service_account_info_args(self):
-        info = dict(SERVICE_ACCOUNT_INFO)
+        info = SERVICE_ACCOUNT_INFO.copy()
+        scopes = ['email', 'profile']
+        subject = 'subject'
+        additional_claims = {'meta': 'data'}
 
         credentials = service_account.Credentials.from_service_account_info(
-            info, scopes=['email', 'profile'], subject='subject',
-            additional_claims={'meta': 'data'})
+            info, scopes=scopes, subject=subject,
+            additional_claims=additional_claims)
 
         assert credentials._signer.key_id == info['private_key_id']
         assert credentials._service_account_email == info['client_email']
         assert credentials._token_uri == info['token_uri']
-        assert credentials._scopes == ['email', 'profile']
-        assert credentials._subject == 'subject'
-        assert credentials._additional_claims['meta'] == 'data'
+        assert credentials._scopes == scopes
+        assert credentials._subject == subject
+        assert credentials._additional_claims == additional_claims
 
     def test_from_service_account_bad_key(self):
-        info = dict(SERVICE_ACCOUNT_INFO)
+        info = SERVICE_ACCOUNT_INFO.copy()
         info['private_key'] = 'garbage'
 
         with pytest.raises(ValueError) as excinfo:
@@ -91,13 +94,11 @@ class TestCredentials:
         assert excinfo.match(r'No key could be detected')
 
     def test_from_service_account_bad_format(self):
-        info = {}
-
-        with pytest.raises(KeyError):
-            service_account.Credentials.from_service_account_info(info)
+        with pytest.raises(ValueError):
+            service_account.Credentials.from_service_account_info({})
 
     def test_from_service_account_file(self):
-        info = dict(SERVICE_ACCOUNT_INFO)
+        info = SERVICE_ACCOUNT_INFO.copy()
 
         credentials = service_account.Credentials.from_service_account_file(
             SERVICE_ACCOUNT_JSON_FILE)
@@ -107,18 +108,21 @@ class TestCredentials:
         assert credentials._token_uri == info['token_uri']
 
     def test_from_service_account_file_args(self):
-        info = dict(SERVICE_ACCOUNT_INFO)
+        info = SERVICE_ACCOUNT_INFO.copy()
+        scopes = ['email', 'profile']
+        subject = 'subject'
+        additional_claims = {'meta': 'data'}
 
         credentials = service_account.Credentials.from_service_account_file(
-            SERVICE_ACCOUNT_JSON_FILE, subject='subject',
-            scopes=['email', 'profile'], additional_claims={'meta': 'data'})
+            SERVICE_ACCOUNT_JSON_FILE, subject=subject,
+            scopes=scopes, additional_claims=additional_claims)
 
         assert credentials._signer.key_id == info['private_key_id']
         assert credentials._service_account_email == info['client_email']
         assert credentials._token_uri == info['token_uri']
-        assert credentials._scopes == ['email', 'profile']
-        assert credentials._subject == 'subject'
-        assert credentials._additional_claims['meta'] == 'data'
+        assert credentials._scopes == scopes
+        assert credentials._subject == subject
+        assert credentials._additional_claims == additional_claims
 
     def test_default_state(self):
         assert not self.credentials.valid
@@ -130,34 +134,38 @@ class TestCredentials:
     def test_sign_bytes(self):
         to_sign = b'123'
         signature = self.credentials.sign_bytes(to_sign)
-        crypt.verify_signature(to_sign, signature, PUBLIC_CERT_BYTES)
+        assert crypt.verify_signature(to_sign, signature, PUBLIC_CERT_BYTES)
 
     def test_create_scoped(self):
-        credentials = self.credentials.with_scopes(['email', 'profile'])
-        assert credentials._scopes == ['email', 'profile']
+        scopes = ['email', 'profile']
+        credentials = self.credentials.with_scopes(scopes)
+        assert credentials._scopes == scopes
 
     def test__make_authorization_grant_assertion(self):
         token = self.credentials._make_authorization_grant_assertion()
         payload = jwt.decode(token, PUBLIC_CERT_BYTES)
-        assert payload['iss'] == self.service_account_email
-        assert payload['aud'] == self.token_uri
+        assert payload['iss'] == self.SERVICE_ACCOUNT_EMAIL
+        assert payload['aud'] == self.TOKEN_URI
 
     def test__make_authorization_grant_assertion_scoped(self):
-        credentials = self.credentials.with_scopes(['email', 'profile'])
+        scopes = ['email', 'profile']
+        credentials = self.credentials.with_scopes(scopes)
         token = credentials._make_authorization_grant_assertion()
         payload = jwt.decode(token, PUBLIC_CERT_BYTES)
         assert payload['scope'] == 'email profile'
 
     def test__make_authorization_grant_assertion_subject(self):
-        credentials = self.credentials.with_subject('user@example.com')
+        subject = 'user@example.com'
+        credentials = self.credentials.with_subject(subject)
         token = credentials._make_authorization_grant_assertion()
         payload = jwt.decode(token, PUBLIC_CERT_BYTES)
-        assert payload['sub'] == 'user@example.com'
+        assert payload['sub'] == subject
 
     @mock.patch('google.oauth2._client.jwt_grant')
     def test_refresh_success(self, jwt_grant_mock):
+        token = 'token'
         jwt_grant_mock.return_value = (
-            'token', _helpers.utcnow() + datetime.timedelta(seconds=500), None)
+            token, _helpers.utcnow() + datetime.timedelta(seconds=500), None)
         request_mock = mock.Mock()
 
         # Refresh credentials
@@ -173,7 +181,7 @@ class TestCredentials:
         # for checking the authorization grant assertion.
 
         # Check that the credentials have the token.
-        assert self.credentials.token == 'token'
+        assert self.credentials.token == token
 
         # Check that the credentials are valid (have a token and are not
         # expired)
@@ -181,8 +189,9 @@ class TestCredentials:
 
     @mock.patch('google.oauth2._client.jwt_grant')
     def test_before_request_refreshes(self, jwt_grant_mock):
+        token = 'token'
         jwt_grant_mock.return_value = (
-            'token', _helpers.utcnow() + datetime.timedelta(seconds=500), None)
+            token, _helpers.utcnow() + datetime.timedelta(seconds=500), None)
         request_mock = mock.Mock()
 
         # Credentials should start as invalid

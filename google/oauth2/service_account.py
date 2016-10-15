@@ -70,12 +70,14 @@ specific subject using :meth:`~Credentials.with_subject`.
 .. _RFC 7523: https://tools.ietf.org/html/rfc7523
 """
 
+import io
+
 import datetime
 import json
 
 from google.auth import _helpers
-from google.auth import crypt
 from google.auth import credentials
+from google.auth import crypt
 from google.auth import jwt
 from google.oauth2 import _client
 
@@ -129,14 +131,24 @@ class Credentials(credentials.Signing,
                 user to for which to request delegated access.
             additional_claims (Mapping[str, str]): Any additional claims for
                 the JWT assertion used in the authorization grant.
+
+        .. note:: Typically one of the helper constructors
+            :meth:`from_service_account_file` or
+            :meth:`from_service_account_info` are used instead of calling the
+            constructor directly.
         """
         super(Credentials, self).__init__()
+
         self._scopes = scopes
         self._signer = signer
         self._service_account_email = service_account_email
         self._subject = subject
         self._token_uri = token_uri
-        self._additional_claims = additional_claims or {}
+
+        if additional_claims is not None:
+            self._additional_claims = additional_claims
+        else:
+            self._additional_claims = {}
 
     @classmethod
     def from_service_account_info(cls, info, **kwargs):
@@ -151,10 +163,14 @@ class Credentials(credentials.Signing,
             google.auth.service_account.Credentials: The constructed
                 credentials.
         """
-        email = info['client_email']
-        key_id = info['private_key_id']
-        private_key = info['private_key']
-        token_uri = info['token_uri']
+        try:
+            email = info['client_email']
+            key_id = info['private_key_id']
+            private_key = info['private_key']
+            token_uri = info['token_uri']
+        except KeyError:
+            raise ValueError(
+                'Service account info was not in the expected format.')
 
         signer = crypt.Signer.from_string(private_key, key_id)
 
@@ -173,7 +189,7 @@ class Credentials(credentials.Signing,
             google.auth.service_account.Credentials: The constructed
                 credentials.
         """
-        with open(filename, 'r') as json_file:
+        with io.open(filename, 'r', encoding='utf-8') as json_file:
             info = json.load(json_file)
         return cls.from_service_account_info(info, **kwargs)
 
@@ -234,14 +250,14 @@ class Credentials(credentials.Signing,
             'iss': self._service_account_email,
             # The audience must be the auth token endpoint's URI
             'aud': self._token_uri,
-            'scope': _helpers.scopes_to_string(self._scopes or [])
+            'scope': _helpers.scopes_to_string(self._scopes or ())
         }
+
+        payload.update(self._additional_claims)
 
         # The subject can be a user email for domain-wide delegation.
         if self._subject:
             payload.setdefault('sub', self._subject)
-
-        payload.update(self._additional_claims)
 
         token = jwt.encode(self._signer, payload)
 
