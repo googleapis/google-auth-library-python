@@ -70,9 +70,8 @@ specific subject using :meth:`~Credentials.with_subject`.
 .. _RFC 7523: https://tools.ietf.org/html/rfc7523
 """
 
-import io
-
 import datetime
+import io
 import json
 
 from google.auth import _helpers
