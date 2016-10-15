@@ -71,10 +71,7 @@ class Credentials(credentials.Scoped, credentials.Credentials):
             service_account=self._service_account_email)
 
         self._service_account_email = info['email']
-        # pylint: disable=attribute-defined-outside-init
-        # (pylint doesn't recognize that this is defined in ScopedCredentials)
         self._scopes = _helpers.string_to_scopes(info['scopes'])
-        # pylint: enable=attribute-defined-outside-init
 
     def refresh(self, request):
         """Refresh the access token and scopes.

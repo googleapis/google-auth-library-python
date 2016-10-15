@@ -21,7 +21,7 @@ from google.auth import exceptions
 from google.auth.compute_engine import credentials
 
 
-class TestCredentials:
+class TestCredentials(object):
     @pytest.fixture(autouse=True)
     def credentials(self):
         self.credentials = credentials.Credentials()
@@ -32,9 +32,6 @@ class TestCredentials:
         assert not self.credentials.expired
         # Scopes aren't needed
         assert not self.credentials.requires_scopes
-
-    def test_create_scoped_fails(self):
-        pass
 
     @mock.patch(
         'google.auth._helpers.utcnow', return_value=datetime.datetime.min)
