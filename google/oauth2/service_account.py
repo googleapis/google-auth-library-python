@@ -161,6 +161,9 @@ class Credentials(credentials.Signing,
         Returns:
             google.auth.service_account.Credentials: The constructed
                 credentials.
+
+        Raises:
+            ValueError: If the info is not in the expected format.
         """
         try:
             email = info['client_email']
