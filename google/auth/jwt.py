@@ -43,6 +43,7 @@ You can also skip verification::
 import base64
 import collections
 import datetime
+import io
 import json
 
 from six.moves import urllib
@@ -322,9 +323,14 @@ class Credentials(credentials.Signing,
         Returns:
             google.auth.jwt.Credentials: The constructed credentials.
         """
-        email = info['client_email']
-        key_id = info['private_key_id']
-        private_key = info['private_key']
+
+        try:
+            email = info['client_email']
+            key_id = info['private_key_id']
+            private_key = info['private_key']
+        except KeyError:
+            raise ValueError(
+                'Service account info was not in the expected format.')
 
         signer = crypt.Signer.from_string(private_key, key_id)
 
@@ -342,7 +348,7 @@ class Credentials(credentials.Signing,
         Returns:
             google.auth.jwt.Credentials: The constructed credentials.
         """
-        with open(filename, 'r') as json_file:
+        with io.open(filename, 'r', encoding='utf-8') as json_file:
             info = json.load(json_file)
         return cls.from_service_account_info(info, **kwargs)
 

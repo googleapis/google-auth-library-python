@@ -237,10 +237,8 @@ class TestCredentials:
         assert excinfo.match(r'No key could be detected')
 
     def test_from_service_account_bad_format(self):
-        info = {}
-
-        with pytest.raises(KeyError):
-            jwt.Credentials.from_service_account_info(info)
+        with pytest.raises(ValueError):
+            jwt.Credentials.from_service_account_info({})
 
     def test_from_service_account_file(self):
         info = dict(SERVICE_ACCOUNT_INFO)
