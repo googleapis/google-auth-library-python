@@ -306,7 +306,7 @@ class TestCredentials:
             mock.Mock(), 'GET', 'http://example.com?a=1#3', headers)
 
         header_value = headers['authorization']
-        token = header_value.split('Bearer ').pop()
+        _, token = header_value.split(' ')
 
         # This should be a one-off token, so it shouldn't be the same as the
         # credentials' stored token.
@@ -324,7 +324,7 @@ class TestCredentials:
             None, 'GET', 'http://example.com?a=1#3', headers)
 
         header_value = headers['authorization']
-        token = header_value.split('Bearer ').pop()
+        _, token = header_value.split(' ')
 
         # Since the audience is set, it should use the existing token.
         assert token.encode('utf-8') == credentials.token
