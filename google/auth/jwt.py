@@ -43,12 +43,12 @@ You can also skip verification::
 import base64
 import collections
 import datetime
-import io
 import json
 
 from six.moves import urllib
 
 from google.auth import _helpers
+from google.auth import _service_account_info
 from google.auth import credentials
 from google.auth import crypt
 
@@ -314,8 +314,27 @@ class Credentials(credentials.Signing,
         self._token_lifetime = token_lifetime
 
     @classmethod
-    def from_service_account_info(cls, info, **kwargs):
+    def _from_parsed_service_account_info(cls, info, signer, **kwargs):
         """Creates a Credentials instance from parsed service account info.
+
+        Args:
+            info (Mapping[str, str]): The service account info.
+            signer (google.auth.crypt.Signer): The signer used to sign JWTs.
+            kwargs: Additional arguments to pass to the constructor.
+
+        Returns:
+            google.auth.jwt.Credentials: The constructed credentials.
+
+        Raises:
+            ValueError: If the info is not in the expected format.
+        """
+        kwargs.setdefault('subject', info['client_email'])
+        return cls(signer, issuer=info['client_email'], **kwargs)
+
+    @classmethod
+    def from_service_account_info(cls, info, **kwargs):
+        """Creates a Credentials instance from a dictionary containing service
+        account info in Google format.
 
         Args:
             info (Mapping[str, str]): The service account info in Google
@@ -328,34 +347,25 @@ class Credentials(credentials.Signing,
         Raises:
             ValueError: If the info is not in the expected format.
         """
-
-        try:
-            email = info['client_email']
-            key_id = info['private_key_id']
-            private_key = info['private_key']
-        except KeyError:
-            raise ValueError(
-                'Service account info was not in the expected format.')
-
-        signer = crypt.Signer.from_string(private_key, key_id)
-
-        kwargs.setdefault('subject', email)
-        return cls(signer, issuer=email, **kwargs)
+        info, signer = _service_account_info.from_dict(
+            info, require=['client_email'])
+        return cls._from_parsed_service_account_info(info, signer, **kwargs)
 
     @classmethod
     def from_service_account_file(cls, filename, **kwargs):
-        """Creates a Credentials instance from a service account json file.
+        """Creates a Credentials instance from a service account .json file
+        in Google format.
 
         Args:
-            filename (str): The path to the service account json file.
+            filename (str): The path to the service account .json file.
             kwargs: Additional arguments to pass to the constructor.
 
         Returns:
             google.auth.jwt.Credentials: The constructed credentials.
         """
-        with io.open(filename, 'r', encoding='utf-8') as json_file:
-            info = json.load(json_file)
-        return cls.from_service_account_info(info, **kwargs)
+        info, signer = _service_account_info.from_filename(
+            filename, require=['client_email'])
+        return cls._from_parsed_service_account_info(info, signer, **kwargs)
 
     def with_claims(self, issuer=None, subject=None, audience=None,
                     additional_claims=None):
