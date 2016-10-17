@@ -197,12 +197,16 @@ def test_roundtrip_explicit_key_id(token_factory):
 
 
 class TestCredentials:
-    service_account_email = 'service-account@example.com'
+    SERVICE_ACCOUNT_EMAIL = 'service-account@example.com'
+    SUBJECT = 'subject'
+    AUDIENCE = 'audience'
+    ADDITIONAL_CLAIMS = {'meta': 'data'}
+    credentials = None
 
     @pytest.fixture(autouse=True)
-    def credentials(self, signer):
+    def credentials_fixture(self, signer):
         self.credentials = jwt.Credentials(
-            signer, self.service_account_email)
+            signer, self.SERVICE_ACCOUNT_EMAIL)
 
     def test_from_service_account_info(self):
         with open(SERVICE_ACCOUNT_JSON_FILE, 'r') as fh:
@@ -215,20 +219,20 @@ class TestCredentials:
         assert credentials._subject == info['client_email']
 
     def test_from_service_account_info_args(self):
-        info = dict(SERVICE_ACCOUNT_INFO)
+        info = SERVICE_ACCOUNT_INFO.copy()
 
         credentials = jwt.Credentials.from_service_account_info(
-            info, subject='subject', audience='audience',
-            additional_claims={'meta': 'data'})
+            info, subject=self.SUBJECT, audience=self.AUDIENCE,
+            additional_claims=self.ADDITIONAL_CLAIMS)
 
         assert credentials._signer.key_id == info['private_key_id']
         assert credentials._issuer == info['client_email']
-        assert credentials._subject == 'subject'
-        assert credentials._audience == 'audience'
-        assert credentials._additional_claims['meta'] == 'data'
+        assert credentials._subject == self.SUBJECT
+        assert credentials._audience == self.AUDIENCE
+        assert credentials._additional_claims == self.ADDITIONAL_CLAIMS
 
-    def test_from_service_account_bad_key(self):
-        info = dict(SERVICE_ACCOUNT_INFO)
+    def test_from_service_account_bad_private_key(self):
+        info = SERVICE_ACCOUNT_INFO.copy()
         info['private_key'] = 'garbage'
 
         with pytest.raises(ValueError) as excinfo:
@@ -241,7 +245,7 @@ class TestCredentials:
             jwt.Credentials.from_service_account_info({})
 
     def test_from_service_account_file(self):
-        info = dict(SERVICE_ACCOUNT_INFO)
+        info = SERVICE_ACCOUNT_INFO.copy()
 
         credentials = jwt.Credentials.from_service_account_file(
             SERVICE_ACCOUNT_JSON_FILE)
@@ -251,17 +255,17 @@ class TestCredentials:
         assert credentials._subject == info['client_email']
 
     def test_from_service_account_file_args(self):
-        info = dict(SERVICE_ACCOUNT_INFO)
+        info = SERVICE_ACCOUNT_INFO.copy()
 
         credentials = jwt.Credentials.from_service_account_file(
-            SERVICE_ACCOUNT_JSON_FILE, subject='subject', audience='audience',
-            additional_claims={'meta': 'data'})
+            SERVICE_ACCOUNT_JSON_FILE, subject=self.SUBJECT,
+            audience=self.AUDIENCE, additional_claims=self.ADDITIONAL_CLAIMS)
 
         assert credentials._signer.key_id == info['private_key_id']
         assert credentials._issuer == info['client_email']
-        assert credentials._subject == 'subject'
-        assert credentials._audience == 'audience'
-        assert credentials._additional_claims['meta'] == 'data'
+        assert credentials._subject == self.SUBJECT
+        assert credentials._audience == self.AUDIENCE
+        assert credentials._additional_claims == self.ADDITIONAL_CLAIMS
 
     def test_default_state(self):
         assert not self.credentials.valid
@@ -271,11 +275,11 @@ class TestCredentials:
     def test_sign_bytes(self):
         to_sign = b'123'
         signature = self.credentials.sign_bytes(to_sign)
-        crypt.verify_signature(to_sign, signature, PUBLIC_CERT_BYTES)
+        assert crypt.verify_signature(to_sign, signature, PUBLIC_CERT_BYTES)
 
     def _verify_token(self, token):
         payload = jwt.decode(token, PUBLIC_CERT_BYTES)
-        assert payload['iss'] == self.service_account_email
+        assert payload['iss'] == self.SERVICE_ACCOUNT_EMAIL
         return payload
 
     def test_refresh(self):
@@ -290,8 +294,8 @@ class TestCredentials:
         assert not self.credentials.expired
 
         with mock.patch('google.auth._helpers.utcnow') as now:
-            one_day_from_now = datetime.timedelta(days=1)
-            now.return_value = self.credentials.expiry + one_day_from_now
+            one_day = datetime.timedelta(days=1)
+            now.return_value = self.credentials.expiry + one_day
             assert self.credentials.expired
 
     def test_before_request_one_time_token(self):
@@ -302,7 +306,7 @@ class TestCredentials:
             mock.Mock(), 'GET', 'http://example.com?a=1#3', headers)
 
         header_value = headers['authorization']
-        token = header_value.split().pop()
+        token = header_value.split('Bearer ').pop()
 
         # This should be a one-off token, so it shouldn't be the same as the
         # credentials' stored token.
@@ -311,25 +315,25 @@ class TestCredentials:
         payload = self._verify_token(token)
         assert payload['aud'] == 'http://example.com'
 
-    def test_before_request_set_audience(self):
+    def test_before_request_with_preset_audience(self):
         headers = {}
 
-        credentials = self.credentials.with_claims(audience='test')
+        credentials = self.credentials.with_claims(audience=self.AUDIENCE)
         credentials.refresh(None)
         credentials.before_request(
             None, 'GET', 'http://example.com?a=1#3', headers)
 
         header_value = headers['authorization']
-        token = header_value.split().pop()
+        token = header_value.split('Bearer ').pop()
 
         # Since the audience is set, it should use the existing token.
         assert token.encode('utf-8') == credentials.token
 
         payload = self._verify_token(token)
-        assert payload['aud'] == 'test'
+        assert payload['aud'] == self.AUDIENCE
 
     def test_before_request_refreshes(self):
-        credentials = self.credentials.with_claims(audience='test')
+        credentials = self.credentials.with_claims(audience=self.AUDIENCE)
         assert not credentials.valid
         credentials.before_request(
             None, 'GET', 'http://example.com?a=1#3', {})
