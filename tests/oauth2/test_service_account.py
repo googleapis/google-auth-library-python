@@ -50,9 +50,10 @@ def signer():
 class TestCredentials(object):
     SERVICE_ACCOUNT_EMAIL = 'service-account@example.com'
     TOKEN_URI = 'https://example.com/oauth2/token'
+    credentials = None
 
     @pytest.fixture(autouse=True)
-    def credentials(self, signer):
+    def credentials_fixture(self, signer):
         self.credentials = service_account.Credentials(
             signer, self.SERVICE_ACCOUNT_EMAIL, self.TOKEN_URI)
 
