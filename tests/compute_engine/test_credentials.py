@@ -22,8 +22,10 @@ from google.auth.compute_engine import credentials
 
 
 class TestCredentials(object):
+    credentials = None
+
     @pytest.fixture(autouse=True)
-    def credentials(self):
+    def credentials_fixture(self):
         self.credentials = credentials.Credentials()
 
     def test_default_state(self):
