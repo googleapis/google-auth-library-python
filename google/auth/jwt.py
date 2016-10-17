@@ -254,7 +254,7 @@ class Credentials(credentials.Signing,
 
     The constructor arguments determine the claims for the JWT that is
     sent with requests. Usually, you'll construct these credentials with
-    one of the helper constructors.
+    one of the helper constructors as shown in the next section.
 
     To create JWT credentials using a Google service account private key
     JSON file::
