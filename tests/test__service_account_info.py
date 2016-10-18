@@ -1,4 +1,4 @@
-# Copyright 2014 Google Inc.
+# Copyright 2016 Google Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -30,11 +30,7 @@ with open(SERVICE_ACCOUNT_JSON_FILE, 'r') as fh:
 
 
 def test_from_dict():
-    info, signer = _service_account_info.from_dict(SERVICE_ACCOUNT_INFO)
-
-    for key, value in six.iteritems(SERVICE_ACCOUNT_INFO):
-        assert info[key] == value
-
+    signer = _service_account_info.from_dict(SERVICE_ACCOUNT_INFO)
     assert isinstance(signer, crypt.Signer)
     assert signer.key_id == SERVICE_ACCOUNT_INFO['private_key_id']
 

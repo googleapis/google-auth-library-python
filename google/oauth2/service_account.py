@@ -148,12 +148,13 @@ class Credentials(credentials.Signing,
             self._additional_claims = {}
 
     @classmethod
-    def _from_parsed_service_account_info(cls, info, signer, **kwargs):
-        """Creates a Credentials instance from parsed service account info.
+    def _from_signer_and_info(cls, signer, info, **kwargs):
+        """Creates a Credentials instance from a signer and service account
+        info.
 
         Args:
-            info (Mapping[str, str]): The service account info.
             signer (google.auth.crypt.Signer): The signer used to sign JWTs.
+            info (Mapping[str, str]): The service account info.
             kwargs: Additional arguments to pass to the constructor.
 
         Returns:
@@ -183,9 +184,9 @@ class Credentials(credentials.Signing,
         Raises:
             ValueError: If the info is not in the expected format.
         """
-        info, signer = _service_account_info.from_dict(
+        signer = _service_account_info.from_dict(
             info, require=['client_email', 'token_uri'])
-        return cls._from_parsed_service_account_info(info, signer, **kwargs)
+        return cls._from_signer_and_info(signer, info, **kwargs)
 
     @classmethod
     def from_service_account_file(cls, filename, **kwargs):
@@ -201,7 +202,7 @@ class Credentials(credentials.Signing,
         """
         info, signer = _service_account_info.from_filename(
             filename, require=['client_email', 'token_uri'])
-        return cls._from_parsed_service_account_info(info, signer, **kwargs)
+        return cls._from_signer_and_info(signer, info, **kwargs)
 
     @property
     def requires_scopes(self):

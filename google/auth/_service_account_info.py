@@ -17,12 +17,16 @@
 import io
 import json
 
+import six
+
 from google.auth import crypt
 
 
 def from_dict(data, require=None):
-    """Validates a dictionary containing Google service account data and
-    creates a :class:`google.auth.crypt.Signer` instance.
+    """Validates a dictionary containing Google service account data.
+
+    Creates and returns a :class:`google.auth.crypt.Signer` instance from the
+    private key specified in the data.
 
     Args:
         data (Mapping[str, str]): The service account data
@@ -30,16 +34,19 @@ def from_dict(data, require=None):
             info.
 
     Returns:
-        Tuple[ Mapping[str, str], google.auth.crypt.Signer ]: The verified
-            info and a signer instance.
+        google.auth.crypt.Signer: A signer created from the private key in the
+            service account file.
 
     Raises:
         ValueError: if the data was in the wrong format, or if one of the
             required keys is missing.
     """
     # Private key is always required.
-    require = set((require or []) + ['private_key'])
-    missing = require.difference(set(data.keys()))
+    keys_needed = set(('private_key',))
+    if require is not None:
+        keys_needed.update(require)
+
+    missing = keys_needed.difference(six.iterkeys(data))
 
     if missing:
         raise ValueError(
@@ -50,7 +57,7 @@ def from_dict(data, require=None):
     signer = crypt.Signer.from_string(
         data['private_key'], data.get('private_key_id'))
 
-    return data, signer
+    return signer
 
 
 def from_filename(filename, require=None):
@@ -67,4 +74,4 @@ def from_filename(filename, require=None):
     """
     with io.open(filename, 'r', encoding='utf-8') as json_file:
         data = json.load(json_file)
-        return from_dict(data, require=require)
+        return data, from_dict(data, require=require)
