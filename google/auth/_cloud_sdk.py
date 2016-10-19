@@ -14,10 +14,10 @@
 
 """Helpers for reading the Google Cloud SDK's configuration."""
 
-import configparser
 import os
 
 import six
+from six.moves import configparser
 
 from google.auth import environment_vars
 import google.oauth2.credentials
