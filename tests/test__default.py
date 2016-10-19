@@ -39,6 +39,10 @@ with open(SERVICE_ACCOUNT_FILE) as fh:
 with open(os.path.join(DATA_DIR, 'cloud_sdk.cfg')) as fh:
     CLOUD_SDK_CONFIG_DATA = fh.read()
 
+LOAD_FILE_PATCH = mock.patch(
+    'google.auth._default._load_credentials_from_file', return_value=(
+        mock.sentinel.credentials, mock.sentinel.project_id))
+
 
 def test__load_credentials_from_file_invalid_json(tmpdir):
     jsonfile = tmpdir.join('invalid.json')
@@ -84,11 +88,6 @@ def test__load_credentials_from_file_service_account():
 @mock.patch.dict(os.environ, {}, clear=True)
 def test__get_explicit_environ_credentials_no_env():
     assert _default._get_explicit_environ_credentials() == (None, None)
-
-
-LOAD_FILE_PATCH = mock.patch(
-    'google.auth._default._load_credentials_from_file', return_value=(
-        mock.sentinel.credentials, mock.sentinel.project_id))
 
 
 @LOAD_FILE_PATCH
@@ -180,12 +179,13 @@ def test__get_gcloud_sdk_config_path_unix(
 
 @mock.patch('os.name', new='nt')
 def test__get_gcloud_sdk_config_path_windows(monkeypatch):
-    monkeypatch.setenv('APPDATA', 'appdata')
+    appdata = 'appdata'
+    monkeypatch.setenv('APPDATA', appdata)
 
     config_path = _default._get_gcloud_sdk_config_path()
 
     assert os.path.split(config_path) == (
-        'appdata', _default._CLOUDSDK_CONFIG_DIRECTORY)
+        appdata, _default._CLOUDSDK_CONFIG_DIRECTORY)
 
 
 @mock.patch('os.name', new='nt')
@@ -202,10 +202,10 @@ def test__get_gcloud_sdk_config_path_no_appdata(monkeypatch):
 @mock.patch(
     'google.auth._default._get_gcloud_sdk_project_id',
     return_value=mock.sentinel.project_id)
-@mock.patch('os.path.exists', return_value=True)
+@mock.patch('os.path.isfile', return_value=True)
 @LOAD_FILE_PATCH
 def test__get_gcloud_sdk_credentials_no_project_id(
-        mock_load, unused_mock_exists, mock_get_project_id):
+        mock_load, unused_mock_isfile, mock_get_project_id):
     mock_load.return_value = (mock.sentinel.credentials, None)
 
     credentials, project_id = _default._get_gcloud_sdk_credentials()
@@ -248,6 +248,12 @@ def test__get_gce_credentials_no_project_id(get_mock, ping_mock):
 
     assert isinstance(credentials, compute_engine.Credentials)
     assert project_id is None
+
+
+@mock.patch('google.auth.compute_engine._metadata.ping', return_value=False)
+def test__get_gce_credentials_explicit_request(ping_mock):
+    _default._get_gce_credentials(mock.sentinel.request)
+    ping_mock.assert_called_with(request=mock.sentinel.request)
 
 
 @mock.patch(

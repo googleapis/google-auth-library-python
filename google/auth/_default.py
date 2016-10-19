@@ -14,7 +14,8 @@
 
 """Application default credentials.
 
-Implementes application default credentials and project ID detection."""
+Implements application default credentials and project ID detection.
+"""
 
 import io
 import json
@@ -44,6 +45,8 @@ _GOOGLE_OAUTH2_TOKEN_ENDPOINT = 'https://accounts.google.com/o/oauth2/token'
 
 # The ~/.config subdirectory containing gcloud credentials.
 _CLOUDSDK_CONFIG_DIRECTORY = 'gcloud'
+# Windows systems store config at %APPDATA%\gcloud
+_CLOUDSDK_WINDOWS_CONFIG_ROOT_ENV_VAR = 'APPDATA'
 # The environment variable name which can replace ~/.config if set.
 _CLOUDSDK_CONFIG_ENV = 'CLOUDSDK_CONFIG'
 # The name of the file in the Cloud SDK config that contains default
@@ -104,7 +107,7 @@ def _load_credentials_from_file(filename):
         # Authorized user credentials do not contain the project ID.
         return credentials, None
 
-    if credential_type == _SERVICE_ACCOUNT_TYPE:
+    elif credential_type == _SERVICE_ACCOUNT_TYPE:
         credentials = service_account.Credentials.from_service_account_info(
             info)
         return credentials, info.get('project_id')
@@ -138,7 +141,7 @@ def _get_gcloud_sdk_project_id(config_path):
     """
     config_file = os.path.join(config_path, _CLOUDSDK_ACTIVE_CONFIG_FILENAME)
 
-    if not os.path.exists(config_file):
+    if not os.path.isfile(config_file):
         return None
 
     config = configparser.RawConfigParser()
@@ -159,8 +162,11 @@ def _get_gcloud_sdk_config_path():
     Returns:
         str: The Cloud SDK config path.
     """
-    if _CLOUDSDK_CONFIG_ENV in os.environ:
+    # If the path is explicitly set, return that.
+    try:
         return os.environ[_CLOUDSDK_CONFIG_ENV]
+    except KeyError:
+        pass
 
     # Non-windows systems store this at ~/.config/gcloud
     if os.name != 'nt':
@@ -168,10 +174,11 @@ def _get_gcloud_sdk_config_path():
             os.path.expanduser('~'), '.config', _CLOUDSDK_CONFIG_DIRECTORY)
     # Windows systems store config at %APPDATA%\gcloud
     else:
-        if 'APPDATA' in os.environ:
+        try:
             return os.path.join(
-                os.environ['APPDATA'], _CLOUDSDK_CONFIG_DIRECTORY)
-        else:
+                os.environ[_CLOUDSDK_WINDOWS_CONFIG_ROOT_ENV_VAR],
+                _CLOUDSDK_CONFIG_DIRECTORY)
+        except KeyError:
             # This should never happen unless someone is really
             # messing with things, but we'll cover the case anyway.
             drive = os.environ.get('SystemDrive', 'C:')
@@ -188,7 +195,7 @@ def _get_gcloud_sdk_credentials():
     credentials_filename = os.path.join(
         config_path, _CLOUDSDK_CREDENTIALS_FILENAME)
 
-    if not os.path.exists(credentials_filename):
+    if not os.path.isfile(credentials_filename):
         return None, None
 
     credentials, project_id = _load_credentials_from_file(
@@ -205,13 +212,15 @@ def _get_gae_credentials():
     return None, None
 
 
-def _get_gce_credentials():
+def _get_gce_credentials(request=None):
     """Gets credentials and project ID from the GCE Metadata Service."""
     # Ping requires a transport, but we want application default credentials
     # to require no arguments. So, we'll use the _http_client transport which
     # uses http.client. This is only acceptable because the metadata server
     # doesn't do SSL and never requires proxies.
-    request = google.auth.transport._http_client.Request()
+
+    if request is None:
+        request = google.auth.transport._http_client.Request()
 
     if _metadata.ping(request=request):
         # Get the project ID.
@@ -225,7 +234,7 @@ def _get_gce_credentials():
         return None, None
 
 
-def default():
+def default(request=None):
     """Gets the default credentials for the current environment.
 
     `Application Default Credentials`_ provides an easy way to obtain
@@ -234,13 +243,22 @@ def default():
     order:
 
     1. If the environment variable ``GOOGLE_APPLICATION_CREDENTIALS`` is set
-       to the path of a valid service account private key file, then it is
+       to the path of a valid service account JSON private key file, then it is
        loaded and returned. The project ID returned is the project ID defined
-       in the service account file.
-    2. If the `Google Cloud SDK`_ is installed and has credentials set via
-       ``gcloud auth application-default login`` they are loaded and returned.
-       The Project ID is the project ID configured with ``gcloud init`` or
-       ``gcloud config set project``.
+       in the service account file if available (some older files do not
+       contain project ID information).
+    2. If the `Google Cloud SDK`_ is installed and has application default
+       credentials set they are loaded and returned.
+
+       To enable application default credentials with the Cloud SDK run::
+
+            gcloud auth application-default login
+
+       If the Cloud SDK has an active project, the project ID is returned. The
+       active project can be set using::
+
+            gcloud config set project
+
     3. If the application is running in the `App Engine standard environment`_
        then the credentials and project ID from the `App Identity Service`_
        are used.
@@ -268,6 +286,12 @@ def default():
 
         credentials, project_id = google.auth.default()
 
+    Args:
+        request (google.auth.transport.Request): An object used to make
+            HTTP requests. This is used to detect whether the application
+            is running on Compute Engine. If not specified, then it will
+            use the standard library http client to make requests.
+
     Returns:
         Tuple[~google.auth.credentials.Credentials, Optional[str]]:
             the current environment's credentials and project ID. Project ID
@@ -285,7 +309,7 @@ def default():
         _get_explicit_environ_credentials,
         _get_gcloud_sdk_credentials,
         _get_gae_credentials,
-        _get_gce_credentials)
+        lambda: _get_gce_credentials(request))
 
     for checker in checkers:
         credentials, project_id = checker()
