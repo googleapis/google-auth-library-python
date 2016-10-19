@@ -20,6 +20,7 @@ import pytest
 
 from google.auth import _default
 from google.auth import compute_engine
+from google.auth import environment_vars
 from google.auth import exceptions
 from google.oauth2 import service_account
 import google.oauth2.credentials
@@ -69,13 +70,17 @@ def test__load_credentials_from_file_authorized_user():
         AUTHORIZED_USER_FILE)
     assert isinstance(credentials, google.oauth2.credentials.Credentials)
     assert project_id is None
-    assert credentials.token is None
-    assert (credentials._refresh_token ==
-            AUTHORIZED_USER_FILE_DATA['refresh_token'])
-    assert credentials._client_id == AUTHORIZED_USER_FILE_DATA['client_id']
-    assert (credentials._client_secret ==
-            AUTHORIZED_USER_FILE_DATA['client_secret'])
-    assert credentials._token_uri == _default._GOOGLE_OAUTH2_TOKEN_ENDPOINT
+
+
+def test__load_credentials_from_file_authorized_user_bad_format(tmpdir):
+    filename = tmpdir.join('authoirzed_user_bad.json')
+    filename.write(json.dumps({'type': 'authorized_user'}))
+
+    with pytest.raises(exceptions.DefaultCredentialsError) as excinfo:
+        _default._load_credentials_from_file(str(filename))
+
+    assert excinfo.match(r'Failed to load authorized user')
+    assert excinfo.match(r'missing fields')
 
 
 def test__load_credentials_from_file_service_account():
@@ -85,6 +90,17 @@ def test__load_credentials_from_file_service_account():
     assert project_id == SERVICE_ACCOUNT_FILE_DATA['project_id']
 
 
+def test__load_credentials_from_file_service_account_bad_format(tmpdir):
+    filename = tmpdir.join('serivce_account_bad.json')
+    filename.write(json.dumps({'type': 'service_account'}))
+
+    with pytest.raises(exceptions.DefaultCredentialsError) as excinfo:
+        _default._load_credentials_from_file(str(filename))
+
+    assert excinfo.match(r'Failed to load service account')
+    assert excinfo.match(r'missing fields')
+
+
 @mock.patch.dict(os.environ, {}, clear=True)
 def test__get_explicit_environ_credentials_no_env():
     assert _default._get_explicit_environ_credentials() == (None, None)
@@ -92,7 +108,7 @@ def test__get_explicit_environ_credentials_no_env():
 
 @LOAD_FILE_PATCH
 def test__get_explicit_environ_credentials(mock_load, monkeypatch):
-    monkeypatch.setenv(_default._CREDENTIALS_ENV, 'filename')
+    monkeypatch.setenv(environment_vars.CREDENTIALS, 'filename')
 
     credentials, project_id = _default._get_explicit_environ_credentials()
 
@@ -101,64 +117,35 @@ def test__get_explicit_environ_credentials(mock_load, monkeypatch):
     mock_load.assert_called_with('filename')
 
 
-def test__get_gcloud_sdk_project_id(tmpdir):
-    config_dir = tmpdir.join(
-        '.config', _default._CLOUDSDK_CONFIG_DIRECTORY)
-    config_file = config_dir.join(
-        _default._CLOUDSDK_ACTIVE_CONFIG_FILENAME)
-    config_file.write(CLOUD_SDK_CONFIG_DATA, ensure=True)
+@LOAD_FILE_PATCH
+def test__get_explicit_environ_credentials_no_project_id(
+        mock_load, monkeypatch):
+    mock_load.return_value = (mock.sentinel.credentials, None)
+    monkeypatch.setenv(environment_vars.CREDENTIALS, 'filename')
 
-    project_id = _default._get_gcloud_sdk_project_id(str(config_dir))
+    credentials, project_id = _default._get_explicit_environ_credentials()
 
-    assert project_id == 'example-project'
-
-
-def test__get_gcloud_sdk_project_id_non_existent(tmpdir):
-    project_id = _default._get_gcloud_sdk_project_id(str(tmpdir))
-    assert project_id is None
-
-
-def test__get_gcloud_sdk_project_id_bad_file(tmpdir):
-    config_dir = tmpdir.join(
-        '.config', _default._CLOUDSDK_CONFIG_DIRECTORY)
-    config_file = config_dir.join(
-        _default._CLOUDSDK_ACTIVE_CONFIG_FILENAME)
-    config_file.write('<<<badconfig', ensure=True)
-
-    project_id = _default._get_gcloud_sdk_project_id(str(config_dir))
-
-    assert project_id is None
-
-
-def test__get_gcloud_sdk_project_id_no_section(tmpdir):
-    config_dir = tmpdir.join(
-        '.config', _default._CLOUDSDK_CONFIG_DIRECTORY)
-    config_file = config_dir.join(
-        _default._CLOUDSDK_ACTIVE_CONFIG_FILENAME)
-    config_file.write('[section]', ensure=True)
-
-    project_id = _default._get_gcloud_sdk_project_id(str(config_dir))
-
+    assert credentials is mock.sentinel.credentials
     assert project_id is None
 
 
 @LOAD_FILE_PATCH
-def test__get_gcloud_sdk_credentials_explicit_path(
-        mock_load, monkeypatch, tmpdir):
-    filename = tmpdir.join(_default._CLOUDSDK_CREDENTIALS_FILENAME)
-    filename.ensure()
-    monkeypatch.setenv(_default._CLOUDSDK_CONFIG_ENV, str(tmpdir))
+@mock.patch('google.auth._cloud_sdk.get_application_default_credentials_path')
+def test__get_gcloud_sdk_credentials(
+        mock_get_adc_path, mock_load):
+    mock_get_adc_path.return_value = SERVICE_ACCOUNT_FILE
 
     credentials, project_id = _default._get_gcloud_sdk_credentials()
 
     assert credentials is mock.sentinel.credentials
     assert project_id is mock.sentinel.project_id
-    mock_load.assert_called_with(str(filename))
+    mock_load.assert_called_with(SERVICE_ACCOUNT_FILE)
 
 
-def test__get_gcloud_sdk_credentials_non_existent(monkeypatch, tmpdir):
-    tmpdir.join(_default._CLOUDSDK_CREDENTIALS_FILENAME)
-    monkeypatch.setenv(_default._CLOUDSDK_CONFIG_ENV, str(tmpdir))
+@mock.patch('google.auth._cloud_sdk.get_application_default_credentials_path')
+def test__get_gcloud_sdk_credentials_non_existent(mock_get_adc_path, tmpdir):
+    non_existent = tmpdir.join('non-existent')
+    mock_get_adc_path.return_value = str(non_existent)
 
     credentials, project_id = _default._get_gcloud_sdk_credentials()
 
@@ -166,46 +153,15 @@ def test__get_gcloud_sdk_credentials_non_existent(monkeypatch, tmpdir):
     assert project_id is None
 
 
-@mock.patch('os.path.expanduser')
-def test__get_gcloud_sdk_config_path_unix(
-        mock_expanduser):
-    mock_expanduser.side_effect = lambda path: path
-
-    config_path = _default._get_gcloud_sdk_config_path()
-
-    assert os.path.split(config_path) == (
-        '~/.config', _default._CLOUDSDK_CONFIG_DIRECTORY)
-
-
-@mock.patch('os.name', new='nt')
-def test__get_gcloud_sdk_config_path_windows(monkeypatch):
-    appdata = 'appdata'
-    monkeypatch.setenv('APPDATA', appdata)
-
-    config_path = _default._get_gcloud_sdk_config_path()
-
-    assert os.path.split(config_path) == (
-        appdata, _default._CLOUDSDK_CONFIG_DIRECTORY)
-
-
-@mock.patch('os.name', new='nt')
-def test__get_gcloud_sdk_config_path_no_appdata(monkeypatch):
-    monkeypatch.delenv('APPDATA', raising=False)
-    monkeypatch.setenv('SystemDrive', 'G:')
-
-    config_path = _default._get_gcloud_sdk_config_path()
-
-    assert os.path.split(config_path) == (
-        'G:/\\', _default._CLOUDSDK_CONFIG_DIRECTORY)
-
-
 @mock.patch(
-    'google.auth._default._get_gcloud_sdk_project_id',
+    'google.auth._cloud_sdk.get_project_id',
     return_value=mock.sentinel.project_id)
 @mock.patch('os.path.isfile', return_value=True)
 @LOAD_FILE_PATCH
-def test__get_gcloud_sdk_credentials_no_project_id(
+def test__get_gcloud_sdk_credentials_project_id(
         mock_load, unused_mock_isfile, mock_get_project_id):
+    # Don't return a project ID from load file, make the function check
+    # the Cloud SDK project.
     mock_load.return_value = (mock.sentinel.credentials, None)
 
     credentials, project_id = _default._get_gcloud_sdk_credentials()
@@ -213,6 +169,23 @@ def test__get_gcloud_sdk_credentials_no_project_id(
     assert credentials == mock.sentinel.credentials
     assert project_id == mock.sentinel.project_id
     assert mock_get_project_id.called
+
+
+@mock.patch(
+    'google.auth._cloud_sdk.get_project_id',
+    return_value=None)
+@mock.patch('os.path.isfile', return_value=True)
+@LOAD_FILE_PATCH
+def test__get_gcloud_sdk_credentials_no_project_id(
+        mock_load, unused_mock_isfile, mock_get_project_id):
+    # Don't return a project ID from load file, make the function check
+    # the Cloud SDK project.
+    mock_load.return_value = (mock.sentinel.credentials, None)
+
+    credentials, project_id = _default._get_gcloud_sdk_credentials()
+
+    assert credentials == mock.sentinel.credentials
+    assert project_id is None
 
 
 def test__get_gae_credentials():
@@ -268,7 +241,7 @@ def test_default_early_out(get_mock):
     'google.auth._default._get_explicit_environ_credentials',
     return_value=(mock.sentinel.credentials, mock.sentinel.project_id))
 def test_default_explict_project_id(get_mock, monkeypatch):
-    monkeypatch.setenv(_default._PROJECT_ENV, 'explicit-env')
+    monkeypatch.setenv(environment_vars.PROJECT, 'explicit-env')
     assert _default.default() == (
         mock.sentinel.credentials, 'explicit-env')
 

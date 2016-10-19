@@ -19,53 +19,32 @@ Implements application default credentials and project ID detection.
 
 import io
 import json
+import logging
 import os
 
-from six.moves import configparser
-
+from google.auth import _cloud_sdk
 from google.auth import compute_engine
+from google.auth import environment_vars
 from google.auth import exceptions
 from google.auth.compute_engine import _metadata
 import google.auth.transport._http_client
 from google.oauth2 import service_account
 import google.oauth2.credentials
 
-# Environment variable for explicit application default credentials and project
-# ID.
-_CREDENTIALS_ENV = 'GOOGLE_APPLICATION_CREDENTIALS'
-_PROJECT_ENV = 'GCLOUD_PROJECT'
+_LOGGER = logging.getLogger(__name__)
 
 # Valid types accepted for file-based credentials.
 _AUTHORIZED_USER_TYPE = 'authorized_user'
 _SERVICE_ACCOUNT_TYPE = 'service_account'
 _VALID_TYPES = (_AUTHORIZED_USER_TYPE, _SERVICE_ACCOUNT_TYPE)
 
-# The Google OAuth 2.0 token endpoint. Used for authorized user credentials.
-_GOOGLE_OAUTH2_TOKEN_ENDPOINT = 'https://accounts.google.com/o/oauth2/token'
-
-# The ~/.config subdirectory containing gcloud credentials.
-_CLOUDSDK_CONFIG_DIRECTORY = 'gcloud'
-# Windows systems store config at %APPDATA%\gcloud
-_CLOUDSDK_WINDOWS_CONFIG_ROOT_ENV_VAR = 'APPDATA'
-# The environment variable name which can replace ~/.config if set.
-_CLOUDSDK_CONFIG_ENV = 'CLOUDSDK_CONFIG'
-# The name of the file in the Cloud SDK config that contains default
-# credentials.
-_CLOUDSDK_CREDENTIALS_FILENAME = 'application_default_credentials.json'
-# The name of the file in the Cloud SDK config that contains the
-# active configuration.
-_CLOUDSDK_ACTIVE_CONFIG_FILENAME = os.path.join(
-    'configurations', 'config_default')
-# The config section and key for the project ID in the cloud SDK config.
-_CLOUDSDK_PROJECT_CONFIG_SECTION = 'core'
-_CLOUDSDK_PROJECT_CONFIG_KEY = 'project'
-
 # Help message when no credentials can be found.
-_HELP_MESSAGE = (
-    'Could not automatically determine credentials. Please set {env} or '
-    'explicitly create credential and re-run the application. For more '
-    'information, please see https://developers.google.com/accounts/docs'
-    '/application-default-credentials.'.format(env=_CREDENTIALS_ENV))
+_HELP_MESSAGE = """
+Could not automatically determine credentials. Please set {env} or '
+explicitly create credential and re-run the application. For more '
+information, please see '
+'https://developers.google.com/accounts/docs/application-default-credentials.
+""".format(env=environment_vars.CREDENTIALS).strip()
 
 
 def _load_credentials_from_file(filename):
@@ -98,18 +77,23 @@ def _load_credentials_from_file(filename):
     credential_type = info.get('type')
 
     if credential_type == _AUTHORIZED_USER_TYPE:
-        credentials = google.oauth2.credentials.Credentials(
-            None,
-            refresh_token=info['refresh_token'],
-            token_uri=_GOOGLE_OAUTH2_TOKEN_ENDPOINT,
-            client_id=info['client_id'],
-            client_secret=info['client_secret'])
+        try:
+            credentials = _cloud_sdk.load_authorized_user_credentials(info)
+        except ValueError as exc:
+            raise exceptions.DefaultCredentialsError(
+                'Failed to load authorized user credentials from {}'.format(
+                    filename), exc)
         # Authorized user credentials do not contain the project ID.
         return credentials, None
 
     elif credential_type == _SERVICE_ACCOUNT_TYPE:
-        credentials = service_account.Credentials.from_service_account_info(
-            info)
+        try:
+            credentials = (
+                service_account.Credentials.from_service_account_info(info))
+        except ValueError as exc:
+            raise exceptions.DefaultCredentialsError(
+                'Failed to load service account credentials from {}'.format(
+                    filename), exc)
         return credentials, info.get('project_id')
 
     else:
@@ -119,81 +103,11 @@ def _load_credentials_from_file(filename):
                 file=filename, type=credential_type, valid_types=_VALID_TYPES))
 
 
-def _get_explicit_environ_credentials():
-    """Gets credentials from the GOOGLE_APPLICATION_CREDENTIALS environment
-    variable."""
-    explicit_file = os.environ.get(_CREDENTIALS_ENV)
-    if explicit_file is not None:
-        return _load_credentials_from_file(os.environ[_CREDENTIALS_ENV])
-    else:
-        return None, None
-
-
-def _get_gcloud_sdk_project_id(config_path):
-    """Gets the project ID from the Cloud SDK's configuration.
-
-    Args:
-        config_path (str): The path to the Cloud SDK's config directory,
-            for example ``~/.config/gcloud``.
-
-    Returns:
-        Optional[str]: The project ID.
-    """
-    config_file = os.path.join(config_path, _CLOUDSDK_ACTIVE_CONFIG_FILENAME)
-
-    if not os.path.isfile(config_file):
-        return None
-
-    config = configparser.RawConfigParser()
-
-    try:
-        config.read(config_file)
-    except configparser.Error:
-        return None
-
-    if config.has_section(_CLOUDSDK_PROJECT_CONFIG_SECTION):
-        return config.get(
-            _CLOUDSDK_PROJECT_CONFIG_SECTION, _CLOUDSDK_PROJECT_CONFIG_KEY)
-
-
-def _get_gcloud_sdk_config_path():
-    """Returns the absolute path the the Cloud SDK's configuration directory.
-
-    Returns:
-        str: The Cloud SDK config path.
-    """
-    # If the path is explicitly set, return that.
-    try:
-        return os.environ[_CLOUDSDK_CONFIG_ENV]
-    except KeyError:
-        pass
-
-    # Non-windows systems store this at ~/.config/gcloud
-    if os.name != 'nt':
-        return os.path.join(
-            os.path.expanduser('~'), '.config', _CLOUDSDK_CONFIG_DIRECTORY)
-    # Windows systems store config at %APPDATA%\gcloud
-    else:
-        try:
-            return os.path.join(
-                os.environ[_CLOUDSDK_WINDOWS_CONFIG_ROOT_ENV_VAR],
-                _CLOUDSDK_CONFIG_DIRECTORY)
-        except KeyError:
-            # This should never happen unless someone is really
-            # messing with things, but we'll cover the case anyway.
-            drive = os.environ.get('SystemDrive', 'C:')
-            return os.path.join(
-                drive, '\\', _CLOUDSDK_CONFIG_DIRECTORY)
-
-
 def _get_gcloud_sdk_credentials():
     """Gets the credentials and project ID from the Cloud SDK."""
-    # Get the Cloud SDK's configuration path.
-    config_path = _get_gcloud_sdk_config_path()
-
-    # Check the config path for the credentials file.
-    credentials_filename = os.path.join(
-        config_path, _CLOUDSDK_CREDENTIALS_FILENAME)
+    # Check if application default credentials exist.
+    credentials_filename = (
+        _cloud_sdk.get_application_default_credentials_path())
 
     if not os.path.isfile(credentials_filename):
         return None, None
@@ -202,9 +116,36 @@ def _get_gcloud_sdk_credentials():
         credentials_filename)
 
     if not project_id:
-        project_id = _get_gcloud_sdk_project_id(config_path)
+        project_id = _cloud_sdk.get_project_id()
+
+    if not project_id:
+        _LOGGER.warning(
+            'No project ID could be determined from the Cloud SDK '
+            'configuration. Consider running `gcloud config set project` or '
+            'setting the %s environment variable', environment_vars.PROJECT)
 
     return credentials, project_id
+
+
+def _get_explicit_environ_credentials():
+    """Gets credentials from the GOOGLE_APPLICATION_CREDENTIALS environment
+    variable."""
+    explicit_file = os.environ.get(environment_vars.CREDENTIALS)
+
+    if explicit_file is not None:
+        credentials, project_id = _load_credentials_from_file(
+            os.environ[environment_vars.CREDENTIALS])
+
+        if not project_id:
+            _LOGGER.warning(
+                'No project ID could be determined from the credentials at %s '
+                'Consider setting the %s environment variable',
+                environment_vars.CREDENTIALS, environment_vars.PROJECT)
+
+        return credentials, project_id
+
+    else:
+        return None, None
 
 
 def _get_gae_credentials():
@@ -227,6 +168,10 @@ def _get_gce_credentials(request=None):
         try:
             project_id = _metadata.get(request, 'project/project-id')
         except exceptions.TransportError:
+            _LOGGER.warning(
+                'No project ID could be determined from the Compute Engine '
+                'metadata service. Consider setting the %s environment '
+                'variable.', environment_vars.PROJECT)
             project_id = None
 
         return compute_engine.Credentials(), project_id
@@ -303,7 +248,7 @@ def default(request=None):
             If no credentials were found, or if the credentials found were
             invalid.
     """
-    explicit_project_id = os.environ.get(_PROJECT_ENV)
+    explicit_project_id = os.environ.get(environment_vars.PROJECT)
 
     checkers = (
         _get_explicit_environ_credentials,
