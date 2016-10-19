@@ -12,11 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Environment variables used by google.auth."""
+"""Environment variables used by :mod:`google.auth`."""
 
 
 PROJECT = 'GOOGLE_CLOUD_PROJECT'
-"""Environment variable defining default project."""
+"""Environment variable defining default project.
+
+This used by :func:`google.auth.default` to explicitly set a project ID. This
+environment variable is also used by the Google Cloud Python Library.
+"""
 
 CREDENTIALS = 'GOOGLE_APPLICATION_CREDENTIALS'
 """Environment variable defining the location of Google application default

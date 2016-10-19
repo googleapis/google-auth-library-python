@@ -73,7 +73,7 @@ def test__load_credentials_from_file_authorized_user():
 
 
 def test__load_credentials_from_file_authorized_user_bad_format(tmpdir):
-    filename = tmpdir.join('authoirzed_user_bad.json')
+    filename = tmpdir.join('authorized_user_bad.json')
     filename.write(json.dumps({'type': 'authorized_user'}))
 
     with pytest.raises(exceptions.DefaultCredentialsError) as excinfo:
