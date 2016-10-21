@@ -35,7 +35,7 @@ setup(
     description='Google Authentication Library',
     long_description=long_description,
     url='https://github.com/GoogleCloudPlatform/google-auth-library-python',
-    modules=['google_auth_httplib2'],
+    py_modules=['google_auth_httplib2'],
     install_requires=DEPENDENCIES,
     license='Apache 2.0',
     keywords='google auth oauth client',

@@ -27,6 +27,6 @@ You can install using `pip`_::
 License
 -------
 
-Apache 2.0 - See `LICENSE`_ for more information.
+Apache 2.0 - See `the LICENSE`_ for more information.
 
-.. _LICENSE: https://github.com/GoogleCloudPlatform/google-auth-library-python/blob/master/LICENSE
+.. _the LICENSE: https://github.com/GoogleCloudPlatform/google-auth-library-python/blob/master/LICENSE
