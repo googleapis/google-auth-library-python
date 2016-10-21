@@ -17,8 +17,8 @@ import mock
 import six
 from six.moves import http_client
 
-import google.auth.transport._httplib2
-from tests.transport import compliance
+import google_auth_httplib2
+from tests import compliance
 
 
 class MockHttp(object):
@@ -45,12 +45,12 @@ class MockResponse(object):
 class TestRequestResponse(compliance.RequestResponseTests):
     def make_request(self):
         http = httplib2.Http()
-        return google.auth.transport._httplib2.Request(http)
+        return google_auth_httplib2.Request(http)
 
     def test_timeout(self):
         url = 'http://example.com'
         http = MockHttp(responses=[MockResponse()])
-        request = google.auth.transport._httplib2.Request(http)
+        request = google_auth_httplib2.Request(http)
         request(url=url, method='GET', timeout=5)
 
         assert http.requests[0] == (
@@ -58,7 +58,7 @@ class TestRequestResponse(compliance.RequestResponseTests):
 
 
 def test__make_default_http():
-    http = google.auth.transport._httplib2._make_default_http()
+    http = google_auth_httplib2._make_default_http()
     assert isinstance(http, httplib2.Http)
 
 
@@ -80,7 +80,7 @@ class TestAuthorizedHttp(object):
     TEST_URL = 'http://example.com'
 
     def test_authed_http_defaults(self):
-        authed_http = google.auth.transport._httplib2.AuthorizedHttp(
+        authed_http = google_auth_httplib2.AuthorizedHttp(
             mock.sentinel.credentials)
 
         assert authed_http.credentials == mock.sentinel.credentials
@@ -91,7 +91,7 @@ class TestAuthorizedHttp(object):
         mock_response = MockResponse()
         mock_http = MockHttp([mock_response])
 
-        authed_http = google.auth.transport._httplib2.AuthorizedHttp(
+        authed_http = google_auth_httplib2.AuthorizedHttp(
             mock_credentials, http=mock_http)
 
         response, data = authed_http.request(self.TEST_URL)
@@ -111,7 +111,7 @@ class TestAuthorizedHttp(object):
             MockResponse(status=http_client.UNAUTHORIZED),
             mock_final_response])
 
-        authed_http = google.auth.transport._httplib2.AuthorizedHttp(
+        authed_http = google_auth_httplib2.AuthorizedHttp(
             mock_credentials, http=mock_http)
 
         response, data = authed_http.request(self.TEST_URL)
@@ -135,7 +135,7 @@ class TestAuthorizedHttp(object):
         body = six.StringIO('body')
         body.seek(1)
 
-        authed_http = google.auth.transport._httplib2.AuthorizedHttp(
+        authed_http = google_auth_httplib2.AuthorizedHttp(
             mock_credentials, http=mock_http)
 
         response, data = authed_http.request(

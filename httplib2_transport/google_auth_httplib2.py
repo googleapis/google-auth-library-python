@@ -12,16 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Transport adapter for urllib3."""
+"""Transport adapter for httplib2."""
 
 from __future__ import absolute_import
 
 import logging
 
-import httplib2
-
 from google.auth import exceptions
 from google.auth import transport
+import httplib2
+
 
 _LOGGER = logging.getLogger(__name__)
 # Properties present in file-like streams / buffers.
@@ -41,14 +41,17 @@ class _Response(transport.Response):
 
     @property
     def status(self):
+        """int: The HTTP status code."""
         return self._response.status
 
     @property
     def headers(self):
-        return self._response
+        """Mapping[str, str]: The HTTP response headers."""
+        return dict(self._response)
 
     @property
     def data(self):
+        """bytes: The response body."""
         return self._data
 
 
@@ -93,7 +96,7 @@ class Request(transport.Request):
                 response from the server. This is ignored by httplib2 and will
                 issue a warning.
             kwargs: Additional arguments passed throught to the underlying
-                httplib2 :meth:`request` method.
+                :meth:`httplib2.Http.request` method.
 
         Returns:
             google.auth.transport.Response: The HTTP response.
@@ -117,6 +120,7 @@ class Request(transport.Request):
 
 
 def _make_default_http():
+    """Returns a default httplib2.Http instance."""
     return httplib2.Http()
 
 
@@ -134,28 +138,28 @@ class AuthorizedHttp(object):
             'https://www.googleapis.com/storage/v1/b')
 
     This class implements :meth:`request` in the same way as
-    :class:`httplib2.Http` and can be usually be used just like any other
+    :class:`httplib2.Http` and can usually be used just like any other
     instance of :class:``httplib2.Http`.
 
     The underlying :meth:`request` implementation handles adding the
     credentials' headers to the request and refreshing credentials as needed.
-
-    Args:
-        credentials (google.auth.credentials.Credentials): The credentials to
-            add to the request.
-        http (httplib2.Http): The underlying HTTP object to
-            use to make requests. If not specified, a
-            :class:`httplib2.Http` instance will be constructed with
-            sane defaults.
-        refresh_status_codes (Sequence[int]): Which HTTP status codes indicate
-            that credentials should be refreshed and the request should be
-            retried.
-        max_refresh_attempts (int): The maximum number of times to attempt to
-            refresh the credentials and retry the request.
     """
     def __init__(self, credentials, http=None,
                  refresh_status_codes=transport.DEFAULT_REFRESH_STATUS_CODES,
                  max_refresh_attempts=transport.DEFAULT_MAX_REFRESH_ATTEMPTS):
+        """
+        Args:
+            credentials (google.auth.credentials.Credentials): The credentials
+                to add to the request.
+            http (httplib2.Http): The underlying HTTP object to
+                use to make requests. If not specified, a
+                :class:`httplib2.Http` instance will be constructed.
+            refresh_status_codes (Sequence[int]): Which HTTP status codes
+                indicate that credentials should be refreshed and the request
+                should be retried.
+            max_refresh_attempts (int): The maximum number of times to attempt
+                to refresh the credentials and retry the request.
+        """
 
         if http is None:
             http = _make_default_http()
