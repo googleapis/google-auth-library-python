@@ -3,7 +3,6 @@ branch = True
 
 [report]
 omit =
-    */samples/*
     */conftest.py
 exclude_lines =
     # Re-enable the standard pragma

@@ -5,11 +5,12 @@ Httplib2 Transport for Google Auth
 
 This library provides an `httplib2`_ transport for `google-auth`_.
 
-.. note:: Httplib2 has lots of problems. Using it is highly discouraged. This
-    library is intended to help existing users of oauth2client migrate to
-    google-auth.
+.. note:: ``httplib`` has lots of problems such as lack of threadsafety and
+    and insecure usage of TLS. Using it is highly discouraged. This
+    library is intended to help existing users of ``oauth2client`` migrate to
+    ``google-auth``.
 
-.. |pypi| image:: https://img.shields.io/pypi/v//google-auth.svg
+.. |pypi| image:: https://img.shields.io/pypi/v/google-auth-httplib2.svg
    :target: https://pypi.python.org/pypi/google-auth-httplib2
 
 .. _httplib2: https://github.com/httplib2/httplib2
