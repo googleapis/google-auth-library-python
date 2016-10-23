@@ -28,7 +28,6 @@ from google.auth import _helpers
 from google.auth import credentials
 from google.auth import exceptions
 
-
 try:
     from google.appengine.api import app_identity
 except ImportError:
@@ -39,7 +38,7 @@ class Credentials(credentials.Scoped, credentials.Signing,
                   credentials.Credentials):
     """App Engine standard environment credentials.
 
-    These credentials use the App Engine App Idenity API to obtain access
+    These credentials use the App Engine App Identity API to obtain access
     tokens.
     """
 
@@ -50,7 +49,7 @@ class Credentials(credentials.Scoped, credentials.Signing,
                 API.
             service_account_id (str): The service account ID passed into
                 :func:`google.appengine.api.app_identity.get_access_token`.
-                This is not required as the default application service account
+                If not specified, the default application service account
                 ID will be used.
         """
         super(Credentials, self).__init__()
@@ -68,7 +67,7 @@ class Credentials(credentials.Scoped, credentials.Signing,
                 not available.
         """
         # pylint: disable=unused-argument
-        if not app_identity:
+        if app_identity is None:
             raise exceptions.RefreshError(
                 'The App Engine APIs are not available.')
 
@@ -85,7 +84,7 @@ class Credentials(credentials.Scoped, credentials.Signing,
         Returns:
             bool: True if there are no scopes set otherwise False.
         """
-        return True if not self._scopes else False
+        return not self._scopes
 
     @_helpers.copy_docstring(credentials.Scoped)
     def with_scopes(self, scopes):
@@ -104,7 +103,7 @@ class Credentials(credentials.Scoped, credentials.Signing,
         Raises:
             EnvironmentError: If the App Engine APIs are unavailable.
         """
-        if not app_identity:
+        if app_identity is None:
             raise EnvironmentError('The App Engine APIs are not available.')
 
         return app_identity.sign_blob(message)

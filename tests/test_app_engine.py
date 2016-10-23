@@ -13,48 +13,25 @@
 # limitations under the License.
 
 import datetime
-import sys
 
 import mock
 import pytest
-from six.moves import reload_module
 
+from google.auth import app_engine
 from google.auth import exceptions
 
 
 @pytest.fixture
 def app_identity_mock(monkeypatch):
-    """Mocks the google.appengine.api.app_identity module."""
-    api_mock = mock.Mock()
-    app_identity_mock = api_mock.app_identity
-
-    monkeypatch.setitem(
-        sys.modules, 'google.appengine', mock.Mock())
-    monkeypatch.setitem(
-        sys.modules, 'google.appengine.api', api_mock)
-
-    from google.appengine.api import app_identity
-    assert app_identity == app_identity_mock
-
+    """Mocks the app_identity module for google.auth.app_engine."""
+    app_identity_mock = mock.Mock()
+    monkeypatch.setattr(
+        app_engine, 'app_identity', app_identity_mock)
     yield app_identity_mock
 
 
-@pytest.fixture
-def app_engine(app_identity_mock):
-    from google.auth import app_engine
-    reload_module(app_engine)
-    yield app_engine
-
-
-@pytest.fixture
-def app_engine_no_apis():
-    from google.auth import app_engine
-    reload_module(app_engine)
-    yield app_engine
-
-
 class TestCredentials(object):
-    def test_default_state(self, app_engine):
+    def test_default_state(self):
         credentials = app_engine.Credentials()
 
         # Not token acquired yet
@@ -65,7 +42,7 @@ class TestCredentials(object):
         assert not credentials.scopes
         assert credentials.requires_scopes
 
-    def test_with_scopes(self, app_engine):
+    def test_with_scopes(self):
         credentials = app_engine.Credentials()
 
         assert not credentials.scopes
@@ -79,10 +56,10 @@ class TestCredentials(object):
     @mock.patch(
         'google.auth._helpers.utcnow',
         return_value=datetime.datetime.min)
-    def test_refresh(self, now_mock, app_engine, app_identity_mock):
+    def test_refresh(self, now_mock, app_identity_mock):
         token = 'token'
         ttl = 100
-        app_identity_mock.get_access_token.return_value = (token, ttl)
+        app_identity_mock.get_access_token.return_value = token, ttl
         credentials = app_engine.Credentials(scopes=['email'])
 
         credentials.refresh(None)
@@ -95,13 +72,13 @@ class TestCredentials(object):
         assert credentials.valid
         assert not credentials.expired
 
-    def test_refresh_failure(self, app_engine_no_apis):
+    def test_refresh_failure(self):
         with pytest.raises(exceptions.RefreshError) as excinfo:
-            app_engine_no_apis.Credentials().refresh(None)
+            app_engine.Credentials().refresh(None)
 
         assert excinfo.match(r'App Engine APIs are not available')
 
-    def test_sign_bytes(self, app_engine, app_identity_mock):
+    def test_sign_bytes(self, app_identity_mock):
         app_identity_mock.sign_blob.return_value = mock.sentinel.signature
         credentials = app_engine.Credentials()
         to_sign = b'123'
@@ -111,8 +88,8 @@ class TestCredentials(object):
         assert signature == mock.sentinel.signature
         app_identity_mock.sign_blob.assert_called_with(to_sign)
 
-    def test_sign_bytes_failure(self, app_engine_no_apis):
+    def test_sign_bytes_failure(self):
         with pytest.raises(EnvironmentError) as excinfo:
-            app_engine_no_apis.Credentials().sign_bytes(b'123')
+            app_engine.Credentials().sign_bytes(b'123')
 
         assert excinfo.match(r'App Engine APIs are not available')
