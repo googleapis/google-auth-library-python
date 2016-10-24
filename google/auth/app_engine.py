@@ -26,7 +26,6 @@ import datetime
 
 from google.auth import _helpers
 from google.auth import credentials
-from google.auth import exceptions
 
 try:
     from google.appengine.api import app_identity
@@ -51,26 +50,21 @@ class Credentials(credentials.Scoped, credentials.Signing,
                 :func:`google.appengine.api.app_identity.get_access_token`.
                 If not specified, the default application service account
                 ID will be used.
+
+        Raises:
+            EnvironmentError: If the App Engine APIs are unavailable.
         """
+        if app_identity is None:
+            raise EnvironmentError(
+                'The App Engine APIs are not available.')
+
         super(Credentials, self).__init__()
         self._scopes = scopes
         self._service_account_id = service_account_id
 
+    @_helpers.copy_docstring(credentials.Credentials)
     def refresh(self, request):
-        """Refresh the access token and scopes.
-
-        Args:
-            request (google.auth.transport.Request): Unused.
-
-        Raises:
-            google.auth.exceptions.RefreshError: If the App Engine APIs are
-                not available.
-        """
         # pylint: disable=unused-argument
-        if app_identity is None:
-            raise exceptions.RefreshError(
-                'The App Engine APIs are not available.')
-
         token, ttl = app_identity.get_access_token(
             self._scopes, self._service_account_id)
         expiry = _helpers.utcnow() + datetime.timedelta(seconds=ttl)
@@ -91,19 +85,6 @@ class Credentials(credentials.Scoped, credentials.Signing,
         return Credentials(
             scopes=scopes, service_account_id=self._service_account_id)
 
+    @_helpers.copy_docstring(credentials.Signing)
     def sign_bytes(self, message):
-        """Signs the given message.
-
-        Args:
-            message (bytes): The message to sign.
-
-        Returns:
-            bytes: The message's cryptographic signature.
-
-        Raises:
-            EnvironmentError: If the App Engine APIs are unavailable.
-        """
-        if app_identity is None:
-            raise EnvironmentError('The App Engine APIs are not available.')
-
         return app_identity.sign_blob(message)

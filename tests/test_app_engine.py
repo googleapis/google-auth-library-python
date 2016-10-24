@@ -18,7 +18,6 @@ import mock
 import pytest
 
 from google.auth import app_engine
-from google.auth import exceptions
 
 
 @pytest.fixture
@@ -31,7 +30,13 @@ def app_identity_mock(monkeypatch):
 
 
 class TestCredentials(object):
-    def test_default_state(self):
+    def test_missing_apis(self):
+        with pytest.raises(EnvironmentError) as excinfo:
+            app_engine.Credentials()
+
+        assert excinfo.match(r'App Engine APIs are not available')
+
+    def test_default_state(self, app_identity_mock):
         credentials = app_engine.Credentials()
 
         # Not token acquired yet
@@ -42,7 +47,7 @@ class TestCredentials(object):
         assert not credentials.scopes
         assert credentials.requires_scopes
 
-    def test_with_scopes(self):
+    def test_with_scopes(self, app_identity_mock):
         credentials = app_engine.Credentials()
 
         assert not credentials.scopes
@@ -72,12 +77,6 @@ class TestCredentials(object):
         assert credentials.valid
         assert not credentials.expired
 
-    def test_refresh_failure(self):
-        with pytest.raises(exceptions.RefreshError) as excinfo:
-            app_engine.Credentials().refresh(None)
-
-        assert excinfo.match(r'App Engine APIs are not available')
-
     def test_sign_bytes(self, app_identity_mock):
         app_identity_mock.sign_blob.return_value = mock.sentinel.signature
         credentials = app_engine.Credentials()
@@ -87,9 +86,3 @@ class TestCredentials(object):
 
         assert signature == mock.sentinel.signature
         app_identity_mock.sign_blob.assert_called_with(to_sign)
-
-    def test_sign_bytes_failure(self):
-        with pytest.raises(EnvironmentError) as excinfo:
-            app_engine.Credentials().sign_bytes(b'123')
-
-        assert excinfo.match(r'App Engine APIs are not available')
