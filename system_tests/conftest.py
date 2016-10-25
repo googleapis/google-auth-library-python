@@ -18,11 +18,12 @@ import os
 from google.auth import _helpers
 import google.auth.transport.urllib3
 import pytest
+import urllib3
 
 
 HERE = os.path.dirname(__file__)
 DATA_DIR = os.path.join(HERE, 'data')
-HTTP = google.auth.transport.urllib3._make_default_http()
+HTTP = urllib3.PoolManager()
 TOKEN_INFO_URL = 'https://www.googleapis.com/oauth2/v3/tokeninfo'
 
 
@@ -62,7 +63,7 @@ def token_info(request):
 
 def verify_environment():
     """Checks to make sure that requisite data files are available."""
-    if not os.path.exists(DATA_DIR):
+    if not os.path.isdir(DATA_DIR):
         raise EnvironmentError(
             'In order to run system tests, test data must exist in '
             'system_tests/data. See CONTRIBUTING.rst for details.')
