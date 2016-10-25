@@ -12,10 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import pytest
+
 from google.auth import _helpers
 from google.auth import exceptions
 from google.oauth2 import service_account
-import pytest
 
 
 @pytest.fixture

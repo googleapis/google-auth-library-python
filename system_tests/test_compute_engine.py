@@ -12,10 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import pytest
+
 from google.auth import _helpers
 from google.auth import compute_engine
 from google.auth.compute_engine import _metadata
-import pytest
 
 
 @pytest.fixture(autouse=True)
