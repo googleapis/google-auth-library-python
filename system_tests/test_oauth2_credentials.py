@@ -15,7 +15,7 @@
 import json
 
 from google.auth import _helpers
-from google.oauth2 import credentials
+import google.oauth2.credentials
 
 GOOGLE_OAUTH2_TOKEN_ENDPOINT = 'https://accounts.google.com/o/oauth2/token'
 
@@ -24,7 +24,7 @@ def test_refresh(authorized_user_file, request, token_info):
     with open(authorized_user_file, 'r') as fh:
         info = json.load(fh)
 
-    return credentials.Credentials(
+    credentials = google.oauth2.credentials.Credentials(
         None,  # No access token, must be refreshed.
         refresh_token=info['refresh_token'],
         token_uri=GOOGLE_OAUTH2_TOKEN_ENDPOINT,
