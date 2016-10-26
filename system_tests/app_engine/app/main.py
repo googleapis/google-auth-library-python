@@ -13,31 +13,42 @@
 # limitations under the License.
 
 import contextlib
+import json
 import sys
 from StringIO import StringIO
 import traceback
 
 from google.appengine.api import app_identity
 import google.auth
+from google.auth import _helpers
 from google.auth import app_engine
 import google.auth.transport.urllib3
 import urllib3.contrib.appengine
 import webapp2
 
-
-http = urllib3.contrib.appengine.AppEngineManager()
-http_request = google.auth.transport.urllib3.Request(http)
+TOKEN_INFO_URL = 'https://www.googleapis.com/oauth2/v3/tokeninfo'
+EMAIL_SCOPE = 'https://www.googleapis.com/auth/userinfo.email'
+HTTP = urllib3.contrib.appengine.AppEngineManager()
+HTTP_REQUEST = google.auth.transport.urllib3.Request(HTTP)
 
 
 def test_credentials():
     credentials = app_engine.Credentials()
-    scoped_credentials = credentials.with_scopes([
-        'https://www.googleapis.com/auth/userinfo.email'])
+    scoped_credentials = credentials.with_scopes([EMAIL_SCOPE])
 
     scoped_credentials.refresh(None)
 
     assert scoped_credentials.valid
     assert scoped_credentials.token is not None
+
+    # Get token info and verify scope
+    url = _helpers.update_query(TOKEN_INFO_URL, {
+        'access_token': scoped_credentials.token
+    })
+    response = HTTP_REQUEST(url=url, method='GET')
+    token_info = json.loads(response.data.decode('utf-8'))
+
+    assert token_info['scope'] == EMAIL_SCOPE
 
 
 def test_default():
