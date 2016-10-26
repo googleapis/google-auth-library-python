@@ -94,8 +94,8 @@ def _get_active_config(config_path):
     if not os.path.isfile(active_config_filename):
         return 'default'
 
-    with io.open(active_config_filename, 'r', encoding='utf-8') as fh:
-        active_config_name = fh.read().strip()
+    with io.open(active_config_filename, 'r', encoding='utf-8') as file_obj:
+        active_config_name = file_obj.read().strip()
 
     return active_config_name
 
