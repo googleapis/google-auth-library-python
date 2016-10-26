@@ -12,8 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""This program obtains a set of user credentials needed by the system tests
-for google.oauth2.credentials."""
+"""This program obtains a set of user credentials.
+
+These credentials are needed to run the system test for OAuth2 credentials.
+It's expected that a developer will run this program manually once to obtain
+a refresh token. It's highly recommended to use a Google account created
+specifically created for testing.
+"""
 
 import json
 import os
