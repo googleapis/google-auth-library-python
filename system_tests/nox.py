@@ -91,9 +91,9 @@ def setup_cloud_sdk():
 
 def gcloud(*args, **kwargs):
     """Calls the Cloud SDK CLI."""
-    bin = str(CLOUD_SDK_ROOT.join('google-cloud-sdk', 'bin', 'gcloud'))
+    prog = str(CLOUD_SDK_ROOT.join('google-cloud-sdk', 'bin', 'gcloud'))
     env = {CLOUD_SDK_CONFIG_ENV: str(CLOUD_SDK_ROOT)}
-    return prerun(bin, *args, env=env, **kwargs)
+    return prerun(prog, *args, env=env, **kwargs)
 
 
 def configure_cloud_sdk(application_default_credentials, project=False):
