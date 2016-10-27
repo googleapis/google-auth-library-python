@@ -14,59 +14,17 @@
 
 import os
 
-import py
-
 import google.auth
-from google.auth import environment_vars
-import google.oauth2.credentials
-from google.oauth2 import service_account
+
+EXPECT_PROJECT_ID = os.environ.get('EXPECT_PROJECT_ID')
 
 
-def generate_cloud_sdk_config(
-        tmpdir, credentials_file, active_config='default', project=None):
-    tmpdir.join('active_config').write(
-        '{}\n'.format(active_config), ensure=True)
-
-    if project is not None:
-        config_file = tmpdir.join(
-            'configurations', 'config_{}'.format(active_config))
-        config_file.write(
-            '[core]\nproject = {}'.format(project), ensure=True)
-
-    py.path.local(credentials_file).copy(
-        tmpdir.join('application_default_credentials.json'))
-
-
-def test_cloud_sdk_credentials_service_account(
-        tmpdir, monkeypatch, service_account_file, verify_refresh):
-    # Create the Cloud SDK configuration tree
-    project = 'system-test-project'
-    generate_cloud_sdk_config(tmpdir, service_account_file, project=project)
-    monkeypatch.setitem(
-        os.environ, environment_vars.CLOUD_SDK_CONFIG_DIR, str(tmpdir))
-
+def test_explicit_credentials(verify_refresh):
     credentials, project_id = google.auth.default()
 
-    assert isinstance(credentials, service_account.Credentials)
-    assert project_id is not None
-    # The project ID should be the project ID specified in the the service
-    # account file, not the project in the config.
-    assert project_id is not project
-
-    verify_refresh(credentials)
-
-
-def test_cloud_sdk_credentials_authorized_user(
-        tmpdir, monkeypatch, authorized_user_file, verify_refresh):
-    # Create the Cloud SDK configuration tree
-    project = 'system-test-project'
-    generate_cloud_sdk_config(tmpdir, authorized_user_file, project=project)
-    monkeypatch.setitem(
-        os.environ, environment_vars.CLOUD_SDK_CONFIG_DIR, str(tmpdir))
-
-    credentials, project_id = google.auth.default()
-
-    assert isinstance(credentials, google.oauth2.credentials.Credentials)
-    assert project_id == project
+    if EXPECT_PROJECT_ID is not None:
+        assert project_id is not None
+    else:
+        assert project_id is None
 
     verify_refresh(credentials)
