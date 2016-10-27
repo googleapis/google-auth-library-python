@@ -22,55 +22,6 @@ import google.oauth2.credentials
 from google.oauth2 import service_account
 
 
-def validate_refresh(credentials, http_request):
-    if credentials.requires_scopes:
-        credentials = credentials.with_scopes(['email', 'profile'])
-
-    credentials.refresh(http_request)
-
-    assert credentials.token
-    assert credentials.valid
-
-
-def test_explicit_credentials_service_account(
-        monkeypatch, service_account_file, http_request):
-    monkeypatch.setitem(
-        os.environ, environment_vars.CREDENTIALS, service_account_file)
-
-    credentials, project_id = google.auth.default()
-
-    assert isinstance(credentials, service_account.Credentials)
-    assert project_id is not None
-
-    validate_refresh(credentials, http_request)
-
-
-def test_explicit_credentials_authorized_user(
-        monkeypatch, authorized_user_file, http_request):
-    monkeypatch.setitem(
-        os.environ, environment_vars.CREDENTIALS, authorized_user_file)
-
-    credentials, project_id = google.auth.default()
-
-    assert isinstance(credentials, google.oauth2.credentials.Credentials)
-    assert project_id is None
-
-    validate_refresh(credentials, http_request)
-
-
-def test_explicit_credentials_explicit_project_id(
-        monkeypatch, service_account_file, http_request):
-    project = 'system-test-project'
-    monkeypatch.setitem(
-        os.environ, environment_vars.CREDENTIALS, service_account_file)
-    monkeypatch.setitem(
-        os.environ, environment_vars.PROJECT, project)
-
-    _, project_id = google.auth.default()
-
-    assert project_id == project
-
-
 def generate_cloud_sdk_config(
         tmpdir, credentials_file, active_config='default', project=None):
     tmpdir.join('active_config').write(
@@ -87,7 +38,7 @@ def generate_cloud_sdk_config(
 
 
 def test_cloud_sdk_credentials_service_account(
-        tmpdir, monkeypatch, service_account_file, http_request):
+        tmpdir, monkeypatch, service_account_file, verify_refresh):
     # Create the Cloud SDK configuration tree
     project = 'system-test-project'
     generate_cloud_sdk_config(tmpdir, service_account_file, project=project)
@@ -102,11 +53,11 @@ def test_cloud_sdk_credentials_service_account(
     # account file, not the project in the config.
     assert project_id is not project
 
-    validate_refresh(credentials, http_request)
+    verify_refresh(credentials)
 
 
 def test_cloud_sdk_credentials_authorized_user(
-        tmpdir, monkeypatch, authorized_user_file, http_request):
+        tmpdir, monkeypatch, authorized_user_file, verify_refresh):
     # Create the Cloud SDK configuration tree
     project = 'system-test-project'
     generate_cloud_sdk_config(tmpdir, authorized_user_file, project=project)
@@ -118,4 +69,4 @@ def test_cloud_sdk_credentials_authorized_user(
     assert isinstance(credentials, google.oauth2.credentials.Credentials)
     assert project_id == project
 
-    validate_refresh(credentials, http_request)
+    verify_refresh(credentials)

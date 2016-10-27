@@ -16,8 +16,18 @@
 
 This file handles setting up environments needed by the system tests. This
 separates the tests from their environment configuration.
+
+See the `nox docs`_ for details on how this file works:
+
+.. _nox docs: http://nox.readthedocs.io/en/latest/
 """
 
+import os
+
+HERE = os.path.dirname(__file__)
+DATA_DIR = os.path.join(HERE, 'data')
+SERVICE_ACCOUNT_FILE = os.path.join(DATA_DIR, 'service_account.json')
+AUTHORIZED_USER_FILE = os.path.join(DATA_DIR, 'authorized_user.json')
 
 def session_service_account(session):
     session.virtualenv = False
@@ -42,3 +52,24 @@ def session_app_engine(session):
 def session_default(session):
     session.virtualenv = False
     session.run('pytest', 'test_default.py')
+
+
+def session_default_explicit_service_account(session):
+    session.virtualenv = False
+    session.env['GOOGLE_APPLICATION_CREDENTIALS'] = SERVICE_ACCOUNT_FILE
+    session.env['EXPECT_PROJECT_ID'] = '1'
+    session.run('pytest', 'test_default_explicit.py')
+
+
+def session_default_explicit_authorized_user(session):
+    session.virtualenv = False
+    session.env['GOOGLE_APPLICATION_CREDENTIALS'] = AUTHORIZED_USER_FILE
+    session.run('pytest', 'test_default_explicit.py')
+
+
+def session_default_explicit_authorized_user_explicit_project(session):
+    session.virtualenv = False
+    session.env['GOOGLE_APPLICATION_CREDENTIALS'] = AUTHORIZED_USER_FILE
+    session.env['GOOGLE_CLOUD_PROJECT'] = 'example-project'
+    session.env['EXPECT_PROJECT_ID'] = '1'
+    session.run('pytest', 'test_default_explicit.py')
