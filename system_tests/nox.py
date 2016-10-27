@@ -115,7 +115,8 @@ def configure_cloud_sdk(application_default_credentials, project=False):
     # also considers the credentials valid by calling application-default
     # print-access-token
     dest = CLOUD_SDK_ROOT.join('application_default_credentials.json')
-    dest.remove()
+    if dest.exists():
+        dest.remove()
     py.path.local(application_default_credentials).copy(dest)
 
     gcloud('auth', 'application-default', 'print-access-token')
