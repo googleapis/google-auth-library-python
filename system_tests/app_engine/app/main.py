@@ -12,6 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""App Engine standard application that runs basic system tests for
+google.auth.app_engine.
+
+This application has to run tests manually instead of using py.test because
+py.test currently doesn't work on App Engine standard.
+"""
+
 import contextlib
 import json
 import sys
@@ -43,7 +50,7 @@ def test_credentials():
 
     # Get token info and verify scope
     url = _helpers.update_query(TOKEN_INFO_URL, {
-        'access_token': scoped_credentials.token
+        'access_token': scoped_credentials.token,
     })
     response = HTTP_REQUEST(url=url, method='GET')
     token_info = json.loads(response.data.decode('utf-8'))
@@ -70,6 +77,21 @@ def capture():
         sys.stdout, sys.stderr = oldout, olderr
 
 
+def run_test_func(func):
+    with capture() as capsys:
+        try:
+            func()
+            return True, ''
+        except Exception as exc:
+            output = (
+                'Test {} failed: {}\n\n'
+                'Stacktrace:\n{}\n\n'
+                'Captured output:\n{}').format(
+                    func.func_name, exc, traceback.format_exc(),
+                    capsys.getvalue())
+            return False, output
+
+
 def run_tests():
     """Runs all tests.
 
@@ -77,19 +99,16 @@ def run_tests():
         Tuple[bool, str]: A tuple containing True if all tests pass, False
         otherwise, and any captured output from the tests.
     """
-    status = False
+    status = True
     output = ''
 
-    with capture() as capsys:
-        try:
-            test_credentials()
-            test_default()
-            status = True
-        except Exception:
-            status = False
-            output = 'Stacktrace:\n{}\n'.format(traceback.format_exc())
+    tests = (test_credentials, test_default)
 
-    output += 'Captured output:\n{}'.format(capsys.getvalue())
+    for test in tests:
+        test_status, test_output = run_test_func(test)
+        status = status and test_status
+        output += test_output
+
     return status, output
 
 
@@ -106,5 +125,5 @@ class MainHandler(webapp2.RequestHandler):
 
 
 app = webapp2.WSGIApplication([
-    ('/', MainHandler)
+    ('/', MainHandler),
 ], debug=True)

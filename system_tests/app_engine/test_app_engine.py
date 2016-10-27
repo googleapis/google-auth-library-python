@@ -18,7 +18,7 @@ import subprocess
 from google.auth import _cloud_sdk
 import pytest
 
-
+SKIP_TEST_ENV = 'SKIP_APP_ENGINE_SYSTEM_TEST'
 HERE = os.path.dirname(__file__)
 TEST_APP_DIR = os.path.join(HERE, 'app')
 TEST_APP_SERVICE = 'google-auth-system-tests'
@@ -27,7 +27,7 @@ TEST_APP_SERVICE = 'google-auth-system-tests'
 def vendor_app_dependencies():
     """Vendors in the test application's third-party dependencies."""
     subprocess.check_call(
-        ['pip', 'install', '-t', 'lib', '-r', 'requirements.txt'])
+        ['pip', 'install', '--target', 'lib', '-r', 'requirements.txt'])
 
 
 def deploy_app():
@@ -51,7 +51,7 @@ def app(monkeypatch):
 
 
 @pytest.mark.skipif(
-    'SKIP_APP_ENGINE_SYSTEM_TEST' in os.environ,
+    SKIP_TEST_ENV in os.environ,
     reason='Explicitly skipping App Engine system tests.')
 def test_live_application(app, http_request):
     response = http_request(method='GET', url=app)
