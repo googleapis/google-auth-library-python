@@ -13,46 +13,10 @@
 # limitations under the License.
 
 import os
-import subprocess
 
-from google.auth import _cloud_sdk
-import pytest
-
-SKIP_TEST_ENV = 'SKIP_APP_ENGINE_SYSTEM_TEST'
-HERE = os.path.dirname(__file__)
-TEST_APP_DIR = os.path.join(HERE, 'app')
-TEST_APP_SERVICE = 'google-auth-system-tests'
+TEST_APP_URL = os.environ['TEST_APP_URL']
 
 
-def vendor_app_dependencies():
-    """Vendors in the test application's third-party dependencies."""
-    subprocess.check_call(
-        ['pip', 'install', '--target', 'lib', '-r', 'requirements.txt'])
-
-
-def deploy_app():
-    """Deploys the test application using gcloud."""
-    subprocess.check_call(
-        ['gcloud', 'app', 'deploy', '-q', 'app.yaml'])
-
-
-@pytest.fixture
-def app(monkeypatch):
-    monkeypatch.chdir(TEST_APP_DIR)
-
-    vendor_app_dependencies()
-    deploy_app()
-
-    application_id = _cloud_sdk.get_project_id()
-    application_url = 'https://{}-dot-{}.appspot.com'.format(
-        TEST_APP_SERVICE, application_id)
-
-    yield application_url
-
-
-@pytest.mark.skipif(
-    SKIP_TEST_ENV in os.environ,
-    reason='Explicitly skipping App Engine system tests.')
-def test_live_application(app, http_request):
-    response = http_request(method='GET', url=app)
+def test_live_application(http_request):
+    response = http_request(method='GET', url=TEST_APP_URL)
     assert response.status == 200, response.data.decode('utf-8')
