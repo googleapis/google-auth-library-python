@@ -236,7 +236,7 @@ def session_app_engine(session):
         GAE_TEST_APP_SERVICE, project_id)
 
     # Vendor in the test application's dependencies
-    session.chdir(os.path.join(HERE, 'app_engine', 'app'))
+    session.chdir(os.path.join(HERE, 'app_engine_test_app'))
     session.run(
         'pip', 'install', '--target', 'lib', '-r', 'requirements.txt',
         silent=True)
@@ -247,4 +247,4 @@ def session_app_engine(session):
     # Run the tests
     session.env['TEST_APP_URL'] = application_url
     session.chdir(HERE)
-    session.run('pytest', 'app_engine/test_app_engine.py')
+    session.run('pytest', 'test_app_engine.py')
