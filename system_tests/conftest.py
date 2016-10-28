@@ -25,7 +25,7 @@ HERE = os.path.dirname(__file__)
 DATA_DIR = os.path.join(HERE, 'data')
 SERVICE_ACCOUNT_FILE = os.path.join(DATA_DIR, 'service_account.json')
 AUTHORIZED_USER_FILE = os.path.join(DATA_DIR, 'authorized_user.json')
-HTTP = urllib3.PoolManager()
+HTTP = urllib3.PoolManager(retries=False)
 TOKEN_INFO_URL = 'https://www.googleapis.com/oauth2/v3/tokeninfo'
 
 
