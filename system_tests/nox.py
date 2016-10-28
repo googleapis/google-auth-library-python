@@ -24,7 +24,7 @@ See the `nox docs`_ for details on how this file works:
 
 import os
 
-from nox.command import Command
+from nox.command import which
 import py.path
 
 
@@ -32,94 +32,116 @@ HERE = os.path.dirname(__file__)
 DATA_DIR = os.path.join(HERE, 'data')
 SERVICE_ACCOUNT_FILE = os.path.join(DATA_DIR, 'service_account.json')
 AUTHORIZED_USER_FILE = os.path.join(DATA_DIR, 'authorized_user.json')
+EXPLICIT_CREDENTIALS_ENV = 'GOOGLE_APPLICATION_CREDENTIALS'
+EXPLICIT_PROJECT_ENV = 'GOOGLE_CLOUD_PROJECT'
+EXPECT_PROJECT_ENV = 'EXPECT_PROJECT_ID'
+
+# The download location for the Cloud SDK
+CLOUD_SDK_DIST_FILENAME = 'google-cloud-sdk.tar.gz'
+CLOUD_SDK_DOWNLOAD_URL = (
+    'https://dl.google.com/dl/cloudsdk/release/{}'.format(
+        CLOUD_SDK_DIST_FILENAME))
+
+# This environment variable is recognized by the Cloud SDK and overrides
+# the location of the SDK's configuration files (which is usually at
+# ${HOME}/.config).
 CLOUD_SDK_CONFIG_ENV = 'CLOUDSDK_CONFIG'
 
-# If set, this is where the environment setup will store the Cloud SDK.
+# If set, this is where the environment setup will install the Cloud SDK.
 # If unset, it will download the SDK to a temporary directory.
 CLOUD_SDK_ROOT = os.environ.get('CLOUD_SDK_ROOT')
-if CLOUD_SDK_ROOT:
+
+if CLOUD_SDK_ROOT is not None:
     CLOUD_SDK_ROOT = py.path.local(CLOUD_SDK_ROOT)
-    CLOUD_SDK_ROOT.ensure(dir=True)
-if not CLOUD_SDK_ROOT:
+    CLOUD_SDK_ROOT.ensure(dir=True)  # Makes sure the directory exists.
+else:
     CLOUD_SDK_ROOT = py.path.local.mkdtemp()
 
+# The full path the cloud sdk install directory
+CLOUD_SDK_INSTALL_DIR = CLOUD_SDK_ROOT.join('google-cloud-sdk')
 
-# Helper functions
+# The full path to the gcloud cli executable.
+GCLOUD = str(CLOUD_SDK_INSTALL_DIR.join('bin', 'gcloud'))
 
-
-def prerun(*args, **kwargs):
-    """Runs a command before the session."""
-    kwargs.setdefault('silent', True)
-    env = os.environ.copy()
-    env.update(kwargs.pop('env', {}))
-    Command(args, env=env, **kwargs).run()
-
+# gcloud requires Python 2.7 and doesn't work on 3.x, so we need to tell it
+# where to find 2.7 when we're running in a 3.x environment.
+CLOUD_SDK_PYTHON_ENV = 'GCLOUD_PYTHON'
+CLOUD_SDK_PYTHON = which('python2.7', None)
 
 # Cloud SDK helpers
 
 
-def setup_cloud_sdk():
+def install_cloud_sdk(session):
     """Downloads and installs the Google Cloud SDK."""
+    # Configure environment variables needed by the SDK.
+    # This sets the config root to the tests' config root. This prevents
+    # our tests from clobbering a developer's configuration when running
+    # these tests locally.
+    session.env[CLOUD_SDK_CONFIG_ENV] = str(CLOUD_SDK_ROOT)
+    # This tells gcloud which Python interpreter to use (always use 2.7)
+    session.env[CLOUD_SDK_PYTHON_ENV] = CLOUD_SDK_PYTHON
 
     # If the sdk already exists, we don't need to do anything else.
-    if CLOUD_SDK_ROOT.join('google-cloud-sdk').exists():
+    # Note that because of this we do not attempt to update the sdk -
+    # if the CLOUD_SDK_ROOT is cached, it will need to be periodically cleared.
+    if CLOUD_SDK_INSTALL_DIR.exists():
         return
 
-    tar_file = 'google-cloud-sdk.tar.gz'
-    tar_path = CLOUD_SDK_ROOT.join(tar_file)
+    tar_path = CLOUD_SDK_ROOT.join(CLOUD_SDK_DIST_FILENAME)
 
     # Download the release.
-    prerun(
-        'wget', 'https://dl.google.com/dl/cloudsdk/release/{}'.format(
-            tar_file),
-        '-O', str(tar_path))
+    session.run(
+        'wget', CLOUD_SDK_DOWNLOAD_URL, '-O', str(tar_path), silent=True)
 
     # Extract the release.
-    prerun('tar', 'xzf', str(tar_path), '-C', str(CLOUD_SDK_ROOT))
-    tar_path.remove()
+    session.run(
+        'tar', 'xzf', str(tar_path), '-C', str(CLOUD_SDK_ROOT))
+    session.run(tar_path.remove)
 
     # Run the install script.
-    prerun(
-        str(CLOUD_SDK_ROOT.join('google-cloud-sdk', 'install.sh')),
+    session.run(
+        str(CLOUD_SDK_INSTALL_DIR.join('install.sh')),
         '--usage-reporting', 'false',
         '--path-update', 'false',
         '--command-completion', 'false',
-        env={CLOUD_SDK_CONFIG_ENV: str(CLOUD_SDK_ROOT)})
-
-    return CLOUD_SDK_ROOT
+        silent=True)
 
 
-def gcloud(*args, **kwargs):
-    """Calls the Cloud SDK CLI."""
-    prog = str(CLOUD_SDK_ROOT.join('google-cloud-sdk', 'bin', 'gcloud'))
-    env = {CLOUD_SDK_CONFIG_ENV: str(CLOUD_SDK_ROOT)}
-    return prerun(prog, *args, env=env, **kwargs)
-
-
-def configure_cloud_sdk(application_default_credentials, project=False):
-    """Configures the Cloud SDK with the given application default
+def configure_cloud_sdk(
+        session, application_default_credentials, project=False):
+    """Installs and configures the Cloud SDK with the given application default
     credentials.
 
     If project is True, then a project will be set in the active config.
     If it is false, this will ensure no project is set.
     """
+    install_cloud_sdk(session)
 
     if project:
-        gcloud('config', 'set', 'project', 'example-project')
+        session.run(GCLOUD, 'config', 'set', 'project', 'example-project')
     else:
-        gcloud('config', 'unset', 'project')
+        session.run(GCLOUD, 'config', 'unset', 'project')
 
     # Copy the credentials file to the config root. This is needed because
     # unfortunately gcloud doesn't provide a clean way to tell it to use
     # a particular set of credentials. However, this does verify that gcloud
     # also considers the credentials valid by calling application-default
     # print-access-token
-    dest = CLOUD_SDK_ROOT.join('application_default_credentials.json')
-    if dest.exists():
-        dest.remove()
-    py.path.local(application_default_credentials).copy(dest)
+    def copy_credentials():
+        dest = CLOUD_SDK_ROOT.join('application_default_credentials.json')
+        if dest.exists():
+            dest.remove()
+        py.path.local(application_default_credentials).copy(dest)
 
-    gcloud('auth', 'application-default', 'print-access-token')
+    session.run(copy_credentials)
+
+    # Calling this forces the Cloud SDK to read the credentials we just wrote
+    # and obtain a new access token with those credentials. This validates
+    # that our credentials matches the format expected by gcloud.
+    # Silent is set to True to prevent leaking secrets in test logs.
+    session.run(
+        GCLOUD, 'auth', 'application-default', 'print-access-token',
+        silent=True)
 
 
 # Test sesssions
@@ -137,51 +159,42 @@ def session_oauth2_credentials(session):
 
 def session_default_explicit_service_account(session):
     session.virtualenv = False
-    session.env['GOOGLE_APPLICATION_CREDENTIALS'] = SERVICE_ACCOUNT_FILE
-    session.env['EXPECT_PROJECT_ID'] = '1'
+    session.env[EXPLICIT_CREDENTIALS_ENV] = SERVICE_ACCOUNT_FILE
+    session.env[EXPECT_PROJECT_ENV] = '1'
     session.run('pytest', 'test_default.py')
 
 
 def session_default_explicit_authorized_user(session):
     session.virtualenv = False
-    session.env['GOOGLE_APPLICATION_CREDENTIALS'] = AUTHORIZED_USER_FILE
+    session.env[EXPLICIT_CREDENTIALS_ENV] = AUTHORIZED_USER_FILE
     session.run('pytest', 'test_default.py')
 
 
 def session_default_explicit_authorized_user_explicit_project(session):
     session.virtualenv = False
-    session.env['GOOGLE_APPLICATION_CREDENTIALS'] = AUTHORIZED_USER_FILE
-    session.env['GOOGLE_CLOUD_PROJECT'] = 'example-project'
-    session.env['EXPECT_PROJECT_ID'] = '1'
+    session.env[EXPLICIT_CREDENTIALS_ENV] = AUTHORIZED_USER_FILE
+    session.env[EXPLICIT_PROJECT_ENV] = 'example-project'
+    session.env[EXPECT_PROJECT_ENV] = '1'
     session.run('pytest', 'test_default.py')
 
 
 def session_default_cloud_sdk_service_account(session):
     session.virtualenv = False
-    setup_cloud_sdk()
-    configure_cloud_sdk(SERVICE_ACCOUNT_FILE)
-
-    session.env[CLOUD_SDK_CONFIG_ENV] = str(CLOUD_SDK_ROOT)
-    session.env['EXPECT_PROJECT_ID'] = '1'
+    configure_cloud_sdk(session, SERVICE_ACCOUNT_FILE)
+    session.env[EXPECT_PROJECT_ENV] = '1'
     session.run('pytest', 'test_default.py')
 
 
 def session_default_cloud_sdk_authorized_user(session):
     session.virtualenv = False
-    setup_cloud_sdk()
-    configure_cloud_sdk(AUTHORIZED_USER_FILE)
-
-    session.env[CLOUD_SDK_CONFIG_ENV] = str(CLOUD_SDK_ROOT)
-    session.run('pytest', '--pdb', 'test_default.py')
+    configure_cloud_sdk(session, AUTHORIZED_USER_FILE)
+    session.run('pytest', 'test_default.py')
 
 
 def session_default_cloud_sdk_authorized_user_configured_project(session):
     session.virtualenv = False
-    setup_cloud_sdk()
-    configure_cloud_sdk(AUTHORIZED_USER_FILE, project=True)
-
-    session.env[CLOUD_SDK_CONFIG_ENV] = str(CLOUD_SDK_ROOT)
-    session.env['EXPECT_PROJECT_ID'] = '1'
+    configure_cloud_sdk(session, AUTHORIZED_USER_FILE, project=True)
+    session.env[EXPECT_PROJECT_ENV] = '1'
     session.run('pytest', 'test_default.py')
 
 
