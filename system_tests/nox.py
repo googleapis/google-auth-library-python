@@ -22,6 +22,7 @@ See the `nox docs`_ for details on how this file works:
 .. _nox docs: http://nox.readthedocs.io/en/latest/
 """
 
+import functools
 import os
 
 from nox.command import which
@@ -65,7 +66,7 @@ GCLOUD = str(CLOUD_SDK_INSTALL_DIR.join('bin', 'gcloud'))
 
 # gcloud requires Python 2.7 and doesn't work on 3.x, so we need to tell it
 # where to find 2.7 when we're running in a 3.x environment.
-CLOUD_SDK_PYTHON_ENV = 'GCLOUD_PYTHON'
+CLOUD_SDK_PYTHON_ENV = 'CLOUDSDK_PYTHON'
 CLOUD_SDK_PYTHON = which('python2.7', None)
 
 # Cloud SDK helpers
@@ -107,6 +108,15 @@ def install_cloud_sdk(session):
         silent=True)
 
 
+def copy_credentials(credentials_path):
+    """Copies credentials into the SDK root as the application default
+    credentials."""
+    dest = CLOUD_SDK_ROOT.join('application_default_credentials.json')
+    if dest.exists():
+        dest.remove()
+    py.path.local(credentials_path).copy(dest)
+
+
 def configure_cloud_sdk(
         session, application_default_credentials, project=False):
     """Installs and configures the Cloud SDK with the given application default
@@ -127,13 +137,8 @@ def configure_cloud_sdk(
     # a particular set of credentials. However, this does verify that gcloud
     # also considers the credentials valid by calling application-default
     # print-access-token
-    def copy_credentials():
-        dest = CLOUD_SDK_ROOT.join('application_default_credentials.json')
-        if dest.exists():
-            dest.remove()
-        py.path.local(application_default_credentials).copy(dest)
-
-    session.run(copy_credentials)
+    session.run(
+        functools.partial(copy_credentials, application_default_credentials))
 
     # Calling this forces the Cloud SDK to read the credentials we just wrote
     # and obtain a new access token with those credentials. This validates
