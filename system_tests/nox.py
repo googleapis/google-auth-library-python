@@ -22,7 +22,6 @@ See the `nox docs`_ for details on how this file works:
 .. _nox docs: http://nox.readthedocs.io/en/latest/
 """
 
-import functools
 import os
 
 from nox.command import which
@@ -64,10 +63,11 @@ CLOUD_SDK_INSTALL_DIR = CLOUD_SDK_ROOT.join('google-cloud-sdk')
 # The full path to the gcloud cli executable.
 GCLOUD = str(CLOUD_SDK_INSTALL_DIR.join('bin', 'gcloud'))
 
-# gcloud requires Python 2.7 and doesn't work on 3.x, so we need to tell it
-# where to find 2.7 when we're running in a 3.x environment.
+# gcloud requires Python 2 and doesn't work on 3, so we need to tell it
+# where to find 2 when we're running in a 3 environment.
 CLOUD_SDK_PYTHON_ENV = 'CLOUDSDK_PYTHON'
-CLOUD_SDK_PYTHON = which('python2.7', None)
+CLOUD_SDK_PYTHON = which('python2', None)
+print('Python 2: ', CLOUD_SDK_PYTHON)
 
 # Cloud SDK helpers
 
@@ -137,8 +137,7 @@ def configure_cloud_sdk(
     # a particular set of credentials. However, this does verify that gcloud
     # also considers the credentials valid by calling application-default
     # print-access-token
-    session.run(
-        functools.partial(copy_credentials, application_default_credentials))
+    session.run(copy_credentials, application_default_credentials)
 
     # Calling this forces the Cloud SDK to read the credentials we just wrote
     # and obtain a new access token with those credentials. This validates
