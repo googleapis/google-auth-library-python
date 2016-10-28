@@ -67,7 +67,6 @@ GCLOUD = str(CLOUD_SDK_INSTALL_DIR.join('bin', 'gcloud'))
 # where to find 2 when we're running in a 3 environment.
 CLOUD_SDK_PYTHON_ENV = 'CLOUDSDK_PYTHON'
 CLOUD_SDK_PYTHON = which('python2', None)
-print('Python 2: ', CLOUD_SDK_PYTHON)
 
 # Cloud SDK helpers
 
@@ -82,10 +81,10 @@ def install_cloud_sdk(session):
     # This tells gcloud which Python interpreter to use (always use 2.7)
     session.env[CLOUD_SDK_PYTHON_ENV] = CLOUD_SDK_PYTHON
 
-    # If the sdk already exists, we don't need to do anything else.
+    # If the glcoud already exists, we don't need to do anything else.
     # Note that because of this we do not attempt to update the sdk -
     # if the CLOUD_SDK_ROOT is cached, it will need to be periodically cleared.
-    if CLOUD_SDK_INSTALL_DIR.exists():
+    if GCLOUD.exists():
         return
 
     tar_path = CLOUD_SDK_ROOT.join(CLOUD_SDK_DIST_FILENAME)
