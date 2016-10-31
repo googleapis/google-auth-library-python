@@ -49,6 +49,13 @@ class AuthMetadataPlugin(grpc.AuthMetadataPlugin):
         ]
 
     def __call__(self, context, callback):
+        """Passes authorization metadata into the given callback.
+
+        Args:
+            context (grpc.AuthMetadataContext): The RPC context.
+            callback (grpc.AuthMetadataPluginCallback): The callback that will
+                be invoked to pass in the authorization metadata.
+        """
         callback(self._get_authorization_headers(), None)
 
 
