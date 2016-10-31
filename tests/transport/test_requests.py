@@ -88,6 +88,7 @@ class TestAuthorizedHttp(object):
         assert response == mock_response
         assert mock_credentials.before_request.called
         assert not mock_credentials.refresh.called
+        assert len(mock_adapter.requests) == 1
         assert mock_adapter.requests[0].url == self.TEST_URL
         assert mock_adapter.requests[0].headers['authorization'] == 'token'
 
@@ -108,6 +109,7 @@ class TestAuthorizedHttp(object):
         assert response == mock_final_response
         assert mock_credentials.before_request.call_count == 2
         assert mock_credentials.refresh.called
+        assert len(mock_adapter.requests) == 2
 
         assert mock_adapter.requests[0].url == self.TEST_URL
         assert mock_adapter.requests[0].headers['authorization'] == 'token'
