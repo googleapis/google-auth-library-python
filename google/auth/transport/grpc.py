@@ -14,6 +14,8 @@
 
 """Authorization support for gRPC."""
 
+from __future__ import absolute_import
+
 import grpc
 
 
@@ -101,20 +103,16 @@ def secure_authorized_channel(
         grpc.Channel: The created gRPC channel.
     """
     # Create the metadata plugin for inserting the authorization header.
-    google_auth_credentials_metadata_plugin = AuthMetadataPlugin(
-        credentials, request)
+    metadata_plugin = AuthMetadataPlugin(credentials, request)
 
     # Create a set of grpc.CallCredentials using the metadata plugin.
-    google_auth_credentials = grpc.metadata_call_credentials(
-        google_auth_credentials_metadata_plugin)
+    google_auth_credentials = grpc.metadata_call_credentials(metadata_plugin)
 
-    if not ssl_credentials:
+    if ssl_credentials is None:
         ssl_credentials = grpc.ssl_channel_credentials()
 
     # Combine the ssl credentials and the authorization credentials.
     composite_credentials = grpc.composite_channel_credentials(
         ssl_credentials, google_auth_credentials)
 
-    channel = grpc.secure_channel(target, composite_credentials)
-
-    return channel
+    return grpc.secure_channel(target, composite_credentials)

@@ -14,8 +14,16 @@
 
 import mock
 
+import pytest
 
-import google.auth.transport.grpc
+try:
+    import google.auth.transport.grpc
+    HAS_GRPC = True
+except ImportError:  # pragma: NO COVER
+    HAS_GRPC = False
+
+
+pytestmark = pytest.mark.skipif(not HAS_GRPC, reason='gRPC is unavailable.')
 
 
 class MockCredentials(object):
