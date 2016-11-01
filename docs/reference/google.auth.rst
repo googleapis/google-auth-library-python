@@ -25,4 +25,5 @@ Submodules
    google.auth.environment_vars
    google.auth.exceptions
    google.auth.jwt
+   google.auth.oauth2client
 
