@@ -31,14 +31,56 @@ import six
 
 
 _SCRIPTS_DIR = os.path.abspath(os.path.dirname(__file__))
-_ROOT_DIR = os.path.abspath(os.path.join(_SCRIPTS_DIR, '..'))
-PRODUCTION_RC = os.path.join(_ROOT_DIR, 'pylintrc')
-TEST_RC = os.path.join(_ROOT_DIR, 'pylintrc.test')
+PRODUCTION_RC = os.path.join(_SCRIPTS_DIR, 'pylintrc')
+TEST_RC = os.path.join(_SCRIPTS_DIR, 'pylintrc.test')
 
-_PRODUCTION_RC_ADDITIONS = {}
-_PRODUCTION_RC_REPLACEMENTS = {}
+_PRODUCTION_RC_ADDITIONS = {
+    'MESSAGES CONTROL': {
+        'disable': [
+            'I',
+            'import-error',
+            'no-member',
+            'protected-access',
+            'redefined-variable-type',
+            'similarities',
+        ],
+    },
+}
+_PRODUCTION_RC_REPLACEMENTS = {
+    'MASTER': {
+        'ignore': ['CVS', '.git', '.cache', '.tox', '.nox'],
+        'load-plugins': 'pylint.extensions.check_docs',
+    },
+    'REPORTS': {
+        'reports': 'no',
+    },
+    'BASIC': {
+        'method-rgx': '[a-z_][a-z0-9_]{2,40}$',
+        'function-rgx': '[a-z_][a-z0-9_]{2,40}$',
+    },
+    'TYPECHECK': {
+        'ignored-modules': ['six', 'google.protobuf'],
+    },
+    'DESIGN': {
+        'min-public-methods': '0',
+        'max-args': '10',
+        'max-attributes': '15',
+    },
+}
 _TEST_RC_ADDITIONS = copy.deepcopy(_PRODUCTION_RC_ADDITIONS)
+_TEST_RC_ADDITIONS['MESSAGES CONTROL']['disable'].extend([
+    'missing-docstring',
+    'no-self-use',
+    'redefined-outer-name',
+    'unused-argument',
+])
 _TEST_RC_REPLACEMENTS = copy.deepcopy(_PRODUCTION_RC_REPLACEMENTS)
+_TEST_RC_REPLACEMENTS.setdefault('BASIC', {})
+_TEST_RC_REPLACEMENTS['BASIC'].update({
+    'good-names': ['i', 'j', 'k', 'ex', 'Run', '_', 'fh'],
+    'method-rgx': '[a-z_][a-z0-9_]{2,80}$',
+    'function-rgx': '[a-z_][a-z0-9_]{2,80}$',
+})
 IGNORED_FILES = ()
 
 _ERROR_TEMPLATE = 'Pylint failed on {} with status {:d}.'
