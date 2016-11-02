@@ -56,7 +56,7 @@ _PRODUCTION_RC_REPLACEMENTS = {
     },
     'BASIC': {
         'method-rgx': '[a-z_][a-z0-9_]{2,40}$',
-        'function-rgx': '[a-z_][a-z0-9_]{2,45}$',
+        'function-rgx': '[a-z_][a-z0-9_]{2,40}$',
     },
     'TYPECHECK': {
         'ignored-modules': ['six', 'google.protobuf'],

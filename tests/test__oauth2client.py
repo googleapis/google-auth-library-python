@@ -23,7 +23,7 @@ import oauth2client.service_account
 import pytest
 from six.moves import reload_module
 
-from google.auth import oauth2client as _oauth2client
+from google.auth import _oauth2client
 
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), 'data')
@@ -137,21 +137,21 @@ def test_convert_not_found():
     assert excinfo.match('Unable to convert')
 
 
-def test_convert_no_oauth2client(monkeypatch):
-    monkeypatch.setattr(_oauth2client, '_HAS_OAUTH2CLIENT', False)
-
-    with pytest.raises(EnvironmentError) as excinfo:
-        _oauth2client.convert('any value will do here')
-
-    assert excinfo.match('oauth2client is not installed')
+@pytest.fixture
+def reset__oauth2client_module():
+    """Reloads the _oauth2client module after a test."""
+    reload_module(_oauth2client)
 
 
-def test_import_has_app_engine(mock_oauth2client_gae_imports):
+def test_import_has_app_engine(
+        mock_oauth2client_gae_imports, reset__oauth2client_module):
     reload_module(_oauth2client)
     assert _oauth2client._HAS_APPENGINE
 
 
-def test_import_without_oauth2client(monkeypatch):
+def test_import_without_oauth2client(monkeypatch, reset__oauth2client_module):
     monkeypatch.setitem(sys.modules, 'oauth2client', None)
-    reload_module(_oauth2client)
-    assert not _oauth2client._HAS_OAUTH2CLIENT
+    with pytest.raises(ImportError) as excinfo:
+        reload_module(_oauth2client)
+
+    assert excinfo.match('oauth2client')
