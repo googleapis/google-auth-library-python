@@ -93,6 +93,15 @@ class Credentials(credentials.Scoped, credentials.Credentials):
             raise exceptions.RefreshError(exc)
 
     @property
+    def service_account_email(self):
+        """The service account email.
+
+        .. Note: This is not guarenteed to be set until :meth`refresh` has been
+            called.
+        """
+        return self._service_account_email
+
+    @property
     def requires_scopes(self):
         """False: Compute Engine credentials can not be scoped."""
         return False
