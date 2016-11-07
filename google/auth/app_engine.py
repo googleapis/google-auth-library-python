@@ -89,10 +89,9 @@ class Credentials(credentials.Scoped, credentials.Signing,
     @property
     def service_account_email(self):
         """The service account email."""
-        if self._service_account_id is not None:
-            return self._service_account_id
-        else:
-            return app_identity.get_service_account_name()
+        if self._service_account_id is None:
+            self._service_account_id = app_identity.get_service_account_name()
+        return self._service_account_id
 
     @property
     def requires_scopes(self):
