@@ -8,7 +8,7 @@ google-auth
    user-guide
    Reference <reference/modules>
 
-``google-auth`` is the Google authentication library for Python. This library
+google-auth is the Google authentication library for Python. This library
 provides the ability to authenticate to Google APIs using various methods. It
 also provides integration with several HTTP libraries.
 
@@ -25,13 +25,14 @@ also provides integration with several HTTP libraries.
 Installing
 ----------
 
-google-auth can be installed with `pip <https://pip.pypa.io>`_::
+google-auth can be installed with `pip`_::
 
-    $ pip install google-auth
+    $ pip install --upgrade google-auth
 
 google-auth is open-source, so you can alternatively grab the source code from
 `GitHub`_ and install from source.
 
+.. _pip: https://pip.pypa.io
 .. _GitHub: https://github.com/GoogleCloudPlatform/google-auth-library-python
 
 Usage

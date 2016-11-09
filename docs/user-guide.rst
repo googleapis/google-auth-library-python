@@ -8,16 +8,18 @@ Credentials and account types
 
 :class:`~credentials.Credentials` are the means of identifying an application or
 user to a service or API. Credentials can be obtained with two different types
-of accounts: *service accounts* and *user accounts*. Credentials from service
-accounts identify a particular application. These types of credentials are used
-in server-to-server use cases, such as accessing a database. Credentials from
-user accounts are obtained by asking the user to authorize access to their data.
-These types of credentials are used in cases where your application needs access
-to a user's data in another service, such as accessing a user's documents in
-Google Drive.
+of accounts: *service accounts* and *user accounts*.
 
-This library primarily focuses on service account credentials and provides
-some limited support for user credentials.
+Credentials from service accounts identify a particular application. These types
+of credentials are used in server-to-server use cases, such as accessing a
+database. This library primarily focuses on service account credentials.
+
+Credentials from user accounts are obtained by asking the user to authorize
+access to their data. These types of credentials are used in cases where your
+application needs access to a user's data in another service, such as accessing
+a user's documents in Google Drive. This library provides no support for
+obtaining user credentials, but does provide limited support for using user
+credentials.
 
 Obtaining credentials
 ---------------------
@@ -30,7 +32,7 @@ Application default credentials
 `Google Application Default Credentials`_ abstracts authentication across the
 different Google Cloud Platform hosting environments. When running on any Google
 Cloud hosting environment or when running locally with the `Google Cloud SDK`_
-installed :func:`default` can automatically determine the credentials from the
+installed, :func:`default` can automatically determine the credentials from the
 environment::
 
     import google.auth
@@ -43,7 +45,8 @@ If your application requires specific scopes::
         scopes=['https://www.googleapis.com/auth/cloud-platform'])
 
 .. _Google Application Default Credentials:
-    https://developers.google.com/identity/protocols/application-default-credentials
+    https://developers.google.com/identity/protocols/
+    application-default-credentials
 .. _Google Cloud SDK: https://cloud.google.com/sdk
 
 
@@ -56,7 +59,9 @@ Google Cloud Console`_. Once you have a private key you can either obtain
 credentials one of two ways:
 
 1. Set the ``GOOGLE_APPLICATION_CREDENTIALS`` environment variable to the full
-   path to your service account private key file::
+   path to your service account private key file
+
+   .. code-block:: bash
 
         $ export GOOGLE_APPLICATION_CREDENTIALS=/path/to/key.json
 
@@ -183,7 +188,7 @@ you use a custom `Session`_ object::
 .. _Requests: http://docs.python-requests.org/en/master/
 .. _Session: http://docs.python-requests.org/en/master/user/advanced/#session-objects
 
-Urllib3
+urllib3
 +++++++
 
 :mod:`urllib3` is the underlying HTTP library used by Requests and can also be
@@ -225,6 +230,10 @@ this is to use google-auth to create the gRPC channel::
 .. note:: Even though gRPC is its own transport, you still need to use one of
     the other HTTP transports with gRPC. The reason is that most credential
     types need to make HTTP requests in order to refresh their access token.
+    The sample above uses the Requests transport, but any HTTP transport can
+    be used. Additionally, if you know that your credentials do not need to
+    make HTTP requests in order to refresh (as is the case with
+    :class:`jwt.Credentials`) then you can specify ``None``.
 
 Alternatively, you can create the channel yourself and use
 :class:`google.auth.transport.grpc.AuthMetadataPlugin`::
