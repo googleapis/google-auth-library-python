@@ -33,6 +33,20 @@ _GOOGLE_APIS_CERTS_URL = (
 
 
 def _fetch_certs(request, certs_url):
+    """Fetches certificates.
+
+    Google-style cerificate endpoints return JSON in the format of
+    ``{'key id': 'x509 certificate'}``.
+
+    Args:
+        request (google.auth.transport.Request): The object used to make
+            HTTP requests.
+        certs_url (str): The certificate endpoint URL.
+
+    Returns:
+        Mapping[str, str]: A mapping of public key ID to x.509 certificate
+            data.
+    """
     response = request('GET', certs_url)
 
     if response.status != http_client.OK:
@@ -58,9 +72,6 @@ def verify_token(id_token, request, audience=None,
 
     Returns:
         Mapping[str, Any]: The decoded token.
-
-    Raises:
-        ValueError: if verification fails.
     """
     certs = _fetch_certs(request, certs_url)
 
@@ -80,9 +91,6 @@ def verify_oauth2_token(id_token, request, audience=None):
 
     Returns:
         Mapping[str, Any]: The decoded token.
-
-    Raises:
-        ValueError: if verification fails.
     """
     return verify_token(
         id_token, request, audience=audience,
@@ -102,9 +110,6 @@ def verify_firebase_token(id_token, request, audience=None):
 
     Returns:
         Mapping[str, Any]: The decoded token.
-
-    Raises:
-        ValueError: if verification fails.
     """
     return verify_token(
         id_token, request, audience=audience, certs_url=_GOOGLE_APIS_CERTS_URL)
