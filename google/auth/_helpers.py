@@ -209,5 +209,5 @@ def padded_urlsafe_b64decode(value):
         bytes: The decoded value
     """
     b64string = to_bytes(value)
-    padded = b64string + b'=' * (4 - len(b64string) % 4)
+    padded = b64string + b'=' * (-len(b64string) % 4)
     return base64.urlsafe_b64decode(padded)
