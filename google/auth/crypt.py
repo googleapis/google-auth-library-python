@@ -38,6 +38,8 @@ To sign messages use :class:`Signer` with a private key::
     signature = signer.sign(message)
 
 """
+import io
+import json
 
 from pyasn1.codec.der import decoder
 from pyasn1_modules import pem
@@ -229,6 +231,29 @@ class Signer(object):
         return cls(private_key, key_id=key_id)
 
     @classmethod
+    def from_service_account_info(cls, info):
+        """Creates a Signer instance instance from a dictionary containing
+        service account info in Google format.
+
+        Args:
+            info (Mapping[str, str]): The service account info in Google
+                format.
+
+        Returns:
+            Signer: The constructed signer.
+
+        Raises:
+            ValueError: If the info is not in the expected format.
+        """
+        if 'private_key' not in info:
+            raise ValueError(
+                'The private_key field was not found in the service account '
+                'info.')
+
+        return cls.from_string(
+            info['private_key'], info.get('private_key_id'))
+
+    @classmethod
     def from_service_account_file(cls, filename):
         """Creates a Signer instance from a service account .json file
         in Google format.
@@ -239,6 +264,7 @@ class Signer(object):
         Returns:
             Signer: The constructed signer.
         """
-        from google.auth import _service_account_info
-        _, signer = _service_account_info.from_filename(filename)
-        return signer
+        with io.open(filename, 'r', encoding='utf-8') as json_file:
+            data = json.load(json_file)
+
+        return cls.from_service_account_info(data)

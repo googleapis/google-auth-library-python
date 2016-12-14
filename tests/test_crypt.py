@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
 import json
+import os
 
 import mock
 from pyasn1_modules import pem
@@ -198,6 +198,18 @@ class TestSigner(object):
         key_bytes = 'bogus-key'
         with pytest.raises(ValueError):
             crypt.Signer.from_string(key_bytes)
+
+    def test_from_service_account_info(self):
+        signer = crypt.Signer.from_service_account_info(SERVICE_ACCOUNT_INFO)
+
+        assert signer.key_id == SERVICE_ACCOUNT_INFO['private_key_id']
+        assert isinstance(signer._key, rsa.key.PrivateKey)
+
+    def test_from_service_account_info_missing_key(self):
+        with pytest.raises(ValueError) as excinfo:
+            crypt.Signer.from_service_account_info({})
+
+        assert excinfo.match(r'private_key')
 
     def test_from_service_account_file(self):
         signer = crypt.Signer.from_service_account_file(
