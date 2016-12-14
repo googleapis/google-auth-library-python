@@ -57,6 +57,8 @@ _PKCS1_MARKER = ('-----BEGIN RSA PRIVATE KEY-----',
 _PKCS8_MARKER = ('-----BEGIN PRIVATE KEY-----',
                  '-----END PRIVATE KEY-----')
 _PKCS8_SPEC = PrivateKeyInfo()
+_JSON_FILE_PRIVATE_KEY = 'private_key'
+_JSON_FILE_PRIVATE_KEY_ID = 'private_key_id'
 
 
 def _bit_list_to_bytes(bit_list):
@@ -245,13 +247,14 @@ class Signer(object):
         Raises:
             ValueError: If the info is not in the expected format.
         """
-        if 'private_key' not in info:
+        if _JSON_FILE_PRIVATE_KEY not in info:
             raise ValueError(
                 'The private_key field was not found in the service account '
                 'info.')
 
         return cls.from_string(
-            info['private_key'], info.get('private_key_id'))
+            info[_JSON_FILE_PRIVATE_KEY],
+            info.get(_JSON_FILE_PRIVATE_KEY_ID))
 
     @classmethod
     def from_service_account_file(cls, filename):
