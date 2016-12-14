@@ -42,7 +42,8 @@ class Signer(object):
     def __init__(self):
         self.key_id = None
 
-    def sign(self, message):
+    @staticmethod
+    def sign(message):
         """Signs a message.
 
         Args:
@@ -51,9 +52,6 @@ class Signer(object):
         Returns:
             bytes: The signature of the message.
         """
-        # pylint: disable=no-self-use
-        # Locally disabled because this needs to confirm the to Signer
-        # interface.
         message = _helpers.to_bytes(message)
         return app_identity.sign_blob(message)
 
