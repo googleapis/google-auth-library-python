@@ -71,7 +71,7 @@ def test_redirect_uri(instance):
 
 def test_authorization_url(instance):
     scope = 'scope_one'
-    instance.oauth2session.scope = scope
+    instance.oauth2session.scope = [scope]
     authorization_url_patch = mock.patch.object(
         instance.oauth2session, 'authorization_url',
         wraps=instance.oauth2session.authorization_url)
