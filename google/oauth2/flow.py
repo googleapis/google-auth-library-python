@@ -20,11 +20,11 @@ This module provides integration with `requests-oauthlib`_ for running the
 Here's an example of using the flow with the installed application
 authorization flow::
 
-    from google.oauth2 import flow
+    import google.oauth2.flow
 
     # Create the flow using the client secrets file from the Google API
     # Console.
-    flow = flow.Flow.from_client_secrets_file(
+    flow = google.oauth2.flow.Flow.from_client_secrets_file(
         'path/to/client_secrets.json',
         scopes=['profile', 'email'],
         redirect_uri='urn:ietf:wg:oauth:2.0:oob')
@@ -60,8 +60,9 @@ import google.oauth2.credentials
 class Flow(object):
     """OAuth 2.0 Authorization Flow
 
-    This class is a thin wrapper over :class:`requests_oauthlib.OAuth2Session`.
-    It provides convenience methods and sane defaults for doing Google's
+    This class uses a :class:`requests_oauthlib.OAuth2Session` instance at
+    :attr:`oauth2session` to perform all of the OAuth 2.0 logic. This class
+    just provides convenience methods and sane defaults for doing Google's
     particular flavors of OAuth 2.0.
 
     Typically you'll construct an instance of this flow using
@@ -95,18 +96,23 @@ class Flow(object):
         """
         self.client_config = None
         """Mapping[str, Any]: The OAuth 2.0 client configuration."""
-        self.type = None
+        self.client_type = None
         """str: The client type, either ``'web'`` or ``'installed'``"""
 
         if 'web' in client_config:
             self.client_config = client_config['web']
-            self.type = 'web'
+            self.client_type = 'web'
         elif 'installed' in client_config:
             self.client_config = client_config['installed']
-            self.type = 'installed'
+            self.client_type = 'installed'
         else:
             raise ValueError(
                 'Client secrets must be for a web or installed app.')
+
+        required_keys = ('auth_uri', 'token_uri', 'client_id')
+
+        if not set(required_keys).issubset(self.client_config.keys()):
+            raise ValueError('Client secrets is not in the correct format.')
 
         self.oauth2session = requests_oauthlib.OAuth2Session(
             client_id=self.client_config['client_id'],
@@ -193,7 +199,9 @@ class Flow(object):
 
         Returns:
             Mapping[str, str]: The obtained tokens. Typically, you will not use
-                return value and use :meth:`credentials`.
+                return value of this function and instead and use
+                :meth:`credentials` to obtain a
+                :class:`~google.auth.credentials.Credentials` instance.
         """
         return self.oauth2session.fetch_token(
             self.client_config['token_uri'],

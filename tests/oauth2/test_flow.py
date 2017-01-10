@@ -1,4 +1,4 @@
-# Copyright 2014 Google Inc.
+# Copyright 2016 Google Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -43,9 +43,14 @@ def test_constructor_installed():
     assert instance.oauth2session.scope == mock.sentinel.scopes
 
 
-def test_constructor_bad():
+def test_constructor_bad_format():
     with pytest.raises(ValueError):
         flow.Flow({}, scopes=[])
+
+
+def test_constructor_missing_keys():
+    with pytest.raises(ValueError):
+        flow.Flow({'web': {}}, scopes=[])
 
 
 def test_from_client_secrets_file():
