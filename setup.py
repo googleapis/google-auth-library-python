@@ -43,7 +43,7 @@ setup(
     namespace_packages=('google',),
     install_requires=DEPENDENCIES,
     extras_require={
-        'oauthlib': EXTRA_OAUTHLIB_DEPENDENCIES
+        'oauthlib': EXTRA_OAUTHLIB_DEPENDENCIES,
     },
     license='Apache 2.0',
     keywords='google auth oauth client',

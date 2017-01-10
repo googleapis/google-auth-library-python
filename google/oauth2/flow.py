@@ -56,6 +56,8 @@ import requests_oauthlib
 import google.auth.transport.requests
 import google.oauth2.credentials
 
+_REQUIRED_CONFIG_KEYS = frozenset(('auth_uri', 'token_uri', 'client_id'))
+
 
 class Flow(object):
     """OAuth 2.0 Authorization Flow
@@ -109,9 +111,7 @@ class Flow(object):
             raise ValueError(
                 'Client secrets must be for a web or installed app.')
 
-        required_keys = ('auth_uri', 'token_uri', 'client_id')
-
-        if not set(required_keys).issubset(self.client_config.keys()):
+        if not set(_REQUIRED_CONFIG_KEYS).issubset(self.client_config.keys()):
             raise ValueError('Client secrets is not in the correct format.')
 
         self.oauth2session = requests_oauthlib.OAuth2Session(
