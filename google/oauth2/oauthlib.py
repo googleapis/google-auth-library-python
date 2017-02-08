@@ -14,6 +14,10 @@
 
 """Integration with oauthlib
 
+.. warning::
+    This module is experimental and is subject to change signficantly
+    within major version releases.
+
 This module provides helpers for integrating with `requests-oauthlib`_.
 Typically, you'll want to use the higher-level helpers in
 :mod:`google.oauth2.flow`.
