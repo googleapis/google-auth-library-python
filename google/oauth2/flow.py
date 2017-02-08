@@ -117,7 +117,7 @@ class Flow(object):
             Flow: The constructed Flow instance.
 
         Raises:
-            ValueError:  If the client configuration is not in the correct
+            ValueError: If the client configuration is not in the correct
                 format.
 
         .. _client secrets:
