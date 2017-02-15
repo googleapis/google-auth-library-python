@@ -18,6 +18,7 @@ import json
 
 import mock
 import pytest
+from six.moves import http_client
 
 from google.auth import exceptions
 from google.auth import iam
@@ -64,7 +65,7 @@ class TestSigner(object):
 
     def test_key_id(self):
         key_id = '123'
-        request = make_request(200, data={'keyId': key_id})
+        request = make_request(http_client.OK, data={'keyId': key_id})
         credentials = make_credentials()
 
         signer = iam.Signer(
@@ -77,7 +78,8 @@ class TestSigner(object):
     def test_sign_bytes(self):
         signature = b'DEADBEEF'
         encoded_signature = base64.b64encode(signature).decode('utf-8')
-        request = make_request(200, data={'signature': encoded_signature})
+        request = make_request(
+            http_client.OK, data={'signature': encoded_signature})
         credentials = make_credentials()
 
         signer = iam.Signer(
@@ -88,7 +90,7 @@ class TestSigner(object):
         assert returned_signature == signature
 
     def test_sign_bytes_failure(self):
-        request = make_request(401)
+        request = make_request(http_client.UNAUTHORIZED)
         credentials = make_credentials()
 
         signer = iam.Signer(

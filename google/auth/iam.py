@@ -22,8 +22,14 @@ API`_'s auth-related functionality.
 import base64
 import json
 
+from six.moves import http_client
+
 from google.auth import _helpers
 from google.auth import exceptions
+
+_IAM_API_ROOT_URI = 'https://iam.googleapis.com/v1'
+_SIGN_BLOB_URI = (
+    _IAM_API_ROOT_URI + '/projects/-/serviceAccounts/{}:signBlob?alt=json')
 
 
 class Signer(object):
@@ -57,9 +63,10 @@ class Signer(object):
 
                 - https://www.googleapis.com/auth/iam
                 - https://www.googleapis.com/auth/cloud-platform
-            service_account_email (str): The service account email to  use to
-                sign bytes. Often, this can be the same as the service account
-                email in the given credentials.
+            service_account_email (str): The service account email identifying
+                which service account to use to sign bytes. Often, this can
+                be the same as the service account email in the given
+                credentials.
         """
         self._request = request
         self._credentials = credentials
@@ -70,25 +77,22 @@ class Signer(object):
         message = _helpers.to_bytes(message)
 
         method = 'POST'
-        url = (
-            'https://iam.googleapis.com/v1/projects/-/serviceAccounts/{}'
-            ':signBlob?alt=json').format(self._service_account_email)
+        url = _SIGN_BLOB_URI.format(self._service_account_email)
         headers = {}
         body = json.dumps({
-            'bytesToSign': base64.b64encode(message).decode('utf-8')
+            'bytesToSign': base64.b64encode(message).decode('utf-8'),
         })
 
         self._credentials.before_request(self._request, method, url, headers)
         response = self._request(
             url=url, method=method, body=body, headers=headers)
 
-        if response.status != 200:
+        if response.status != http_client.OK:
             raise exceptions.TransportError(
                 'Error calling the IAM signBytes API: {}'.format(
                     response.data))
 
-        data = json.loads(response.data.decode('utf-8'))
-        return data
+        return json.loads(response.data.decode('utf-8'))
 
     @property
     def key_id(self):
