@@ -17,6 +17,7 @@
 from __future__ import absolute_import
 
 import grpc
+import six
 
 
 class AuthMetadataPlugin(grpc.AuthMetadataPlugin):
@@ -51,12 +52,10 @@ class AuthMetadataPlugin(grpc.AuthMetadataPlugin):
         self._credentials.before_request(
             self._request,
             context.method_name,
-            context.url,
+            context.service_url,
             headers)
 
-        return [
-            headers.items()
-        ]
+        return list(six.iteritems(headers))
 
     def __call__(self, context, callback):
         """Passes authorization metadata into the given callback.
