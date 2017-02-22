@@ -207,7 +207,7 @@ class Signer(object):
 
 
 class RSASigner(Signer):
-    """Signs messages with a RSA private key.
+    """Signs messages with an RSA private key.
 
     Args:
         private_key (rsa.key.PrivateKey): The private key to sign with.
@@ -219,7 +219,6 @@ class RSASigner(Signer):
     def __init__(self, private_key, key_id=None):
         self._key = private_key
         self._key_id = key_id
-        """"""
 
     @property
     @_helpers.copy_docstring(Signer)
