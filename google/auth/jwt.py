@@ -47,8 +47,8 @@ import json
 
 from google.auth import _helpers
 from google.auth import _service_account_info
-from google.auth import credentials
 from google.auth import crypt
+import google.auth.credentials
 
 
 _DEFAULT_TOKEN_LIFETIME_SECS = 3600  # 1 hour in sections
@@ -239,8 +239,8 @@ def decode(token, certs=None, verify=True, audience=None):
     return payload
 
 
-class Credentials(credentials.Signing,
-                  credentials.Credentials):
+class Credentials(google.auth.credentials.Signing,
+                  google.auth.credentials.Credentials):
     """Credentials that use a JWT as the bearer token.
 
     These credentials require an "audience" claim. This claim identifies the
@@ -371,6 +371,40 @@ class Credentials(credentials.Signing,
             filename, require=['client_email'])
         return cls._from_signer_and_info(signer, info, **kwargs)
 
+    @classmethod
+    def from_signing_credentials(cls, credentials, audience, **kwargs):
+        """Creates a new :class:`google.auth.jwt.Credentials` instance from an
+        existing :class:`google.auth.credentials.Signing` instance.
+
+        The new instance will use the same signer as the existing instance and
+        will use the existing instance's signer email as the issuer and
+        subject by default.
+
+        Example::
+
+            svc_creds = service_account.Credentials.from_service_account_file(
+                'service_account.json')
+            jwt_ceds = jwt.Credentials.from_signing_credentials(
+                svc_creds,
+                audience='https://speech.googleapis.com')
+
+        Args:
+            credentials (google.auth.credentials.Signing): The credentials to
+                use to construct the new credentials.
+            audience (str): the `aud` claim. The intended audience for the
+                credentials.
+            kwargs: Additional arguments to pass to the constructor.
+
+        Returns:
+            google.auth.jwt.Credentials: A new Credentials instance.
+        """
+        kwargs.setdefault('issuer', credentials.signer_email)
+        kwargs.setdefault('subject', credentials.signer_email)
+        return cls(
+            credentials.signer,
+            audience=audience,
+            **kwargs)
+
     def with_claims(self, issuer=None, subject=None, audience=None,
                     additional_claims=None):
         """Returns a copy of these credentials with modified claims.
@@ -431,16 +465,16 @@ class Credentials(credentials.Signing,
         # (pylint doesn't correctly recognize overridden methods.)
         self.token, self.expiry = self._make_jwt()
 
-    @_helpers.copy_docstring(credentials.Signing)
+    @_helpers.copy_docstring(google.auth.credentials.Signing)
     def sign_bytes(self, message):
         return self._signer.sign(message)
 
     @property
-    @_helpers.copy_docstring(credentials.Signing)
+    @_helpers.copy_docstring(google.auth.credentials.Signing)
     def signer_email(self):
         return self._issuer
 
     @property
-    @_helpers.copy_docstring(credentials.Signing)
+    @_helpers.copy_docstring(google.auth.credentials.Signing)
     def signer(self):
         return self._signer
