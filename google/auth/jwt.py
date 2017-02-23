@@ -333,9 +333,7 @@ class Credentials(credentials.Signing,
         """
         kwargs.setdefault('subject', info['client_email'])
         kwargs.setdefault('issuer', info['client_email'])
-        return cls(
-            signer,
-            **kwargs)
+        return cls(signer, **kwargs)
 
     @classmethod
     def from_service_account_info(cls, info, **kwargs):
