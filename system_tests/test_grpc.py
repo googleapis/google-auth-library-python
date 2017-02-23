@@ -45,7 +45,8 @@ def test_grpc_request_with_jwt_credentials(http_request):
 
     channel = google.auth.transport.grpc.secure_authorized_channel(
         credentials,
-        http_request)
+        http_request,
+        publisher_client.PublisherClient.SERVICE_ADDRESS)
 
     # Create a pub/sub client.
     client = publisher_client.PublisherClient(channel=channel)
