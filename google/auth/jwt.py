@@ -253,23 +253,24 @@ class Credentials(google.auth.credentials.Signing,
     To create JWT credentials using a Google service account private key
     JSON file::
 
+        audience = 'https://pubsub.googleapis.com/google.pubsub.v1.Publisher'
         credentials = jwt.Credentials.from_service_account_file(
             'service-account.json',
-            audience='https://speech.googleapis.com')
+            audience=audience)
 
     If you already have the service account file loaded and parsed::
 
         service_account_info = json.load(open('service_account.json'))
         credentials = jwt.Credentials.from_service_account_info(
             service_account_info,
-            audience='https://speech.googleapis.com')
+            audience=audience)
 
     Both helper methods pass on arguments to the constructor, so you can
     specify the JWT claims::
 
         credentials = jwt.Credentials.from_service_account_file(
             'service-account.json',
-            audience='https://speech.googleapis.com',
+            audience=audience,
             additional_claims={'meta': 'data'})
 
     You can also construct the credentials directly if you have a
@@ -279,13 +280,14 @@ class Credentials(google.auth.credentials.Signing,
             signer,
             issuer='your-issuer',
             subject='your-subject',
-            audience=''https://speech.googleapis.com'')
+            audience=audience)
 
     The claims are considered immutable. If you want to modify the claims,
     you can easily create another instance using :meth:`with_claims`::
 
-        new_credentials = credentials.with_claims(
-            audience='https://vision.googleapis.com')
+        new_audience = (
+            'https://pubsub.googleapis.com/google.pubsub.v1.Subscriber')
+        new_credentials = credentials.with_claims(audience=new_audience)
     """
 
     def __init__(self, signer, issuer, subject, audience,
@@ -384,9 +386,10 @@ class Credentials(google.auth.credentials.Signing,
 
             svc_creds = service_account.Credentials.from_service_account_file(
                 'service_account.json')
-            jwt_ceds = jwt.Credentials.from_signing_credentials(
-                svc_creds,
-                audience='https://speech.googleapis.com')
+            audience = (
+                'https://pubsub.googleapis.com/google.pubsub.v1.Publisher')
+            jwt_creds = jwt.Credentials.from_signing_credentials(
+                svc_creds, audience=audience)
 
         Args:
             credentials (google.auth.credentials.Signing): The credentials to
