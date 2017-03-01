@@ -31,8 +31,8 @@ try:
     import requests_oauthlib
 except ImportError:  # pragma: NO COVER
     raise ImportError(
-        'The requests-oauthlib library is not installed, please install '
-        'requests-oauthlib to use google.oauth2.oauthlib.')
+        'The requests-oauthlib library is not installed, please install the '
+        'requests-oauthlib package to use google.oauth2.oauthlib.')
 
 import google.oauth2.credentials
 

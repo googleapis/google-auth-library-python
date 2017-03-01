@@ -34,8 +34,8 @@ try:
     import urllib3
 except ImportError:  # pragma: NO COVER
     raise ImportError(
-        'The urllib3 library is not installed, please install urllib3 to '
-        'use the urllib3 transport.')
+        'The urllib3 library is not installed, please install the urllib3 '
+        'package to use the urllib3 transport.')
 import urllib3.exceptions
 
 from google.auth import exceptions

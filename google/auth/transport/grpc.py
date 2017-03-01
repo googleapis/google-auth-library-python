@@ -20,8 +20,8 @@ try:
     import grpc
 except ImportError:  # pragma: NO COVER
     raise ImportError(
-        'gRPC is not installed, please install grpcio to use the gRPC '
-        'transport.')
+        'gRPC is not installed, please install the grpcio package to use the '
+        'gRPC transport.')
 import six
 
 

@@ -22,8 +22,8 @@ try:
     import requests
 except ImportError:  # pragma: NO COVER
     raise ImportError(
-        'The requests library is not installed, please install requests to '
-        'use the requests transport.')
+        'The requests library is not installed, please install the requests '
+        'package to use the requests transport.')
 import requests.exceptions
 
 from google.auth import exceptions
