@@ -275,7 +275,7 @@ class InstalledAppFlow(Flow):
 
     This flow has two strategies: The console strategy and the server strategy.
 
-    The console strategy instructs the user to open the authoriation URL
+    The console strategy instructs the user to open the authorization URL
     in their browser. Once the authorization is complete the authorization
     server will give the user a code. The user then most copy & paste this
     code into the application. The code is then exchanged for a token.
