@@ -50,11 +50,21 @@ authorization flow::
 """
 
 import json
+import logging
+import webbrowser
+
+from six.moves import BaseHTTPServer
+from six.moves import http_client
+from six.moves import input
+from six.moves import urllib
 
 import google.auth.transport.requests
 import google.oauth2.credentials
 
 import google_auth_oauthlib.helpers
+
+
+_LOGGER = logging.getLogger(__name__)
 
 
 class Flow(object):
@@ -253,3 +263,169 @@ class Flow(object):
         """
         return google.auth.transport.requests.AuthorizedSession(
             self.credentials)
+
+
+class InstalledAppFlow(Flow):
+    """Authorization flow helper for installed applications.
+
+    This :class:`Flow` subclass makes it easier to perform the
+    `Installed Application Authorization Flow`_. This flow is useful for
+    local development or applications that are installed on a desktop operating
+    system.
+
+    This flow has two strategies: The console strategy and the server strategy.
+
+    The console strategy instructs the user to open the authoriation URL
+    in their browser. Once the authorization is complete the authorization
+    server will give the user a code. The user then most copy & paste this
+    code into the application. The code is then exchanged for a token.
+
+    The server strategy instructs the user to open the authorization URL in
+    their browser and will attempt to automatically open the URL for them. The
+    strategy will start a local web server to listen for the authorization
+    response. Once authorization is complete the authorization server will
+    redirect the user's browser to the local web server. The web server will
+    get the authorization code from the response and shutdown. The code is then
+    exchanged for a token.
+
+    Example::
+        import google.oauth2.flow
+
+        flow = google.oauth2.flow.InstalledAppFlow.from_client_secrets_file(
+            'client_secrets.json',
+            scopes=['profile', 'email'])
+
+        flow.run()
+
+        session = flow.authorized_session()
+
+        profile_info = session.get(
+            'https://www.googleapis.com/userinfo/v2/me').json()
+
+        print(profile_info)
+
+
+    Note that these aren't the only two ways to accomplish the installed
+    application flow, they are just the most common ways. You can use the
+    :class:`Flow` class to perform the same flow with different methods of
+    presenting the authorization URL to the user or obtaining the authorization
+    response, such as using an embedded web view.
+
+    .. _Installed Application Authorization Flow:
+        https://developers.google.com/api-client-library/python/auth
+        /installed-app
+    """
+    _OOB_REDIRECT_URI = 'urn:ietf:wg:oauth:2.0:oob'
+    CONSOLE = 'console'
+    """The console strategy"""
+    SERVER = 'server'
+    """The server strategy"""
+
+    authorization_prompt_messsage = (
+        'Please visit this URL to authorize this application: {}')
+    """str: The message to display when prompting the user for
+    authorization."""
+    authorization_code_message = (
+        'Enter the authorization code: ')
+    """str: The message to display when prompting the user for the
+    authorization code. Used only by the console strategy."""
+
+    web_host = 'localhost'
+    """str: The web host for the local redirect server. Used only by the server
+    strategy."""
+    web_port = 8080
+    """int: The port for the local redirect server. Used only by the server
+    strategy."""
+    web_success_message = (
+        'The authentication flow has completed, you may close this window.')
+    """str: The message to display when the authorization flow is complete.
+    Used only by the server strategy."""
+
+    def run(self, strategy=CONSOLE, **kwargs):
+        """Run the flow.
+
+        Prompts the user for authorization and processes the authorization
+        response.
+
+        Args:
+            strategy (str): Either :attr:`InstalledAppFlow.CONSOLE` or
+                :attr:`InstalledAppFlow.SERVER`. The strategy to use to present
+                the user with the authorization URL and process the
+                authorization response.
+            kwargs: Additional key-word arguments passed through to
+                :meth:`authorization_url`.
+
+        Raises:
+            ValueError: If an invalid strategy was specified.
+        """
+        kwargs.setdefault('prompt', 'consent')
+
+        if strategy == self.CONSOLE:
+            self._console_strategy(**kwargs)
+        elif strategy == self.SERVER:
+            self._server_strategy(**kwargs)
+        else:
+            raise ValueError('Unknown strategy {}'.format(strategy))
+
+    def _console_strategy(self, **kwargs):
+        self.redirect_uri = self._OOB_REDIRECT_URI
+
+        auth_url, _ = self.authorization_url(**kwargs)
+
+        print(self.authorization_prompt_messsage.format(auth_url))
+
+        code = input(self.authorization_code_message)
+
+        self.fetch_token(code=code)
+
+    def _server_strategy(self, **kwargs):
+        self.redirect_uri = 'http://{}:{}/'.format(
+            self.web_host, self.web_port)
+
+        auth_url, _ = self.authorization_url(**kwargs)
+
+        local_server = self._LocalRedirectServer(
+            self.web_success_message,
+            (self.web_host, self.web_port),
+            self._LocalRedirectRequestHandler)
+
+        webbrowser.open(auth_url, new=1, autoraise=True)
+
+        print(self.authorization_prompt_messsage.format(auth_url))
+
+        local_server.handle_request()
+
+        authorization_response = urllib.parse.urljoin(
+            # Note: using https here because oauthlib is very picky that
+            # OAuth 2.0 should only occur over https.
+            'https://localhost', local_server.last_request_path)
+        self.fetch_token(authorization_response=authorization_response)
+
+    class _LocalRedirectServer(BaseHTTPServer.HTTPServer):
+        """A server to handle OAuth 2.0 redirects back to localhost."""
+        def __init__(self, success_message, *args, **kwargs):
+            BaseHTTPServer.HTTPServer.__init__(self, *args, **kwargs)
+            self.success_message = success_message
+            self.last_request_path = None
+
+    class _LocalRedirectRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
+        """A handler for OAuth 2.0 redirects back to localhost.
+        Waits for a single request and parses the query parameters
+        into the servers last_query_params and then stops serving.
+        """
+        def do_GET(self):
+            """GET request handler."""
+            # pylint: disable=invalid-name
+            # (do_GET is the method name defined in the superclass.)
+            self.server.last_request_path = self.path
+            self.send_response(http_client.OK)
+            self.send_header('Content-type', 'text/html')
+            self.end_headers()
+            self.wfile.write(self.server.success_message.encode('utf-8'))
+
+        def log_message(self, format, *args, **kwargs):
+            """Override of log_message to prevent printing directly to
+            stderr."""
+            # pylint: disable=redefined-builtin
+            # (format is the argument name defined in the superclass.)
+            _LOGGER.info(format, *args, **kwargs)
