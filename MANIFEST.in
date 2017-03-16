@@ -1,2 +1,2 @@
-include README.rst LICENSE.txt CHANGELOG.rst
+include README.rst LICENSE CHANGELOG.rst
 recursive-include tests *
