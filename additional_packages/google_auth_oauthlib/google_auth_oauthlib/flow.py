@@ -273,29 +273,19 @@ class InstalledAppFlow(Flow):
     local development or applications that are installed on a desktop operating
     system.
 
-    This flow has two strategies: The console strategy and the server strategy.
-
-    The console strategy instructs the user to open the authorization URL
-    in their browser. Once the authorization is complete the authorization
-    server will give the user a code. The user then most copy & paste this
-    code into the application. The code is then exchanged for a token.
-
-    The server strategy instructs the user to open the authorization URL in
-    their browser and will attempt to automatically open the URL for them. The
-    strategy will start a local web server to listen for the authorization
-    response. Once authorization is complete the authorization server will
-    redirect the user's browser to the local web server. The web server will
-    get the authorization code from the response and shutdown. The code is then
-    exchanged for a token.
+    This flow has two strategies: The console strategy provided by
+    :meth:`run_console` and the local server strategy provided by
+    :meth:`run_local_server`.
 
     Example::
+
         import google.oauth2.flow
 
         flow = google.oauth2.flow.InstalledAppFlow.from_client_secrets_file(
             'client_secrets.json',
             scopes=['profile', 'email'])
 
-        flow.run()
+        flow.run_local_server()
 
         session = flow.authorized_session()
 
@@ -316,82 +306,96 @@ class InstalledAppFlow(Flow):
         /installed-app
     """
     _OOB_REDIRECT_URI = 'urn:ietf:wg:oauth:2.0:oob'
-    CONSOLE = 'console'
-    """The console strategy"""
-    SERVER = 'server'
-    """The server strategy"""
 
-    authorization_prompt_messsage = (
-        'Please visit this URL to authorize this application: {}')
+    _DEFAULT_AUTH_PROMPT_MESSAGE = (
+        'Please visit this URL to authorize this application: {url}')
     """str: The message to display when prompting the user for
     authorization."""
-    authorization_code_message = (
+    _DEFAULT_AUTH_CODE_MESSAGE = (
         'Enter the authorization code: ')
     """str: The message to display when prompting the user for the
     authorization code. Used only by the console strategy."""
 
-    web_host = 'localhost'
-    """str: The web host for the local redirect server. Used only by the server
-    strategy."""
-    web_port = 8080
-    """int: The port for the local redirect server. Used only by the server
-    strategy."""
-    web_success_message = (
+    _DEFAULT_WEB_SUCCESS_MESSAGE = (
         'The authentication flow has completed, you may close this window.')
-    """str: The message to display when the authorization flow is complete.
-    Used only by the server strategy."""
 
-    def run(self, strategy=CONSOLE, **kwargs):
-        """Run the flow.
+    def run_console(
+            self,
+            authorization_prompt_message=_DEFAULT_AUTH_PROMPT_MESSAGE,
+            authorization_code_message=_DEFAULT_AUTH_CODE_MESSAGE,
+            **kwargs):
+        """Run the flow using the console strategy.
 
-        Prompts the user for authorization and processes the authorization
-        response.
+        The console strategy instructs the user to open the authorization URL
+        in their browser. Once the authorization is complete the authorization
+        server will give the user a code. The user then most copy & paste this
+        code into the application. The code is then exchanged for a token.
 
         Args:
-            strategy (str): Either :attr:`InstalledAppFlow.CONSOLE` or
-                :attr:`InstalledAppFlow.SERVER`. The strategy to use to present
-                the user with the authorization URL and process the
-                authorization response.
+            authorization_prompt_message (str): The message to display to tell
+                the user to navigate to the authorization URL.
+            authorization_code_message (str): The message to display when
+                prompting the user for the authorization code.
             kwargs: Additional key-word arguments passed through to
                 :meth:`authorization_url`.
 
-        Raises:
-            ValueError: If an invalid strategy was specified.
+        Returns:
+            google.oauth2.credentials.Credentials: The OAuth 2.0 credentials
+                for the user.
         """
         kwargs.setdefault('prompt', 'consent')
 
-        if strategy == self.CONSOLE:
-            self._console_strategy(**kwargs)
-        elif strategy == self.SERVER:
-            self._server_strategy(**kwargs)
-        else:
-            raise ValueError('Unknown strategy {}'.format(strategy))
-
-    def _console_strategy(self, **kwargs):
         self.redirect_uri = self._OOB_REDIRECT_URI
 
         auth_url, _ = self.authorization_url(**kwargs)
 
-        print(self.authorization_prompt_messsage.format(auth_url))
+        print(authorization_prompt_message.format(url=auth_url))
 
-        code = input(self.authorization_code_message)
+        code = input(authorization_code_message)
 
         self.fetch_token(code=code)
 
-    def _server_strategy(self, **kwargs):
-        self.redirect_uri = 'http://{}:{}/'.format(
-            self.web_host, self.web_port)
+        return self.credentials
+
+    def run_local_server(
+            self, host='localhost', port=8080,
+            authorization_prompt_message=_DEFAULT_AUTH_PROMPT_MESSAGE,
+            success_message=_DEFAULT_WEB_SUCCESS_MESSAGE,
+            **kwargs):
+        """Run the flow using the server strategy.
+
+        The server strategy instructs the user to open the authorization URL in
+        their browser and will attempt to automatically open the URL for them.
+        It will start a local web server to listen for the authorization
+        response. Once authorization is complete the authorization server will
+        redirect the user's browser to the local web server. The web server
+        will get the authorization code from the response and shutdown. The
+        code is then exchanged for a token.
+
+        Args:
+            host (str): The web host for the local redirect server.
+            port (int): The port for the local redirect server.
+            authorization_prompt_message (str): The message to display to tell
+                the user to navigate to the authorization URL.
+            success_message (str): The message to display in the web browser
+                the authorization flow is complete.
+            kwargs: Additional key-word arguments passed through to
+                :meth:`authorization_url`.
+
+        Returns:
+            google.oauth2.credentials.Credentials: The OAuth 2.0 credentials
+                for the user.
+        """
+        self.redirect_uri = 'http://{}:{}/'.format(host, port)
 
         auth_url, _ = self.authorization_url(**kwargs)
 
         local_server = self._LocalRedirectServer(
-            self.web_success_message,
-            (self.web_host, self.web_port),
-            self._LocalRedirectRequestHandler)
+            success_message, (host, port), self._LocalRedirectRequestHandler)
 
         webbrowser.open(auth_url, new=1, autoraise=True)
 
-        print(self.authorization_prompt_messsage.format(auth_url))
+        print(authorization_prompt_message.format(url=auth_url))
 
         local_server.handle_request()
 
@@ -400,6 +404,8 @@ class InstalledAppFlow(Flow):
             # OAuth 2.0 should only occur over https.
             'https://localhost', local_server.last_request_path)
         self.fetch_token(authorization_response=authorization_response)
+
+        return self.credentials
 
     class _LocalRedirectServer(BaseHTTPServer.HTTPServer):
         """A server to handle OAuth 2.0 redirects back to localhost."""
