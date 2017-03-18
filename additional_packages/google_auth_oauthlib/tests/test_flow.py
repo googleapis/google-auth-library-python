@@ -169,7 +169,13 @@ class TestInstalledAppFlow(object):
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
             future = pool.submit(instance.run_local_server)
-            requests.get(auth_redirect_url)
+
+            while not future.done():
+                try:
+                    requests.get(auth_redirect_url)
+                except requests.ConnectionError:  # pragma: NO COVER
+                    pass
+
             credentials = future.result()
 
         assert credentials.token == mock.sentinel.access_token
