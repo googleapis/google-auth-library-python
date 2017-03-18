@@ -17,7 +17,7 @@
 This module provides integration with `requests-oauthlib`_ for running the
 `OAuth 2.0 Authorization Flow`_ and acquiring user credentials.
 
-Here's an example of using the flow with the installed application
+Here's an example of using :class:`Flow` with the installed application
 authorization flow::
 
     from google_auth_oauthlib.flow import Flow
@@ -44,6 +44,9 @@ authorization flow::
     session = flow.authorized_session()
     print(session.get('https://www.googleapis.com/userinfo/v2/me').json())
 
+This particular flow can be handled entirely by using
+:class:`InstalledAppFlow`.
+
 .. _requests-oauthlib: http://requests-oauthlib.readthedocs.io/en/stable/
 .. _OAuth 2.0 Authorization Flow:
     https://tools.ietf.org/html/rfc6749#section-1.2
@@ -52,11 +55,10 @@ authorization flow::
 import json
 import logging
 import webbrowser
+import wsgiref.simple_server
+import wsgiref.util
 
-from six.moves import BaseHTTPServer
-from six.moves import http_client
 from six.moves import input
-from six.moves import urllib
 
 import google.auth.transport.requests
 import google.oauth2.credentials
@@ -279,9 +281,9 @@ class InstalledAppFlow(Flow):
 
     Example::
 
-        import google.oauth2.flow
+        from google.oauth2.flow import InstalledAppFlow
 
-        flow = google.oauth2.flow.InstalledAppFlow.from_client_secrets_file(
+        flow = InstalledAppFlow.from_client_secrets_file(
             'client_secrets.json',
             scopes=['profile', 'email'])
 
@@ -293,6 +295,7 @@ class InstalledAppFlow(Flow):
             'https://www.googleapis.com/userinfo/v2/me').json()
 
         print(profile_info)
+        # {'name': '...',  'email': '...', ...}
 
 
     Note that these aren't the only two ways to accomplish the installed
@@ -328,7 +331,7 @@ class InstalledAppFlow(Flow):
 
         The console strategy instructs the user to open the authorization URL
         in their browser. Once the authorization is complete the authorization
-        server will give the user a code. The user then most copy & paste this
+        server will give the user a code. The user then must copy & paste this
         code into the application. The code is then exchanged for a token.
 
         Args:
@@ -336,7 +339,7 @@ class InstalledAppFlow(Flow):
                 the user to navigate to the authorization URL.
             authorization_code_message (str): The message to display when
                 prompting the user for the authorization code.
-            kwargs: Additional key-word arguments passed through to
+            kwargs: Additional keyword arguments passed through to
                 :meth:`authorization_url`.
 
         Returns:
@@ -361,6 +364,7 @@ class InstalledAppFlow(Flow):
             self, host='localhost', port=8080,
             authorization_prompt_message=_DEFAULT_AUTH_PROMPT_MESSAGE,
             success_message=_DEFAULT_WEB_SUCCESS_MESSAGE,
+            open_browser=True,
             **kwargs):
         """Run the flow using the server strategy.
 
@@ -373,13 +377,16 @@ class InstalledAppFlow(Flow):
         code is then exchanged for a token.
 
         Args:
-            host (str): The web host for the local redirect server.
+            host (str): The hostname for the local redirect server. This will
+                be served over http, not https.
             port (int): The port for the local redirect server.
             authorization_prompt_message (str): The message to display to tell
                 the user to navigate to the authorization URL.
             success_message (str): The message to display in the web browser
                 the authorization flow is complete.
-            kwargs: Additional key-word arguments passed through to
+            open_browser (bool): Whether or not to open the authorization URL
+                in the user's browser.
+            kwargs: Additional keyword arguments passed through to
                 :meth:`authorization_url`.
 
         Returns:
@@ -390,48 +397,63 @@ class InstalledAppFlow(Flow):
 
         auth_url, _ = self.authorization_url(**kwargs)
 
-        local_server = self._LocalRedirectServer(
-            success_message, (host, port), self._LocalRedirectRequestHandler)
+        wsgi_app = _RedirectWSGIApp(success_message)
+        local_server = wsgiref.simple_server.make_server(
+            host, port, wsgi_app, handler_class=_WSGIRequestHandler)
 
-        webbrowser.open(auth_url, new=1, autoraise=True)
+        if open_browser:
+            webbrowser.open(auth_url, new=1, autoraise=True)
 
         print(authorization_prompt_message.format(url=auth_url))
 
         local_server.handle_request()
 
-        authorization_response = urllib.parse.urljoin(
-            # Note: using https here because oauthlib is very picky that
-            # OAuth 2.0 should only occur over https.
-            'https://localhost', local_server.last_request_path)
+        # Note: using https here because oauthlib is very picky that
+        # OAuth 2.0 should only occur over https.
+        authorization_response = wsgi_app.last_request_uri.replace(
+            'http', 'https')
         self.fetch_token(authorization_response=authorization_response)
 
         return self.credentials
 
-    class _LocalRedirectServer(BaseHTTPServer.HTTPServer):
-        """A server to handle OAuth 2.0 redirects back to localhost."""
-        def __init__(self, success_message, *args, **kwargs):
-            BaseHTTPServer.HTTPServer.__init__(self, *args, **kwargs)
-            self.success_message = success_message
-            self.last_request_path = None
 
-    class _LocalRedirectRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
-        """A handler for OAuth 2.0 redirects back to localhost.
-        Waits for a single request and parses the query parameters
-        into the servers last_query_params and then stops serving.
+class _WSGIRequestHandler(wsgiref.simple_server.WSGIRequestHandler):
+    """Custom WSGIRequestHandler.
+
+    Uses a named logger instead of printing to stderr.
+    """
+    def log_message(self, format, *args, **kwargs):
+        # pylint: disable=redefined-builtin
+        # (format is the argument name defined in the superclass.)
+        _LOGGER.info(format, *args, **kwargs)
+
+
+class _RedirectWSGIApp(object):
+    """WSGI app to handle the authorization redirect.
+
+    Stores the request URI and displays the given success message.
+    """
+
+    def __init__(self, success_message):
         """
-        def do_GET(self):
-            """GET request handler."""
-            # pylint: disable=invalid-name
-            # (do_GET is the method name defined in the superclass.)
-            self.server.last_request_path = self.path
-            self.send_response(http_client.OK)
-            self.send_header('Content-type', 'text/html')
-            self.end_headers()
-            self.wfile.write(self.server.success_message.encode('utf-8'))
+        Args:
+            success_message (str): The message to display in the web browser
+                the authorization flow is complete.
+        """
+        self.last_request_uri = None
+        self._success_message = success_message
 
-        def log_message(self, format, *args, **kwargs):
-            """Override of log_message to prevent printing directly to
-            stderr."""
-            # pylint: disable=redefined-builtin
-            # (format is the argument name defined in the superclass.)
-            _LOGGER.info(format, *args, **kwargs)
+    def __call__(self, environ, start_response):
+        """WSGI Callable.
+
+        Args:
+            environ (Mapping[str, Any]): The WSGI environment.
+            start_response (Callable[str, list]): The WSGI start_response
+                callable.
+
+        Returns:
+            Iterable[bytes]: The response body.
+        """
+        start_response('200 OK', [('Content-type', 'text/plain')])
+        self.last_request_uri = wsgiref.util.request_uri(environ)
+        return [self._success_message.encode('utf-8')]

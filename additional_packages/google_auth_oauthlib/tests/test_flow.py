@@ -12,12 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import concurrent.futures
 import json
 import os
 
 import mock
 import pytest
-import six
+import requests
+from six.moves import urllib
 
 from google_auth_oauthlib import flow
 
@@ -144,7 +146,7 @@ class TestInstalledAppFlow(object):
         with fetch_token_patch as fetch_token_mock:
             yield fetch_token_mock
 
-    @mock.patch('google.oauth2.flow.input')
+    @mock.patch('google.oauth2.flow.input', autospec=True)
     def test_run_console(self, input_mock, instance, mock_fetch_token):
         input_mock.return_value = mock.sentinel.code
 
@@ -158,49 +160,40 @@ class TestInstalledAppFlow(object):
             client_secret=CLIENT_SECRETS_INFO['web']['client_secret'],
             code=mock.sentinel.code)
 
-    @mock.patch('google.oauth2.flow.webbrowser')
+    @mock.patch('google.oauth2.flow.webbrowser', autospec=True)
     def test_run_local_server(
             self, webbrowser_mock, instance, mock_fetch_token):
-        redirect_path = self.REDIRECT_REQUEST_PATH
+        auth_redirect_url = urllib.parse.urljoin(
+            'http://localhost:8080',
+            self.REDIRECT_REQUEST_PATH)
 
-        class MockLocalServer(flow.InstalledAppFlow._LocalRedirectServer):
-            def handle_request(self):
-                self.last_request_path = redirect_path
-
-        instance._LocalRedirectServer = MockLocalServer
-
-        credentials = instance.run_local_server()
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+            future = pool.submit(instance.run_local_server)
+            requests.get(auth_redirect_url)
+            credentials = future.result()
 
         assert credentials.token == mock.sentinel.access_token
         assert credentials.refresh_token == mock.sentinel.refresh_token
+        assert webbrowser_mock.open.called
 
-        expected_response = 'https://localhost' + self.REDIRECT_REQUEST_PATH
+        expected_auth_response = auth_redirect_url.replace('http', 'https')
         mock_fetch_token.assert_called_with(
             CLIENT_SECRETS_INFO['web']['token_uri'],
             client_secret=CLIENT_SECRETS_INFO['web']['client_secret'],
-            authorization_response=expected_response)
+            authorization_response=expected_auth_response)
 
-    def test_request_handler(self):
-        # Borrowed from CPython, see https://github.com/python/cpython
-        # /blob/328612353266d86c248950a910efa869c8c9c087/Lib/test
-        # /test_httpservers.py#L727
-        class SocketlessRequestHandler(
-                flow.InstalledAppFlow._LocalRedirectRequestHandler):
-            def __init__(self, request, server):
-                # pylint: disable=super-init-not-called
-                # (intentionally not called so we can avoid socket code.)
-                self.rfile = six.BytesIO(request.encode('utf-8'))
-                self.wfile = six.BytesIO()
-                self.server = server
+    @mock.patch('google.oauth2.flow.webbrowser', autospec=True)
+    @mock.patch('wsgiref.simple_server.make_server', autospec=True)
+    def test_run_local_server_no_browser(
+            self, make_server_mock, webbrowser_mock, instance,
+            mock_fetch_token):
 
-        server = mock.Mock()
-        server.success_message = 'success'
+        def assign_last_request_uri(host, port, wsgi_app, **kwargs):
+            wsgi_app.last_request_uri = self.REDIRECT_REQUEST_PATH
+            return mock.Mock()
 
-        request = 'GET {} HTTP/1.1\r\n\r\n'.format(self.REDIRECT_REQUEST_PATH)
-        handler = SocketlessRequestHandler(request, server)
+        make_server_mock.side_effect = assign_last_request_uri
 
-        handler.handle_one_request()
+        instance.run_local_server(open_browser=False)
 
-        assert server.last_request_path == self.REDIRECT_REQUEST_PATH
-        response = handler.wfile.getvalue().decode('utf-8')
-        assert server.success_message in response
+        assert not webbrowser_mock.open.called
