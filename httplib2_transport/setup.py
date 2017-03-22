@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import io
+
 from setuptools import setup
 
 
@@ -24,7 +26,7 @@ DEPENDENCIES = (
 )
 
 
-with open('README.rst', 'r') as fh:
+with io.open('README.rst', 'r') as fh:
     long_description = fh.read()
 
 
