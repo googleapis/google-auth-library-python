@@ -25,10 +25,6 @@ DEPENDENCIES = (
     'six>=1.9.0',
 )
 
-EXTRA_OAUTHLIB_DEPENDENCIES = (
-    'requests-oauthlib>=0.7.0',
-)
-
 
 with io.open('README.rst', 'r') as fh:
     long_description = fh.read()
@@ -44,9 +40,6 @@ setup(
     packages=find_packages(exclude=('tests*', 'system_tests*')),
     namespace_packages=('google',),
     install_requires=DEPENDENCIES,
-    extras_require={
-        'oauthlib': EXTRA_OAUTHLIB_DEPENDENCIES,
-    },
     license='Apache 2.0',
     keywords='google auth oauth client',
     classifiers=(
@@ -55,6 +48,7 @@ setup(
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
+        'Programming Language :: Python :: 3.6',
         'Development Status :: 4 - Beta',
         'Intended Audience :: Developers',
         'License :: OSI Approved :: Apache Software License',
