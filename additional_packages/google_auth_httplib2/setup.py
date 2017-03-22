@@ -18,10 +18,6 @@ from setuptools import setup
 
 
 DEPENDENCIES = (
-    'pyasn1>=0.1.7',
-    'pyasn1-modules>=0.0.5',
-    'rsa>=3.1.4',
-    'six>=1.9.0',
     'google-auth'
 )
 
