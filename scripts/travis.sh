@@ -43,7 +43,7 @@ tox
 
 # Run tox for sub-packages.
 if [[ $TOXENV != "docs"  && -z $SYSTEM_TEST ]]; then
-    echo "Running tox for httplib2_transport..."
-    cd httplib2_transport
+    echo "Running tox for google_auth_httplib2..."
+    cd additional_packages/google_auth_httplib2
     tox
 fi
