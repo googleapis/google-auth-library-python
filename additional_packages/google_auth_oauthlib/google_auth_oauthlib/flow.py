@@ -58,10 +58,9 @@ import webbrowser
 import wsgiref.simple_server
 import wsgiref.util
 
-from six.moves import input
-
 import google.auth.transport.requests
 import google.oauth2.credentials
+from six.moves import input
 
 import google_auth_oauthlib.helpers
 
@@ -281,7 +280,7 @@ class InstalledAppFlow(Flow):
 
     Example::
 
-        from google.oauth2.flow import InstalledAppFlow
+        from google_auth_oauthlib.flow import InstalledAppFlow
 
         flow = InstalledAppFlow.from_client_secrets_file(
             'client_secrets.json',

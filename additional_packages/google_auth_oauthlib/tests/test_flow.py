@@ -146,21 +146,21 @@ class TestInstalledAppFlow(object):
         with fetch_token_patch as fetch_token_mock:
             yield fetch_token_mock
 
-    @mock.patch('google.oauth2.flow.input', autospec=True)
+    @mock.patch('google_auth_oauthlib.flow.input', autospec=True)
     def test_run_console(self, input_mock, instance, mock_fetch_token):
         input_mock.return_value = mock.sentinel.code
 
         credentials = instance.run_console()
 
         assert credentials.token == mock.sentinel.access_token
-        assert credentials.refresh_token == mock.sentinel.refresh_token
+        assert credentials._refresh_token == mock.sentinel.refresh_token
 
         mock_fetch_token.assert_called_with(
             CLIENT_SECRETS_INFO['web']['token_uri'],
             client_secret=CLIENT_SECRETS_INFO['web']['client_secret'],
             code=mock.sentinel.code)
 
-    @mock.patch('google.oauth2.flow.webbrowser', autospec=True)
+    @mock.patch('google_auth_oauthlib.flow.webbrowser', autospec=True)
     def test_run_local_server(
             self, webbrowser_mock, instance, mock_fetch_token):
         auth_redirect_url = urllib.parse.urljoin(
@@ -179,7 +179,7 @@ class TestInstalledAppFlow(object):
             credentials = future.result()
 
         assert credentials.token == mock.sentinel.access_token
-        assert credentials.refresh_token == mock.sentinel.refresh_token
+        assert credentials._refresh_token == mock.sentinel.refresh_token
         assert webbrowser_mock.open.called
 
         expected_auth_response = auth_redirect_url.replace('http', 'https')
@@ -188,7 +188,7 @@ class TestInstalledAppFlow(object):
             client_secret=CLIENT_SECRETS_INFO['web']['client_secret'],
             authorization_response=expected_auth_response)
 
-    @mock.patch('google.oauth2.flow.webbrowser', autospec=True)
+    @mock.patch('google_auth_oauthlib.flow.webbrowser', autospec=True)
     @mock.patch('wsgiref.simple_server.make_server', autospec=True)
     def test_run_local_server_no_browser(
             self, make_server_mock, webbrowser_mock, instance,
