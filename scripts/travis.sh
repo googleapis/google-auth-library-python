@@ -46,4 +46,8 @@ if [[ $TOXENV != "docs"  && -z $SYSTEM_TEST ]]; then
     echo "Running tox for google_auth_httplib2..."
     cd additional_packages/google_auth_httplib2
     tox
+    cd $ROOT
+    echo "Running tox for google_auth_oauthlib..."
+    cd additional_packages/google_auth_oauthlib
+    tox
 fi
