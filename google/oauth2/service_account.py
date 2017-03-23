@@ -70,6 +70,7 @@ specific subject using :meth:`~Credentials.with_subject`.
 .. _RFC 7523: https://tools.ietf.org/html/rfc7523
 """
 
+import copy
 import datetime
 
 from google.auth import _helpers
@@ -258,7 +259,7 @@ class Credentials(credentials.Signing,
             google.auth.service_account.Credentials: A new credentials
                 instance.
         """
-        new_additional_claims = self._additional_claims.copy()
+        new_additional_claims = copy.deepcopy(self._additional_claims)
         new_additional_claims.update(additional_claims or {})
 
         return Credentials(

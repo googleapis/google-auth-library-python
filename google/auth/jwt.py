@@ -42,6 +42,7 @@ You can also skip verification::
 
 import base64
 import collections
+import copy
 import datetime
 import json
 
@@ -426,7 +427,7 @@ class Credentials(google.auth.credentials.Signing,
         Returns:
             google.auth.jwt.Credentials: A new credentials instance.
         """
-        new_additional_claims = self._additional_claims.copy()
+        new_additional_claims = copy.deepcopy(self._additional_claims)
         new_additional_claims.update(additional_claims or {})
 
         return Credentials(
