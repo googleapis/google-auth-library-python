@@ -117,8 +117,8 @@ def get_project_id():
 
     try:
         output = subprocess.check_output(
-            _CLOUD_SDK_CONFIG_COMMAND,)
-            #stderr=subprocess.STDOUT)
+            _CLOUD_SDK_CONFIG_COMMAND,
+            stderr=subprocess.STDOUT)
     except (subprocess.CalledProcessError, OSError, IOError):
         return None
 
