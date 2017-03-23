@@ -114,7 +114,8 @@ def get_project_id():
 
     try:
         output = subprocess.check_output([
-            'gcloud', 'config', 'config-helper', '--format', 'json'])
+            'gcloud', 'config', 'config-helper', '--format', 'json'],
+            stderr=subprocess.STDOUT)
     except (subprocess.CalledProcessError, OSError, IOError):
         return None
 
