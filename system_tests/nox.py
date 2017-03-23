@@ -134,6 +134,14 @@ def configure_cloud_sdk(
     """
     install_cloud_sdk(session)
 
+    # Setup the service account as the default user account. This is
+    # needed for the project ID detection to work. Note that this doesn't
+    # change the application default credentials file, which is user
+    # credentials instead of service account credentials sometimes.
+    session.run(
+        GCLOUD, 'auth', 'activate-service-account', '--key-file',
+        SERVICE_ACCOUNT_FILE)
+
     if project:
         session.run(GCLOUD, 'config', 'set', 'project', 'example-project')
     else:
@@ -153,14 +161,6 @@ def configure_cloud_sdk(
     session.run(
         GCLOUD, 'auth', 'application-default', 'print-access-token',
         silent=True)
-
-    # Now, setup the service account as the default user account. This is
-    # needed for the project ID detection to work. Note that this doesn't
-    # change the application default credentials file, which is user
-    # credentials instead of service account credentials sometimes.
-    session.run(
-        GCLOUD, 'auth', 'activate-service-account', '--key-file',
-        SERVICE_ACCOUNT_FILE)
 
 
 # Test sesssions
