@@ -56,7 +56,9 @@ class Credentials(object):
         Note that credentials can be invalid but not expired becaue Credentials
         with :attr:`expiry` set to None is considered to never expire.
         """
-        now = _helpers.utcnow()
+        # Err on the side of reporting expiration early so that we avoid
+        # the 403-refresh-retry loop.
+        now = _helpers.utcnow() - _helpers.CLOCK_SKEW
         return self.expiry is not None and self.expiry <= now
 
     @property
