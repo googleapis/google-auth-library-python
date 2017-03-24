@@ -78,10 +78,10 @@ def test_ping_success_custom_root(mock_request):
     reload_module(_metadata)
 
     try:
-      assert _metadata.ping(request_mock)
+        assert _metadata.ping(request_mock)
     finally:
-      del os.environ[environment_vars.GCE_METADATA_IP]
-      reload_module(_metadata)
+        del os.environ[environment_vars.GCE_METADATA_IP]
+        reload_module(_metadata)
 
     request_mock.assert_called_once_with(
         method='GET',
@@ -126,11 +126,12 @@ def test_get_success_custom_root(mock_request):
     fake_root = 'another.metadata.service'
     os.environ[environment_vars.GCE_METADATA_ROOT] = fake_root
     reload_module(_metadata)
+
     try:
-      _metadata.get(request_mock, PATH)
+        _metadata.get(request_mock, PATH)
     finally:
-      del os.environ[environment_vars.GCE_METADATA_ROOT]
-      reload_module(_metadata)
+        del os.environ[environment_vars.GCE_METADATA_ROOT]
+        reload_module(_metadata)
 
     request_mock.assert_called_once_with(
         method='GET',
