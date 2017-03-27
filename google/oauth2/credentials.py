@@ -67,6 +67,7 @@ class Credentials(credentials.Scoped, credentials.Credentials):
         self._token_uri = token_uri
         self._client_id = client_id
         self._client_secret = client_secret
+        self._refresh_grant_response = None
 
     @property
     def refresh_token(self):
@@ -90,6 +91,17 @@ class Credentials(credentials.Scoped, credentials.Credentials):
         return self._client_secret
 
     @property
+    def refresh_grant_response(self):
+        """Optional[str]: The last response from the OAuth 2.0 token server.
+
+        This is set when :meth:`refresh` is called and will not be populated
+        otherwise. This is provided because some authorization servers will
+        send along additional information other than the access and refresh
+        tokens in the refresh grant response.
+        """
+        return self._refresh_grant_response
+
+    @property
     def requires_scopes(self):
         """False: OAuth 2.0 credentials have their scopes set when
         the initial token is requested and can not be changed."""
@@ -106,10 +118,12 @@ class Credentials(credentials.Scoped, credentials.Credentials):
 
     @_helpers.copy_docstring(credentials.Credentials)
     def refresh(self, request):
-        access_token, refresh_token, expiry, _ = _client.refresh_grant(
-            request, self._token_uri, self._refresh_token, self._client_id,
-            self._client_secret)
+        access_token, refresh_token, expiry, grant_response = (
+            _client.refresh_grant(
+                request, self._token_uri, self._refresh_token, self._client_id,
+                self._client_secret))
 
         self.token = access_token
         self.expiry = expiry
         self._refresh_token = refresh_token
+        self._refresh_grant_response = grant_response
