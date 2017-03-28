@@ -39,14 +39,16 @@ from google.oauth2 import _client
 class Credentials(credentials.Scoped, credentials.Credentials):
     """Credentials using OAuth 2.0 access and refresh tokens."""
 
-    def __init__(self, token, refresh_token=None, token_uri=None,
-                 client_id=None, client_secret=None, scopes=None):
+    def __init__(self, token, refresh_token=None, id_token=None,
+                 token_uri=None, client_id=None, client_secret=None,
+                 scopes=None):
         """
         Args:
             token (Optional(str)): The OAuth 2.0 access token. Can be None
                 if refresh information is provided.
             refresh_token (str): The OAuth 2.0 refresh token. If specified,
                 credentials can be refreshed.
+            id_token (str): The Open ID Connect ID Token.
             token_uri (str): The OAuth 2.0 authorization server's token
                 endpoint URI. Must be specified for refresh, can be left as
                 None if the token can not be refreshed.
@@ -63,6 +65,7 @@ class Credentials(credentials.Scoped, credentials.Credentials):
         super(Credentials, self).__init__()
         self.token = token
         self._refresh_token = refresh_token
+        self._id_token = id_token
         self._scopes = scopes
         self._token_uri = token_uri
         self._client_id = client_id
@@ -81,6 +84,17 @@ class Credentials(credentials.Scoped, credentials.Credentials):
         return self._token_uri
 
     @property
+    def id_token(self):
+        """Optional[str]: The Open ID Connect ID Token.
+
+        Depending on the authorization server and the scopes requested, this
+        may be populated when credentials are obtained and updated when
+        :meth:`refresh` is called. This token is a JWT. It can be verified
+        and decoded using :func:`google.oauth2.id_token.verify_oauth2_token`.
+        """
+        return self._id_token
+
+    @property
     def client_id(self):
         """Optional[str]: The OAuth 2.0 client ID."""
         return self._client_id
@@ -89,17 +103,6 @@ class Credentials(credentials.Scoped, credentials.Credentials):
     def client_secret(self):
         """Optional[str]: The OAuth 2.0 client secret."""
         return self._client_secret
-
-    @property
-    def refresh_grant_response(self):
-        """Optional[str]: The last response from the OAuth 2.0 token server.
-
-        This is set when :meth:`refresh` is called and will not be populated
-        otherwise. This is provided because some authorization servers will
-        send along additional information other than the access and refresh
-        tokens in the refresh grant response.
-        """
-        return self._refresh_grant_response
 
     @property
     def requires_scopes(self):
@@ -126,4 +129,4 @@ class Credentials(credentials.Scoped, credentials.Credentials):
         self.token = access_token
         self.expiry = expiry
         self._refresh_token = refresh_token
-        self._refresh_grant_response = grant_response
+        self._id_token = grant_response.get('id_token', self._id_token)

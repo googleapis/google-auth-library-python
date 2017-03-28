@@ -161,11 +161,10 @@ class TestCredentials(object):
     @mock.patch('google.oauth2._client.jwt_grant', autospec=True)
     def test_refresh_success(self, jwt_grant_mock):
         token = 'token'
-        grant_response = {'meep': 'moop'}
         jwt_grant_mock.return_value = (
             token,
             _helpers.utcnow() + datetime.timedelta(seconds=500),
-            grant_response)
+            {})
         request_mock = mock.Mock()
 
         # Refresh credentials
@@ -182,7 +181,6 @@ class TestCredentials(object):
 
         # Check that the credentials have the token.
         assert self.credentials.token == token
-        assert self.credentials.refresh_grant_response == grant_response
 
         # Check that the credentials are valid (have a token and are not
         # expired)

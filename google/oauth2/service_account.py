@@ -148,8 +148,6 @@ class Credentials(credentials.Signing,
         else:
             self._additional_claims = {}
 
-        self._refresh_grant_response = None
-
     @classmethod
     def _from_signer_and_info(cls, signer, info, **kwargs):
         """Creates a Credentials instance from a signer and service account
@@ -206,17 +204,6 @@ class Credentials(credentials.Signing,
         info, signer = _service_account_info.from_filename(
             filename, require=['client_email', 'token_uri'])
         return cls._from_signer_and_info(signer, info, **kwargs)
-
-    @property
-    def refresh_grant_response(self):
-        """Optional[str]: The last response from the OAuth 2.0 token server.
-
-        This is set when :meth:`refresh` is called and will not be populated
-        otherwise. This is provided because some authorization servers will
-        send along additional information other than the access and refresh
-        tokens in the refresh grant response.
-        """
-        return self._refresh_grant_response
 
     @property
     def service_account_email(self):
@@ -319,11 +306,10 @@ class Credentials(credentials.Signing,
     @_helpers.copy_docstring(credentials.Credentials)
     def refresh(self, request):
         assertion = self._make_authorization_grant_assertion()
-        access_token, expiry, refresh_grant_response = _client.jwt_grant(
+        access_token, expiry, _ = _client.jwt_grant(
             request, self._token_uri, assertion)
         self.token = access_token
         self.expiry = expiry
-        self._refresh_grant_response = refresh_grant_response
 
     @_helpers.copy_docstring(credentials.Signing)
     def sign_bytes(self, message):
