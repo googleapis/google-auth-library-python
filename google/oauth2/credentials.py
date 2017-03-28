@@ -128,4 +128,4 @@ class Credentials(credentials.Scoped, credentials.Credentials):
         self.token = access_token
         self.expiry = expiry
         self._refresh_token = refresh_token
-        self._id_token = grant_response.get('id_token', self._id_token)
+        self._id_token = grant_response.get('id_token')
