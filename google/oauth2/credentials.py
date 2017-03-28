@@ -70,7 +70,6 @@ class Credentials(credentials.Scoped, credentials.Credentials):
         self._token_uri = token_uri
         self._client_id = client_id
         self._client_secret = client_secret
-        self._refresh_grant_response = None
 
     @property
     def refresh_token(self):
