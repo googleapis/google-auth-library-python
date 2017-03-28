@@ -197,7 +197,7 @@ def test_roundtrip_explicit_key_id(token_factory):
     assert payload['user'] == 'billy bob'
 
 
-class TestCredentials:
+class TestCredentials(object):
     SERVICE_ACCOUNT_EMAIL = 'service-account@example.com'
     SUBJECT = 'subject'
     AUDIENCE = 'audience'
@@ -346,7 +346,7 @@ class TestCredentials:
         assert self.credentials.valid
 
 
-class TestOnDemandCredentials:
+class TestOnDemandCredentials(object):
     SERVICE_ACCOUNT_EMAIL = 'service-account@example.com'
     SUBJECT = 'subject'
     ADDITIONAL_CLAIMS = {'meta': 'data'}

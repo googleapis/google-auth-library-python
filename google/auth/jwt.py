@@ -55,7 +55,7 @@ from google.auth import crypt
 from google.auth import exceptions
 import google.auth.credentials
 
-_DEFAULT_TOKEN_LIFETIME_SECS = 3600  # 1 hour in sections
+_DEFAULT_TOKEN_LIFETIME_SECS = 3600  # 1 hour in seconds
 _DEFAULT_MAX_CACHE_SIZE = 10
 
 
@@ -320,10 +320,10 @@ class Credentials(google.auth.credentials.Signing,
         self._audience = audience
         self._token_lifetime = token_lifetime
 
-        if additional_claims is not None:
-            self._additional_claims = additional_claims
-        else:
-            self._additional_claims = {}
+        if additional_claims is None:
+            additional_claims = {}
+
+        self._additional_claims = additional_claims
 
     @classmethod
     def _from_signer_and_info(cls, signer, info, **kwargs):
@@ -347,8 +347,7 @@ class Credentials(google.auth.credentials.Signing,
 
     @classmethod
     def from_service_account_info(cls, info, **kwargs):
-        """Creates a Credentials instance from a dictionary containing service
-        account info in Google format.
+        """Creates an Credentials instance from a dictionary.
 
         Args:
             info (Mapping[str, str]): The service account info in Google
@@ -535,11 +534,10 @@ class OnDemandCredentials(
         self._subject = subject
         self._token_lifetime = token_lifetime
 
-        if additional_claims is not None:
-            self._additional_claims = additional_claims
-        else:
-            self._additional_claims = {}
+        if additional_claims is None:
+            additional_claims = {}
 
+        self._additional_claims = additional_claims
         self._cache = cachetools.LRUCache(maxsize=max_cache_size)
 
     @classmethod
@@ -564,8 +562,7 @@ class OnDemandCredentials(
 
     @classmethod
     def from_service_account_info(cls, info, **kwargs):
-        """Creates an OnDemandCredentials instance from a dictionary containing
-        service account info in Google format.
+        """Creates an OnDemandCredentials instance from a dictionary.
 
         Args:
             info (Mapping[str, str]): The service account info in Google
@@ -624,9 +621,7 @@ class OnDemandCredentials(
         """
         kwargs.setdefault('issuer', credentials.signer_email)
         kwargs.setdefault('subject', credentials.signer_email)
-        return cls(
-            credentials.signer,
-            **kwargs)
+        return cls(credentials.signer, **kwargs)
 
     def with_claims(self, issuer=None, subject=None, additional_claims=None):
         """Returns a copy of these credentials with modified claims.
@@ -657,7 +652,8 @@ class OnDemandCredentials(
     def valid(self):
         """Checks the validity of the credentials.
 
-        These credentials are always valid.
+        These credentials are always valid because it generates tokens on
+        demand.
         """
         return True
 
@@ -701,7 +697,6 @@ class OnDemandCredentials(
         Returns:
             bytes: The encoded JWT.
         """
-
         token, expiry = self._cache.get(audience, (None, None))
 
         if token is None or expiry < _helpers.utcnow():
