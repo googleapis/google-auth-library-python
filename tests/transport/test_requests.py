@@ -58,7 +58,9 @@ class MockAdapter(requests.adapters.BaseAdapter):
         self.requests.append(request)
         return self.responses.pop(0)
 
-    def close(self):
+    def close(self):  # pragma: NO COVER
+        # pylint wants this to be here because it's abstract in the base
+        # class, but requests never actually calls it.
         return
 
 
