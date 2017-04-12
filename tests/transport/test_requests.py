@@ -49,6 +49,7 @@ class MockCredentials(object):
 
 class MockAdapter(requests.adapters.BaseAdapter):
     def __init__(self, responses, headers=None):
+        super(MockAdapter, self).__init__()
         self.responses = responses
         self.requests = []
         self.headers = headers or {}
@@ -56,6 +57,9 @@ class MockAdapter(requests.adapters.BaseAdapter):
     def send(self, request, **kwargs):
         self.requests.append(request)
         return self.responses.pop(0)
+
+    def close(self):
+        return
 
 
 def make_response(status=http_client.OK, data=None):
