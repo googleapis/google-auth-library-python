@@ -58,7 +58,7 @@ class Credentials(object):
         """
         # Err on the side of reporting expiration early so that we avoid
         # the 403-refresh-retry loop.
-        adjusted_now = _helpers.utcnow() - _helpers.CLOCK_SKEW
+        adjusted_now = _helpers.utcnow() + _helpers.CLOCK_SKEW
         return self.expiry is not None and self.expiry <= adjusted_now
 
     @property
