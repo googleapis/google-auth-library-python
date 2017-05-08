@@ -60,7 +60,7 @@ class Credentials(object):
             return False
 
         # Remove 5 minutes from expiry to err on the side of reporting
-        # expiration early so that we avoid the 403-refresh-retry loop.
+        # expiration early so that we avoid the 401-refresh-retry loop.
         skewed_expiry = self.expiry - _helpers.CLOCK_SKEW
         return _helpers.utcnow() >= skewed_expiry
 
