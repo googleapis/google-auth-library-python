@@ -174,18 +174,19 @@ class AuthorizedHttp(urllib3.request.RequestMethods):
     def __init__(self, credentials, http=None,
                  refresh_status_codes=transport.DEFAULT_REFRESH_STATUS_CODES,
                  max_refresh_attempts=transport.DEFAULT_MAX_REFRESH_ATTEMPTS):
-        super(AuthorizedHttp, self).__init__()
 
         if http is None:
             http = _make_default_http()
 
-        self.http = http
         self.credentials = credentials
+        self.http = http
         self._refresh_status_codes = refresh_status_codes
         self._max_refresh_attempts = max_refresh_attempts
         # Request instance used by internal methods (for example,
         # credentials.refresh).
         self._request = Request(self.http)
+
+        super(AuthorizedHttp, self).__init__()
 
     def urlopen(self, method, url, body=None, headers=None, **kwargs):
         """Implementation of urllib3's urlopen."""
