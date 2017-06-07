@@ -174,6 +174,7 @@ class AuthorizedHttp(urllib3.request.RequestMethods):
     def __init__(self, credentials, http=None,
                  refresh_status_codes=transport.DEFAULT_REFRESH_STATUS_CODES,
                  max_refresh_attempts=transport.DEFAULT_MAX_REFRESH_ATTEMPTS):
+        super(AuthorizedHttp, self).__init__()
 
         if http is None:
             http = _make_default_http()
@@ -188,6 +189,10 @@ class AuthorizedHttp(urllib3.request.RequestMethods):
 
     def urlopen(self, method, url, body=None, headers=None, **kwargs):
         """Implementation of urllib3's urlopen."""
+        # pylint: disable=arguments-differ
+        # We use kwargs to collect additional args that we don't need to
+        # introspect here. However, we do explicitly collect the two
+        # positional arguments.
 
         # Use a kwarg for this instead of an attribute to maintain
         # thread-safety.
