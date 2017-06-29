@@ -22,6 +22,7 @@ from six.moves import http_client
 from six.moves import urllib
 
 from google.auth import exceptions
+from google.auth import transport
 from google.oauth2 import _client
 
 
@@ -56,10 +57,12 @@ def test__parse_expiry_none():
 
 
 def _make_request(response_data):
-    response = mock.Mock()
+    response = mock.create_autospec(transport.Response, instance=True)
     response.status = http_client.OK
     response.data = json.dumps(response_data).encode('utf-8')
-    return mock.Mock(return_value=response)
+    mock_request = mock.create_autospec(transport.Request)
+    mock_request.return_value = response
+    return mock_request
 
 
 def test__token_endpoint_request():
@@ -80,13 +83,14 @@ def test__token_endpoint_request():
 
 
 def test__token_endpoint_request_error():
-    response = mock.Mock()
+    response = mock.create_autospec(transport.Response, instance=True)
     response.status = http_client.BAD_REQUEST
     response.data = b'Error'
-    request = mock.Mock(return_value=response)
+    mock_request = mock.create_autospec(transport.Request)
+    mock_request.return_value = response
 
     with pytest.raises(exceptions.RefreshError):
-        _client._token_endpoint_request(request, 'http://example.com', {})
+        _client._token_endpoint_request(mock_request, 'http://example.com', {})
 
 
 def _verify_request_params(request, params):

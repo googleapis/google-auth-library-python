@@ -23,13 +23,16 @@ from google.oauth2 import id_token
 
 
 def make_request(status, data=None):
-    response = mock.Mock()
+    response = mock.create_autospec(
+        google.auth.transport.Response, instance=True)
     response.status = status
 
     if data is not None:
         response.data = json.dumps(data).encode('utf-8')
 
-    return mock.Mock(return_value=response, spec=google.auth.transport.Request)
+    mock_request = mock.create_autospec(google.auth.transport.Request)
+    mock_request.return_value = response
+    return mock_request
 
 
 def test__fetch_certs_success():

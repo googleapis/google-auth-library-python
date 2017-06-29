@@ -24,6 +24,7 @@ from six.moves import reload_module
 from google.auth import _helpers
 from google.auth import environment_vars
 from google.auth import exceptions
+from google.auth import transport
 from google.auth.compute_engine import _metadata
 
 PATH = 'instance/service-accounts/default'
@@ -31,15 +32,15 @@ PATH = 'instance/service-accounts/default'
 
 @pytest.fixture
 def mock_request():
-    request_mock = mock.Mock()
+    mock_request = mock.create_autospec(transport.Request)
 
     def set_response(data, status=http_client.OK, headers=None):
-        response = mock.Mock()
+        response = mock.create_autospec(transport.Response, instance=True)
         response.status = status
         response.data = _helpers.to_bytes(data)
         response.headers = headers or {}
-        request_mock.return_value = response
-        return request_mock
+        mock_request.return_value = response
+        return mock_request
 
     yield set_response
 

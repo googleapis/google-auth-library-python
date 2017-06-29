@@ -22,6 +22,7 @@ import pytest
 from google.auth import _helpers
 from google.auth import crypt
 from google.auth import jwt
+from google.auth import transport
 from google.oauth2 import service_account
 
 
@@ -165,7 +166,7 @@ class TestCredentials(object):
             token,
             _helpers.utcnow() + datetime.timedelta(seconds=500),
             {})
-        request_mock = mock.Mock()
+        request_mock = mock.create_autospec(transport.Request)
 
         # Refresh credentials
         self.credentials.refresh(request_mock)
@@ -191,7 +192,7 @@ class TestCredentials(object):
         token = 'token'
         jwt_grant_mock.return_value = (
             token, _helpers.utcnow() + datetime.timedelta(seconds=500), None)
-        request_mock = mock.Mock()
+        request_mock = mock.create_autospec(transport.Request)
 
         # Credentials should start as invalid
         assert not self.credentials.valid

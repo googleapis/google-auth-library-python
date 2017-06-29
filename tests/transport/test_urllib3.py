@@ -16,6 +16,7 @@ import mock
 from six.moves import http_client
 import urllib3
 
+import google.auth.credentials
 import google.auth.transport.urllib3
 from tests.transport import compliance
 
@@ -26,7 +27,7 @@ class TestRequestResponse(compliance.RequestResponseTests):
         return google.auth.transport.urllib3.Request(http)
 
     def test_timeout(self):
-        http = mock.Mock()
+        http = mock.create_autospec(urllib3.PoolManager)
         request = google.auth.transport.urllib3.Request(http)
         request(url='http://example.com', method='GET', timeout=5)
 
@@ -44,7 +45,7 @@ def test__make_default_http_without_certfi():
     assert 'cert_reqs' not in http.connection_pool_kw
 
 
-class MockCredentials(object):
+class MockCredentials(google.auth.credentials.Credentials):
     def __init__(self, token='token'):
         self.token = token
 
@@ -122,7 +123,7 @@ class TestAuthorizedHttp(object):
             ('GET', self.TEST_URL, None, {'authorization': 'token1'}, {})]
 
     def test_proxies(self):
-        mock_http = mock.MagicMock()
+        mock_http = mock.create_autospec(urllib3.PoolManager)
 
         authed_http = google.auth.transport.urllib3.AuthorizedHttp(
             None, http=mock_http)

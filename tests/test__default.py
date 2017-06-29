@@ -190,10 +190,19 @@ def test__get_gcloud_sdk_credentials_no_project_id(
     assert project_id is None
 
 
+class _AppIdentityModule(object):
+    """The interface of the App Idenity app engine module.
+    See https://cloud.google.com/appengine/docs/standard/python/refdocs
+    /google.appengine.api.app_identity.app_identity
+    """
+    def get_application_id():
+        pass
+
+
 @pytest.fixture
 def app_identity_mock(monkeypatch):
     """Mocks the app_identity module for google.auth.app_engine."""
-    app_identity_mock = mock.Mock()
+    app_identity_mock = mock.create_autospec(_AppIdentityModule, instance=True)
     monkeypatch.setattr(
         app_engine, 'app_identity', app_identity_mock)
     yield app_identity_mock

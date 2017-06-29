@@ -21,10 +21,28 @@ from google.auth import _helpers
 from google.auth import app_engine
 
 
+class _AppIdentityModule(object):
+    """The interface of the App Idenity app engine module.
+    See https://cloud.google.com/appengine/docs/standard/python/refdocs
+    /google.appengine.api.app_identity.app_identity
+    """
+    def get_application_id(self):
+        pass
+
+    def sign_blob(self, bytes_to_sign, deadline=None):
+        pass
+
+    def get_service_account_name(self, deadline=None):
+        pass
+
+    def get_access_token(self, scopes, service_account_id=None):
+        pass
+
+
 @pytest.fixture
 def app_identity_mock(monkeypatch):
     """Mocks the app_identity module for google.auth.app_engine."""
-    app_identity_mock = mock.Mock()
+    app_identity_mock = mock.create_autospec(_AppIdentityModule, instance=True)
     monkeypatch.setattr(
         app_engine, 'app_identity', app_identity_mock)
     yield app_identity_mock

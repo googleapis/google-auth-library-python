@@ -17,6 +17,7 @@ import requests
 import requests.adapters
 from six.moves import http_client
 
+import google.auth.credentials
 import google.auth.transport.requests
 from tests.transport import compliance
 
@@ -26,14 +27,14 @@ class TestRequestResponse(compliance.RequestResponseTests):
         return google.auth.transport.requests.Request()
 
     def test_timeout(self):
-        http = mock.Mock()
+        http = mock.create_autospec(requests.Session, instance=True)
         request = google.auth.transport.requests.Request(http)
         request(url='http://example.com', method='GET', timeout=5)
 
         assert http.request.call_args[1]['timeout'] == 5
 
 
-class MockCredentials(object):
+class MockCredentials(google.auth.credentials.Credentials):
     def __init__(self, token='token'):
         self.token = token
 

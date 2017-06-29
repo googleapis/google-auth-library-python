@@ -18,6 +18,7 @@ import mock
 import pytest
 
 from google.auth import _helpers
+from google.auth import transport
 from google.oauth2 import credentials
 
 
@@ -68,7 +69,8 @@ class TestCredentials(object):
             expiry,
             # Extra data
             grant_response)
-        request_mock = mock.Mock()
+
+        request_mock = mock.create_autospec(transport.Request)
 
         # Refresh credentials
         self.credentials.refresh(request_mock)

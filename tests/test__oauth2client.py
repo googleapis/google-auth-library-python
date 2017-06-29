@@ -117,7 +117,7 @@ class MockCredentials(object):
 
 
 def test_convert_success():
-    convert_function = mock.Mock()
+    convert_function = mock.Mock(spec=['__call__'])
     conversion_map_patch = mock.patch.object(
         _oauth2client, '_CLASS_CONVERSION_MAP',
         {MockCredentials: convert_function})
