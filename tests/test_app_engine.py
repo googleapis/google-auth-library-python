@@ -27,16 +27,16 @@ class _AppIdentityModule(object):
     /google.appengine.api.app_identity.app_identity
     """
     def get_application_id(self):
-        pass
+        raise NotImplementedError()
 
     def sign_blob(self, bytes_to_sign, deadline=None):
-        pass
+        raise NotImplementedError()
 
     def get_service_account_name(self, deadline=None):
-        pass
+        raise NotImplementedError()
 
     def get_access_token(self, scopes, service_account_id=None):
-        pass
+        raise NotImplementedError()
 
 
 @pytest.fixture

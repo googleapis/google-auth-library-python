@@ -195,7 +195,7 @@ class _AppIdentityModule(object):
     /google.appengine.api.app_identity.app_identity
     """
     def get_application_id(self):
-        pass
+        raise NotImplementedError()
 
 
 @pytest.fixture

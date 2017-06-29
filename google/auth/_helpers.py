@@ -162,10 +162,10 @@ def update_query(url, params, remove=None):
     # Update the query parameters with the new parameters.
     query_params.update(params)
     # Remove any values specified in remove.
-    query_params = {
+    query_params = dict({
         key: value for key, value
         in six.iteritems(query_params)
-        if key not in remove}
+        if key not in remove})
     # Re-encoded the query string.
     new_query = urllib.parse.urlencode(query_params, doseq=True)
     # Unsplit the url.
