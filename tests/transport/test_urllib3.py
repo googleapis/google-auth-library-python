@@ -88,52 +88,51 @@ class TestAuthorizedHttp(object):
         assert isinstance(authed_http.http, urllib3.PoolManager)
 
     def test_urlopen_no_refresh(self):
-        mock_credentials = mock.Mock(wraps=MockCredentials())
-        mock_response = MockResponse()
-        mock_http = MockHttp([mock_response])
+        credentials = mock.Mock(wraps=MockCredentials())
+        response = MockResponse()
+        http = MockHttp([response])
 
         authed_http = google.auth.transport.urllib3.AuthorizedHttp(
-            mock_credentials, http=mock_http)
+            credentials, http=http)
 
-        response = authed_http.urlopen('GET', self.TEST_URL)
+        result = authed_http.urlopen('GET', self.TEST_URL)
 
-        assert response == mock_response
-        assert mock_credentials.before_request.called
-        assert not mock_credentials.refresh.called
-        assert mock_http.requests == [
+        assert result == response
+        assert credentials.before_request.called
+        assert not credentials.refresh.called
+        assert http.requests == [
             ('GET', self.TEST_URL, None, {'authorization': 'token'}, {})]
 
     def test_urlopen_refresh(self):
-        mock_credentials = mock.Mock(wraps=MockCredentials())
-        mock_final_response = MockResponse(status=http_client.OK)
+        credentials = mock.Mock(wraps=MockCredentials())
+        final_response = MockResponse(status=http_client.OK)
         # First request will 401, second request will succeed.
-        mock_http = MockHttp([
+        http = MockHttp([
             MockResponse(status=http_client.UNAUTHORIZED),
-            mock_final_response])
+            final_response])
 
         authed_http = google.auth.transport.urllib3.AuthorizedHttp(
-            mock_credentials, http=mock_http)
+            credentials, http=http)
 
-        response = authed_http.urlopen('GET', 'http://example.com')
+        authed_http = authed_http.urlopen('GET', 'http://example.com')
 
-        assert response == mock_final_response
-        assert mock_credentials.before_request.call_count == 2
-        assert mock_credentials.refresh.called
-        assert mock_http.requests == [
+        assert authed_http == final_response
+        assert credentials.before_request.call_count == 2
+        assert credentials.refresh.called
+        assert http.requests == [
             ('GET', self.TEST_URL, None, {'authorization': 'token'}, {}),
             ('GET', self.TEST_URL, None, {'authorization': 'token1'}, {})]
 
     def test_proxies(self):
-        mock_http = mock.create_autospec(urllib3.PoolManager)
-
+        http = mock.create_autospec(urllib3.PoolManager)
         authed_http = google.auth.transport.urllib3.AuthorizedHttp(
-            None, http=mock_http)
+            None, http=http)
 
         with authed_http:
             pass
 
-        assert mock_http.__enter__.called
-        assert mock_http.__exit__.called
+        assert http.__enter__.called
+        assert http.__exit__.called
 
         authed_http.headers = mock.sentinel.headers
-        assert authed_http.headers == mock_http.headers
+        assert authed_http.headers == http.headers

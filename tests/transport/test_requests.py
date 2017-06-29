@@ -86,44 +86,44 @@ class TestAuthorizedHttp(object):
         assert authed_session.credentials == mock.sentinel.credentials
 
     def test_request_no_refresh(self):
-        mock_credentials = mock.Mock(wraps=MockCredentials())
-        mock_response = make_response()
-        mock_adapter = MockAdapter([mock_response])
+        credentials = mock.Mock(wraps=MockCredentials())
+        response = make_response()
+        adapter = MockAdapter([response])
 
         authed_session = google.auth.transport.requests.AuthorizedSession(
-            mock_credentials)
-        authed_session.mount(self.TEST_URL, mock_adapter)
+            credentials)
+        authed_session.mount(self.TEST_URL, adapter)
 
-        response = authed_session.request('GET', self.TEST_URL)
+        result = authed_session.request('GET', self.TEST_URL)
 
-        assert response == mock_response
-        assert mock_credentials.before_request.called
-        assert not mock_credentials.refresh.called
-        assert len(mock_adapter.requests) == 1
-        assert mock_adapter.requests[0].url == self.TEST_URL
-        assert mock_adapter.requests[0].headers['authorization'] == 'token'
+        assert response == result
+        assert credentials.before_request.called
+        assert not credentials.refresh.called
+        assert len(adapter.requests) == 1
+        assert adapter.requests[0].url == self.TEST_URL
+        assert adapter.requests[0].headers['authorization'] == 'token'
 
     def test_request_refresh(self):
-        mock_credentials = mock.Mock(wraps=MockCredentials())
-        mock_final_response = make_response(status=http_client.OK)
+        credentials = mock.Mock(wraps=MockCredentials())
+        final_response = make_response(status=http_client.OK)
         # First request will 401, second request will succeed.
-        mock_adapter = MockAdapter([
+        adapter = MockAdapter([
             make_response(status=http_client.UNAUTHORIZED),
-            mock_final_response])
+            final_response])
 
         authed_session = google.auth.transport.requests.AuthorizedSession(
-            mock_credentials)
-        authed_session.mount(self.TEST_URL, mock_adapter)
+            credentials)
+        authed_session.mount(self.TEST_URL, adapter)
 
-        response = authed_session.request('GET', self.TEST_URL)
+        result = authed_session.request('GET', self.TEST_URL)
 
-        assert response == mock_final_response
-        assert mock_credentials.before_request.call_count == 2
-        assert mock_credentials.refresh.called
-        assert len(mock_adapter.requests) == 2
+        assert result == final_response
+        assert credentials.before_request.call_count == 2
+        assert credentials.refresh.called
+        assert len(adapter.requests) == 2
 
-        assert mock_adapter.requests[0].url == self.TEST_URL
-        assert mock_adapter.requests[0].headers['authorization'] == 'token'
+        assert adapter.requests[0].url == self.TEST_URL
+        assert adapter.requests[0].headers['authorization'] == 'token'
 
-        assert mock_adapter.requests[1].url == self.TEST_URL
-        assert mock_adapter.requests[1].headers['authorization'] == 'token1'
+        assert adapter.requests[1].url == self.TEST_URL
+        assert adapter.requests[1].headers['authorization'] == 'token1'

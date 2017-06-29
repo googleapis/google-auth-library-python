@@ -18,21 +18,20 @@ import mock
 import pytest
 
 from google.auth import exceptions
-import google.auth.transport
+from google.auth import transport
 from google.oauth2 import id_token
 
 
 def make_request(status, data=None):
-    response = mock.create_autospec(
-        google.auth.transport.Response, instance=True)
+    response = mock.create_autospec(transport.Response, instance=True)
     response.status = status
 
     if data is not None:
         response.data = json.dumps(data).encode('utf-8')
 
-    mock_request = mock.create_autospec(google.auth.transport.Request)
-    mock_request.return_value = response
-    return mock_request
+    request = mock.create_autospec(transport.Request)
+    request.return_value = response
+    return request
 
 
 def test__fetch_certs_success():

@@ -34,9 +34,9 @@ def make_request(status, data=None):
     if data is not None:
         response.data = json.dumps(data).encode('utf-8')
 
-    mock_request = mock.create_autospec(transport.Request)
-    mock_request.return_value = response
-    return mock_request
+    request = mock.create_autospec(transport.Request)
+    request.return_value = response
+    return request
 
 
 def make_credentials():
