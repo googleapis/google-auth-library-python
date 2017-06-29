@@ -36,9 +36,10 @@ class TestRequestResponse(compliance.RequestResponseTests):
 
 class MockCredentials(google.auth.credentials.Credentials):
     def __init__(self, token='token'):
+        super(MockCredentials, self).__init__()
         self.token = token
 
-    def apply(self, headers):
+    def apply(self, headers, token=None):
         headers['authorization'] = self.token
 
     def before_request(self, request, method, url, headers):

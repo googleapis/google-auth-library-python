@@ -27,40 +27,40 @@ class TestCredentials(object):
     REFRESH_TOKEN = 'refresh_token'
     CLIENT_ID = 'client_id'
     CLIENT_SECRET = 'client_secret'
-    credentials = None
 
-    @pytest.fixture(autouse=True)
-    def credentials_fixture(self):
-        self.credentials = credentials.Credentials(
+    def make_credentials(self):
+        return credentials.Credentials(
             token=None, refresh_token=self.REFRESH_TOKEN,
             token_uri=self.TOKEN_URI, client_id=self.CLIENT_ID,
             client_secret=self.CLIENT_SECRET)
 
     def test_default_state(self):
-        assert not self.credentials.valid
+        credentials = self.make_credentials()
+        assert not credentials.valid
         # Expiration hasn't been set yet
-        assert not self.credentials.expired
+        assert not credentials.expired
         # Scopes aren't required for these credentials
-        assert not self.credentials.requires_scopes
+        assert not credentials.requires_scopes
         # Test properties
-        assert self.credentials.refresh_token == self.REFRESH_TOKEN
-        assert self.credentials.token_uri == self.TOKEN_URI
-        assert self.credentials.client_id == self.CLIENT_ID
-        assert self.credentials.client_secret == self.CLIENT_SECRET
+        assert credentials.refresh_token == self.REFRESH_TOKEN
+        assert credentials.token_uri == self.TOKEN_URI
+        assert credentials.client_id == self.CLIENT_ID
+        assert credentials.client_secret == self.CLIENT_SECRET
 
     def test_create_scoped(self):
+        credentials = self.make_credentials()
         with pytest.raises(NotImplementedError):
-            self.credentials.with_scopes(['email'])
+            credentials.with_scopes(['email'])
 
     @mock.patch('google.oauth2._client.refresh_grant', autospec=True)
     @mock.patch(
         'google.auth._helpers.utcnow',
         return_value=datetime.datetime.min + _helpers.CLOCK_SKEW)
-    def test_refresh_success(self, now_mock, refresh_grant_mock):
+    def test_refresh_success(self, unused_utcnow, refresh_grant):
         token = 'token'
         expiry = _helpers.utcnow() + datetime.timedelta(seconds=500)
         grant_response = {'id_token': mock.sentinel.id_token}
-        refresh_grant_mock.return_value = (
+        refresh_grant.return_value = (
             # Access token
             token,
             # New refresh token
@@ -70,21 +70,22 @@ class TestCredentials(object):
             # Extra data
             grant_response)
 
-        request_mock = mock.create_autospec(transport.Request)
+        request = mock.create_autospec(transport.Request)
+        credentials = self.make_credentials()
 
         # Refresh credentials
-        self.credentials.refresh(request_mock)
+        credentials.refresh(request)
 
         # Check jwt grant call.
-        refresh_grant_mock.assert_called_with(
-            request_mock, self.TOKEN_URI, self.REFRESH_TOKEN, self.CLIENT_ID,
+        refresh_grant.assert_called_with(
+            request, self.TOKEN_URI, self.REFRESH_TOKEN, self.CLIENT_ID,
             self.CLIENT_SECRET)
 
         # Check that the credentials have the token and expiry
-        assert self.credentials.token == token
-        assert self.credentials.expiry == expiry
-        assert self.credentials.id_token == mock.sentinel.id_token
+        assert credentials.token == token
+        assert credentials.expiry == expiry
+        assert credentials.id_token == mock.sentinel.id_token
 
         # Check that the credentials are valid (have a token and are not
         # expired)
-        assert self.credentials.valid
+        assert credentials.valid

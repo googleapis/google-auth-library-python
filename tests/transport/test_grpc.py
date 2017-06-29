@@ -22,6 +22,7 @@ from google.auth import credentials
 from google.auth import transport
 
 try:
+    # pylint: disable=ungrouped-imports
     import grpc
     import google.auth.transport.grpc
     HAS_GRPC = True
