@@ -45,9 +45,9 @@ def test__make_default_http_without_certfi():
     assert 'cert_reqs' not in http.connection_pool_kw
 
 
-class MockCredentials(google.auth.credentials.Credentials):
+class CredentialsStub(google.auth.credentials.Credentials):
     def __init__(self, token='token'):
-        super(MockCredentials, self).__init__()
+        super(CredentialsStub, self).__init__()
         self.token = token
 
     def apply(self, headers, token=None):
@@ -60,7 +60,7 @@ class MockCredentials(google.auth.credentials.Credentials):
         self.token += '1'
 
 
-class MockHttp(object):
+class HttpStub(object):
     def __init__(self, responses, headers=None):
         self.responses = responses
         self.requests = []
@@ -71,7 +71,7 @@ class MockHttp(object):
         return self.responses.pop(0)
 
 
-class MockResponse(object):
+class ResponseStub(object):
     def __init__(self, status=http_client.OK, data=None):
         self.status = status
         self.data = data
@@ -88,9 +88,9 @@ class TestAuthorizedHttp(object):
         assert isinstance(authed_http.http, urllib3.PoolManager)
 
     def test_urlopen_no_refresh(self):
-        credentials = mock.Mock(wraps=MockCredentials())
-        response = MockResponse()
-        http = MockHttp([response])
+        credentials = mock.Mock(wraps=CredentialsStub())
+        response = ResponseStub()
+        http = HttpStub([response])
 
         authed_http = google.auth.transport.urllib3.AuthorizedHttp(
             credentials, http=http)
@@ -104,11 +104,11 @@ class TestAuthorizedHttp(object):
             ('GET', self.TEST_URL, None, {'authorization': 'token'}, {})]
 
     def test_urlopen_refresh(self):
-        credentials = mock.Mock(wraps=MockCredentials())
-        final_response = MockResponse(status=http_client.OK)
+        credentials = mock.Mock(wraps=CredentialsStub())
+        final_response = ResponseStub(status=http_client.OK)
         # First request will 401, second request will succeed.
-        http = MockHttp([
-            MockResponse(status=http_client.UNAUTHORIZED),
+        http = HttpStub([
+            ResponseStub(status=http_client.UNAUTHORIZED),
             final_response])
 
         authed_http = google.auth.transport.urllib3.AuthorizedHttp(

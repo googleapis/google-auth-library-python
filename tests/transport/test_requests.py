@@ -34,9 +34,9 @@ class TestRequestResponse(compliance.RequestResponseTests):
         assert http.request.call_args[1]['timeout'] == 5
 
 
-class MockCredentials(google.auth.credentials.Credentials):
+class CredentialsStub(google.auth.credentials.Credentials):
     def __init__(self, token='token'):
-        super(MockCredentials, self).__init__()
+        super(CredentialsStub, self).__init__()
         self.token = token
 
     def apply(self, headers, token=None):
@@ -49,9 +49,9 @@ class MockCredentials(google.auth.credentials.Credentials):
         self.token += '1'
 
 
-class MockAdapter(requests.adapters.BaseAdapter):
+class AdapterStub(requests.adapters.BaseAdapter):
     def __init__(self, responses, headers=None):
-        super(MockAdapter, self).__init__()
+        super(AdapterStub, self).__init__()
         self.responses = responses
         self.requests = []
         self.headers = headers or {}
@@ -86,9 +86,9 @@ class TestAuthorizedHttp(object):
         assert authed_session.credentials == mock.sentinel.credentials
 
     def test_request_no_refresh(self):
-        credentials = mock.Mock(wraps=MockCredentials())
+        credentials = mock.Mock(wraps=CredentialsStub())
         response = make_response()
-        adapter = MockAdapter([response])
+        adapter = AdapterStub([response])
 
         authed_session = google.auth.transport.requests.AuthorizedSession(
             credentials)
@@ -104,10 +104,10 @@ class TestAuthorizedHttp(object):
         assert adapter.requests[0].headers['authorization'] == 'token'
 
     def test_request_refresh(self):
-        credentials = mock.Mock(wraps=MockCredentials())
+        credentials = mock.Mock(wraps=CredentialsStub())
         final_response = make_response(status=http_client.OK)
         # First request will 401, second request will succeed.
-        adapter = MockAdapter([
+        adapter = AdapterStub([
             make_response(status=http_client.UNAUTHORIZED),
             final_response])
 

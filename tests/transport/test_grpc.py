@@ -33,9 +33,9 @@ except ImportError:  # pragma: NO COVER
 pytestmark = pytest.mark.skipif(not HAS_GRPC, reason='gRPC is unavailable.')
 
 
-class MockCredentials(credentials.Credentials):
+class CredentialsStub(credentials.Credentials):
     def __init__(self, token='token'):
-        super(MockCredentials, self).__init__()
+        super(CredentialsStub, self).__init__()
         self.token = token
         self.expiry = None
 
@@ -45,7 +45,7 @@ class MockCredentials(credentials.Credentials):
 
 class TestAuthMetadataPlugin(object):
     def test_call_no_refresh(self):
-        credentials = MockCredentials()
+        credentials = CredentialsStub()
         request = mock.create_autospec(transport.Request)
 
         plugin = google.auth.transport.grpc.AuthMetadataPlugin(
@@ -62,7 +62,7 @@ class TestAuthMetadataPlugin(object):
             [(u'authorization', u'Bearer {}'.format(credentials.token))], None)
 
     def test_call_refresh(self):
-        credentials = MockCredentials()
+        credentials = CredentialsStub()
         credentials.expiry = datetime.datetime.min + _helpers.CLOCK_SKEW
         request = mock.create_autospec(transport.Request)
 
@@ -88,7 +88,7 @@ class TestAuthMetadataPlugin(object):
 def test_secure_authorized_channel(
         secure_channel, ssl_channel_credentials, metadata_call_credentials,
         composite_channel_credentials):
-    credentials = MockCredentials()
+    credentials = CredentialsStub()
     request = mock.create_autospec(transport.Request)
     target = 'example.com:80'
 
