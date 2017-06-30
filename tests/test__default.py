@@ -201,10 +201,11 @@ class _AppIdentityModule(object):
 @pytest.fixture
 def app_identity(monkeypatch):
     """Mocks the app_identity module for google.auth.app_engine."""
-    app_identity = mock.create_autospec(_AppIdentityModule, instance=True)
+    app_identity_module = mock.create_autospec(
+        _AppIdentityModule, instance=True)
     monkeypatch.setattr(
-        app_engine, 'app_identity', app_identity)
-    yield app_identity
+        app_engine, 'app_identity', app_identity_module)
+    yield app_identity_module
 
 
 def test__get_gae_credentials(app_identity):
