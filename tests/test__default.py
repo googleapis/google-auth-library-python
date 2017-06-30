@@ -191,7 +191,7 @@ def test__get_gcloud_sdk_credentials_no_project_id(
 
 class _AppIdentityModule(object):
     """The interface of the App Idenity app engine module.
-    See https://cloud.google.com/appengine/docs/standard/python/refdocs
+    See https://cloud.google.com/appengine/docs/standard/python/refdocs\
     /google.appengine.api.app_identity.app_identity
     """
     def get_application_id(self):
