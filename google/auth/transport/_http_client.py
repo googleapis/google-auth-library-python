@@ -34,8 +34,8 @@ class Response(transport.Response):
     """
     def __init__(self, response):
         self._status = response.status
-        self._headers = dict({
-            key.lower(): value for key, value in response.getheaders()})
+        self._headers = {
+            key.lower(): value for key, value in response.getheaders()}
         self._data = response.read()
 
     @property
