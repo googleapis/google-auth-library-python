@@ -42,7 +42,7 @@ class TestCredentials(object):
     @mock.patch(
         'google.auth._helpers.utcnow',
         return_value=datetime.datetime.min + _helpers.CLOCK_SKEW)
-    @mock.patch('google.auth.compute_engine._metadata.get')
+    @mock.patch('google.auth.compute_engine._metadata.get', autospec=True)
     def test_refresh_success(self, get, utcnow):
         get.side_effect = [{
             # First request is for sevice account info.

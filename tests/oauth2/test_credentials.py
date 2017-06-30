@@ -28,11 +28,12 @@ class TestCredentials(object):
     CLIENT_ID = 'client_id'
     CLIENT_SECRET = 'client_secret'
 
-    def make_credentials(self):
+    @classmethod
+    def make_credentials(cls):
         return credentials.Credentials(
-            token=None, refresh_token=self.REFRESH_TOKEN,
-            token_uri=self.TOKEN_URI, client_id=self.CLIENT_ID,
-            client_secret=self.CLIENT_SECRET)
+            token=None, refresh_token=cls.REFRESH_TOKEN,
+            token_uri=cls.TOKEN_URI, client_id=cls.CLIENT_ID,
+            client_secret=cls.CLIENT_SECRET)
 
     def test_default_state(self):
         credentials = self.make_credentials()

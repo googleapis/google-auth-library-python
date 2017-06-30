@@ -48,9 +48,10 @@ class TestCredentials(object):
     SERVICE_ACCOUNT_EMAIL = 'service-account@example.com'
     TOKEN_URI = 'https://example.com/oauth2/token'
 
-    def make_credentials(self):
+    @classmethod
+    def make_credentials(cls):
         return service_account.Credentials(
-            SIGNER, self.SERVICE_ACCOUNT_EMAIL, self.TOKEN_URI)
+            SIGNER, cls.SERVICE_ACCOUNT_EMAIL, cls.TOKEN_URI)
 
     def test_from_service_account_info(self):
         credentials = service_account.Credentials.from_service_account_info(
