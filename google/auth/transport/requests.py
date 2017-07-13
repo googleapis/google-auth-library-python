@@ -74,14 +74,18 @@ class Request(transport.Request):
     Args:
         session (requests.Session): An instance :class:`requests.Session` used
             to make HTTP requests. If not specified, a session will be created.
+        default_timeout (int): A number indicating the seconds for the default
+            HTTP request timeout. If not specified, the default timeout will be
+            indefinite.
 
     .. automethod:: __call__
     """
-    def __init__(self, session=None):
+    def __init__(self, session=None, default_timeout=None):
         if not session:
             session = requests.Session()
 
         self.session = session
+        self.default_timeout = default_timeout
 
     def __call__(self, url, method='GET', body=None, headers=None,
                  timeout=None, **kwargs):
@@ -95,7 +99,7 @@ class Request(transport.Request):
             headers (Mapping[str, str]): Request headers.
             timeout (Optional[int]): The number of seconds to wait for a
                 response from the server. If not specified or if None, the
-                requests default timeout will be used.
+                ``default_timeout`` property for this instance will be used.
             kwargs: Additional arguments passed through to the underlying
                 requests :meth:`~requests.Session.request` method.
 
@@ -105,11 +109,12 @@ class Request(transport.Request):
         Raises:
             google.auth.exceptions.TransportError: If any exception occurred.
         """
+        request_timeout = timeout or self.default_timeout
         try:
             _LOGGER.debug('Making request: %s %s', method, url)
             response = self.session.request(
-                method, url, data=body, headers=headers, timeout=timeout,
-                **kwargs)
+                method, url, data=body, headers=headers,
+                timeout=request_timeout, **kwargs)
             return _Response(response)
         except requests.exceptions.RequestException as exc:
             raise exceptions.TransportError(exc)

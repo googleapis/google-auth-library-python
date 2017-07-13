@@ -21,7 +21,7 @@ from tests.transport import compliance
 
 
 class TestRequestResponse(compliance.RequestResponseTests):
-    def make_request(self):
+    def make_request(self, default_timeout=None):
         return google.auth.transport._http_client.Request()
 
     def test_non_http(self):

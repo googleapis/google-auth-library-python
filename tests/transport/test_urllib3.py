@@ -22,9 +22,10 @@ from tests.transport import compliance
 
 
 class TestRequestResponse(compliance.RequestResponseTests):
-    def make_request(self):
+    def make_request(self, default_timeout=None):
         http = urllib3.PoolManager()
-        return google.auth.transport.urllib3.Request(http)
+        return google.auth.transport.urllib3.Request(
+            http, default_timeout=default_timeout)
 
     def test_timeout(self):
         http = mock.create_autospec(urllib3.PoolManager)

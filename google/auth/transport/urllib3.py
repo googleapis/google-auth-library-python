@@ -88,11 +88,15 @@ class Request(transport.Request):
         http (urllib3.request.RequestMethods): An instance of any urllib3
             class that implements :class:`~urllib3.request.RequestMethods`,
             usually :class:`urllib3.PoolManager`.
+        default_timeout (int): A number indicating the seconds for the default
+            HTTP request timeout. If not specified, the default timeout will be
+            ``None``.
 
     .. automethod:: __call__
     """
-    def __init__(self, http):
+    def __init__(self, http, default_timeout=None):
         self.http = http
+        self.default_timeout = default_timeout
 
     def __call__(self, url, method='GET', body=None, headers=None,
                  timeout=None, **kwargs):
@@ -118,8 +122,9 @@ class Request(transport.Request):
         """
         # urllib3 uses a sentinel default value for timeout, so only set it if
         # specified.
-        if timeout is not None:
-            kwargs['timeout'] = timeout
+        request_timeout = timeout or self.default_timeout
+        if request_timeout is not None:
+            kwargs['timeout'] = request_timeout
 
         try:
             _LOGGER.debug('Making request: %s %s', method, url)
