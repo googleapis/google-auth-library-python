@@ -62,6 +62,14 @@ class RequestResponseTests(object):
         assert response.headers['x-test-header'] == 'value'
         assert response.data == b'Basic Content'
 
+    def test_request_default_timeout(self, server):
+        request = self.make_request(default_timeout=2)
+        response = request(url=server.url + '/basic', method='GET')
+
+        assert response.status == http_client.OK
+        assert response.headers['x-test-header'] == 'value'
+        assert response.data == b'Basic Content'
+
     def test_request_timeout(self, server):
         request = self.make_request()
         response = request(url=server.url + '/basic', method='GET', timeout=2)
