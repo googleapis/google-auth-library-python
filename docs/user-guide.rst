@@ -132,10 +132,10 @@ credentials and transports provided by this library, you need to follow a few
 additional steps:
 
 1. If you are using the :mod:`google.auth.transport.requests` transport, vendor
-   in the `requests-toolbelt` library into you app, and enable the App Engine
+   in the ``requests-toolbelt`` library into you app, and enable the App Engine
    monkeypatch. Refer `App Engine documentation`_ for more details on this.
-2. To make HTTPS calls, enable the `ssl` library for you app by adding the
-   following configuration to the `app.yaml` file:
+2. To make HTTPS calls, enable the ``ssl`` library for you app by adding the
+   following configuration to the ``app.yaml`` file::
 
         libraries:
         - name: ssl
@@ -143,7 +143,7 @@ additional steps:
 
 3. Enable billing for you App Engine project. Then enable socket support for
    your app. This can be achieved by setting an environment variable in the
-   `app.yaml` file:
+   ``app.yaml`` file::
 
         env_variables:
           GAE_USE_SOCKETS_HTTPLIB : 'true'
@@ -152,7 +152,7 @@ additional steps:
     https://cloud.google.com/appengine/docs/python
 .. _App Engine App Identity API:
     https://cloud.google.com/appengine/docs/python/appidentity/
-.. _App Engne documentation:
+.. _App Engine documentation:
     https://cloud.google.com/appengine/docs/standard/python/issue-requests
 
 User credentials
