@@ -49,12 +49,12 @@ class RequestResponseTests(object):
         @app.route('/server_error')
         def server_error():
             return 'Error', http_client.INTERNAL_SERVER_ERROR
-        # pylint: enable=unused-variable
 
         @app.route('/wait')
         def wait():
             time.sleep(3)
             return 'Waited'
+        # pylint: enable=unused-variable
 
         server = WSGIServer(application=app.wsgi_app)
         server.start()
