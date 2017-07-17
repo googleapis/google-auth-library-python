@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import time
+
 import flask
 import pytest
 from pytest_localserver.http import WSGIServer
@@ -49,6 +51,11 @@ class RequestResponseTests(object):
             return 'Error', http_client.INTERNAL_SERVER_ERROR
         # pylint: enable=unused-variable
 
+        @app.route('/wait')
+        def wait():
+            time.sleep(3)
+            return 'Waited'
+
         server = WSGIServer(application=app.wsgi_app)
         server.start()
         yield server
@@ -62,13 +69,19 @@ class RequestResponseTests(object):
         assert response.headers['x-test-header'] == 'value'
         assert response.data == b'Basic Content'
 
-    def test_request_timeout(self, server):
+    def test_request_with_timeout_success(self, server):
         request = self.make_request()
         response = request(url=server.url + '/basic', method='GET', timeout=2)
 
         assert response.status == http_client.OK
         assert response.headers['x-test-header'] == 'value'
         assert response.data == b'Basic Content'
+
+    def test_request_with_timeout_failure(self, server):
+        request = self.make_request()
+
+        with pytest.raises(exceptions.TransportError):
+            request(url=server.url + '/wait', method='GET', timeout=1)
 
     def test_request_headers(self, server):
         request = self.make_request()
