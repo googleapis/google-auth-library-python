@@ -33,9 +33,11 @@ _WINDOWS_CONFIG_ROOT_ENV_VAR = 'APPDATA'
 # The name of the file in the Cloud SDK config that contains default
 # credentials.
 _CREDENTIALS_FILENAME = 'application_default_credentials.json'
+# The name of the Cloud SDK shell script
+_CLOUD_SDK_SHELL_SCRIPT = 'gcloud' if os.name != 'nt' else 'gcloud.cmd'
 # The command to get the Cloud SDK configuration
 _CLOUD_SDK_CONFIG_COMMAND = (
-    'gcloud', 'config', 'config-helper', '--format', 'json')
+    _CLOUD_SDK_SHELL_SCRIPT, 'config', 'config-helper', '--format', 'json')
 
 
 def get_config_path():
