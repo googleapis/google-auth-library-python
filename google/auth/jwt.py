@@ -24,7 +24,7 @@ To encode a JWT use :func:`encode`::
     from google.auth import crypto
     from google.auth import jwt
 
-    signer = crypt.Signer(private_key)
+    signer = crypt.RSASigner(private_key)
     payload = {'some': 'payload'}
     encoded = jwt.encode(signer, payload)
 
