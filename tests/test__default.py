@@ -48,6 +48,7 @@ def test__load_credentials_from_missing_file():
     
     assert excinfo.match(r'not found')
 
+
 def test__load_credentials_from_file_invalid_json(tmpdir):
     jsonfile = tmpdir.join('invalid.json')
     jsonfile.write('{')
