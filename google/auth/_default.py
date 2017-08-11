@@ -60,16 +60,16 @@ def _load_credentials_from_file(filename):
         google.auth.exceptions.DefaultCredentialsError: if the file is in the
             wrong format or is missing.
     """
-    try:
-        with io.open(filename, 'r') as file_obj:
-            try:
-                info = json.load(file_obj)
-            except ValueError as exc:
-                raise exceptions.DefaultCredentialsError(
-                    'File {} is not a valid json file.'.format(filename), exc)
-    except IOError as exc:
+    if not os.path.exists(filename):
         raise exceptions.DefaultCredentialsError(
-            'File {} was not found.'.format(filename), exc)
+            'File {} was not found.'.format(filename))
+
+    with io.open(filename, 'r') as file_obj:
+        try:
+            info = json.load(file_obj)
+        except ValueError as exc:
+            raise exceptions.DefaultCredentialsError(
+                'File {} is not a valid json file.'.format(filename), exc)
 
     # The type key should indicate that the file is either a service account
     # credentials file or an authorized user credentials file.
