@@ -19,6 +19,8 @@ to parse PEM files storing PKCS#1 or PKCS#8 keys as well as
 certificates. There is no support for p12 files.
 """
 
+from __future__ import absolute_import
+
 import io
 import json
 
