@@ -17,7 +17,7 @@
 try:
     from google.auth.crypt import _cryptography_rsa
 
-    RSASigner = _cryptography_rsa.CryptographySigner
+    RSASigner = _cryptography_rsa.RSASigner
     RSAVerifier = NotImplemented
 except ImportError:
     from google.auth.crypt import _python_rsa

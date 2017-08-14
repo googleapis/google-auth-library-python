@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Verifier and signer that use the ``cryptography`` library.
+"""RSA verifier and signer that use the ``cryptography`` library.
 
 This is a much faster implementation than the default (in
 ``google.auth.crypt._python_rsa``), which depends on the pure-Python
@@ -33,7 +33,7 @@ _PADDING = padding.PKCS1v15()
 _SHA256 = hashes.SHA256()
 
 
-class CryptographySigner(base.Signer, base._FromServiceAccountMixin):
+class RSASigner(base.Signer, base._FromServiceAccountMixin):
     """Signs messages with a cryptography ``PKey`` private key.
 
     Args:
@@ -61,14 +61,14 @@ class CryptographySigner(base.Signer, base._FromServiceAccountMixin):
 
     @classmethod
     def from_string(cls, key, key_id=None):
-        """Construct a CryptographySigner from a private key in PEM format.
+        """Construct a RSASigner from a private key in PEM format.
 
         Args:
             key (Union[bytes, str]): Private key in PEM format.
             key_id (str): An optional key id used to identify the private key.
 
         Returns:
-            google.auth.crypt._cryptography_rsa.CryptographySigner: The
+            google.auth.crypt._cryptography_rsa.RSASigner: The
             constructed signer.
 
         Raises:
