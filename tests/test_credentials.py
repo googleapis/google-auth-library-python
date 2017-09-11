@@ -77,22 +77,20 @@ def test_before_request():
     assert headers['authorization'] == 'Bearer token'
 
 
-class ScopedCredentialsImpl(credentials.Scoped, CredentialsImpl):
+class ReadonlyScopedCredentialsImpl(credentials.ReadonlyScoped,
+                                    CredentialsImpl):
     @property
     def requires_scopes(self):
-        return super(ScopedCredentialsImpl, self).requires_scopes
-
-    def with_scopes(self, scopes):
-        raise NotImplementedError
+        return super(ReadonlyScopedCredentialsImpl, self).requires_scopes
 
 
-def test_scoped_credentials_constructor():
-    credentials = ScopedCredentialsImpl()
+def test_readonly_scoped_credentials_constructor():
+    credentials = ReadonlyScopedCredentialsImpl()
     assert credentials._scopes is None
 
 
-def test_scoped_credentials_scopes():
-    credentials = ScopedCredentialsImpl()
+def test_readonly_scoped_credentials_scopes():
+    credentials = ReadonlyScopedCredentialsImpl()
     credentials._scopes = ['one', 'two']
     assert credentials.scopes == ['one', 'two']
     assert credentials.has_scopes(['one'])
@@ -101,8 +99,8 @@ def test_scoped_credentials_scopes():
     assert not credentials.has_scopes(['three'])
 
 
-def test_scoped_credentials_requires_scopes():
-    credentials = ScopedCredentialsImpl()
+def test_readonly_scoped_credentials_requires_scopes():
+    credentials = ReadonlyScopedCredentialsImpl()
     assert not credentials.requires_scopes
 
 
