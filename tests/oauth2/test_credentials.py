@@ -48,11 +48,6 @@ class TestCredentials(object):
         assert credentials.client_id == self.CLIENT_ID
         assert credentials.client_secret == self.CLIENT_SECRET
 
-    def test_create_scoped(self):
-        credentials = self.make_credentials()
-        with pytest.raises(NotImplementedError):
-            credentials.with_scopes(['email'])
-
     @mock.patch('google.oauth2._client.refresh_grant', autospec=True)
     @mock.patch(
         'google.auth._helpers.utcnow',
