@@ -15,7 +15,6 @@
 import datetime
 
 import mock
-import pytest
 
 from google.auth import _helpers
 from google.auth import transport
