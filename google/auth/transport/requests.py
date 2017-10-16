@@ -24,6 +24,7 @@ except ImportError:  # pragma: NO COVER
     raise ImportError(
         'The requests library is not installed, please install the requests '
         'package to use the requests transport.')
+import requests.adapters
 import requests.exceptions
 
 from google.auth import exceptions
@@ -154,7 +155,9 @@ class AuthorizedSession(requests.Session):
         # credentials.refresh).
         # Do not pass `self` as the session here, as it can lead to infinite
         # recursion.
-        self._auth_request = Request()
+        sess = requests.Session()
+        sess.mount("https://", requests.adapters.HTTPAdapter(max_retries=3))
+        self._auth_request = Request(sess)
 
     def request(self, method, url, data=None, headers=None, **kwargs):
         """Implementation of Requests' request."""
