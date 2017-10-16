@@ -194,7 +194,10 @@ class AuthorizedSession(requests.Session):
                 response.status_code, _credential_refresh_attempt + 1,
                 self._max_refresh_attempts)
 
-            self.credentials.refresh(self._auth_request)
+            try:
+                self.credentials.refresh(self._auth_request)
+            except requests.Timeout:
+                pass
 
             # Recurse. Pass in the original headers, not our modified set.
             return self.request(
