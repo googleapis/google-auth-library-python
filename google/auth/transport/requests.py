@@ -208,7 +208,14 @@ class AuthorizedSession(requests.Session):
 
             try:
                 self.credentials.refresh(self._auth_request)
-            except requests.Timeout:
+            except requests.ReadTimeout:
+                # This exception is not catched by requests.adapter
+                # defined in __init__()
+                # because POST is not considered a retryable HTTP method
+                # when it reaches to the peers.
+                # We here silently ignore the exception and
+                # make the next recursive call
+                # increment _credential_refresh_attempt and retry refresh.
                 pass
 
             # Recurse. Pass in the original headers, not our modified set.
