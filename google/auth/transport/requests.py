@@ -151,13 +151,24 @@ class AuthorizedSession(requests.Session):
         self.credentials = credentials
         self._refresh_status_codes = refresh_status_codes
         self._max_refresh_attempts = max_refresh_attempts
+
+        auth_request_session = requests.Session()
+
+        # This adapter catches exceptions at errors on network layers
+        # lower than HTTP and retrys credentials.refresh().
+        # These exceptions include ConnectionError, ConnectTimeout.
+        # We shouldn't let them bubble up to client codes of this library
+        # because the clients cannot distinguish them with these from
+        # their own HTTP request calls and determine whether they can
+        # safely retry the calls which might cause non-idempotent
+        # HTTP requests as well as the retriable credential refresh.
+        retry_adapter = requests.adapters.HTTPAdapter(max_retries=3)
+        auth_request_session.mount("https://", retry_adapter)
+
         # Request instance used by internal methods (for example,
         # credentials.refresh).
         # Do not pass `self` as the session here, as it can lead to infinite
         # recursion.
-        auth_request_session = requests.Session()
-        retry_adapter = requests.adapters.HTTPAdapter(max_retries=3)
-        auth_request_session.mount("https://", retry_adapter)
         self._auth_request = Request(auth_request_session)
 
     def request(self, method, url, data=None, headers=None, **kwargs):
