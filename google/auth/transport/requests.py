@@ -155,9 +155,10 @@ class AuthorizedSession(requests.Session):
         # credentials.refresh).
         # Do not pass `self` as the session here, as it can lead to infinite
         # recursion.
-        sess = requests.Session()
-        sess.mount("https://", requests.adapters.HTTPAdapter(max_retries=3))
-        self._auth_request = Request(sess)
+        auth_request_session = requests.Session()
+        retry_adapter = requests.adapters.HTTPAdapter(max_retries=3)
+        auth_request_session.mount("https://", retry_adapter)
+        self._auth_request = Request(auth_request_session)
 
     def request(self, method, url, data=None, headers=None, **kwargs):
         """Implementation of Requests' request."""
