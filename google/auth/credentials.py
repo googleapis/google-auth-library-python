@@ -122,6 +122,35 @@ class Credentials(object):
         self.apply(headers)
 
 
+class AnonymousCredentials(Credentials):
+    """Faux credentials for fully-anonymous requests."""
+
+    @property
+    def expired(self):
+        """Anonymous credentials never expire."""
+        return False
+
+    @property
+    def valid(self):
+        """Anonymous credentials are always valid."""
+        return True
+
+    def refresh(self, request):
+        """Anonymous credentials cannot be refreshed."""
+        raise ValueError("Anonymous credentials cannot be refreshed.")
+
+    def apply(self, headers, token=None):
+        """Anonymous credentials do nothing to the request.
+
+        The optional ``token`` argument is not supported.
+        """
+        if token is not None:
+            raise ValueError("Anonymous credentials don't support tokens.")
+
+    def before_request(self, request, method, url, headers):
+        """Anonymous credentials do nothing to the request."""
+
+
 @six.add_metaclass(abc.ABCMeta)
 class ReadOnlyScoped(object):
     """Interface for credentials whose scopes can be queried.
