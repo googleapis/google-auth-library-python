@@ -124,7 +124,7 @@ class Credentials(object):
 
 class AnonymousCredentials(Credentials):
     """Credentials that do not provide any authentication information.
-    
+
     These are useful in the case of services that support anonymous access or
     local service emulators that do not use credentials.
     """
