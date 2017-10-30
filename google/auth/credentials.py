@@ -123,26 +123,34 @@ class Credentials(object):
 
 
 class AnonymousCredentials(Credentials):
-    """Faux credentials for fully-anonymous requests."""
+    """Credentials that do not provide any authentication information.
+    
+    These are useful in the case of services that support anonymous access or
+    local service emulators that do not use credentials.
+    """
 
     @property
     def expired(self):
-        """Anonymous credentials never expire."""
+        """Returns `False`, anonymous credentials never expire."""
         return False
 
     @property
     def valid(self):
-        """Anonymous credentials are always valid."""
+        """Returns `True`, anonymous credentials are always valid."""
         return True
 
     def refresh(self, request):
-        """Anonymous credentials cannot be refreshed."""
+        """Raises :class:`ValueError``, anonymous credentials cannot be
+        refreshed."""
         raise ValueError("Anonymous credentials cannot be refreshed.")
 
     def apply(self, headers, token=None):
         """Anonymous credentials do nothing to the request.
 
         The optional ``token`` argument is not supported.
+
+        Raises:
+            ValueError: If a token was specified.
         """
         if token is not None:
             raise ValueError("Anonymous credentials don't support tokens.")
