@@ -101,7 +101,7 @@ def _token_endpoint_request(request, token_uri, body):
     }
 
     response = request(
-        method='POST', url=token_uri, headers=headers, body=body)
+        method='POST', url=token_uri, headers=headers, body=body, timeout=10)
 
     response_body = response.data.decode('utf-8')
 

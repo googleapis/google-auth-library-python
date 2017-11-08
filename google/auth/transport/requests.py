@@ -24,6 +24,7 @@ except ImportError:  # pragma: NO COVER
     raise ImportError(
         'The requests library is not installed, please install the requests '
         'package to use the requests transport.')
+import requests.adapters
 import requests.exceptions
 
 from google.auth import exceptions
@@ -150,11 +151,25 @@ class AuthorizedSession(requests.Session):
         self.credentials = credentials
         self._refresh_status_codes = refresh_status_codes
         self._max_refresh_attempts = max_refresh_attempts
+
+        auth_request_session = requests.Session()
+
+        # This adapter catches exceptions at errors on network layers
+        # lower than HTTP and retrys credentials.refresh().
+        # These exceptions include ConnectionError, ConnectTimeout.
+        # We shouldn't let them bubble up to client codes of this library
+        # because the clients cannot distinguish them with these from
+        # their own HTTP request calls and determine whether they can
+        # safely retry the calls which might cause non-idempotent
+        # HTTP requests as well as the retriable credential refresh.
+        retry_adapter = requests.adapters.HTTPAdapter(max_retries=3)
+        auth_request_session.mount("https://", retry_adapter)
+
         # Request instance used by internal methods (for example,
         # credentials.refresh).
         # Do not pass `self` as the session here, as it can lead to infinite
         # recursion.
-        self._auth_request = Request()
+        self._auth_request = Request(auth_request_session)
 
     def request(self, method, url, data=None, headers=None, **kwargs):
         """Implementation of Requests' request."""
@@ -191,7 +206,17 @@ class AuthorizedSession(requests.Session):
                 response.status_code, _credential_refresh_attempt + 1,
                 self._max_refresh_attempts)
 
-            self.credentials.refresh(self._auth_request)
+            try:
+                self.credentials.refresh(self._auth_request)
+            except requests.ReadTimeout:
+                # This exception is not catched by requests.adapter
+                # defined in __init__()
+                # because POST is not considered a retryable HTTP method
+                # when it reaches to the peers.
+                # We here silently ignore the exception and
+                # make the next recursive call
+                # increment _credential_refresh_attempt and retry refresh.
+                pass
 
             # Recurse. Pass in the original headers, not our modified set.
             return self.request(
