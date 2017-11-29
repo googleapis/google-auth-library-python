@@ -12,7 +12,52 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Google ID Token helpers."""
+"""Google ID Token helpers.
+
+Provides support for verifying OAuth 2.0 ID Tokens, especially ones generated
+by Google infrastructure.
+
+To parse and verify an ID Token issued by Google's OAuth 2.0 authorization
+server use :func:`verify_oauth2_token`. To verify an ID Token issued by
+Firebase, use :func:`verify_firebase_token`.
+
+A general purpose ID Token verifier is available as :func:`verify_token`.
+
+Example::
+
+    from google.oauth2 import id_token
+    from google.auth.transport import requests
+
+    request = requests.Request()
+    try:
+        id_info = id_token.verify_oauth2_token(token, request, CLIENT_ID)
+
+        if id_info['iss'] != 'https://accounts.google.com':
+            raise ValueError('Wrong issuer.')
+
+        userid = id_info['sub']
+    except ValueError:
+        # Invalid token
+        pass
+
+By default, this will re-fetch certificates for each verification. Because
+Google's public keys are only changed infrequently (on the order of once per
+day), you may wish to take advantage of caching to reduce latency and the
+potential for network errors. This can be accomplished using an external
+library like `CacheControl`_ to create a cache-aware
+:class:`google.auth.transport.Request`::
+
+    from cachecontrol import CacheControl
+    from requests import session
+
+    from google.auth.transport import requests
+
+    sess = session()
+    cached_sess = CacheControl(sess)
+    request = requests.Request(session=cached_sess)
+
+.. _CacheControl: https://cachecontrol.readthedocs.io
+"""
 
 import json
 
