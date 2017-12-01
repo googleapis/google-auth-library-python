@@ -1,6 +1,35 @@
 Changelog
 =========
 
+v1.2.1
+------
+
+- Excluded compiled Python files in source distributions. (#215)
+- Updated docs for creating RSASigner from string. (#213)
+- Use ``six.raise_from`` wherever possible. (#212)
+- Fixed a typo in a comment ``seconds`` not ``sections``. (#210)
+
+v1.2.0
+------
+
+- Added ``google.auth.credentials.AnonymousCredentials``. (#206)
+- Updated the documentation to link to the Google Cloud Platform Python setup guide (#204)
+
+v1.1.1
+------
+
+- ``google.oauth.credentials.Credentials`` now correctly inherits from ``ReadOnlyScoped`` instead of ``Scoped``. (#200)
+
+v1.1.0
+------
+
+- Added ``service_account.Credentials.project_id``. (#187)
+- Move read-only methods of ``credentials.Scoped`` into new interface ``credentials.ReadOnlyScoped``. (#195, #196)
+- Make ``compute_engine.Credentials`` derive from ``ReadOnlyScoped`` instead of ``Scoped``. (#195)
+- Fix App Engine's expiration calculation (#197)
+- Split ``crypt`` module into a package to allow alternative implementations. (#189)
+- Add error message to handle case of empty string or missing file for GOOGLE_APPLICATION_CREDENTIALS (#188)
+
 v1.0.2
 ------
 

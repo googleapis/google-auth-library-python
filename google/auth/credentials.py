@@ -122,9 +122,101 @@ class Credentials(object):
         self.apply(headers)
 
 
+class AnonymousCredentials(Credentials):
+    """Credentials that do not provide any authentication information.
+
+    These are useful in the case of services that support anonymous access or
+    local service emulators that do not use credentials.
+    """
+
+    @property
+    def expired(self):
+        """Returns `False`, anonymous credentials never expire."""
+        return False
+
+    @property
+    def valid(self):
+        """Returns `True`, anonymous credentials are always valid."""
+        return True
+
+    def refresh(self, request):
+        """Raises :class:`ValueError``, anonymous credentials cannot be
+        refreshed."""
+        raise ValueError("Anonymous credentials cannot be refreshed.")
+
+    def apply(self, headers, token=None):
+        """Anonymous credentials do nothing to the request.
+
+        The optional ``token`` argument is not supported.
+
+        Raises:
+            ValueError: If a token was specified.
+        """
+        if token is not None:
+            raise ValueError("Anonymous credentials don't support tokens.")
+
+    def before_request(self, request, method, url, headers):
+        """Anonymous credentials do nothing to the request."""
+
+
 @six.add_metaclass(abc.ABCMeta)
-class Scoped(object):
-    """Interface for scoped credentials.
+class ReadOnlyScoped(object):
+    """Interface for credentials whose scopes can be queried.
+
+    OAuth 2.0-based credentials allow limiting access using scopes as described
+    in `RFC6749 Section 3.3`_.
+    If a credential class implements this interface then the credentials either
+    use scopes in their implementation.
+
+    Some credentials require scopes in order to obtain a token. You can check
+    if scoping is necessary with :attr:`requires_scopes`::
+
+        if credentials.requires_scopes:
+            # Scoping is required.
+            credentials = credentials.with_scopes(scopes=['one', 'two'])
+
+    Credentials that require scopes must either be constructed with scopes::
+
+        credentials = SomeScopedCredentials(scopes=['one', 'two'])
+
+    Or must copy an existing instance using :meth:`with_scopes`::
+
+        scoped_credentials = credentials.with_scopes(scopes=['one', 'two'])
+
+    Some credentials have scopes but do not allow or require scopes to be set,
+    these credentials can be used as-is.
+
+    .. _RFC6749 Section 3.3: https://tools.ietf.org/html/rfc6749#section-3.3
+    """
+    def __init__(self):
+        super(ReadOnlyScoped, self).__init__()
+        self._scopes = None
+
+    @property
+    def scopes(self):
+        """Sequence[str]: the credentials' current set of scopes."""
+        return self._scopes
+
+    @abc.abstractproperty
+    def requires_scopes(self):
+        """True if these credentials require scopes to obtain an access token.
+        """
+        return False
+
+    def has_scopes(self, scopes):
+        """Checks if the credentials have the given scopes.
+
+        .. warning: This method is not guaranteed to be accurate if the
+            credentials are :attr:`~Credentials.invalid`.
+
+        Returns:
+            bool: True if the credentials have the given scopes.
+        """
+        return set(scopes).issubset(set(self._scopes or []))
+
+
+class Scoped(ReadOnlyScoped):
+    """Interface for credentials whose scopes can be replaced while copying.
 
     OAuth 2.0-based credentials allow limiting access using scopes as described
     in `RFC6749 Section 3.3`_.
@@ -151,21 +243,6 @@ class Scoped(object):
 
     .. _RFC6749 Section 3.3: https://tools.ietf.org/html/rfc6749#section-3.3
     """
-    def __init__(self):
-        super(Scoped, self).__init__()
-        self._scopes = None
-
-    @property
-    def scopes(self):
-        """Sequence[str]: the credentials' current set of scopes."""
-        return self._scopes
-
-    @abc.abstractproperty
-    def requires_scopes(self):
-        """True if these credentials require scopes to obtain an access token.
-        """
-        return False
-
     @abc.abstractmethod
     def with_scopes(self, scopes):
         """Create a copy of these credentials with the specified scopes.
@@ -179,17 +256,6 @@ class Scoped(object):
                 calling this method.
         """
         raise NotImplementedError('This class does not require scoping.')
-
-    def has_scopes(self, scopes):
-        """Checks if the credentials have the given scopes.
-
-        .. warning: This method is not guaranteed to be accurate if the
-            credentials are :attr:`~Credentials.invalid`.
-
-        Returns:
-            bool: True if the credentials have the given scopes.
-        """
-        return set(scopes).issubset(set(self._scopes or []))
 
 
 def with_scopes_if_required(credentials, scopes):

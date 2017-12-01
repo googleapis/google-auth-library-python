@@ -14,6 +14,8 @@
 
 import datetime
 
+import pytest
+
 from google.auth import _helpers
 from google.auth import credentials
 
@@ -77,22 +79,54 @@ def test_before_request():
     assert headers['authorization'] == 'Bearer token'
 
 
-class ScopedCredentialsImpl(credentials.Scoped, CredentialsImpl):
+def test_anonymous_credentials_ctor():
+    anon = credentials.AnonymousCredentials()
+    assert anon.token is None
+    assert anon.expiry is None
+    assert not anon.expired
+    assert anon.valid
+
+
+def test_anonymous_credentials_refresh():
+    anon = credentials.AnonymousCredentials()
+    request = object()
+    with pytest.raises(ValueError):
+        anon.refresh(request)
+
+
+def test_anonymous_credentials_apply_default():
+    anon = credentials.AnonymousCredentials()
+    headers = {}
+    anon.apply(headers)
+    assert headers == {}
+    with pytest.raises(ValueError):
+        anon.apply(headers, token='TOKEN')
+
+
+def test_anonymous_credentials_before_request():
+    anon = credentials.AnonymousCredentials()
+    request = object()
+    method = 'GET'
+    url = 'https://example.com/api/endpoint'
+    headers = {}
+    anon.before_request(request, method, url, headers)
+    assert headers == {}
+
+
+class ReadOnlyScopedCredentialsImpl(
+        credentials.ReadOnlyScoped, CredentialsImpl):
     @property
     def requires_scopes(self):
-        return super(ScopedCredentialsImpl, self).requires_scopes
-
-    def with_scopes(self, scopes):
-        raise NotImplementedError
+        return super(ReadOnlyScopedCredentialsImpl, self).requires_scopes
 
 
-def test_scoped_credentials_constructor():
-    credentials = ScopedCredentialsImpl()
+def test_readonly_scoped_credentials_constructor():
+    credentials = ReadOnlyScopedCredentialsImpl()
     assert credentials._scopes is None
 
 
-def test_scoped_credentials_scopes():
-    credentials = ScopedCredentialsImpl()
+def test_readonly_scoped_credentials_scopes():
+    credentials = ReadOnlyScopedCredentialsImpl()
     credentials._scopes = ['one', 'two']
     assert credentials.scopes == ['one', 'two']
     assert credentials.has_scopes(['one'])
@@ -101,8 +135,8 @@ def test_scoped_credentials_scopes():
     assert not credentials.has_scopes(['three'])
 
 
-def test_scoped_credentials_requires_scopes():
-    credentials = ScopedCredentialsImpl()
+def test_readonly_scoped_credentials_requires_scopes():
+    credentials = ReadOnlyScopedCredentialsImpl()
     assert not credentials.requires_scopes
 
 

@@ -19,12 +19,14 @@ Engine using the Compute Engine metadata server.
 
 """
 
+import six
+
 from google.auth import credentials
 from google.auth import exceptions
 from google.auth.compute_engine import _metadata
 
 
-class Credentials(credentials.Scoped, credentials.Credentials):
+class Credentials(credentials.ReadOnlyScoped, credentials.Credentials):
     """Compute Engine Credentials.
 
     These credentials use the Google Compute Engine metadata server to obtain
@@ -89,8 +91,9 @@ class Credentials(credentials.Scoped, credentials.Credentials):
             self.token, self.expiry = _metadata.get_service_account_token(
                 request,
                 service_account=self._service_account_email)
-        except exceptions.TransportError as exc:
-            raise exceptions.RefreshError(exc)
+        except exceptions.TransportError as caught_exc:
+            new_exc = exceptions.RefreshError(caught_exc)
+            six.raise_from(new_exc, caught_exc)
 
     @property
     def service_account_email(self):
@@ -105,17 +108,3 @@ class Credentials(credentials.Scoped, credentials.Credentials):
     def requires_scopes(self):
         """False: Compute Engine credentials can not be scoped."""
         return False
-
-    def with_scopes(self, scopes):
-        """Unavailable, Compute Engine credentials can not be scoped.
-
-        Scopes can only be set at Compute Engine instance creation time.
-        See the `Compute Engine authentication documentation`_ for details on
-        how to configure instance scopes.
-
-        .. _Compute Engine authentication documentation:
-            https://cloud.google.com/compute/docs/authentication#using
-        """
-        raise NotImplementedError(
-            'Compute Engine credentials can not set scopes. Scopes must be '
-            'set when the Compute Engine instance is created.')
