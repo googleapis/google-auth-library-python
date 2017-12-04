@@ -82,11 +82,13 @@ def get_application_default_credentials_path():
     return os.path.join(config_path, _CREDENTIALS_FILENAME)
 
 
-def load_authorized_user_credentials(info):
+def load_authorized_user_credentials(info, scopes=None):
     """Loads an authorized user credential.
 
     Args:
         info (Mapping[str, str]): The loaded file's data.
+        scopes (Sequence[str]): Optional list of scopes to include in the
+                credentials.
 
     Returns:
         google.oauth2.credentials.Credentials: The constructed credentials.
@@ -106,6 +108,7 @@ def load_authorized_user_credentials(info):
         None,  # No access token, must be refreshed.
         refresh_token=info['refresh_token'],
         token_uri=_GOOGLE_OAUTH2_TOKEN_ENDPOINT,
+        scopes=scopes,
         client_id=info['client_id'],
         client_secret=info['client_secret'])
 

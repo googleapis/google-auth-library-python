@@ -34,6 +34,7 @@ Authorization Code grant flow.
 import io
 import json
 
+from google.auth import _cloud_sdk
 from google.auth import _helpers
 from google.auth import credentials
 from google.oauth2 import _client
@@ -144,20 +145,7 @@ class Credentials(credentials.ReadOnlyScoped, credentials.Credentials):
         Raises:
             ValueError: If the info is not in the expected format.
         """
-        try:
-            file_type = info['type']
-            client_id = info['client_id']
-            client_secret = info['client_secret']
-            refresh_token = info['refresh_token']
-        except KeyError as error:
-            raise ValueError('Failed to initialize am authorized_user credential. '
-                             'Missing key: {0}'.format(error))
-        if file_type != 'authorized_user':
-            raise ValueError('Invalid type field: {0}'.format(file_type))
-        return Credentials(
-            token=None, refresh_token=refresh_token,
-            token_uri=_DEFAULT_TOKEN_URI,
-            client_id=client_id, client_secret=client_secret, scopes=scopes)
+        return _cloud_sdk.load_authorized_user_credentials(info, scopes)
 
     @classmethod
     def from_authorized_user_file(cls, filename, scopes=None):

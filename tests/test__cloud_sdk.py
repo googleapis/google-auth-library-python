@@ -134,8 +134,9 @@ def test_get_config_path_no_appdata(monkeypatch):
 
 
 def test_load_authorized_user_credentials():
+    scopes = ['email', 'profile']
     credentials = _cloud_sdk.load_authorized_user_credentials(
-        AUTHORIZED_USER_FILE_DATA)
+        AUTHORIZED_USER_FILE_DATA, scopes=scopes)
 
     assert isinstance(credentials, google.oauth2.credentials.Credentials)
 
@@ -146,6 +147,7 @@ def test_load_authorized_user_credentials():
     assert (credentials._client_secret ==
             AUTHORIZED_USER_FILE_DATA['client_secret'])
     assert credentials._token_uri == _cloud_sdk._GOOGLE_OAUTH2_TOKEN_ENDPOINT
+    assert credentials.scopes == scopes
 
 
 def test_load_authorized_user_credentials_bad_format():
