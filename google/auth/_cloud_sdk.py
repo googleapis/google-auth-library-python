@@ -18,8 +18,6 @@ import json
 import os
 import subprocess
 
-import six
-
 from google.auth import environment_vars
 import google.oauth2.credentials
 
