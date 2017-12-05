@@ -34,13 +34,15 @@ Authorization Code grant flow.
 import io
 import json
 
-from google.auth import _cloud_sdk
+import six
+
 from google.auth import _helpers
 from google.auth import credentials
 from google.oauth2 import _client
 
 
-_DEFAULT_TOKEN_URI = 'https://accounts.google.com/o/oauth2/token'
+# The Google OAuth 2.0 token endpoint. Used for authorized user credentials.
+_GOOGLE_OAUTH2_TOKEN_ENDPOINT = 'https://accounts.google.com/o/oauth2/token'
 
 
 class Credentials(credentials.ReadOnlyScoped, credentials.Credentials):
@@ -145,7 +147,21 @@ class Credentials(credentials.ReadOnlyScoped, credentials.Credentials):
         Raises:
             ValueError: If the info is not in the expected format.
         """
-        return _cloud_sdk.load_authorized_user_credentials(info, scopes)
+        keys_needed = set(('refresh_token', 'client_id', 'client_secret'))
+        missing = keys_needed.difference(six.iterkeys(info))
+
+        if missing:
+            raise ValueError(
+                'Authorized user info was not in the expected format, missing '
+                'fields {}.'.format(', '.join(missing)))
+
+        return Credentials(
+            None,  # No access token, must be refreshed.
+            refresh_token=info['refresh_token'],
+            token_uri=_GOOGLE_OAUTH2_TOKEN_ENDPOINT,
+            scopes=scopes,
+            client_id=info['client_id'],
+            client_secret=info['client_secret'])
 
     @classmethod
     def from_authorized_user_file(cls, filename, scopes=None):

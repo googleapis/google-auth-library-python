@@ -102,7 +102,7 @@ class TestCredentials(object):
         assert creds.client_secret == info['client_secret']
         assert creds.client_id == info['client_id']
         assert creds.refresh_token == info['refresh_token']
-        assert creds.token_uri == credentials._DEFAULT_TOKEN_URI
+        assert creds.token_uri == credentials._GOOGLE_OAUTH2_TOKEN_ENDPOINT
         assert creds.scopes is None
 
         scopes = ['email', 'profile']
@@ -111,7 +111,7 @@ class TestCredentials(object):
         assert creds.client_secret == info['client_secret']
         assert creds.client_id == info['client_id']
         assert creds.refresh_token == info['refresh_token']
-        assert creds.token_uri == credentials._DEFAULT_TOKEN_URI
+        assert creds.token_uri == credentials._GOOGLE_OAUTH2_TOKEN_ENDPOINT
         assert creds.scopes == scopes
 
     def test_from_authorized_user_file(self):
@@ -122,7 +122,7 @@ class TestCredentials(object):
         assert creds.client_secret == info['client_secret']
         assert creds.client_id == info['client_id']
         assert creds.refresh_token == info['refresh_token']
-        assert creds.token_uri == credentials._DEFAULT_TOKEN_URI
+        assert creds.token_uri == credentials._GOOGLE_OAUTH2_TOKEN_ENDPOINT
         assert creds.scopes is None
 
         scopes = ['email', 'profile']
@@ -131,5 +131,5 @@ class TestCredentials(object):
         assert creds.client_secret == info['client_secret']
         assert creds.client_id == info['client_id']
         assert creds.refresh_token == info['refresh_token']
-        assert creds.token_uri == credentials._DEFAULT_TOKEN_URI
+        assert creds.token_uri == credentials._GOOGLE_OAUTH2_TOKEN_ENDPOINT
         assert creds.scopes == scopes
