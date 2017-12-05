@@ -83,8 +83,6 @@ def load_authorized_user_credentials(info):
 
     Args:
         info (Mapping[str, str]): The loaded file's data.
-        scopes (Sequence[str]): Optional list of scopes to include in the
-                credentials.
 
     Returns:
         google.oauth2.credentials.Credentials: The constructed credentials.
