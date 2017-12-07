@@ -129,7 +129,7 @@ def _get_gcloud_sdk_credentials():
     if not project_id:
         project_id = _cloud_sdk.get_project_id()
 
-    if not project_id:
+    if not os.environ.get(environment_vars.PROJECT):
         _LOGGER.warning(
             'No project ID could be determined from the Cloud SDK '
             'configuration. Consider running `gcloud config set project` or '
@@ -190,9 +190,9 @@ def _get_gce_credentials(request=None):
         except exceptions.TransportError:
             if not os.environ.get(environment_vars.PROJECT):
                 _LOGGER.warning(
-                    'No project ID could be determined from the Compute Engine '
-                    'metadata service. Consider setting the %s environment '
-                    'variable.', environment_vars.PROJECT)
+                    'No project ID could be determined from the Compute '
+                    'Engine metadata service. Consider setting the %s '
+                    'environment variable.', environment_vars.PROJECT)
             project_id = None
 
         return compute_engine.Credentials(), project_id
