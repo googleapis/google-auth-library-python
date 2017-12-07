@@ -147,7 +147,7 @@ def _get_explicit_environ_credentials():
         credentials, project_id = _load_credentials_from_file(
             os.environ[environment_vars.CREDENTIALS])
 
-        if not project_id:
+        if not os.environ.get(environment_vars.PROJECT):
             _LOGGER.warning(
                 'No project ID could be determined from the credentials at %s '
                 'Consider setting the %s environment variable',
@@ -188,10 +188,11 @@ def _get_gce_credentials(request=None):
         try:
             project_id = _metadata.get_project_id(request=request)
         except exceptions.TransportError:
-            _LOGGER.warning(
-                'No project ID could be determined from the Compute Engine '
-                'metadata service. Consider setting the %s environment '
-                'variable.', environment_vars.PROJECT)
+            if not os.environ.get(environment_vars.PROJECT):
+                _LOGGER.warning(
+                    'No project ID could be determined from the Compute Engine '
+                    'metadata service. Consider setting the %s environment '
+                    'variable.', environment_vars.PROJECT)
             project_id = None
 
         return compute_engine.Credentials(), project_id
