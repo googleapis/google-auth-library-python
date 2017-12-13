@@ -316,7 +316,8 @@ def test_default_explict_legacy_project_id(unused_get, monkeypatch):
 @mock.patch(
     'google.auth._default._get_gce_credentials',
     return_value=(mock.sentinel.credentials, None), autospec=True)
-def test_default_without_project_id(unused_gce, unused_gae, unused_sdk, unused_explicit, logger_warning):
+def test_default_without_project_id(
+        unused_gce, unused_gae, unused_sdk, unused_explicit, logger_warning):
     assert _default.default() == (
         mock.sentinel.credentials, None)
     logger_warning.assert_called_with(mock.ANY, mock.ANY, mock.ANY)
