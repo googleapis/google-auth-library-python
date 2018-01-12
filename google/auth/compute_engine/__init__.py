@@ -15,8 +15,12 @@
 """Google Compute Engine authentication."""
 
 from google.auth.compute_engine.credentials import Credentials
+from google.auth.compute_engine.credentials import IDTokenCredentials
+from google.auth.compute_engine.credentials import Signer
 
 
 __all__ = [
-    'Credentials'
+    'Credentials',
+    'IDTokenCredentials',
+    'Signer',
 ]
