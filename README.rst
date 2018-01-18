@@ -34,8 +34,7 @@ Google Auth Python Library has usage and reference documentation at `google-auth
 
 Examples
 --------
-Please Check this link for `Example`_ on connecting Spreadsheet via Google Auth Library using Service Account </a>
-
+Please Check this link for `Example`_ on connecting Spreadsheet via Google Auth Library using Service Account.
 
 .. _`Example`: https://github.com/Barathwaja/google-auth-library-python/tree/master/examples
 
