@@ -31,6 +31,14 @@ Documentation
 
 Google Auth Python Library has usage and reference documentation at `google-auth.readthedocs.io <https://google-auth.readthedocs.io>`_.
 
+
+Examples
+--------
+Please Check this link for `Example`_ on connecting Spreadsheet via Google Auth Library using Service Account </a>
+
+
+.. _`Example`: https://github.com/Barathwaja/google-auth-library-python/tree/master/examples
+
 Maintainers
 -----------
 
