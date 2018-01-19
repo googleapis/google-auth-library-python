@@ -230,7 +230,7 @@ class Credentials(credentials.Signing,
 
     @_helpers.copy_docstring(credentials.Scoped)
     def with_scopes(self, scopes):
-        return Credentials(
+        return self.__class__(
             self._signer,
             service_account_email=self._service_account_email,
             scopes=scopes,
@@ -249,7 +249,7 @@ class Credentials(credentials.Signing,
             google.auth.service_account.Credentials: A new credentials
                 instance.
         """
-        return Credentials(
+        return self.__class__(
             self._signer,
             service_account_email=self._service_account_email,
             scopes=self._scopes,
@@ -273,7 +273,7 @@ class Credentials(credentials.Signing,
         new_additional_claims = copy.deepcopy(self._additional_claims)
         new_additional_claims.update(additional_claims or {})
 
-        return Credentials(
+        return self.__class__(
             self._signer,
             service_account_email=self._service_account_email,
             scopes=self._scopes,
@@ -476,7 +476,7 @@ class IDTokenCredentials(credentials.Signing, credentials.Credentials):
             google.auth.service_account.IDTokenCredentials: A new credentials
                 instance.
         """
-        return IDTokenCredentials(
+        return self.__class__(
             self._signer,
             service_account_email=self._service_account_email,
             token_uri=self._token_uri,

@@ -158,7 +158,7 @@ def jwt_grant(request, token_uri, assertion):
 
 def id_token_jwt_grant(request, token_uri, assertion):
     """Implements the JWT Profile for OAuth 2.0 Authorization Grants, but
-    requests an OpenID Connect ID Token instead of a access token.
+    requests an OpenID Connect ID Token instead of an access token.
 
     This is a variant on the standard JWT Profile that is currently unique
     to Google. This was added for the benefit of authenticating to services
@@ -167,14 +167,16 @@ def id_token_jwt_grant(request, token_uri, assertion):
     Args:
         request (google.auth.transport.Request): A callable used to make
             HTTP requests.
-        token_uri (str): The OAuth 2.0 authorizations server's token endpoint
+        token_uri (str): The OAuth 2.0 authorization server's token endpoint
             URI.
-        assertion (str): JWT token signed by a service account. The assertion
-            must include a ``target_audience`` claim.
+        assertion (str): JWT token signed by a service account. The token's
+            payload must include a ``target_audience`` claim.
+
     Returns:
         Tuple[str, Optional[datetime], Mapping[str, str]]:
             The (encoded) Open ID Connect ID Token, expiration, and additional
             data returned by the endpoint.
+
     Raises:
         google.auth.exceptions.RefreshError: If the token endpoint returned
             an error.
