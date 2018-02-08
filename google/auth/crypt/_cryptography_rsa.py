@@ -58,20 +58,8 @@ class RSAVerifier(base.Verifier):
             return False
 
     @classmethod
+    @_helpers.copy_docstring(base.Signer)
     def from_string(cls, public_key):
-        """Construct an Verifier instance from a public key or public
-        certificate string.
-
-        Args:
-            public_key (Union[str, bytes]): The public key in PEM format or the
-                x509 public key certificate.
-
-        Returns:
-            Verifier: The constructed verifier.
-
-        Raises:
-            ValueError: If the public_key can't be parsed.
-        """
         public_key_data = _helpers.to_bytes(public_key)
 
         if _CERTIFICATE_MARKER in public_key_data:
