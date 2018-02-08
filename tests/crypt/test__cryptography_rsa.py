@@ -59,63 +59,51 @@ with open(SERVICE_ACCOUNT_JSON_FILE, 'r') as fh:
     SERVICE_ACCOUNT_INFO = json.load(fh)
 
 
-# class TestRSAVerifier(object):
-#     def test_verify_success(self):
-#         to_sign = b'foo'
-#         signer = _python_rsa.RSASigner.from_string(PRIVATE_KEY_BYTES)
-#         actual_signature = signer.sign(to_sign)
+class TestRSAVerifier(object):
+    def test_verify_success(self):
+        to_sign = b'foo'
+        signer = _cryptography_rsa.RSASigner.from_string(PRIVATE_KEY_BYTES)
+        actual_signature = signer.sign(to_sign)
 
-#         verifier = _python_rsa.RSAVerifier.from_string(PUBLIC_KEY_BYTES)
-#         assert verifier.verify(to_sign, actual_signature)
+        verifier = _cryptography_rsa.RSAVerifier.from_string(PUBLIC_KEY_BYTES)
+        assert verifier.verify(to_sign, actual_signature)
 
-#     def test_verify_unicode_success(self):
-#         to_sign = u'foo'
-#         signer = _python_rsa.RSASigner.from_string(PRIVATE_KEY_BYTES)
-#         actual_signature = signer.sign(to_sign)
+    def test_verify_unicode_success(self):
+        to_sign = u'foo'
+        signer = _cryptography_rsa.RSASigner.from_string(PRIVATE_KEY_BYTES)
+        actual_signature = signer.sign(to_sign)
 
-#         verifier = _python_rsa.RSAVerifier.from_string(PUBLIC_KEY_BYTES)
-#         assert verifier.verify(to_sign, actual_signature)
+        verifier = _cryptography_rsa.RSAVerifier.from_string(PUBLIC_KEY_BYTES)
+        assert verifier.verify(to_sign, actual_signature)
 
-#     def test_verify_failure(self):
-#         verifier = _python_rsa.RSAVerifier.from_string(PUBLIC_KEY_BYTES)
-#         bad_signature1 = b''
-#         assert not verifier.verify(b'foo', bad_signature1)
-#         bad_signature2 = b'a'
-#         assert not verifier.verify(b'foo', bad_signature2)
+    def test_verify_failure(self):
+        verifier = _cryptography_rsa.RSAVerifier.from_string(PUBLIC_KEY_BYTES)
+        bad_signature1 = b''
+        assert not verifier.verify(b'foo', bad_signature1)
+        bad_signature2 = b'a'
+        assert not verifier.verify(b'foo', bad_signature2)
 
-#     def test_from_string_pub_key(self):
-#         verifier = _python_rsa.RSAVerifier.from_string(PUBLIC_KEY_BYTES)
-#         assert isinstance(verifier, _python_rsa.RSAVerifier)
-#         assert isinstance(verifier._pubkey, rsa.key.PublicKey)
+    def test_from_string_pub_key(self):
+        verifier = _cryptography_rsa.RSAVerifier.from_string(PUBLIC_KEY_BYTES)
+        assert isinstance(verifier, _cryptography_rsa.RSAVerifier)
+        assert isinstance(verifier._pubkey, rsa.RSAPublicKey)
 
-#     def test_from_string_pub_key_unicode(self):
-#         public_key = _helpers.from_bytes(PUBLIC_KEY_BYTES)
-#         verifier = _python_rsa.RSAVerifier.from_string(public_key)
-#         assert isinstance(verifier, _python_rsa.RSAVerifier)
-#         assert isinstance(verifier._pubkey, rsa.key.PublicKey)
+    def test_from_string_pub_key_unicode(self):
+        public_key = _helpers.from_bytes(PUBLIC_KEY_BYTES)
+        verifier = _cryptography_rsa.RSAVerifier.from_string(public_key)
+        assert isinstance(verifier, _cryptography_rsa.RSAVerifier)
+        assert isinstance(verifier._pubkey, rsa.RSAPublicKey)
 
-#     def test_from_string_pub_cert(self):
-#         verifier = _python_rsa.RSAVerifier.from_string(PUBLIC_CERT_BYTES)
-#         assert isinstance(verifier, _python_rsa.RSAVerifier)
-#         assert isinstance(verifier._pubkey, rsa.key.PublicKey)
+    def test_from_string_pub_cert(self):
+        verifier = _cryptography_rsa.RSAVerifier.from_string(PUBLIC_CERT_BYTES)
+        assert isinstance(verifier, _cryptography_rsa.RSAVerifier)
+        assert isinstance(verifier._pubkey, rsa.RSAPublicKey)
 
-#     def test_from_string_pub_cert_unicode(self):
-#         public_cert = _helpers.from_bytes(PUBLIC_CERT_BYTES)
-#         verifier = _python_rsa.RSAVerifier.from_string(public_cert)
-#         assert isinstance(verifier, _python_rsa.RSAVerifier)
-#         assert isinstance(verifier._pubkey, rsa.key.PublicKey)
-
-#     def test_from_string_pub_cert_failure(self):
-#         cert_bytes = PUBLIC_CERT_BYTES
-#         true_der = rsa.pem.load_pem(cert_bytes, 'CERTIFICATE')
-#         load_pem_patch = mock.patch(
-#             'rsa.pem.load_pem', return_value=true_der + b'extra',
-#             autospec=True)
-
-#         with load_pem_patch as load_pem:
-#             with pytest.raises(ValueError):
-#                 _python_rsa.RSAVerifier.from_string(cert_bytes)
-#             load_pem.assert_called_once_with(cert_bytes, 'CERTIFICATE')
+    def test_from_string_pub_cert_unicode(self):
+        public_cert = _helpers.from_bytes(PUBLIC_CERT_BYTES)
+        verifier = _cryptography_rsa.RSAVerifier.from_string(public_cert)
+        assert isinstance(verifier, _cryptography_rsa.RSAVerifier)
+        assert isinstance(verifier._pubkey, rsa.RSAPublicKey)
 
 
 class TestRSASigner(object):

@@ -19,15 +19,18 @@ This is a much faster implementation than the default (in
 ``rsa`` library.
 """
 
+import cryptography.exceptions
 from cryptography.hazmat import backends
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import padding
+import cryptography.x509
 
 from google.auth import _helpers
 from google.auth.crypt import base
 
 
+_CERTIFICATE_MARKER = b'-----BEGIN CERTIFICATE-----'
 _BACKEND = backends.default_backend()
 _PADDING = padding.PKCS1v15()
 _SHA256 = hashes.SHA256()
@@ -37,8 +40,9 @@ class RSAVerifier(base.Verifier):
     """Verifies RSA cryptographic signatures using public keys.
 
     Args:
-        public_key (rsa.key.PublicKey): The public key used to verify
-            signatures.
+        public_key (
+                cryptography.hazmat.primitives.asymmetric.rsa.RSAPublicKey):
+            The public key used to verify signatures.
     """
 
     def __init__(self, public_key):
@@ -48,8 +52,9 @@ class RSAVerifier(base.Verifier):
     def verify(self, message, signature):
         message = _helpers.to_bytes(message)
         try:
-            return rsa.pkcs1.verify(message, signature, self._pubkey)
-        except (ValueError, rsa.pkcs1.VerificationError):
+            self._pubkey.verify(signature, message, _PADDING, _SHA256)
+            return True
+        except (ValueError, cryptography.exceptions.InvalidSignature):
             return False
 
     @classmethod
@@ -67,21 +72,17 @@ class RSAVerifier(base.Verifier):
         Raises:
             ValueError: If the public_key can't be parsed.
         """
-        public_key = _helpers.to_bytes(public_key)
-        is_x509_cert = _CERTIFICATE_MARKER in public_key
+        public_key_data = _helpers.to_bytes(public_key)
 
-        # If this is a certificate, extract the public key info.
-        if is_x509_cert:
-            der = rsa.pem.load_pem(public_key, 'CERTIFICATE')
-            asn1_cert, remaining = decoder.decode(der, asn1Spec=Certificate())
-            if remaining != b'':
-                raise ValueError('Unused bytes', remaining)
+        if _CERTIFICATE_MARKER in public_key_data:
+            cert = cryptography.x509.load_pem_x509_certificate(
+                public_key_data, _BACKEND)
+            pubkey = cert.public_key()
 
-            cert_info = asn1_cert['tbsCertificate']['subjectPublicKeyInfo']
-            key_bytes = _bit_list_to_bytes(cert_info['subjectPublicKey'])
-            pubkey = rsa.PublicKey.load_pkcs1(key_bytes, 'DER')
         else:
-            pubkey = rsa.PublicKey.load_pkcs1(public_key, 'PEM')
+            pubkey = serialization.load_pem_public_key(
+                public_key_data, _BACKEND)
+
         return cls(pubkey)
 
 
