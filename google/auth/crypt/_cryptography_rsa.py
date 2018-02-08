@@ -20,9 +20,9 @@ This is a much faster implementation than the default (in
 """
 
 from cryptography.hazmat import backends
-from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import padding
 
 from google.auth import _helpers
 from google.auth.crypt import base
@@ -33,11 +33,64 @@ _PADDING = padding.PKCS1v15()
 _SHA256 = hashes.SHA256()
 
 
-class RSASigner(base.Signer, base._FromServiceAccountMixin):
-    """Signs messages with a cryptography ``PKey`` private key.
+class RSAVerifier(base.Verifier):
+    """Verifies RSA cryptographic signatures using public keys.
 
     Args:
-        private_key (cryptography.hazmat.backends.openssl.rsa._RSAPrivateKey):
+        public_key (rsa.key.PublicKey): The public key used to verify
+            signatures.
+    """
+
+    def __init__(self, public_key):
+        self._pubkey = public_key
+
+    @_helpers.copy_docstring(base.Verifier)
+    def verify(self, message, signature):
+        message = _helpers.to_bytes(message)
+        try:
+            return rsa.pkcs1.verify(message, signature, self._pubkey)
+        except (ValueError, rsa.pkcs1.VerificationError):
+            return False
+
+    @classmethod
+    def from_string(cls, public_key):
+        """Construct an Verifier instance from a public key or public
+        certificate string.
+
+        Args:
+            public_key (Union[str, bytes]): The public key in PEM format or the
+                x509 public key certificate.
+
+        Returns:
+            Verifier: The constructed verifier.
+
+        Raises:
+            ValueError: If the public_key can't be parsed.
+        """
+        public_key = _helpers.to_bytes(public_key)
+        is_x509_cert = _CERTIFICATE_MARKER in public_key
+
+        # If this is a certificate, extract the public key info.
+        if is_x509_cert:
+            der = rsa.pem.load_pem(public_key, 'CERTIFICATE')
+            asn1_cert, remaining = decoder.decode(der, asn1Spec=Certificate())
+            if remaining != b'':
+                raise ValueError('Unused bytes', remaining)
+
+            cert_info = asn1_cert['tbsCertificate']['subjectPublicKeyInfo']
+            key_bytes = _bit_list_to_bytes(cert_info['subjectPublicKey'])
+            pubkey = rsa.PublicKey.load_pkcs1(key_bytes, 'DER')
+        else:
+            pubkey = rsa.PublicKey.load_pkcs1(public_key, 'PEM')
+        return cls(pubkey)
+
+
+class RSASigner(base.Signer, base.FromServiceAccountMixin):
+    """Signs messages with an RSA private key.
+
+    Args:
+        private_key (
+                cryptography.hazmat.primitives.asymmetric.rsa.RSAPrivateKey):
             The private key to sign with.
         key_id (str): Optional key ID used to identify this private key. This
             can be useful to associate the private key with its associated
@@ -77,7 +130,7 @@ class RSASigner(base.Signer, base._FromServiceAccountMixin):
                 into a UTF-8 ``str``.
             ValueError: If ``cryptography`` "Could not deserialize key data."
         """
-        message = _helpers.to_bytes(key)
+        key = _helpers.to_bytes(key)
         private_key = serialization.load_pem_private_key(
             key, password=None, backend=_BACKEND)
         return cls(private_key, key_id=key_id)

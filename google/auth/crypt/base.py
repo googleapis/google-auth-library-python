@@ -70,12 +70,25 @@ class Signer(object):
         raise NotImplementedError('Sign must be implemented')
 
 
-class _FromServiceAccountMixin(object):
-    """Mix-in to enable factory constructors for a Signer.
+@six.add_metaclass(abc.ABCMeta)
+class FromServiceAccountMixin(object):
+    """Mix-in to enable factory constructors for a Signer."""
 
-    Assumes this class will be mixed in with a class that has
-    implemented a ``from_string`` class method.
-    """
+    @abc.abstractmethod
+    def from_string(cls, key, key_id=None):
+        """Construct an Signer instance from a private key string.
+
+        Args:
+            key (str): Private key as a string.
+            key_id (str): An optional key id used to identify the private key.
+
+        Returns:
+            google.auth.crypt.Signer: The constructed signer.
+
+        Raises:
+            ValueError: If the key cannot be parsed.
+        """
+        raise NotImplementedError('from_string must be implemented')
 
     @classmethod
     def from_service_account_info(cls, info):

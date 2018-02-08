@@ -14,13 +14,13 @@
 
 """RSA cryptography signer and verifier."""
 
+from google.auth.crypt import _python_rsa
+
 try:
     from google.auth.crypt import _cryptography_rsa
 
     RSASigner = _cryptography_rsa.RSASigner
-    RSAVerifier = NotImplemented
+    RSAVerifier = _python_rsa.RSAVerifier
 except ImportError:
-    from google.auth.crypt import _python_rsa
-
     RSASigner = _python_rsa.RSASigner
     RSAVerifier = _python_rsa.RSAVerifier

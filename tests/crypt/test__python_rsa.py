@@ -23,6 +23,7 @@ import six
 
 from google.auth import _helpers
 from google.auth.crypt import _python_rsa
+from google.auth.crypt import base
 
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), '..', 'data')
@@ -176,19 +177,19 @@ class TestRSASigner(object):
             SERVICE_ACCOUNT_INFO)
 
         assert signer.key_id == SERVICE_ACCOUNT_INFO[
-            _python_rsa._JSON_FILE_PRIVATE_KEY_ID]
+            base._JSON_FILE_PRIVATE_KEY_ID]
         assert isinstance(signer._key, rsa.key.PrivateKey)
 
     def test_from_service_account_info_missing_key(self):
         with pytest.raises(ValueError) as excinfo:
             _python_rsa.RSASigner.from_service_account_info({})
 
-        assert excinfo.match(_python_rsa._JSON_FILE_PRIVATE_KEY)
+        assert excinfo.match(base._JSON_FILE_PRIVATE_KEY)
 
     def test_from_service_account_file(self):
         signer = _python_rsa.RSASigner.from_service_account_file(
             SERVICE_ACCOUNT_JSON_FILE)
 
         assert signer.key_id == SERVICE_ACCOUNT_INFO[
-            _python_rsa._JSON_FILE_PRIVATE_KEY_ID]
+            base._JSON_FILE_PRIVATE_KEY_ID]
         assert isinstance(signer._key, rsa.key.PrivateKey)

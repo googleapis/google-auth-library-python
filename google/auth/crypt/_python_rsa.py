@@ -114,7 +114,7 @@ class RSAVerifier(base.Verifier):
         return cls(pubkey)
 
 
-class RSASigner(base.Signer, base._FromServiceAccountMixin):
+class RSASigner(base.Signer, base.FromServiceAccountMixin):
     """Signs messages with an RSA private key.
 
     Args:
