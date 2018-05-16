@@ -19,19 +19,16 @@ Engine using the Compute Engine metadata server.
 
 """
 
-import base64
 import datetime
 
 import six
 
 from google.auth import _helpers
 from google.auth import credentials
-from google.auth import crypt
 from google.auth import exceptions
+from google.auth import iam
 from google.auth import jwt
 from google.auth.compute_engine import _metadata
-from google.auth.transport.requests import AuthorizedSession
-from google.auth.transport.requests import Request
 from google.oauth2 import _client
 
 
@@ -119,62 +116,6 @@ class Credentials(credentials.ReadOnlyScoped, credentials.Credentials):
         return False
 
 
-class Signer(crypt.Signer):
-    """Signer that uses the default service account of a a GCE instance.
-
-    See the signBlob method in
-    https://cloud.google.com/iam/reference/rest/v1/projects.serviceAccounts
-    """
-
-    _REQUEST_PATH = (
-        "https://iam.googleapis.com/v1/"
-        "projects/{project}/serviceAccounts/{service_account}:signBlob")
-
-    def __init__(self):
-        self._creds = Credentials()
-        request = Request()
-        project_id = _metadata.get_project_id(request)
-        sa_info = _metadata.get_service_account_info(request)
-        self._service_account_email = sa_info['email']
-        self._request_path = self._REQUEST_PATH.format(
-            project=project_id,
-            service_account=self._service_account_email)
-        self._session = AuthorizedSession(self._creds)
-
-    @property
-    def key_id(self):
-        """Optional[str]: The key ID used to identify this private key.
-
-        There is no known key ID associated to the default service account.
-        Any sign() call may be signed with a different key.
-        """
-        return None
-
-    def sign(self, message):
-        """Signs a message.
-
-        Args:
-            message (Union[str, bytes]): The message to be signed.
-
-        Returns:
-            bytes: The signature of the message.
-        """
-        if not isinstance(message, bytes):
-            message = message.encode()
-        body = {
-            'bytesToSign': base64.b64encode(message).decode(),
-        }
-        rep = self._session.post(self._request_path, json=body)
-        rep.raise_for_status()
-        # Note: the response includes a key ID in rep.json()['keyId']
-        return base64.b64decode(rep.json()["signature"].encode())
-
-    @property
-    def service_account_email(self):
-        """The email of the default service account on this GCE instance."""
-        return self._service_account_email
-
-
 _DEFAULT_TOKEN_LIFETIME_SECS = 3600  # 1 hour in seconds
 _DEFAULT_TOKEN_URI = 'https://www.googleapis.com/oauth2/v4/token'
 
@@ -183,20 +124,40 @@ class IDTokenCredentials(credentials.Credentials, credentials.Signing):
     """Open ID Connect ID Token-based service account credentials.
 
     These credentials relies on the default service account of a GCE instance.
+
+    In order for this to work, the GCE instance must have been started with
+    a service account that has access to the IAM Cloud API.
     """
-    def __init__(self, target_audience, token_uri=_DEFAULT_TOKEN_URI,
-                 additional_claims=None):
+    def __init__(self, request, target_audience,
+                 token_uri=_DEFAULT_TOKEN_URI,
+                 additional_claims=None,
+                 service_account_email=None):
         """
         Args:
+            request (google.auth.transport.Request): The object used to make
+                HTTP requests.
             target_audience (str): The intended audience for these credentials,
                 used when requesting the ID Token. The ID Token's ``aud`` claim
                 will be set to this string.
             token_uri (str): The OAuth 2.0 Token URI.
             additional_claims (Mapping[str, str]): Any additional claims for
                 the JWT assertion used in the authorization grant.
+            service_account_email (str): Optional explicit service account to
+                use to sign JWT tokens.
+                By default, this is the default GCE service account.
         """
         super(IDTokenCredentials, self).__init__()
-        self._signer = Signer()
+
+        if service_account_email is None:
+            sa_info = _metadata.get_service_account_info(request)
+            service_account_email = sa_info['email']
+        self._service_account_email = service_account_email
+
+        self._signer = iam.Signer(
+            request=request,
+            credentials=Credentials(),
+            service_account_email=service_account_email)
+
         self._token_uri = token_uri
         self._target_audience = target_audience
 
@@ -261,11 +222,6 @@ class IDTokenCredentials(credentials.Credentials, credentials.Signing):
 
     @property
     @_helpers.copy_docstring(credentials.Signing)
-    def signer_email(self):
-        return self._signer.service_account_email
-
-    @property
-    @_helpers.copy_docstring(credentials.Signing)
     def signer(self):
         return self._signer
 
@@ -276,4 +232,8 @@ class IDTokenCredentials(credentials.Credentials, credentials.Signing):
     @property
     def service_account_email(self):
         """The service account email."""
-        return self._signer.service_account_email
+        return self._service_account_email
+
+    @property
+    def signer_email(self):
+        return self._service_account_email
