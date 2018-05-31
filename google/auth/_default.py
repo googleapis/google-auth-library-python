@@ -39,7 +39,7 @@ _VALID_TYPES = (_AUTHORIZED_USER_TYPE, _SERVICE_ACCOUNT_TYPE)
 # Help message when no credentials can be found.
 _HELP_MESSAGE = """\
 Could not automatically determine credentials. Please set {env} or \
-explicitly create credential and re-run the application. For more \
+explicitly create credentials and re-run the application. For more \
 information, please see \
 https://developers.google.com/accounts/docs/application-default-credentials.
 """.format(env=environment_vars.CREDENTIALS).strip()
