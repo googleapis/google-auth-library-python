@@ -172,13 +172,13 @@ def _get_explicit_environ_credentials():
 
 def _get_gae_credentials():
     """Gets Google App Engine App Identity credentials and project ID."""
-    from google.auth import app_engine
-
     try:
+        from google.auth import app_engine
+
         credentials = app_engine.Credentials()
         project_id = app_engine.get_project_id()
         return credentials, project_id
-    except EnvironmentError:
+    except (ImportError, EnvironmentError):
         return None, None
 
 
