@@ -29,7 +29,7 @@ from google.auth import credentials
 from google.auth import crypt
 
 try:
-    from google.appengine.api import app_identity
+    from google.appengine.api import app_identity  # pytype: disable=import-error
 except ImportError:
     app_identity = None
 
