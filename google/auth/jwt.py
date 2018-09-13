@@ -46,7 +46,7 @@ import copy
 import datetime
 import json
 
-import cachetools
+import cachetools  # pytype: disable=import-error
 import six
 from six.moves import urllib
 
@@ -738,7 +738,7 @@ class OnDemandCredentials(
         parts = urllib.parse.urlsplit(url)
         # Strip query string and fragment
         audience = urllib.parse.urlunsplit(
-            (parts.scheme, parts.netloc, parts.path, None, None))
+            (parts.scheme, parts.netloc, parts.path, "", ""))
         token = self._get_jwt_for_audience(audience)
         self.apply(headers, token=token)
 
