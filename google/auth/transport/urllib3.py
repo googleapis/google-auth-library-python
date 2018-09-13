@@ -31,7 +31,7 @@ except ImportError:  # pragma: NO COVER
     certifi = None
 
 try:
-    import urllib3
+    import urllib3  # pytype: disable=import-error
 except ImportError as caught_exc:  # pragma: NO COVER
     import six
     six.raise_from(
@@ -42,7 +42,9 @@ except ImportError as caught_exc:  # pragma: NO COVER
         caught_exc,
     )
 import six
+# pytype: disable=import-error
 import urllib3.exceptions  # pylint: disable=ungrouped-imports
+# pytype: enable=import-error
 
 from google.auth import exceptions
 from google.auth import transport

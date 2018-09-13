@@ -18,7 +18,7 @@ from __future__ import absolute_import
 
 import six
 try:
-    import grpc
+    import grpc  # pytype: disable=import-error
 except ImportError as caught_exc:  # pragma: NO COVER
     six.raise_from(
         ImportError(
