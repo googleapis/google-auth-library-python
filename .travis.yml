@@ -26,8 +26,7 @@ cache:
   directories:
   - ${HOME}/.cache
 install:
-- pip install --upgrade tox
-- pip install --upgrade pytype
+- pip install --upgrade tox pytype
 script:
 - scripts/travis.sh
 deploy:
