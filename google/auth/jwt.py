@@ -46,7 +46,7 @@ import copy
 import datetime
 import json
 
-import cachetools  # pytype: disable=import-error
+import cachetools
 import six
 from six.moves import urllib
 
