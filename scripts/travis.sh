@@ -40,3 +40,7 @@ fi
 # Run tox.
 echo "Running tox..."
 tox
+
+# Run pytype.
+echo "Running pytype..."
+pytype

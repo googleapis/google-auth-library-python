@@ -19,12 +19,14 @@ This is a much faster implementation than the default (in
 ``rsa`` library.
 """
 
+# pytype: disable=import-error
 import cryptography.exceptions
 from cryptography.hazmat import backends
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import padding
 import cryptography.x509
+# pytype: enable=import-error
 import pkg_resources
 
 from google.auth import _helpers
