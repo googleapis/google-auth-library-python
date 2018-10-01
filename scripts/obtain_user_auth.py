@@ -23,10 +23,8 @@ specifically for testing.
 import json
 import os
 
-# pytype: disable=import-error
 from oauth2client import client
 from oauth2client import tools
-# pytype: disable=import-error
 
 HERE = os.path.dirname(__file__)
 CLIENT_SECRETS_PATH = os.path.abspath(os.path.join(
