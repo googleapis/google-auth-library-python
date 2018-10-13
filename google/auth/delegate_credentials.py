@@ -26,14 +26,13 @@ service account.
 """
 
 import copy
-import datetime
+from datetime import datetime, timedelta
 import json
 
 from google.auth import _helpers
 from google.auth import credentials
 from google.auth import exceptions
 
-from google.auth.transport.requests import AuthorizedSession, Request
 
 _DEFAULT_TOKEN_LIFETIME_SECS = 3600  # 1 hour in seconds
 
@@ -41,9 +40,12 @@ _IAM_SCOPE = ['https://www.googleapis.com/auth/iam']
 
 # Number of seconds before token expiration to initiate a refresh
 _CLOCK_SKEW_SECS = 30
-_CLOCK_SKEW = datetime.timedelta(seconds=_CLOCK_SKEW_SECS)
+_CLOCK_SKEW = timedelta(seconds=_CLOCK_SKEW_SECS)
 
-_IAM_CREDENTIALS_ENDPOINT = 'https://iamcredentials.googleapis.com/v1/projects/'
+_IAM_ENDPOINT = ('https://iamcredentials.googleapis.com/v1/projects/-' +
+                 '/serviceAccounts/{}:generateAccessToken')
+
+_REFRESH_ERROR_MSG = 'Unable to acquire delegated credentials '
 
 
 class DelegateCredentials(credentials.Credentials):
@@ -70,11 +72,12 @@ class DelegateCredentials(credentials.Credentials):
     represented by `svc_account.json`
 
 
-    First initialze a root credential which does not have access to list bucket::
+    First initialze a root credential which does not have access to
+    list bucket::
 
-        os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = '/path/to/svc_account.json'
+        os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = 'svc_account.json'
         scopes = ['https://www.googleapis.com/auth/devstorage.read_only']
-        
+
         root_credentials, project = google.auth.default(scopes=scopes)
         client = storage.Client(credentials=root_credentials)
         buckets = client.list_buckets(project='your_project')
@@ -82,7 +85,8 @@ class DelegateCredentials(credentials.Credentials):
           print bkt
 
 
-    Now use the root credentials to acquire credentials to impersonate another user::
+    Now use the root credentials to acquire credentials to impersonate
+    another user::
 
         new_scopes = scopes
         delegate_credentials = DelegateCredentials(
@@ -91,7 +95,7 @@ class DelegateCredentials(credentials.Credentials):
           new_scopes = new_scopes,
           delegates=[],
           lifetime=500)
-        
+
     Resource access is granted::
 
         client = storage.Client(credentials=delegate_credentials)
@@ -130,16 +134,20 @@ class DelegateCredentials(credentials.Credentials):
     @_helpers.copy_docstring(credentials.Credentials)
     def refresh(self, request):
         self._root_credentials.refresh(request)
-        self._updateToken()
+        self._updateToken(request)
 
     @property
     def expired(self):
         skewed_expiry = self.expiry - _CLOCK_SKEW
         return _helpers.utcnow() >= skewed_expiry
 
-    def _updateToken(self):
+    def _updateToken(self, req):
         """Updates the delegate credentials with a new access_token representing
         the delegated account.
+
+        Args:
+            req (google.auth.transport.requests.Request): Request object to use
+                for refreshing credentials.
 
         Raises:
             DefaultCredentialsError: Raised if the delegated credentials
@@ -147,7 +155,6 @@ class DelegateCredentials(credentials.Credentials):
             `iamcredentials.googleapis.com` is not enabled or the
             `Service Account Token Creator` is not assigned
         """
-        req = Request()
         self._root_credentials.refresh(req)
 
         body = {
@@ -155,19 +162,25 @@ class DelegateCredentials(credentials.Credentials):
             "scope": self._new_scopes,
             "lifetime": str(self._lifetime) + "s"
         }
-        iam_endpoint = ('{}-/serviceAccounts/{}:generateAccessToken').format(_IAM_CREDENTIALS_ENDPOINT, self._principal)
+
+        iam_endpoint = _IAM_ENDPOINT.format(self._principal)
         try:
-            authed_session = AuthorizedSession(self._root_credentials)
-            response = authed_session.post(iam_endpoint,
-                                           headers={'Content-Type': 'application/json'},
-                                           json=body)
-            if (response.status_code == 200):
-                token_response = json.loads(response.content)
+            headers = {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + self._root_credentials.token
+            }
+            response = req(url=iam_endpoint,
+                           method='POST',
+                           headers=headers,
+                           json=body)
+            if (response.status == 200):
+                token_response = json.loads(response.data)
                 self.token = token_response['accessToken']
-                self.expiry = datetime.datetime.strptime(token_response['expireTime'], '%Y-%m-%dT%H:%M:%SZ')
+                self.expiry = datetime.strptime(token_response['expireTime'],
+                                                '%Y-%m-%dT%H:%M:%SZ')
             else:
-                raise exceptions.DefaultCredentialsError("Unable to acquire delegated credentials " +
+                raise exceptions.DefaultCredentialsError(_REFRESH_ERROR_MSG +
                                                          self._principal)
         except (exceptions.TransportError, ValueError, KeyError):
-            raise exceptions.DefaultCredentialsError("Unable to acquire delegated credentials " +
+            raise exceptions.DefaultCredentialsError(_REFRESH_ERROR_MSG +
                                                      self._principal)

@@ -18,14 +18,12 @@ import os
 
 import mock
 import pytest
-
 from six.moves import http_client
 
 from google.auth import _helpers
 from google.auth import crypt
 from google.auth import exceptions
 from google.auth import transport
-
 from google.auth.delegate_credentials import DelegateCredentials
 from google.oauth2 import service_account
 
@@ -45,7 +43,7 @@ SIGNER = crypt.RSASigner.from_string(PRIVATE_KEY_BYTES, '1')
 class TestDelegateCredentials(object):
 
     SERVICE_ACCOUNT_EMAIL = 'service-account@example.com'
-    IMPERSONATED_ACCOUNT = 'impersonated-account@project.iam.gserviceaccount.com'
+    IMPERSONATED_ACCOUNT = 'impersonated@project.iam.gserviceaccount.com'
     NEW_SCOPES = ['https://www.googleapis.com/auth/devstorage.read_only']
     DELEGATES = []
     NEW_SCOPES = 3600
@@ -68,6 +66,19 @@ class TestDelegateCredentials(object):
         assert not credentials.valid
         assert credentials.expired
 
+    def make_request(self, data, status=http_client.OK,
+                     headers=None, side_effect=None):
+        response = mock.create_autospec(transport.Response, instance=False)
+        response.status = status
+        response.data = _helpers.to_bytes(data)
+        response.headers = headers or {}
+
+        request = mock.create_autospec(transport.Request, instance=False)
+        request.side_effect = side_effect
+        request.return_value = response
+
+        return request
+
     @mock.patch('google.oauth2._client.jwt_grant', autospec=True)
     def test_refresh_success(self, jwt_grant):
         credentials = self.make_credentials()
@@ -78,58 +89,70 @@ class TestDelegateCredentials(object):
             _helpers.utcnow() + datetime.timedelta(seconds=500),
             {})
 
-        request_body = {
-            "delegates": credentials._delegates,
-            "scope": credentials._new_scopes,
-            "lifetime": str(credentials._lifetime) + "s"
-        }
         response_body = {
             "accessToken": token,
-            "expireTime": (_helpers.utcnow() +
+            "expireTime": (_helpers.utcnow().replace(microsecond=0) +
                            datetime.timedelta(seconds=credentials._lifetime)
                            ).isoformat('T') + 'Z'
         }
 
-        response = mock.create_autospec(transport.Response, instance=True)
-        response.status = http_client.OK
-        response.data = _helpers.to_bytes(json.dumps(response_body))
+        request = self.make_request(data=json.dumps(response_body),
+                                    status=http_client.OK)
+        credentials.refresh(request)
 
-        request = mock.create_autospec(transport.Request, instance=True)
-        request.data = _helpers.to_bytes(json.dumps(request_body))
-        request.return_value = response
-
-        # this test should pass...commenting out test for now
-        #credentials.refresh(request)
-
-        #assert credentials.valid
-        #assert not credentials.expired
+        assert credentials.valid
+        assert not credentials.expired
 
     @mock.patch('google.oauth2._client.jwt_grant', autospec=True)
-    def test_refresh_failure(self, jwt_grant):
+    def test_refresh_failure_unauthorzed(self, jwt_grant):
         credentials = self.make_credentials()
         token = 'token'
+
         jwt_grant.return_value = (
             token,
             _helpers.utcnow() + datetime.timedelta(seconds=500),
             {})
 
-        body = {
-            "delegates": credentials._delegates,
-            "scope": credentials._new_scopes,
-            "lifetime": str(credentials._lifetime) + "s"
+        response_body = {
+            "error": {
+              "code": 403,
+              "message": "The caller does not have permission",
+              "status": "PERMISSION_DENIED"
+            }
         }
-        response = mock.create_autospec(transport.Response, instance=True)
-        response.status = http_client.NOT_FOUND
-        response.headers = {}
-        request = mock.create_autospec(transport.Request)
-        request.return_value = response
-        request.headers = {}
-        request.data = _helpers.to_bytes(json.dumps(body))
+
+        request = self.make_request(data=json.dumps(response_body),
+                                    status=http_client.UNAUTHORIZED)
 
         with pytest.raises(exceptions.DefaultCredentialsError) as excinfo:
             credentials.refresh(request)
 
-        assert excinfo.match(r'Unable to acquire delegated credentials ')
+        assert excinfo.match(r'Unable to acquire delegated credentials')
+
+        assert not credentials.valid
+        assert credentials.expired
+
+    @mock.patch('google.oauth2._client.jwt_grant', autospec=True)
+    def test_refresh_failure_http_error(self, jwt_grant):
+        credentials = self.make_credentials()
+        token = 'token'
+
+        jwt_grant.return_value = (
+            token,
+            _helpers.utcnow() + datetime.timedelta(seconds=500),
+            {})
+
+        response_body = {}
+
+        request = self.make_request(data=json.dumps(response_body),
+                                    status=http_client.HTTPException,
+                                    side_effect=exceptions.TransportError)
+
+        with pytest.raises(exceptions.DefaultCredentialsError) as excinfo:
+            credentials.refresh(request)
+
+        assert excinfo.match(r'Unable to acquire delegated credentials')
+
         assert not credentials.valid
         assert credentials.expired
 
