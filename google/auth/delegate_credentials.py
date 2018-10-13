@@ -174,13 +174,13 @@ class DelegateCredentials(credentials.Credentials):
                            headers=headers,
                            json=body)
             if (response.status == 200):
-                token_response = json.loads(response.data)
+                token_response = json.loads(response.data.decode('utf-8'))
                 self.token = token_response['accessToken']
                 self.expiry = datetime.strptime(token_response['expireTime'],
                                                 '%Y-%m-%dT%H:%M:%SZ')
             else:
                 raise exceptions.DefaultCredentialsError(_REFRESH_ERROR_MSG +
                                                          self._principal)
-        except (exceptions.TransportError, ValueError, KeyError):
+        except (exceptions.TransportError, ValueError, KeyError, TypeError):
             raise exceptions.DefaultCredentialsError(_REFRESH_ERROR_MSG +
                                                      self._principal)
