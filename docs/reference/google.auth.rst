@@ -22,6 +22,7 @@ Submodules
    google.auth.app_engine
    google.auth.credentials
    google.auth.crypt
+   google.auth.delegate_credentials
    google.auth.environment_vars
    google.auth.exceptions
    google.auth.iam

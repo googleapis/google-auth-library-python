@@ -205,6 +205,40 @@ You can also use :class:`google_auth_oauthlib.flow.Flow` to perform the OAuth
 .. _requests-oauthlib:
     https://requests-oauthlib.readthedocs.io/en/latest/
 
+Delegate credentials
+++++++++++++++++++++
+
+Delegate Credentials allows one set of credentials issued to a user or service account
+to impersonate another.  The target service account must grant the orginating credential
+principal the "Service Account Token Creator" IAM role::
+
+    from google.auth.delegate_credentials import DelegateCredentials
+
+    os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = '/path/to/svc_account.json'
+    scopes = ['https://www.googleapis.com/auth/devstorage.read_only']
+        
+    root_credentials, project = google.auth.default(scopes=scopes)
+    client = storage.Client(credentials=root_credentials)
+    buckets = client.list_buckets(project='your_project')
+    for bkt in buckets:
+        print bkt
+    new_scopes = scopes
+    delegate_credentials = DelegateCredentials(
+        root_credentials = root_credentials,
+        principal='impersonated-account@_project_.iam.gserviceaccount.com',
+        new_scopes = new_scopes,
+        delegates=[],
+        lifetime=500)
+    client = storage.Client(credentials=delegate_credentials)
+    buckets = client.list_buckets(project='your_project')
+    for bkt in buckets:
+        print bkt.name
+
+
+In the example above `root_credentials` does not have direct access to list buckets
+in the target project.  Using `Delegate Credentials` will allow the root_credentials
+to assume the identity of a principal that does have access
+
 Making authenticated requests
 -----------------------------
 
