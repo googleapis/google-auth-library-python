@@ -155,7 +155,6 @@ class DelegateCredentials(credentials.Credentials):
             `iamcredentials.googleapis.com` is not enabled or the
             `Service Account Token Creator` is not assigned
         """
-        self._root_credentials.refresh(req)
 
         body = {
             "delegates": self._delegates,
