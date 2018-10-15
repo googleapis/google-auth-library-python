@@ -18,7 +18,7 @@ This module provides authentication for applications where local credentials
 impersonates a remote service account using `IAM Credentials API`_.
 
 This class can be used to impersonate a service account as long as the original
-Credential object as the "Service Account Token Creator" role on the target
+Credential object has the "Service Account Token Creator" role on the target
 service account.
 
     .. _IAM Credentials API:
@@ -26,73 +26,66 @@ service account.
 """
 
 import copy
-from datetime import datetime, timedelta
+from datetime import datetime
 import json
 
 from google.auth import _helpers
 from google.auth import credentials
 from google.auth import exceptions
 
-
 _DEFAULT_TOKEN_LIFETIME_SECS = 3600  # 1 hour in seconds
 
 _IAM_SCOPE = ['https://www.googleapis.com/auth/iam']
 
-# Number of seconds before token expiration to initiate a refresh
-_CLOCK_SKEW_SECS = 30
-_CLOCK_SKEW = timedelta(seconds=_CLOCK_SKEW_SECS)
-
 _IAM_ENDPOINT = ('https://iamcredentials.googleapis.com/v1/projects/-' +
                  '/serviceAccounts/{}:generateAccessToken')
 
-_REFRESH_ERROR_MSG = 'Unable to acquire delegated credentials '
+_REFRESH_ERROR = 'Unable to acquire delegated credentials '
+_LIFETIME_ERROR = 'Delegate Credentials with lifetime set cannot be renewed'
 
 
 class DelegateCredentials(credentials.Credentials):
     """This module defines delegate credentials which are essentially
     impersonated identities.
 
-    When the `Service Account Token Creator_` IAM role is granted to a
-    service account, any other identity that has that capability can
-    impersonate that service account.
+    Delegate Credentials allows credentials issued to a user or
+    service account to impersonate another. The target service account must
+    grant the orginating credential principal the
+    `Service Account Token Creator`_ IAM role:
+
     For more information about Token Creator IAM role and
-    IAMCredentials API, see `IAM documentation`.
+    IAMCredentials API, see
+    `Creating Short-Lived Service Account Credentials`_.
 
     .. _Service Account Token Creator:
         https://cloud.google.com/iam/docs/service-accounts#the_service_account_token_creator_role
 
+    .. _Creating Short-Lived Service Account Credentials:
+        https://cloud.google.com/iam/docs/creating-short-lived-service-account-credentials
+
     Usage:
+
     First grant root_credentials the `Service Account Token Creator`
     role on the account to impersonate.   In this example, the
     service account represented by svc_account.json has the
     token creator role on
     `impersonated-account@_project_.iam.gserviceaccount.com`.
 
-    Second, enable `iamcredentials.googleapis.com` API on the project
-    represented by `svc_account.json`
-
-
-    First initialze a root credential which does not have access to
+    Initialze a root credential which does not have access to
     list bucket::
 
         os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = 'svc_account.json'
         scopes = ['https://www.googleapis.com/auth/devstorage.read_only']
 
         root_credentials, project = google.auth.default(scopes=scopes)
-        client = storage.Client(credentials=root_credentials)
-        buckets = client.list_buckets(project='your_project')
-        for bkt in buckets:
-          print bkt
-
 
     Now use the root credentials to acquire credentials to impersonate
-    another user::
+    another service account::
 
-        new_scopes = scopes
         delegate_credentials = DelegateCredentials(
           root_credentials = root_credentials,
           principal='impersonated-account@_project_.iam.gserviceaccount.com',
-          new_scopes = new_scopes,
+          new_scopes = scopes,
           delegates=[],
           lifetime=500)
 
@@ -106,7 +99,7 @@ class DelegateCredentials(credentials.Credentials):
 
     def __init__(self, root_credentials,  principal,
                  new_scopes, delegates=None,
-                 lifetime=_DEFAULT_TOKEN_LIFETIME_SECS):
+                 lifetime=None):
         """
         Args:
             root_credentials (google.auth.Credentials): The root credential
@@ -117,7 +110,9 @@ class DelegateCredentials(credentials.Credentials):
             delegates (Sequence[str]): The chained list of delegates required
                 to grant the final access_token.
             lifetime (int): Number of seconds the delegated credential should
-                be valid for (max 3600).
+                be valid for (upto 3600).  If set, the credentials will
+                **not** get refreshed after expiration.  If not set, the
+                credentials will be refreshed every 3600s.
         """
 
         super(credentials.Credentials, self).__init__()
@@ -133,13 +128,15 @@ class DelegateCredentials(credentials.Credentials):
 
     @_helpers.copy_docstring(credentials.Credentials)
     def refresh(self, request):
+        if (self.token is not None and self._lifetime is not None):
+            self.expiry = _helpers.utcnow()
+            raise exceptions.RefreshError(_LIFETIME_ERROR)
         self._root_credentials.refresh(request)
         self._updateToken(request)
 
     @property
     def expired(self):
-        skewed_expiry = self.expiry - _CLOCK_SKEW
-        return _helpers.utcnow() >= skewed_expiry
+        return _helpers.utcnow() >= self.expiry
 
     def _updateToken(self, req):
         """Updates the delegate credentials with a new access_token representing
@@ -150,16 +147,21 @@ class DelegateCredentials(credentials.Credentials):
                 for refreshing credentials.
 
         Raises:
+            TransportError: Raised if there is an underlying HTTP connection
+            Error
             DefaultCredentialsError: Raised if the delegated credentials
             are not available.  Common reasons are
             `iamcredentials.googleapis.com` is not enabled or the
             `Service Account Token Creator` is not assigned
         """
 
+        lifetime = self._lifetime
+        if (self._lifetime is None):
+            lifetime = _DEFAULT_TOKEN_LIFETIME_SECS
         body = {
             "delegates": self._delegates,
             "scope": self._new_scopes,
-            "lifetime": str(self._lifetime) + "s"
+            "lifetime": str(lifetime) + "s"
         }
 
         iam_endpoint = _IAM_ENDPOINT.format(self._principal)
@@ -178,8 +180,11 @@ class DelegateCredentials(credentials.Credentials):
                 self.expiry = datetime.strptime(token_response['expireTime'],
                                                 '%Y-%m-%dT%H:%M:%SZ')
             else:
-                raise exceptions.DefaultCredentialsError(_REFRESH_ERROR_MSG +
+                raise exceptions.DefaultCredentialsError(_REFRESH_ERROR +
                                                          self._principal)
-        except (exceptions.TransportError, ValueError, KeyError, TypeError):
-            raise exceptions.DefaultCredentialsError(_REFRESH_ERROR_MSG +
+        except (ValueError, KeyError, TypeError):
+            raise exceptions.DefaultCredentialsError(_REFRESH_ERROR +
                                                      self._principal)
+        except (exceptions.TransportError):
+            raise exceptions.TransportError(_REFRESH_ERROR +
+                                            self._principal)

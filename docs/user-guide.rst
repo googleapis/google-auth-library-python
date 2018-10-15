@@ -219,14 +219,11 @@ principal the "Service Account Token Creator" IAM role::
         
     root_credentials, project = google.auth.default(scopes=scopes)
     client = storage.Client(credentials=root_credentials)
-    buckets = client.list_buckets(project='your_project')
-    for bkt in buckets:
-        print bkt
-    new_scopes = scopes
+
     delegate_credentials = DelegateCredentials(
         root_credentials = root_credentials,
         principal='impersonated-account@_project_.iam.gserviceaccount.com',
-        new_scopes = new_scopes,
+        new_scopes = scopes,
         delegates=[],
         lifetime=500)
     client = storage.Client(credentials=delegate_credentials)
