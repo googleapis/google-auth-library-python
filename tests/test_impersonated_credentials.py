@@ -22,10 +22,10 @@ from six.moves import http_client
 
 from google.auth import _helpers
 from google.auth import crypt
-from google.auth import delegate_credentials
 from google.auth import exceptions
+from google.auth import impersonated_credentials
 from google.auth import transport
-from google.auth.delegate_credentials import DelegateCredentials
+from google.auth.impersonated_credentials import ImpersonatedCredentials
 from google.oauth2 import service_account
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), '', 'data')
@@ -42,7 +42,7 @@ SIGNER = crypt.RSASigner.from_string(PRIVATE_KEY_BYTES, '1')
 TOKEN_URI = 'https://example.com/oauth2/token'
 
 
-class TestDelegateCredentials(object):
+class TestImpersonatedCredentials(object):
 
     SERVICE_ACCOUNT_EMAIL = 'service-account@example.com'
     IMPERSONATED_ACCOUNT = 'impersonated@project.iam.gserviceaccount.com'
@@ -53,7 +53,7 @@ class TestDelegateCredentials(object):
             SIGNER, SERVICE_ACCOUNT_EMAIL, TOKEN_URI)
 
     def test_default_state(self):
-        credentials = DelegateCredentials(
+        credentials = ImpersonatedCredentials(
                         root_credentials=self.ROOT_CREDENTIALS,
                         principal=self.IMPERSONATED_ACCOUNT,
                         new_scopes=self.NEW_SCOPES,
@@ -77,7 +77,7 @@ class TestDelegateCredentials(object):
 
     @mock.patch('google.oauth2._client.jwt_grant', autospec=True)
     def test_refresh_success(self, jwt_grant):
-        credentials = DelegateCredentials(
+        credentials = ImpersonatedCredentials(
                         root_credentials=self.ROOT_CREDENTIALS,
                         principal=self.IMPERSONATED_ACCOUNT,
                         new_scopes=self.NEW_SCOPES,
@@ -106,7 +106,7 @@ class TestDelegateCredentials(object):
 
     @mock.patch('google.oauth2._client.jwt_grant', autospec=True)
     def test_refresh_failure_malformed_expireTime(self, jwt_grant):
-        credentials = DelegateCredentials(
+        credentials = ImpersonatedCredentials(
                         root_credentials=self.ROOT_CREDENTIALS,
                         principal=self.IMPERSONATED_ACCOUNT,
                         new_scopes=self.NEW_SCOPES,
@@ -131,14 +131,14 @@ class TestDelegateCredentials(object):
         with pytest.raises(exceptions.DefaultCredentialsError) as excinfo:
             credentials.refresh(request)
 
-        assert excinfo.match(delegate_credentials._REFRESH_ERROR)
+        assert excinfo.match(impersonated_credentials._REFRESH_ERROR)
 
         assert not credentials.valid
         assert credentials.expired
 
     @mock.patch('google.oauth2._client.jwt_grant', autospec=True)
     def test_refresh_failure_lifetime_specified(self, jwt_grant):
-        credentials = DelegateCredentials(
+        credentials = ImpersonatedCredentials(
                         root_credentials=self.ROOT_CREDENTIALS,
                         principal=self.IMPERSONATED_ACCOUNT,
                         new_scopes=self.NEW_SCOPES,
@@ -165,14 +165,14 @@ class TestDelegateCredentials(object):
         with pytest.raises(exceptions.RefreshError) as excinfo:
             credentials.refresh(request)
 
-        assert excinfo.match(delegate_credentials._LIFETIME_ERROR)
+        assert excinfo.match(impersonated_credentials._LIFETIME_ERROR)
 
         assert not credentials.valid
         assert credentials.expired
 
     @mock.patch('google.oauth2._client.jwt_grant', autospec=True)
     def test_refresh_failure_unauthorzed(self, jwt_grant):
-        credentials = DelegateCredentials(
+        credentials = ImpersonatedCredentials(
                         root_credentials=self.ROOT_CREDENTIALS,
                         principal=self.IMPERSONATED_ACCOUNT,
                         new_scopes=self.NEW_SCOPES,
@@ -199,14 +199,14 @@ class TestDelegateCredentials(object):
         with pytest.raises(exceptions.DefaultCredentialsError) as excinfo:
             credentials.refresh(request)
 
-        assert excinfo.match(delegate_credentials._REFRESH_ERROR)
+        assert excinfo.match(impersonated_credentials._REFRESH_ERROR)
 
         assert not credentials.valid
         assert credentials.expired
 
     @mock.patch('google.oauth2._client.jwt_grant', autospec=True)
     def test_refresh_failure_http_error(self, jwt_grant):
-        credentials = DelegateCredentials(
+        credentials = ImpersonatedCredentials(
                         root_credentials=self.ROOT_CREDENTIALS,
                         principal=self.IMPERSONATED_ACCOUNT,
                         new_scopes=self.NEW_SCOPES,
@@ -228,13 +228,13 @@ class TestDelegateCredentials(object):
         with pytest.raises(exceptions.TransportError) as excinfo:
             credentials.refresh(request)
 
-        assert excinfo.match(delegate_credentials._REFRESH_ERROR)
+        assert excinfo.match(impersonated_credentials._REFRESH_ERROR)
 
         assert not credentials.valid
         assert credentials.expired
 
     def test_expired(self):
-        credentials = DelegateCredentials(
+        credentials = ImpersonatedCredentials(
                         root_credentials=self.ROOT_CREDENTIALS,
                         principal=self.IMPERSONATED_ACCOUNT,
                         new_scopes=self.NEW_SCOPES,

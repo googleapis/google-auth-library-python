@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Google Cloud Delegated credentials.
+"""Google Cloud Impersonated credentials.
 
 This module provides authentication for applications where local credentials
 impersonates a remote service account using `IAM Credentials API`_.
@@ -40,15 +40,15 @@ _IAM_SCOPE = ['https://www.googleapis.com/auth/iam']
 _IAM_ENDPOINT = ('https://iamcredentials.googleapis.com/v1/projects/-' +
                  '/serviceAccounts/{}:generateAccessToken')
 
-_REFRESH_ERROR = 'Unable to acquire delegated credentials '
-_LIFETIME_ERROR = 'Delegate Credentials with lifetime set cannot be renewed'
+_REFRESH_ERROR = 'Unable to acquire impersonated credentials '
+_LIFETIME_ERROR = 'Credentials with lifetime set cannot be renewed'
 
 
-class DelegateCredentials(credentials.Credentials):
-    """This module defines delegate credentials which are essentially
+class ImpersonatedCredentials(credentials.Credentials):
+    """This module defines impersonated credentials which are essentially
     impersonated identities.
 
-    Delegate Credentials allows credentials issued to a user or
+    Impersonated Credentials allows credentials issued to a user or
     service account to impersonate another. The target service account must
     grant the orginating credential principal the
     `Service Account Token Creator`_ IAM role:
@@ -82,7 +82,7 @@ class DelegateCredentials(credentials.Credentials):
     Now use the root credentials to acquire credentials to impersonate
     another service account::
 
-        delegate_credentials = DelegateCredentials(
+        impersonated_credentials = ImpersonatedCredentials(
           root_credentials = root_credentials,
           principal='impersonated-account@_project_.iam.gserviceaccount.com',
           new_scopes = scopes,
@@ -91,7 +91,7 @@ class DelegateCredentials(credentials.Credentials):
 
     Resource access is granted::
 
-        client = storage.Client(credentials=delegate_credentials)
+        client = storage.Client(credentials=impersonated_credentials)
         buckets = client.list_buckets(project='your_project')
         for bkt in buckets:
           print bkt.name
@@ -103,7 +103,7 @@ class DelegateCredentials(credentials.Credentials):
         """
         Args:
             root_credentials (google.auth.Credentials): The root credential
-                used as to acquire the delegated credentials.
+                used as to acquire the impersonated credentials.
             principal (str): The service account to impersonatge.
             new_scopes (Sequence[str]): Scopes to request during the
                 authorization grant.
@@ -139,8 +139,8 @@ class DelegateCredentials(credentials.Credentials):
         return _helpers.utcnow() >= self.expiry
 
     def _updateToken(self, req):
-        """Updates the delegate credentials with a new access_token representing
-        the delegated account.
+        """Updates credentials with a new access_token representing
+        the impersonated account.
 
         Args:
             req (google.auth.transport.requests.Request): Request object to use
@@ -149,7 +149,7 @@ class DelegateCredentials(credentials.Credentials):
         Raises:
             TransportError: Raised if there is an underlying HTTP connection
             Error
-            DefaultCredentialsError: Raised if the delegated credentials
+            DefaultCredentialsError: Raised if the impersonated credentials
             are not available.  Common reasons are
             `iamcredentials.googleapis.com` is not enabled or the
             `Service Account Token Creator` is not assigned
