@@ -209,32 +209,31 @@ Impersonated credentials
 ++++++++++++++++++++++++
 
 Impersonated Credentials allows one set of credentials issued to a user or service account
-to impersonate another.  The target service account must grant the orginating credential
-principal the "Service Account Token Creator" IAM role::
+to impersonate another.  The target service account must grant the source credential
+the "Service Account Token Creator" IAM role::
 
     from google.auth.impersonated_credentials import ImpersonatedCredentials
 
-    os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = '/path/to/svc_account.json'
-    scopes = ['https://www.googleapis.com/auth/devstorage.read_only']
-        
-    root_credentials, project = google.auth.default(scopes=scopes)
-    client = storage.Client(credentials=root_credentials)
+    target_scopes = ['https://www.googleapis.com/auth/devstorage.read_only']
+    source_credentials = service_account.Credentials.from_service_account_file(
+        '/path/to/svc_account.json',
+        scopes=target_scopes)          
 
-    impersonated_credentials = ImpersonatedCredentials(
-        root_credentials = root_credentials,
-        principal='impersonated-account@_project_.iam.gserviceaccount.com',
-        new_scopes = scopes,
+    target_credentials = ImpersonatedCredentials(
+        source_credentials=source_credentials,
+        target_principal='impersonated-account@_project_.iam.gserviceaccount.com',
+        target_scopes=target_scopes,
         delegates=[],
         lifetime=500)
-    client = storage.Client(credentials=impersonated_credentials)
+    client = storage.Client(credentials = target_credentials)
     buckets = client.list_buckets(project='your_project')
-    for bkt in buckets:
-        print bkt.name
+    for bucket in buckets:
+        print bucket.name
 
 
-In the example above `root_credentials` does not have direct access to list buckets
-in the target project.  Using `ImpersonatedCredentials` will allow the root_credentials
-to assume the identity of a principal that does have access
+In the example above `source_credentials` does not have direct access to list buckets
+in the target project.  Using `ImpersonatedCredentials` will allow the source_credentials
+to assume the identity of a target_principal that does have access
 
 Making authenticated requests
 -----------------------------

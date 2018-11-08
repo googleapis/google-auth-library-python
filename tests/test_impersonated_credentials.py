@@ -45,18 +45,18 @@ TOKEN_URI = 'https://example.com/oauth2/token'
 class TestImpersonatedCredentials(object):
 
     SERVICE_ACCOUNT_EMAIL = 'service-account@example.com'
-    IMPERSONATED_ACCOUNT = 'impersonated@project.iam.gserviceaccount.com'
-    NEW_SCOPES = ['https://www.googleapis.com/auth/devstorage.read_only']
+    TARGET_PRINCIPAL = 'impersonated@project.iam.gserviceaccount.com'
+    TARGET_SCOPES = ['https://www.googleapis.com/auth/devstorage.read_only']
     DELEGATES = []
     LIFETIME = 3600
-    ROOT_CREDENTIALS = service_account.Credentials(
+    SOURCE_CREDENTIALS = service_account.Credentials(
             SIGNER, SERVICE_ACCOUNT_EMAIL, TOKEN_URI)
 
     def test_default_state(self):
         credentials = ImpersonatedCredentials(
-                        root_credentials=self.ROOT_CREDENTIALS,
-                        principal=self.IMPERSONATED_ACCOUNT,
-                        new_scopes=self.NEW_SCOPES,
+                        source_credentials=self.SOURCE_CREDENTIALS,
+                        target_principal=self.TARGET_PRINCIPAL,
+                        target_scopes=self.TARGET_SCOPES,
                         delegates=self.DELEGATES,
                         lifetime=self.LIFETIME)
         assert not credentials.valid
@@ -78,9 +78,9 @@ class TestImpersonatedCredentials(object):
     @mock.patch('google.oauth2._client.jwt_grant', autospec=True)
     def test_refresh_success(self, jwt_grant):
         credentials = ImpersonatedCredentials(
-                        root_credentials=self.ROOT_CREDENTIALS,
-                        principal=self.IMPERSONATED_ACCOUNT,
-                        new_scopes=self.NEW_SCOPES,
+                        source_credentials=self.SOURCE_CREDENTIALS,
+                        target_principal=self.TARGET_PRINCIPAL,
+                        target_scopes=self.TARGET_SCOPES,
                         delegates=self.DELEGATES,
                         lifetime=None)
         token = 'token'
@@ -107,9 +107,9 @@ class TestImpersonatedCredentials(object):
     @mock.patch('google.oauth2._client.jwt_grant', autospec=True)
     def test_refresh_failure_malformed_expireTime(self, jwt_grant):
         credentials = ImpersonatedCredentials(
-                        root_credentials=self.ROOT_CREDENTIALS,
-                        principal=self.IMPERSONATED_ACCOUNT,
-                        new_scopes=self.NEW_SCOPES,
+                        source_credentials=self.SOURCE_CREDENTIALS,
+                        target_principal=self.TARGET_PRINCIPAL,
+                        target_scopes=self.TARGET_SCOPES,
                         delegates=self.DELEGATES,
                         lifetime=None)
         token = 'token'
@@ -139,9 +139,9 @@ class TestImpersonatedCredentials(object):
     @mock.patch('google.oauth2._client.jwt_grant', autospec=True)
     def test_refresh_failure_lifetime_specified(self, jwt_grant):
         credentials = ImpersonatedCredentials(
-                        root_credentials=self.ROOT_CREDENTIALS,
-                        principal=self.IMPERSONATED_ACCOUNT,
-                        new_scopes=self.NEW_SCOPES,
+                        source_credentials=self.SOURCE_CREDENTIALS,
+                        target_principal=self.TARGET_PRINCIPAL,
+                        target_scopes=self.TARGET_SCOPES,
                         delegates=self.DELEGATES,
                         lifetime=500)
         token = 'token'
@@ -173,9 +173,9 @@ class TestImpersonatedCredentials(object):
     @mock.patch('google.oauth2._client.jwt_grant', autospec=True)
     def test_refresh_failure_unauthorzed(self, jwt_grant):
         credentials = ImpersonatedCredentials(
-                        root_credentials=self.ROOT_CREDENTIALS,
-                        principal=self.IMPERSONATED_ACCOUNT,
-                        new_scopes=self.NEW_SCOPES,
+                        source_credentials=self.SOURCE_CREDENTIALS,
+                        target_principal=self.TARGET_PRINCIPAL,
+                        target_scopes=self.TARGET_SCOPES,
                         delegates=self.DELEGATES,
                         lifetime=None)
         token = 'token'
@@ -207,9 +207,9 @@ class TestImpersonatedCredentials(object):
     @mock.patch('google.oauth2._client.jwt_grant', autospec=True)
     def test_refresh_failure_http_error(self, jwt_grant):
         credentials = ImpersonatedCredentials(
-                        root_credentials=self.ROOT_CREDENTIALS,
-                        principal=self.IMPERSONATED_ACCOUNT,
-                        new_scopes=self.NEW_SCOPES,
+                        source_credentials=self.SOURCE_CREDENTIALS,
+                        target_principal=self.TARGET_PRINCIPAL,
+                        target_scopes=self.TARGET_SCOPES,
                         delegates=self.DELEGATES,
                         lifetime=None)
         token = 'token'
@@ -235,9 +235,9 @@ class TestImpersonatedCredentials(object):
 
     def test_expired(self):
         credentials = ImpersonatedCredentials(
-                        root_credentials=self.ROOT_CREDENTIALS,
-                        principal=self.IMPERSONATED_ACCOUNT,
-                        new_scopes=self.NEW_SCOPES,
+                        source_credentials=self.SOURCE_CREDENTIALS,
+                        target_principal=self.TARGET_PRINCIPAL,
+                        target_scopes=self.TARGET_SCOPES,
                         delegates=self.DELEGATES,
                         lifetime=None)
         assert credentials.expired

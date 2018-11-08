@@ -65,50 +65,58 @@ class ImpersonatedCredentials(credentials.Credentials):
 
     Usage:
 
-    First grant root_credentials the `Service Account Token Creator`
-    role on the account to impersonate.   In this example, the
+    First grant source_credentials the `Service Account Token Creator`
+    role on the target account to impersonate.   In this example, the
     service account represented by svc_account.json has the
     token creator role on
     `impersonated-account@_project_.iam.gserviceaccount.com`.
 
-    Initialze a root credential which does not have access to
+    Initialze a source credential which does not have access to
     list bucket::
 
-        os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = 'svc_account.json'
-        scopes = ['https://www.googleapis.com/auth/devstorage.read_only']
+        target_scopes = ['https://www.googleapis.com/auth/devstorage.read_only']
+        source_credentials = service_account.Credentials.from_service_account_file(
+            '/path/to/svc_account.json',
+            scopes=target_scopes)
 
-        root_credentials, project = google.auth.default(scopes=scopes)
-
-    Now use the root credentials to acquire credentials to impersonate
+    Now use the source credentials to acquire credentials to impersonate
     another service account::
 
-        impersonated_credentials = ImpersonatedCredentials(
-          root_credentials = root_credentials,
-          principal='impersonated-account@_project_.iam.gserviceaccount.com',
-          new_scopes = scopes,
+        target_credentials = ImpersonatedCredentials(
+          source_credentials = source_credentials,
+          target_principal='impersonated-account@_project_.iam.gserviceaccount.com',
+          target_scopes = target_scopes,
           delegates=[],
           lifetime=500)
 
     Resource access is granted::
 
-        client = storage.Client(credentials=impersonated_credentials)
+        client = storage.Client(credentials=target_credentials)
         buckets = client.list_buckets(project='your_project')
-        for bkt in buckets:
-          print bkt.name
+        for bucket in buckets:
+          print bucket.name
     """
 
-    def __init__(self, root_credentials,  principal,
-                 new_scopes, delegates=None,
+    def __init__(self, source_credentials,  target_principal,
+                 target_scopes, delegates=None,
                  lifetime=None):
         """
         Args:
-            root_credentials (google.auth.Credentials): The root credential
+            source_credentials (google.auth.Credentials): The source credential
                 used as to acquire the impersonated credentials.
-            principal (str): The service account to impersonatge.
-            new_scopes (Sequence[str]): Scopes to request during the
+            target_principal (str): The service account to impersonate.
+            target_scopes (Sequence[str]): Scopes to request during the
                 authorization grant.
             delegates (Sequence[str]): The chained list of delegates required
-                to grant the final access_token.
+                to grant the final access_token.  If set, the sequence of
+                identities must have "Service Account Token Creator" capability
+                granted to the prceeding identity.  For example, if set to
+                [serviceAccountB, serviceAccountC], the source_credential
+                must have the Token Creator role on serviceAccountB.
+                serviceAccountB must have the Token Creator on serviceAccountC.
+                Finally, C must have Token Creator on target_principal.
+                If left unset, source_credential must have that role on
+                target_principal.
             lifetime (int): Number of seconds the delegated credential should
                 be valid for (upto 3600).  If set, the credentials will
                 **not** get refreshed after expiration.  If not set, the
@@ -117,10 +125,10 @@ class ImpersonatedCredentials(credentials.Credentials):
 
         super(credentials.Credentials, self).__init__()
 
-        self._root_credentials = copy.copy(root_credentials)
-        self._root_credentials._scopes = _IAM_SCOPE
-        self._principal = principal
-        self._new_scopes = new_scopes
+        self._source_credentials = copy.copy(source_credentials)
+        self._source_credentials._scopes = _IAM_SCOPE
+        self._target_principal = target_principal
+        self._target_scopes = target_scopes
         self._delegates = delegates
         self._lifetime = lifetime
         self.token = None
@@ -131,46 +139,30 @@ class ImpersonatedCredentials(credentials.Credentials):
         if (self.token is not None and self._lifetime is not None):
             self.expiry = _helpers.utcnow()
             raise exceptions.RefreshError(_LIFETIME_ERROR)
-        self._root_credentials.refresh(request)
-        self._updateToken(request)
+        self._source_credentials.refresh(request)
+        self._update_token(request)
 
     @property
     def expired(self):
         return _helpers.utcnow() >= self.expiry
 
-    def _updateToken(self, req):
-        """Updates credentials with a new access_token representing
-        the impersonated account.
-
+    def _make_iam_token_request(self, request, headers, body):
+        """
         Args:
-            req (google.auth.transport.requests.Request): Request object to use
-                for refreshing credentials.
-
+            headers (Mapping[str, str]): Map of headers to transmit.
+            body (Mapping[str, str]): JSON Payload body for the iamcredentials
+                API call.                     
         Raises:
             TransportError: Raised if there is an underlying HTTP connection
             Error
             DefaultCredentialsError: Raised if the impersonated credentials
             are not available.  Common reasons are
             `iamcredentials.googleapis.com` is not enabled or the
-            `Service Account Token Creator` is not assigned
+            `Service Account Token Creator` is not assigned        
         """
-
-        lifetime = self._lifetime
-        if (self._lifetime is None):
-            lifetime = _DEFAULT_TOKEN_LIFETIME_SECS
-        body = {
-            "delegates": self._delegates,
-            "scope": self._new_scopes,
-            "lifetime": str(lifetime) + "s"
-        }
-
-        iam_endpoint = _IAM_ENDPOINT.format(self._principal)
+        iam_endpoint = _IAM_ENDPOINT.format(self._target_principal)
         try:
-            headers = {
-                    'Content-Type': 'application/json',
-                    'Authorization': 'Bearer ' + self._root_credentials.token
-            }
-            response = req(url=iam_endpoint,
+            response = request(url=iam_endpoint,
                            method='POST',
                            headers=headers,
                            json=body)
@@ -181,10 +173,35 @@ class ImpersonatedCredentials(credentials.Credentials):
                                                 '%Y-%m-%dT%H:%M:%SZ')
             else:
                 raise exceptions.DefaultCredentialsError(_REFRESH_ERROR +
-                                                         self._principal)
+                                                         self._target_principal)
         except (ValueError, KeyError, TypeError):
             raise exceptions.DefaultCredentialsError(_REFRESH_ERROR +
-                                                     self._principal)
+                                                     self._target_principal)
         except (exceptions.TransportError):
             raise exceptions.TransportError(_REFRESH_ERROR +
-                                            self._principal)
+                                            self._target_principal)
+
+    def _update_token(self, request):
+        """Updates credentials with a new access_token representing
+        the impersonated account.
+
+        Args:
+            request (google.auth.transport.requests.Request): Request object to use
+                for refreshing credentials.
+        """
+
+        lifetime = self._lifetime
+        if (self._lifetime is None):
+            lifetime = _DEFAULT_TOKEN_LIFETIME_SECS
+        body = {
+            "delegates": self._delegates,
+            "scope": self._target_scopes,
+            "lifetime": str(lifetime) + "s"
+        }
+
+        headers = {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + self._source_credentials.token
+        }
+        self._make_iam_token_request(request=request,
+            headers=headers, body=body)
