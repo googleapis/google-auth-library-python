@@ -223,7 +223,6 @@ the "Service Account Token Creator" IAM role::
         source_credentials=source_credentials,
         target_principal='impersonated-account@_project_.iam.gserviceaccount.com',
         target_scopes=target_scopes,
-        delegates=[],
         lifetime=500)
     client = storage.Client(credentials = target_credentials)
     buckets = client.list_buckets(project='your_project')
