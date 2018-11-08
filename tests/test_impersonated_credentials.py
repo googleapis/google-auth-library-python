@@ -42,6 +42,16 @@ SIGNER = crypt.RSASigner.from_string(PRIVATE_KEY_BYTES, '1')
 TOKEN_URI = 'https://example.com/oauth2/token'
 
 
+@pytest.fixture
+def mock_donor_credentials():
+    with mock.patch('google.oauth2._client.jwt_grant', autospec=True) as grant:
+        grant.return_value = (
+            "source token",
+            _helpers.utcnow() + datetime.timedelta(seconds=500),
+            {})
+        yield grant
+
+
 class TestImpersonatedCredentials(object):
 
     SERVICE_ACCOUNT_EMAIL = 'service-account@example.com'
@@ -78,15 +88,9 @@ class TestImpersonatedCredentials(object):
 
         return request
 
-    @mock.patch('google.oauth2._client.jwt_grant', autospec=True)
-    def test_refresh_success(self, jwt_grant):
+    def test_refresh_success(self, mock_donor_credentials):
         credentials = self.make_credentials(lifetime=None)
         token = 'token'
-
-        jwt_grant.return_value = (
-            token,
-            _helpers.utcnow() + datetime.timedelta(seconds=500),
-            {})
 
         expire_time = (
             _helpers.utcnow().replace(microsecond=0) +
@@ -99,20 +103,16 @@ class TestImpersonatedCredentials(object):
         request = self.make_request(
             data=json.dumps(response_body),
             status=http_client.OK)
+
         credentials.refresh(request)
 
         assert credentials.valid
         assert not credentials.expired
 
-    @mock.patch('google.oauth2._client.jwt_grant', autospec=True)
-    def test_refresh_failure_malformed_expireTime(self, jwt_grant):
+    def test_refresh_failure_malformed_expire_time(
+            self, mock_donor_credentials):
         credentials = self.make_credentials(lifetime=None)
         token = 'token'
-
-        jwt_grant.return_value = (
-            token,
-            _helpers.utcnow() + datetime.timedelta(seconds=500),
-            {})
 
         expire_time = (
             _helpers.utcnow() + datetime.timedelta(seconds=500)).isoformat('T')
@@ -125,7 +125,7 @@ class TestImpersonatedCredentials(object):
             data=json.dumps(response_body),
             status=http_client.OK)
 
-        with pytest.raises(exceptions.DefaultCredentialsError) as excinfo:
+        with pytest.raises(exceptions.RefreshError) as excinfo:
             credentials.refresh(request)
 
         assert excinfo.match(impersonated_credentials._REFRESH_ERROR)
@@ -133,15 +133,9 @@ class TestImpersonatedCredentials(object):
         assert not credentials.valid
         assert credentials.expired
 
-    @mock.patch('google.oauth2._client.jwt_grant', autospec=True)
-    def test_refresh_failure_lifetime_specified(self, jwt_grant):
+    def test_refresh_failure_lifetime_specified(self, mock_donor_credentials):
         credentials = self.make_credentials(lifetime=500)
         token = 'token'
-
-        jwt_grant.return_value = (
-            token,
-            _helpers.utcnow() + datetime.timedelta(seconds=500),
-            {})
 
         expire_time = (
             _helpers.utcnow().replace(microsecond=0) +
@@ -156,6 +150,7 @@ class TestImpersonatedCredentials(object):
             status=http_client.OK)
 
         credentials.refresh(request)
+
         with pytest.raises(exceptions.RefreshError) as excinfo:
             credentials.refresh(request)
 
@@ -164,15 +159,8 @@ class TestImpersonatedCredentials(object):
         assert not credentials.valid
         assert credentials.expired
 
-    @mock.patch('google.oauth2._client.jwt_grant', autospec=True)
-    def test_refresh_failure_unauthorzed(self, jwt_grant):
+    def test_refresh_failure_unauthorzed(self, mock_donor_credentials):
         credentials = self.make_credentials(lifetime=None)
-        token = 'token'
-
-        jwt_grant.return_value = (
-            token,
-            _helpers.utcnow() + datetime.timedelta(seconds=500),
-            {})
 
         response_body = {
             "error": {
@@ -186,7 +174,7 @@ class TestImpersonatedCredentials(object):
             data=json.dumps(response_body),
             status=http_client.UNAUTHORIZED)
 
-        with pytest.raises(exceptions.DefaultCredentialsError) as excinfo:
+        with pytest.raises(exceptions.RefreshError) as excinfo:
             credentials.refresh(request)
 
         assert excinfo.match(impersonated_credentials._REFRESH_ERROR)
@@ -194,24 +182,16 @@ class TestImpersonatedCredentials(object):
         assert not credentials.valid
         assert credentials.expired
 
-    @mock.patch('google.oauth2._client.jwt_grant', autospec=True)
-    def test_refresh_failure_http_error(self, jwt_grant):
+    def test_refresh_failure_http_error(self, mock_donor_credentials):
         credentials = self.make_credentials(lifetime=None)
-        token = 'token'
-
-        jwt_grant.return_value = (
-            token,
-            _helpers.utcnow() + datetime.timedelta(seconds=500),
-            {})
 
         response_body = {}
 
         request = self.make_request(
             data=json.dumps(response_body),
-            status=http_client.HTTPException,
-            side_effect=exceptions.TransportError)
+            status=http_client.HTTPException)
 
-        with pytest.raises(exceptions.TransportError) as excinfo:
+        with pytest.raises(exceptions.RefreshError) as excinfo:
             credentials.refresh(request)
 
         assert excinfo.match(impersonated_credentials._REFRESH_ERROR)

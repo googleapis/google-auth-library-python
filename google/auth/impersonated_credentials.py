@@ -29,6 +29,9 @@ import copy
 from datetime import datetime
 import json
 
+import six
+from six.moves import http_client
+
 from google.auth import _helpers
 from google.auth import credentials
 from google.auth import exceptions
@@ -40,8 +43,56 @@ _IAM_SCOPE = ['https://www.googleapis.com/auth/iam']
 _IAM_ENDPOINT = ('https://iamcredentials.googleapis.com/v1/projects/-' +
                  '/serviceAccounts/{}:generateAccessToken')
 
-_REFRESH_ERROR = 'Unable to acquire impersonated credentials '
+_REFRESH_ERROR = 'Unable to acquire impersonated credentials'
 _LIFETIME_ERROR = 'Credentials with lifetime set cannot be renewed'
+
+
+def _make_iam_token_request(request, principal, headers, body):
+    """Makes a request to the Google Cloud IAM service for an access token.
+    Args:
+        request (Request): The Request object to use.
+        principal (str): The principal to request an access token for.
+        headers (Mapping[str, str]): Map of headers to transmit.
+        body (Mapping[str, str]): JSON Payload body for the iamcredentials
+            API call.
+
+    Raises:
+        TransportError: Raised if there is an underlying HTTP connection
+        Error
+        DefaultCredentialsError: Raised if the impersonated credentials
+        are not available.  Common reasons are
+        `iamcredentials.googleapis.com` is not enabled or the
+        `Service Account Token Creator` is not assigned
+    """
+    iam_endpoint = _IAM_ENDPOINT.format(principal)
+
+    body = json.dumps(body)
+
+    response = request(
+        url=iam_endpoint,
+        method='POST',
+        headers=headers,
+        body=body)
+
+    response_body = response.data.decode('utf-8')
+
+    if response.status != http_client.OK:
+        exceptions.RefreshError(_REFRESH_ERROR, response_body)
+
+    try:
+        token_response = json.loads(response.data.decode('utf-8'))
+        token = token_response['accessToken']
+        expiry = datetime.strptime(
+            token_response['expireTime'], '%Y-%m-%dT%H:%M:%SZ')
+
+        return token, expiry
+
+    except (KeyError, ValueError) as caught_exc:
+        new_exc = exceptions.RefreshError(
+            '{}: No access token or invalid expiration in response.'.format(
+                _REFRESH_ERROR),
+            response_body)
+        six.raise_from(new_exc, caught_exc)
 
 
 class Credentials(credentials.Credentials):
@@ -152,44 +203,6 @@ class Credentials(credentials.Credentials):
     def expired(self):
         return _helpers.utcnow() >= self.expiry
 
-    def _make_iam_token_request(self, request, headers, body):
-        """
-        Args:
-            headers (Mapping[str, str]): Map of headers to transmit.
-            body (Mapping[str, str]): JSON Payload body for the iamcredentials
-                API call.
-        Raises:
-            TransportError: Raised if there is an underlying HTTP connection
-            Error
-            DefaultCredentialsError: Raised if the impersonated credentials
-            are not available.  Common reasons are
-            `iamcredentials.googleapis.com` is not enabled or the
-            `Service Account Token Creator` is not assigned
-        """
-        iam_endpoint = _IAM_ENDPOINT.format(self._target_principal)
-        try:
-            response = request(
-                url=iam_endpoint,
-                method='POST',
-                headers=headers,
-                json=body)
-
-            if (response.status == 200):
-                token_response = json.loads(response.data.decode('utf-8'))
-                self.token = token_response['accessToken']
-                self.expiry = datetime.strptime(
-                    token_response['expireTime'], '%Y-%m-%dT%H:%M:%SZ')
-            else:
-                raise exceptions.DefaultCredentialsError(
-                    _REFRESH_ERROR + self._target_principal)
-
-        except (ValueError, KeyError, TypeError):
-            raise exceptions.DefaultCredentialsError(
-                _REFRESH_ERROR + self._target_principal)
-        except (exceptions.TransportError):
-            raise exceptions.TransportError(
-                _REFRESH_ERROR + self._target_principal)
-
     def _update_token(self, request):
         """Updates credentials with a new access_token representing
         the impersonated account.
@@ -198,6 +211,9 @@ class Credentials(credentials.Credentials):
             request (google.auth.transport.requests.Request): Request object
                 to use for refreshing credentials.
         """
+
+        # Refresh our source credentials.
+        self._source_credentials.refresh(request)
 
         lifetime = self._lifetime
         if (self._lifetime is None):
@@ -210,8 +226,14 @@ class Credentials(credentials.Credentials):
         }
 
         headers = {
-                'Content-Type': 'application/json',
-                'Authorization': 'Bearer ' + self._source_credentials.token
+            'Content-Type': 'application/json',
         }
-        self._make_iam_token_request(
-            request=request, headers=headers, body=body)
+
+        # Apply the source credentials authentication info.
+        self._source_credentials.apply(headers)
+
+        self.token, self.expiry = _make_iam_token_request(
+            request=request,
+            principal=self._target_principal,
+            headers=headers,
+            body=body)
