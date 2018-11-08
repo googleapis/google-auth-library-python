@@ -44,13 +44,13 @@ _REFRESH_ERROR = 'Unable to acquire impersonated credentials '
 _LIFETIME_ERROR = 'Credentials with lifetime set cannot be renewed'
 
 
-class ImpersonatedCredentials(credentials.Credentials):
+class Credentials(credentials.Credentials):
     """This module defines impersonated credentials which are essentially
     impersonated identities.
 
     Impersonated Credentials allows credentials issued to a user or
     service account to impersonate another. The target service account must
-    grant the orginating credential principal the
+    grant the originating credential principal the
     `Service Account Token Creator`_ IAM role:
 
     For more information about Token Creator IAM role and
@@ -71,7 +71,7 @@ class ImpersonatedCredentials(credentials.Credentials):
     token creator role on
     `impersonated-account@_project_.iam.gserviceaccount.com`.
 
-    Initialze a source credential which does not have access to
+    Initialize a source credential which does not have access to
     list bucket::
 
         from google.oauth2 import service_acccount
@@ -89,7 +89,7 @@ class ImpersonatedCredentials(credentials.Credentials):
 
         from google.auth import impersonated_credentials
 
-        target_credentials = impersonated_credentials.ImpersonatedCredentials(
+        target_credentials = impersonated_credentials.Credentials(
           source_credentials = source_credentials,
           target_principal='impersonated-account@_project_.iam.gserviceaccount.com',
           target_scopes = target_scopes,
@@ -130,7 +130,7 @@ class ImpersonatedCredentials(credentials.Credentials):
                 credentials will be refreshed every 3600s.
         """
 
-        super(credentials.Credentials, self).__init__()
+        super(Credentials, self).__init__()
 
         self._source_credentials = copy.copy(source_credentials)
         self._source_credentials._scopes = _IAM_SCOPE

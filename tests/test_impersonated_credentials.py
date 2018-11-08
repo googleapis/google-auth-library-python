@@ -25,7 +25,7 @@ from google.auth import crypt
 from google.auth import exceptions
 from google.auth import impersonated_credentials
 from google.auth import transport
-from google.auth.impersonated_credentials import ImpersonatedCredentials
+from google.auth.impersonated_credentials import Credentials
 from google.oauth2 import service_account
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), '', 'data')
@@ -53,12 +53,12 @@ class TestImpersonatedCredentials(object):
             SIGNER, SERVICE_ACCOUNT_EMAIL, TOKEN_URI)
 
     def test_default_state(self):
-        credentials = ImpersonatedCredentials(
-                        source_credentials=self.SOURCE_CREDENTIALS,
-                        target_principal=self.TARGET_PRINCIPAL,
-                        target_scopes=self.TARGET_SCOPES,
-                        delegates=self.DELEGATES,
-                        lifetime=self.LIFETIME)
+        credentials = Credentials(
+            source_credentials=self.SOURCE_CREDENTIALS,
+            target_principal=self.TARGET_PRINCIPAL,
+            target_scopes=self.TARGET_SCOPES,
+            delegates=self.DELEGATES,
+            lifetime=self.LIFETIME)
         assert not credentials.valid
         assert credentials.expired
 
@@ -77,12 +77,12 @@ class TestImpersonatedCredentials(object):
 
     @mock.patch('google.oauth2._client.jwt_grant', autospec=True)
     def test_refresh_success(self, jwt_grant):
-        credentials = ImpersonatedCredentials(
-                        source_credentials=self.SOURCE_CREDENTIALS,
-                        target_principal=self.TARGET_PRINCIPAL,
-                        target_scopes=self.TARGET_SCOPES,
-                        delegates=self.DELEGATES,
-                        lifetime=None)
+        credentials = Credentials(
+            source_credentials=self.SOURCE_CREDENTIALS,
+            target_principal=self.TARGET_PRINCIPAL,
+            target_scopes=self.TARGET_SCOPES,
+            delegates=self.DELEGATES,
+            lifetime=None)
         token = 'token'
 
         jwt_grant.return_value = (
@@ -106,12 +106,12 @@ class TestImpersonatedCredentials(object):
 
     @mock.patch('google.oauth2._client.jwt_grant', autospec=True)
     def test_refresh_failure_malformed_expireTime(self, jwt_grant):
-        credentials = ImpersonatedCredentials(
-                        source_credentials=self.SOURCE_CREDENTIALS,
-                        target_principal=self.TARGET_PRINCIPAL,
-                        target_scopes=self.TARGET_SCOPES,
-                        delegates=self.DELEGATES,
-                        lifetime=None)
+        credentials = Credentials(
+            source_credentials=self.SOURCE_CREDENTIALS,
+            target_principal=self.TARGET_PRINCIPAL,
+            target_scopes=self.TARGET_SCOPES,
+            delegates=self.DELEGATES,
+            lifetime=None)
         token = 'token'
 
         jwt_grant.return_value = (
@@ -138,12 +138,12 @@ class TestImpersonatedCredentials(object):
 
     @mock.patch('google.oauth2._client.jwt_grant', autospec=True)
     def test_refresh_failure_lifetime_specified(self, jwt_grant):
-        credentials = ImpersonatedCredentials(
-                        source_credentials=self.SOURCE_CREDENTIALS,
-                        target_principal=self.TARGET_PRINCIPAL,
-                        target_scopes=self.TARGET_SCOPES,
-                        delegates=self.DELEGATES,
-                        lifetime=500)
+        credentials = Credentials(
+            source_credentials=self.SOURCE_CREDENTIALS,
+            target_principal=self.TARGET_PRINCIPAL,
+            target_scopes=self.TARGET_SCOPES,
+            delegates=self.DELEGATES,
+            lifetime=500)
         token = 'token'
 
         jwt_grant.return_value = (
@@ -172,12 +172,12 @@ class TestImpersonatedCredentials(object):
 
     @mock.patch('google.oauth2._client.jwt_grant', autospec=True)
     def test_refresh_failure_unauthorzed(self, jwt_grant):
-        credentials = ImpersonatedCredentials(
-                        source_credentials=self.SOURCE_CREDENTIALS,
-                        target_principal=self.TARGET_PRINCIPAL,
-                        target_scopes=self.TARGET_SCOPES,
-                        delegates=self.DELEGATES,
-                        lifetime=None)
+        credentials = Credentials(
+            source_credentials=self.SOURCE_CREDENTIALS,
+            target_principal=self.TARGET_PRINCIPAL,
+            target_scopes=self.TARGET_SCOPES,
+            delegates=self.DELEGATES,
+            lifetime=None)
         token = 'token'
 
         jwt_grant.return_value = (
@@ -206,12 +206,12 @@ class TestImpersonatedCredentials(object):
 
     @mock.patch('google.oauth2._client.jwt_grant', autospec=True)
     def test_refresh_failure_http_error(self, jwt_grant):
-        credentials = ImpersonatedCredentials(
-                        source_credentials=self.SOURCE_CREDENTIALS,
-                        target_principal=self.TARGET_PRINCIPAL,
-                        target_scopes=self.TARGET_SCOPES,
-                        delegates=self.DELEGATES,
-                        lifetime=None)
+        credentials = Credentials(
+            source_credentials=self.SOURCE_CREDENTIALS,
+            target_principal=self.TARGET_PRINCIPAL,
+            target_scopes=self.TARGET_SCOPES,
+            delegates=self.DELEGATES,
+            lifetime=None)
         token = 'token'
 
         jwt_grant.return_value = (
@@ -234,10 +234,10 @@ class TestImpersonatedCredentials(object):
         assert credentials.expired
 
     def test_expired(self):
-        credentials = ImpersonatedCredentials(
-                        source_credentials=self.SOURCE_CREDENTIALS,
-                        target_principal=self.TARGET_PRINCIPAL,
-                        target_scopes=self.TARGET_SCOPES,
-                        delegates=self.DELEGATES,
-                        lifetime=None)
+        credentials = Credentials(
+            source_credentials=self.SOURCE_CREDENTIALS,
+            target_principal=self.TARGET_PRINCIPAL,
+            target_scopes=self.TARGET_SCOPES,
+            delegates=self.DELEGATES,
+            lifetime=None)
         assert credentials.expired
