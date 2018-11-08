@@ -74,15 +74,22 @@ class ImpersonatedCredentials(credentials.Credentials):
     Initialze a source credential which does not have access to
     list bucket::
 
-        target_scopes = ['https://www.googleapis.com/auth/devstorage.read_only']
-        source_credentials = service_account.Credentials.from_service_account_file(
-            '/path/to/svc_account.json',
-            scopes=target_scopes)
+        from google.oauth2 import service_acccount
+
+        target_scopes = [
+            'https://www.googleapis.com/auth/devstorage.read_only']
+
+        source_credentials = (
+            service_account.Credentials.from_service_account_file(
+                '/path/to/svc_account.json',
+                scopes=target_scopes))
 
     Now use the source credentials to acquire credentials to impersonate
     another service account::
 
-        target_credentials = ImpersonatedCredentials(
+        from google.auth import impersonated_credentials
+
+        target_credentials = impersonated_credentials.ImpersonatedCredentials(
           source_credentials = source_credentials,
           target_principal='impersonated-account@_project_.iam.gserviceaccount.com',
           target_scopes = target_scopes,
@@ -162,24 +169,27 @@ class ImpersonatedCredentials(credentials.Credentials):
         """
         iam_endpoint = _IAM_ENDPOINT.format(self._target_principal)
         try:
-            response = request(url=iam_endpoint,
-                               method='POST',
-                               headers=headers,
-                               json=body)
+            response = request(
+                url=iam_endpoint,
+                method='POST',
+                headers=headers,
+                json=body)
+
             if (response.status == 200):
                 token_response = json.loads(response.data.decode('utf-8'))
                 self.token = token_response['accessToken']
-                self.expiry = datetime.strptime(token_response['expireTime'],
-                                                '%Y-%m-%dT%H:%M:%SZ')
+                self.expiry = datetime.strptime(
+                    token_response['expireTime'], '%Y-%m-%dT%H:%M:%SZ')
             else:
-                raise exceptions.DefaultCredentialsError(_REFRESH_ERROR +
-                                                         self._target_principal)
+                raise exceptions.DefaultCredentialsError(
+                    _REFRESH_ERROR + self._target_principal)
+
         except (ValueError, KeyError, TypeError):
-            raise exceptions.DefaultCredentialsError(_REFRESH_ERROR +
-                                                     self._target_principal)
+            raise exceptions.DefaultCredentialsError(
+                _REFRESH_ERROR + self._target_principal)
         except (exceptions.TransportError):
-            raise exceptions.TransportError(_REFRESH_ERROR +
-                                            self._target_principal)
+            raise exceptions.TransportError(
+                _REFRESH_ERROR + self._target_principal)
 
     def _update_token(self, request):
         """Updates credentials with a new access_token representing
@@ -193,6 +203,7 @@ class ImpersonatedCredentials(credentials.Credentials):
         lifetime = self._lifetime
         if (self._lifetime is None):
             lifetime = _DEFAULT_TOKEN_LIFETIME_SECS
+
         body = {
             "delegates": self._delegates,
             "scope": self._target_scopes,
@@ -203,5 +214,5 @@ class ImpersonatedCredentials(credentials.Credentials):
                 'Content-Type': 'application/json',
                 'Authorization': 'Bearer ' + self._source_credentials.token
         }
-        self._make_iam_token_request(request=request,
-                                     headers=headers, body=body)
+        self._make_iam_token_request(
+            request=request, headers=headers, body=body)
