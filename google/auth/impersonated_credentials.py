@@ -151,21 +151,21 @@ class ImpersonatedCredentials(credentials.Credentials):
         Args:
             headers (Mapping[str, str]): Map of headers to transmit.
             body (Mapping[str, str]): JSON Payload body for the iamcredentials
-                API call.                     
+                API call.
         Raises:
             TransportError: Raised if there is an underlying HTTP connection
             Error
             DefaultCredentialsError: Raised if the impersonated credentials
             are not available.  Common reasons are
             `iamcredentials.googleapis.com` is not enabled or the
-            `Service Account Token Creator` is not assigned        
+            `Service Account Token Creator` is not assigned
         """
         iam_endpoint = _IAM_ENDPOINT.format(self._target_principal)
         try:
             response = request(url=iam_endpoint,
-                           method='POST',
-                           headers=headers,
-                           json=body)
+                               method='POST',
+                               headers=headers,
+                               json=body)
             if (response.status == 200):
                 token_response = json.loads(response.data.decode('utf-8'))
                 self.token = token_response['accessToken']
@@ -186,8 +186,8 @@ class ImpersonatedCredentials(credentials.Credentials):
         the impersonated account.
 
         Args:
-            request (google.auth.transport.requests.Request): Request object to use
-                for refreshing credentials.
+            request (google.auth.transport.requests.Request): Request object
+                to use for refreshing credentials.
         """
 
         lifetime = self._lifetime
@@ -204,4 +204,4 @@ class ImpersonatedCredentials(credentials.Credentials):
                 'Authorization': 'Bearer ' + self._source_credentials.token
         }
         self._make_iam_token_request(request=request,
-            headers=headers, body=body)
+                                     headers=headers, body=body)
