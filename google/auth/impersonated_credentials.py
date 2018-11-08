@@ -90,10 +90,9 @@ class Credentials(credentials.Credentials):
         from google.auth import impersonated_credentials
 
         target_credentials = impersonated_credentials.Credentials(
-          source_credentials = source_credentials,
+          source_credentials=source_credentials,
           target_principal='impersonated-account@_project_.iam.gserviceaccount.com',
           target_scopes = target_scopes,
-          delegates=[],
           lifetime=500)
 
     Resource access is granted::

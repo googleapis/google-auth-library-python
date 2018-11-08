@@ -212,19 +212,19 @@ Impersonated Credentials allows one set of credentials issued to a user or servi
 to impersonate another.  The target service account must grant the source credential
 the "Service Account Token Creator" IAM role::
 
-    from google.auth.impersonated_credentials import ImpersonatedCredentials
+    from google.auth import impersonated_credentials
 
     target_scopes = ['https://www.googleapis.com/auth/devstorage.read_only']
     source_credentials = service_account.Credentials.from_service_account_file(
         '/path/to/svc_account.json',
-        scopes=target_scopes)          
+        scopes=target_scopes)
 
-    target_credentials = ImpersonatedCredentials(
+    target_credentials = impersonated_credentials.Credentials(
         source_credentials=source_credentials,
         target_principal='impersonated-account@_project_.iam.gserviceaccount.com',
         target_scopes=target_scopes,
         lifetime=500)
-    client = storage.Client(credentials = target_credentials)
+    client = storage.Client(credentials=target_credentials)
     buckets = client.list_buckets(project='your_project')
     for bucket in buckets:
         print bucket.name
