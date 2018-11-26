@@ -51,7 +51,7 @@ class Credentials(credentials.ReadOnlyScoped, credentials.Credentials):
 
     def __init__(self, token, refresh_token=None, id_token=None,
                  token_uri=None, client_id=None, client_secret=None,
-                 scopes=None):
+                 scopes=None, downscope=False):
         """
         Args:
             token (Optional(str)): The OAuth 2.0 access token. Can be None
@@ -71,6 +71,10 @@ class Credentials(credentials.ReadOnlyScoped, credentials.Credentials):
                 to obtain authorization. This is a purely informative parameter
                 that can be used by :meth:`has_scopes`. OAuth 2.0 credentials
                 can not request additional scopes after authorization.
+            downscope (bool): Whether to reduce the requested scopes from those
+                of the refresh token to those listed in scopes. Useful if
+                refresh token has a wild card scope (e.g.
+                'https://www.googleapis.com/auth/any-api').
         """
         super(Credentials, self).__init__()
         self.token = token
@@ -80,6 +84,7 @@ class Credentials(credentials.ReadOnlyScoped, credentials.Credentials):
         self._token_uri = token_uri
         self._client_id = client_id
         self._client_secret = client_secret
+        self._downscope = downscope
 
     @property
     def refresh_token(self):
@@ -130,10 +135,11 @@ class Credentials(credentials.ReadOnlyScoped, credentials.Credentials):
                 'refresh the access token. You must specify refresh_token, '
                 'token_uri, client_id, and client_secret.')
 
+        scopes = self._scopes if self._downscope else None
         access_token, refresh_token, expiry, grant_response = (
             _client.refresh_grant(
                 request, self._token_uri, self._refresh_token, self._client_id,
-                self._client_secret))
+                self._client_secret, scopes))
 
         self.token = access_token
         self.expiry = expiry
@@ -141,7 +147,7 @@ class Credentials(credentials.ReadOnlyScoped, credentials.Credentials):
         self._id_token = grant_response.get('id_token')
 
     @classmethod
-    def from_authorized_user_info(cls, info, scopes=None):
+    def from_authorized_user_info(cls, info, scopes=None, downscope=False):
         """Creates a Credentials instance from parsed authorized user info.
 
         Args:
@@ -149,6 +155,10 @@ class Credentials(credentials.ReadOnlyScoped, credentials.Credentials):
                 format.
             scopes (Sequence[str]): Optional list of scopes to include in the
                 credentials.
+            downscope (bool): Whether to reduce the requested scopes from those
+                of the refresh token to those listed in scopes. Useful if
+                refresh token has a wild card scope (e.g.
+                'https://www.googleapis.com/auth/any-api').
 
         Returns:
             google.oauth2.credentials.Credentials: The constructed
@@ -171,7 +181,8 @@ class Credentials(credentials.ReadOnlyScoped, credentials.Credentials):
             token_uri=_GOOGLE_OAUTH2_TOKEN_ENDPOINT,
             scopes=scopes,
             client_id=info['client_id'],
-            client_secret=info['client_secret'])
+            client_secret=info['client_secret'],
+            downscope=downscope)
 
     @classmethod
     def from_authorized_user_file(cls, filename, scopes=None):
@@ -181,6 +192,10 @@ class Credentials(credentials.ReadOnlyScoped, credentials.Credentials):
             filename (str): The path to the authorized user json file.
             scopes (Sequence[str]): Optional list of scopes to include in the
                 credentials.
+            downscope (bool): Whether to reduce the requested scopes from those
+                of the refresh token to those listed in scopes. Useful if
+                refresh token has a wild card scope (e.g.
+                'https://www.googleapis.com/auth/any-api').
 
         Returns:
             google.oauth2.credentials.Credentials: The constructed
@@ -191,4 +206,4 @@ class Credentials(credentials.ReadOnlyScoped, credentials.Credentials):
         """
         with io.open(filename, 'r', encoding='utf-8') as json_file:
             data = json.load(json_file)
-            return cls.from_authorized_user_info(data, scopes)
+            return cls.from_authorized_user_info(data, scopes, downscope)
