@@ -1,4 +1,4 @@
-google.auth.environment\_vars module
+google.auth.environment_vars module
 ====================================
 
 .. automodule:: google.auth.environment_vars

@@ -1,4 +1,4 @@
-google.auth.compute\_engine package
+google.auth.compute_engine package
 ===================================
 
 .. automodule:: google.auth.compute_engine
