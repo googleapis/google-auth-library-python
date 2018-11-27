@@ -239,7 +239,7 @@ def refresh_grant(request, token_uri, refresh_token, client_id, client_secret,
         'refresh_token': refresh_token,
     }
     if scopes:
-      body['scope'] = ' '.join(scopes)
+        body['scope'] = ' '.join(scopes)
 
     response_data = _token_endpoint_request(request, token_uri, body)
 
