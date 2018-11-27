@@ -1,5 +1,5 @@
-google.oauth2.id_token module
-=============================
+google.oauth2.id\_token module
+==============================
 
 .. automodule:: google.oauth2.id_token
     :members:
