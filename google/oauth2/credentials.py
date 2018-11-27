@@ -85,7 +85,7 @@ class Credentials(credentials.ReadOnlyScoped, credentials.Credentials):
         self._client_id = client_id
         self._client_secret = client_secret
         self._downscope = downscope
-how to install python 3 into "tox_testing" bin
+
     @property
     def refresh_token(self):
         """Optional[str]: The OAuth 2.0 refresh token."""
