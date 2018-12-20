@@ -175,7 +175,7 @@ def _get_gae_credentials():
     # While this library is normally bundled with app_engine, there are
     # some cases where it's not available, so we tolerate ImportError.
     try:
-        from google.auth import app_engine
+        import google.auth.app_engine as app_engine
     except ImportError:
         return None, None
 
