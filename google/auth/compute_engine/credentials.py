@@ -32,7 +32,7 @@ from google.auth.compute_engine import _metadata
 from google.oauth2 import _client
 
 
-class Credentials(credentials.ReadOnlyScoped, credentials.Credentials):
+class Credentials(credentials.Scoped, credentials.Credentials):
     """Compute Engine Credentials.
 
     These credentials use the Google Compute Engine metadata server to obtain
@@ -41,14 +41,6 @@ class Credentials(credentials.ReadOnlyScoped, credentials.Credentials):
     For more information about Compute Engine authentication, including how
     to configure scopes, see the `Compute Engine authentication
     documentation`_.
-
-    .. note:: Compute Engine instances can be created with scopes and therefore
-        these credentials are considered to be 'scoped'. However, you can
-        not use :meth:`~google.auth.credentials.ScopedCredentials.with_scopes`
-        because it is not possible to change the scopes that the instance
-        has. Also note that
-        :meth:`~google.auth.credentials.ScopedCredentials.has_scopes` will not
-        work until the credentials have been refreshed.
 
     .. _Compute Engine authentication documentation:
         https://cloud.google.com/compute/docs/authentication#using
@@ -96,7 +88,8 @@ class Credentials(credentials.ReadOnlyScoped, credentials.Credentials):
             self._retrieve_info(request)
             self.token, self.expiry = _metadata.get_service_account_token(
                 request,
-                service_account=self._service_account_email)
+                service_account=self._service_account_email,
+                scopes=self._scopes)
         except exceptions.TransportError as caught_exc:
             new_exc = exceptions.RefreshError(caught_exc)
             six.raise_from(new_exc, caught_exc)
@@ -112,8 +105,18 @@ class Credentials(credentials.ReadOnlyScoped, credentials.Credentials):
 
     @property
     def requires_scopes(self):
-        """False: Compute Engine credentials can not be scoped."""
-        return False
+        """Compute Engine can be scoped by providing scopes to the metadata
+        service.
+
+        Returns:
+            bool: True if there are no scopes set otherwise False.
+        """
+        return not self._scopes
+
+    @_helpers.copy_docstring(credentials.Scoped)
+    def with_scopes(self, scopes):
+        return self.__class__(
+            scopes=scopes, service_account_id=self._service_account_id)
 
 
 _DEFAULT_TOKEN_LIFETIME_SECS = 3600  # 1 hour in seconds

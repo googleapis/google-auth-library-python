@@ -179,7 +179,7 @@ def get_service_account_info(request, service_account='default'):
         recursive=True)
 
 
-def get_service_account_token(request, service_account='default'):
+def get_service_account_token(request, service_account='default', scopes=['cloud-platform']):
     """Get the OAuth 2.0 access token for a service account.
 
     Args:
@@ -188,6 +188,8 @@ def get_service_account_token(request, service_account='default'):
         service_account (str): The string 'default' or a service account email
             address. The determines which service account for which to acquire
             an access token.
+        scopes (Sequence[str]): A list of OAuth scopes the token should contain.
+            Defaults to cloud-platform if not provided.
 
     Returns:
         Union[str, datetime]: The access token and its expiration.
@@ -198,7 +200,7 @@ def get_service_account_token(request, service_account='default'):
     """
     token_json = get(
         request,
-        'instance/service-accounts/{0}/token'.format(service_account))
+        'instance/service-accounts/{0}/token?scopes={1}'.format(service_account, ",".join(scopes)))
     token_expiry = _helpers.utcnow() + datetime.timedelta(
         seconds=token_json['expires_in'])
     return token_json['access_token'], token_expiry
