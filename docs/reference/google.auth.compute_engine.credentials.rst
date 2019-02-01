@@ -1,4 +1,4 @@
-google.auth.compute\_engine.credentials module
+google.auth.compute_engine.credentials module
 ==============================================
 
 .. automodule:: google.auth.compute_engine.credentials
