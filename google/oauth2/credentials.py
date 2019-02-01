@@ -146,8 +146,36 @@ class Credentials(credentials.ReadOnlyScoped, credentials.Credentials):
         self._refresh_token = refresh_token
         self._id_token = grant_response.get('id_token')
 
+    def downscope(self, scopes):
+        """Creates a Credentials instance with reduced access token scope.
+
+        The requested scopes must be derivable from the current refresh
+        token. For example, a refresh token with a wild card scope like
+        'https://www.googleapis.com/auth/any-api' could be used to request
+        access tokens with 'https://www.googleapis.com/auth/pubsub'.
+
+        Args:
+            scopes (Sequence[str]): The scopes to request for the new
+                credential's access tokens. Access token scope will be limited
+                to those in the new credentials scopes property, even if the
+                associated refresh token's scope is broader.
+        Returns:
+            google.oauth2.credentials.Credentials: The constructed
+                credentials.
+       """
+        scoped_credentials = Credentials(
+            None,
+            refresh_token=self._refresh_token,
+            token_uri=self._token_uri,
+            client_id=self._client_id,
+            client_secret=self._client_secret,
+            scopes=scopes,
+            downscope=True)
+
+        return scoped_credentials
+
     @classmethod
-    def from_authorized_user_info(cls, info, scopes=None, downscope=False):
+    def from_authorized_user_info(cls, info, scopes=None):
         """Creates a Credentials instance from parsed authorized user info.
 
         Args:
@@ -155,10 +183,6 @@ class Credentials(credentials.ReadOnlyScoped, credentials.Credentials):
                 format.
             scopes (Sequence[str]): Optional list of scopes to include in the
                 credentials.
-            downscope (bool): Whether to reduce the requested scopes from those
-                of the refresh token to those listed in scopes. Useful if
-                refresh token has a wild card scope (e.g.
-                'https://www.googleapis.com/auth/any-api').
 
         Returns:
             google.oauth2.credentials.Credentials: The constructed
@@ -181,21 +205,16 @@ class Credentials(credentials.ReadOnlyScoped, credentials.Credentials):
             token_uri=_GOOGLE_OAUTH2_TOKEN_ENDPOINT,
             scopes=scopes,
             client_id=info['client_id'],
-            client_secret=info['client_secret'],
-            downscope=downscope)
+            client_secret=info['client_secret'])
 
     @classmethod
-    def from_authorized_user_file(cls, filename, scopes=None, downscope=False):
+    def from_authorized_user_file(cls, filename, scopes=None):
         """Creates a Credentials instance from an authorized user json file.
 
         Args:
             filename (str): The path to the authorized user json file.
             scopes (Sequence[str]): Optional list of scopes to include in the
                 credentials.
-            downscope (bool): Whether to reduce the requested scopes from those
-                of the refresh token to those listed in scopes. Useful if
-                refresh token has a wild card scope (e.g.
-                'https://www.googleapis.com/auth/any-api').
 
         Returns:
             google.oauth2.credentials.Credentials: The constructed
@@ -206,4 +225,4 @@ class Credentials(credentials.ReadOnlyScoped, credentials.Credentials):
         """
         with io.open(filename, 'r', encoding='utf-8') as json_file:
             data = json.load(json_file)
-            return cls.from_authorized_user_info(data, scopes, downscope)
+            return cls.from_authorized_user_info(data, scopes)

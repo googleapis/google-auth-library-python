@@ -97,12 +97,22 @@ class TestCredentials(object):
         # expired)
         assert credentials.valid
 
+    def test_refresh_no_refresh_token(self):
+        request = mock.create_autospec(transport.Request)
+        credentials_ = credentials.Credentials(
+            token=None, refresh_token=None)
+
+        with pytest.raises(exceptions.RefreshError, match='necessary fields'):
+            credentials_.refresh(request)
+
+        request.assert_not_called()
+
     @mock.patch('google.oauth2._client.refresh_grant', autospec=True)
     @mock.patch(
         'google.auth._helpers.utcnow',
         return_value=datetime.datetime.min + _helpers.CLOCK_SKEW)
-    def test_refresh_success_with_downscoping(self, unused_utcnow,
-                                              refresh_grant):
+    def test_downsoped_credentials_refresh_success(self, unused_utcnow,
+                                                   refresh_grant):
         scopes = ['email', 'profile']
         token = 'token'
         expiry = _helpers.utcnow() + datetime.timedelta(seconds=500)
@@ -121,11 +131,11 @@ class TestCredentials(object):
         creds = credentials.Credentials(
             token=None, refresh_token=self.REFRESH_TOKEN,
             token_uri=self.TOKEN_URI, client_id=self.CLIENT_ID,
-            client_secret=self.CLIENT_SECRET, scopes=scopes,
-            downscope=True)
+            client_secret=self.CLIENT_SECRET)
+        downscoped_creds = creds.downscope(scopes=scopes)
 
         # Refresh credentials
-        creds.refresh(request)
+        downscoped_creds.refresh(request)
 
         # Check jwt grant call.
         refresh_grant.assert_called_with(
@@ -133,24 +143,14 @@ class TestCredentials(object):
             self.CLIENT_SECRET, scopes)
 
         # Check that the credentials have the token and expiry
-        assert creds.token == token
-        assert creds.expiry == expiry
-        assert creds.id_token == mock.sentinel.id_token
-        assert creds.has_scopes(scopes)
+        assert downscoped_creds.token == token
+        assert downscoped_creds.expiry == expiry
+        assert downscoped_creds.id_token == mock.sentinel.id_token
+        assert downscoped_creds.has_scopes(scopes)
 
         # Check that the credentials are valid (have a token and are not
         # expired.)
-        assert creds.valid
-
-    def test_refresh_no_refresh_token(self):
-        request = mock.create_autospec(transport.Request)
-        credentials_ = credentials.Credentials(
-            token=None, refresh_token=None)
-
-        with pytest.raises(exceptions.RefreshError, match='necessary fields'):
-            credentials_.refresh(request)
-
-        request.assert_not_called()
+        assert downscoped_creds.valid
 
     def test_from_authorized_user_info(self):
         info = AUTH_USER_INFO.copy()

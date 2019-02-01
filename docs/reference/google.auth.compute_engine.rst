@@ -1,5 +1,5 @@
-google.auth.compute_engine package
-==================================
+google.auth.compute\_engine package
+===================================
 
 .. automodule:: google.auth.compute_engine
     :members:

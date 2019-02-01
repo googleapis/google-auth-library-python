@@ -1,5 +1,5 @@
-google.auth.app_engine module
-=============================
+google.auth.app\_engine module
+==============================
 
 .. automodule:: google.auth.app_engine
     :members:
