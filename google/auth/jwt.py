@@ -40,7 +40,6 @@ You can also skip verification::
 
 """
 
-import base64
 import collections
 import copy
 import datetime
