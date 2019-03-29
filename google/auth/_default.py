@@ -231,11 +231,11 @@ def default(scopes=None, request=None):
 
             gcloud config set project
 
-    3. If the application is running in the `App Engine standard Generation 1
-       environment`_ then the credentials and project ID from the `App Identity
-       Service`_ are used.
+    3. If the application is running in the `App Engine standard first
+       generation environment`_ then the credentials and project ID from the
+       `App Identity Service`_ are used.
     4. If the application is running in `Compute Engine`_, the `App Engine
-       Standard Generation 2 environment`_, or the `App Engine flexible
+       standard second generation environment`_, or the `App Engine flexible
        environment`_ then the credentials and project ID are obtained from the
        `Metadata Service`_.
     5. If no credentials are found,

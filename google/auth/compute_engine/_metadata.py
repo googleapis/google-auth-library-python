@@ -180,7 +180,7 @@ def get_service_account_info(request, service_account='default'):
 
 
 def get_service_account_token(request, service_account='default',
-                              scopes=['https://www.googleapis.com/auth/cloud-platform']):
+                              scopes=('https://www.googleapis.com/auth/cloud-platform')):
     """Get the OAuth 2.0 access token for a service account.
 
     Args:
