@@ -19,10 +19,11 @@ from setuptools import setup
 
 
 DEPENDENCIES = (
+    'cachetools>=2.0.0',
     'pyasn1-modules>=0.2.1',
     'rsa>=3.1.4',
+    'setuptools>=40.3.0',
     'six>=1.9.0',
-    'cachetools>=2.0.0',
 )
 
 
@@ -31,7 +32,7 @@ with io.open('README.rst', 'r') as fh:
 
 setup(
     name='google-auth',
-    version='1.6.2',
+    version='1.6.3',
     author='Google Cloud Platform',
     author_email='jonwayne+google-auth@google.com',
     description='Google Authentication Library',

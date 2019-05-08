@@ -40,7 +40,6 @@ You can also skip verification::
 
 """
 
-import base64
 import collections
 import copy
 import datetime
@@ -86,13 +85,19 @@ def encode(signer, payload, header=None, key_id=None):
         header['kid'] = key_id
 
     segments = [
-        base64.urlsafe_b64encode(json.dumps(header).encode('utf-8')),
-        base64.urlsafe_b64encode(json.dumps(payload).encode('utf-8')),
+        _helpers.unpadded_urlsafe_b64encode(
+            json.dumps(header).encode('utf-8')
+        ),
+        _helpers.unpadded_urlsafe_b64encode(
+            json.dumps(payload).encode('utf-8')
+        ),
     ]
 
     signing_input = b'.'.join(segments)
     signature = signer.sign(signing_input)
-    segments.append(base64.urlsafe_b64encode(signature))
+    segments.append(
+        _helpers.unpadded_urlsafe_b64encode(signature)
+    )
 
     return b'.'.join(segments)
 
@@ -195,7 +200,7 @@ def decode(token, certs=None, verify=True, audience=None):
     Args:
         token (str): The encoded JWT.
         certs (Union[str, bytes, Mapping[str, Union[str, bytes]]]): The
-            certificate used to validate the JWT signatyre. If bytes or string,
+            certificate used to validate the JWT signature. If bytes or string,
             it must the the public key certificate in PEM format. If a mapping,
             it must be a mapping of key IDs to public key certificates in PEM
             format. The mapping must contain the same key ID that's specified
