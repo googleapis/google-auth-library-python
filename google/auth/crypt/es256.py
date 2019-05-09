@@ -44,7 +44,7 @@ _BACKEND = backends.default_backend()
 _PADDING = padding.PKCS1v15()
 
 
-class EC256Verifier(base.Verifier):
+class ES256Verifier(base.Verifier):
     """Verifies ECDSA cryptographic signatures using public keys.
 
     Args:
@@ -94,7 +94,7 @@ class EC256Verifier(base.Verifier):
         return cls(pubkey)
 
 
-class EC256Signer(base.Signer, base.FromServiceAccountMixin):
+class ES256Signer(base.Signer, base.FromServiceAccountMixin):
     """Signs messages with an ECDSA private key.
 
     Args:

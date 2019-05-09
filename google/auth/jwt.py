@@ -60,17 +60,17 @@ from google.auth import exceptions
 import google.auth.credentials
 
 try:
-    from google.auth.crypt import ec256
+    from google.auth.crypt import es256
 except ImportError:  # pragma: NO COVER
-    ec256 = None
+    es256 = None
 
 _DEFAULT_TOKEN_LIFETIME_SECS = 3600  # 1 hour in seconds
 _DEFAULT_MAX_CACHE_SIZE = 10
 _ALGORITHM_TO_VERIFIER_CLASS = {"RS256": crypt.RSAVerifier}
-_CRYPTOGRAPHY_BASED_ALGORITHMS = set(["EC256"])
+_CRYPTOGRAPHY_BASED_ALGORITHMS = set(["ES256"])
 
-if ec256 is not None:  # pragma: NO COVER
-    _ALGORITHM_TO_VERIFIER_CLASS["EC256"] = ec256.EC256Verifier
+if es256 is not None:  # pragma: NO COVER
+    _ALGORITHM_TO_VERIFIER_CLASS["ES256"] = es256.ES256Verifier
 
 
 def encode(signer, payload, header=None, key_id=None):
