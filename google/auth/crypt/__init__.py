@@ -49,7 +49,7 @@ RSASigner = rsa.RSASigner
 RSAVerifier = rsa.RSAVerifier
 
 
-def verify_signature(message, signature, certs):
+def verify_signature(message, signature, certs, verifier_cls=rsa.RSAVerifier):
     """Verify an RSA cryptographic signature.
 
     Checks that the provided ``signature`` was generated from ``bytes`` using
@@ -60,6 +60,9 @@ def verify_signature(message, signature, certs):
         signature (Union[str, bytes]): The cryptographic signature to check.
         certs (Union[Sequence, str, bytes]): The certificate or certificates
             to use to check the signature.
+        verifier_cls (~google.auth.crypt.base.Signer): Which verifier class to
+            use for verification. This can be used to select different
+            algorithms, such as RSA or ECDSA.
 
     Returns:
         bool: True if the signature is valid, otherwise False.
@@ -68,7 +71,7 @@ def verify_signature(message, signature, certs):
         certs = [certs]
 
     for cert in certs:
-        verifier = rsa.RSAVerifier.from_string(cert)
+        verifier = verifier_cls.from_string(cert)
         if verifier.verify(message, signature):
             return True
     return False

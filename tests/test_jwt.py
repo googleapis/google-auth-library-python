@@ -201,6 +201,37 @@ def test_decode_no_key_id(token_factory):
     assert payload["user"] == "billy bob"
 
 
+def test_decode_unknown_alg():
+    headers = json.dumps({u'kid': u'1', u'alg': u'fakealg'})
+    token = b'.'.join(map(lambda seg: base64.b64encode(seg.encode('utf-8')), [
+        headers,
+        u'{}',
+        u'sig'
+    ]))
+
+    print(token)
+
+    with pytest.raises(ValueError) as excinfo:
+        jwt.decode(token)
+    assert excinfo.match(r'fakealg')
+
+
+def test_decode_missing_crytography_alg(monkeypatch):
+    monkeypatch.delitem(jwt._ALGORITHM_TO_VERIFIER_CLASS, 'EC256')
+    headers = json.dumps({u'kid': u'1', u'alg': u'EC256'})
+    token = b'.'.join(map(lambda seg: base64.b64encode(seg.encode('utf-8')), [
+        headers,
+        u'{}',
+        u'sig'
+    ]))
+
+    print(token)
+
+    with pytest.raises(ValueError) as excinfo:
+        jwt.decode(token)
+    assert excinfo.match(r'cryptography')
+
+
 def test_roundtrip_explicit_key_id(token_factory):
     token = token_factory(key_id="3")
     certs = {"2": OTHER_CERT_BYTES, "3": PUBLIC_CERT_BYTES}
