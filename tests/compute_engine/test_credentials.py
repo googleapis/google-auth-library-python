@@ -220,3 +220,26 @@ class TestIDTokenCredentials(object):
         assert self.credentials.expiry == (
             datetime.datetime.utcfromtimestamp(expire_at))
         assert payload['aud'] == self.test_audience
+
+    @mock.patch('google.auth.compute_engine._metadata.get', autospec=True)
+    def test_get_service_account(self, get, token_factory):
+        service_account = 'service-account@example.com'
+        expire_at = _helpers.datetime_to_secs(
+            _helpers.utcnow() + datetime.timedelta(hours=1))
+        claims = {'exp': expire_at, 'aud': self.test_audience,
+                  'iss': service_account}
+
+        tok = token_factory(claims=claims)
+
+        get.side_effect = [{
+            'email': service_account,
+            'scopes': ['one', 'two']
+        },  tok]
+
+        request = mock.create_autospec(transport.Request, instance=True)
+        self.credentials = credentials.IDTokenCredentials(
+            request=request, target_audience=self.test_audience)
+
+        self.credentials.refresh(None)
+
+        assert self.credentials.service_account_email == service_account
