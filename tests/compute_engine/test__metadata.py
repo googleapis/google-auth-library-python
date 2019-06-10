@@ -241,11 +241,13 @@ def test_get_id_token(token_factory):
     target_audience = 'https://example.com'
 
     expire_at = _helpers.datetime_to_secs(
-        _helpers.utcnow() - datetime.timedelta(hours=1))
+        _helpers.utcnow() + datetime.timedelta(hours=1))
     claims = {'exp': expire_at, 'aud': target_audience}
 
+    tok = token_factory(claims=claims)
+
     request = make_request(
-        token_factory(claims=claims),
+        tok,
         headers={'content-type': 'text/html'})
 
     token, expiry = _metadata.get_id_token(
@@ -258,7 +260,7 @@ def test_get_id_token(token_factory):
         urllib.parse.quote_plus(target_audience),
         headers=_metadata._METADATA_HEADERS)
 
-    assert token == token_factory(claims=claims)
+    assert token == tok.decode("utf-8")
     assert expiry == datetime.datetime.utcfromtimestamp(expire_at)
 
 

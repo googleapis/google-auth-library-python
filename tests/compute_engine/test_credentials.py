@@ -169,13 +169,15 @@ class TestIDTokenCredentials(object):
     @mock.patch('google.auth.compute_engine._metadata.get', autospec=True)
     def test_without_target_audience(self, get, token_factory):
         expire_at = _helpers.datetime_to_secs(
-            _helpers.utcnow() - datetime.timedelta(hours=1))
+            _helpers.utcnow() + datetime.timedelta(hours=1))
         claims = {'exp': expire_at, 'aud': self.test_audience}
+
+        tok = token_factory(claims=claims)
 
         get.side_effect = [{
             'email': 'service-account@example.com',
             'scopes': ['one', 'two']
-        },  token_factory(claims=claims)]
+        },  tok]
 
         request = mock.create_autospec(transport.Request, instance=True)
         self.credentials = credentials.IDTokenCredentials(
@@ -185,7 +187,7 @@ class TestIDTokenCredentials(object):
         token = self.credentials.token
         payload = jwt.decode(token, verify=False)
 
-        assert self.credentials.token == token_factory(claims=claims)
+        assert self.credentials.token == tok
         assert self.credentials.expiry == (
             datetime.datetime.utcfromtimestamp(expire_at))
         assert payload['aud'] == self.test_audience
@@ -194,13 +196,15 @@ class TestIDTokenCredentials(object):
     def test_with_target_audience(self, get, token_factory):
 
         expire_at = _helpers.datetime_to_secs(
-            _helpers.utcnow() - datetime.timedelta(hours=1))
+            _helpers.utcnow() + datetime.timedelta(hours=1))
         claims = {'exp': expire_at, 'aud': self.test_audience}
+
+        tok = token_factory(claims=claims)
 
         get.side_effect = [{
             'email': 'service-account@example.com',
             'scopes': ['one', 'two']
-        }, token_factory(claims=claims)]
+        }, tok]
 
         request = mock.create_autospec(transport.Request, instance=True)
         self.credentials = credentials.IDTokenCredentials(
@@ -212,7 +216,7 @@ class TestIDTokenCredentials(object):
         token = self.credentials.token
         payload = jwt.decode(token, verify=False)
 
-        assert self.credentials.token == token_factory(claims=claims)
+        assert self.credentials.token == tok
         assert self.credentials.expiry == (
             datetime.datetime.utcfromtimestamp(expire_at))
         assert payload['aud'] == self.test_audience
