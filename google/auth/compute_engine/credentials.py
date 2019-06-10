@@ -19,17 +19,12 @@ Engine using the Compute Engine metadata server.
 
 """
 
-import datetime
-
 import six
 
 from google.auth import _helpers
 from google.auth import credentials
 from google.auth import exceptions
-from google.auth import iam
-from google.auth import jwt
 from google.auth.compute_engine import _metadata
-from google.oauth2 import _client
 
 
 class Credentials(credentials.ReadOnlyScoped, credentials.Credentials):
@@ -120,7 +115,7 @@ _DEFAULT_TOKEN_LIFETIME_SECS = 3600  # 1 hour in seconds
 _DEFAULT_TOKEN_URI = 'https://www.googleapis.com/oauth2/v4/token'
 
 
-class IDTokenCredentials(credentials.Credentials, credentials.Signing):
+class IDTokenCredentials(credentials.Credentials):
     """Open ID Connect ID Token-based service account credentials.
 
     These credentials relies on the default service account of a GCE instance.
@@ -129,8 +124,6 @@ class IDTokenCredentials(credentials.Credentials, credentials.Signing):
     a service account that has access to the IAM Cloud API.
     """
     def __init__(self, request, target_audience,
-                 token_uri=_DEFAULT_TOKEN_URI,
-                 additional_claims=None,
                  service_account_email=None):
         """
         Args:
@@ -139,9 +132,6 @@ class IDTokenCredentials(credentials.Credentials, credentials.Signing):
             target_audience (str): The intended audience for these credentials,
                 used when requesting the ID Token. The ID Token's ``aud`` claim
                 will be set to this string.
-            token_uri (str): The OAuth 2.0 Token URI.
-            additional_claims (Mapping[str, str]): Any additional claims for
-                the JWT assertion used in the authorization grant.
             service_account_email (str): Optional explicit service account to
                 use to sign JWT tokens.
                 By default, this is the default GCE service account.
@@ -151,89 +141,35 @@ class IDTokenCredentials(credentials.Credentials, credentials.Signing):
         if service_account_email is None:
             sa_info = _metadata.get_service_account_info(request)
             service_account_email = sa_info['email']
+        self._request = request
         self._service_account_email = service_account_email
-
-        self._signer = iam.Signer(
-            request=request,
-            credentials=Credentials(),
-            service_account_email=service_account_email)
-
-        self._token_uri = token_uri
         self._target_audience = target_audience
 
-        if additional_claims is not None:
-            self._additional_claims = additional_claims
-        else:
-            self._additional_claims = {}
-
-    def with_target_audience(self, target_audience):
+    def with_target_audience(self, audience):
         """Create a copy of these credentials with the specified target
         audience.
         Args:
-            target_audience (str): The intended audience for these credentials,
+            audience (str): The intended audience for these credentials,
             used when requesting the ID Token.
         Returns:
             google.auth.service_account.IDTokenCredentials: A new credentials
                 instance.
         """
         return self.__class__(
-            self._signer,
+            request=self._request,
             service_account_email=self._service_account_email,
-            token_uri=self._token_uri,
-            target_audience=target_audience,
-            additional_claims=self._additional_claims.copy())
-
-    def _make_authorization_grant_assertion(self):
-        """Create the OAuth 2.0 assertion.
-        This assertion is used during the OAuth 2.0 grant to acquire an
-        ID token.
-        Returns:
-            bytes: The authorization grant assertion.
-        """
-        now = _helpers.utcnow()
-        lifetime = datetime.timedelta(seconds=_DEFAULT_TOKEN_LIFETIME_SECS)
-        expiry = now + lifetime
-
-        payload = {
-            'iat': _helpers.datetime_to_secs(now),
-            'exp': _helpers.datetime_to_secs(expiry),
-            # The issuer must be the service account email.
-            'iss': self.service_account_email,
-            # The audience must be the auth token endpoint's URI
-            'aud': self._token_uri,
-            # The target audience specifies which service the ID token is
-            # intended for.
-            'target_audience': self._target_audience
-        }
-
-        payload.update(self._additional_claims)
-
-        token = jwt.encode(self._signer, payload)
-
-        return token
+            target_audience=audience)
 
     @_helpers.copy_docstring(credentials.Credentials)
     def refresh(self, request):
-        assertion = self._make_authorization_grant_assertion()
-        access_token, expiry, _ = _client.id_token_jwt_grant(
-            request, self._token_uri, assertion)
-        self.token = access_token
+
+        id_token, expiry = _metadata.get_id_token(
+            request,
+            self._service_account_email, self._target_audience)
+        self.token = id_token
         self.expiry = expiry
-
-    @property
-    @_helpers.copy_docstring(credentials.Signing)
-    def signer(self):
-        return self._signer
-
-    @_helpers.copy_docstring(credentials.Signing)
-    def sign_bytes(self, message):
-        return self._signer.sign(message)
 
     @property
     def service_account_email(self):
         """The service account email."""
-        return self._service_account_email
-
-    @property
-    def signer_email(self):
         return self._service_account_email
