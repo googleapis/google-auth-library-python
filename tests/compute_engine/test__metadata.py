@@ -15,12 +15,12 @@
 import datetime
 import json
 import os
-import urllib
 
 import mock
 import pytest
 from six.moves import http_client
 from six.moves import reload_module
+from six.moves import urllib
 
 from google.auth import _helpers
 from google.auth import crypt
@@ -255,7 +255,7 @@ def test_get_id_token(token_factory):
     request.assert_called_once_with(
         method='GET',
         url=_metadata._METADATA_ROOT + PATH + '/identity?audience=' +
-        urllib.quote_plus(target_audience),
+        urllib.parse.quote_plus(target_audience),
         headers=_metadata._METADATA_HEADERS)
 
     assert token == token_factory(claims=claims)
