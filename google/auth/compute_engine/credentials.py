@@ -24,6 +24,7 @@ import six
 from google.auth import _helpers
 from google.auth import credentials
 from google.auth import exceptions
+from google.auth import iam
 from google.auth.compute_engine import _metadata
 
 
@@ -115,15 +116,19 @@ _DEFAULT_TOKEN_LIFETIME_SECS = 3600  # 1 hour in seconds
 _DEFAULT_TOKEN_URI = 'https://www.googleapis.com/oauth2/v4/token'
 
 
-class IDTokenCredentials(credentials.Credentials):
+class IDTokenCredentials(credentials.Credentials, credentials.Signing):
     """Open ID Connect ID Token-based service account credentials.
 
-    These credentials relies on the default service account of a GCE instance.
+    These credentials relies on the default service account and metadata
+    server of a GCE instance.
 
-    In order for this to work, the GCE instance must have been started with
-    a service account that has access to the IAM Cloud API.
+    In order to using the signer or sign_bytes capability directly, the GCE
+    instance must have been started with a service account that has access
+    to the IAM Cloud API.
     """
     def __init__(self, request, target_audience,
+                 token_uri=_DEFAULT_TOKEN_URI,
+                 additional_claims=None,
                  service_account_email=None):
         """
         Args:
@@ -132,33 +137,48 @@ class IDTokenCredentials(credentials.Credentials):
             target_audience (str): The intended audience for these credentials,
                 used when requesting the ID Token. The ID Token's ``aud`` claim
                 will be set to this string.
+            token_uri (str): The OAuth 2.0 Token URI.
+            additional_claims (Mapping[str, str]): Unused.
             service_account_email (str): Optional explicit service account to
-                use to sign JWT tokens.
-                By default, this is the default GCE service account.
+                sign with.  For id tokens, this must be set to `default` or
+                to the service account the VM runs as.
         """
         super(IDTokenCredentials, self).__init__()
 
         if service_account_email is None:
             sa_info = _metadata.get_service_account_info(request)
             service_account_email = sa_info['email']
-        self._request = request
         self._service_account_email = service_account_email
+
+        self._signer = iam.Signer(
+            request=request,
+            credentials=Credentials(),
+            service_account_email=service_account_email)
+
+        self._token_uri = token_uri
         self._target_audience = target_audience
 
-    def with_target_audience(self, audience):
+        if additional_claims is not None:
+            self._additional_claims = additional_claims
+        else:
+            self._additional_claims = {}
+
+    def with_target_audience(self, target_audience):
         """Create a copy of these credentials with the specified target
         audience.
         Args:
-            audience (str): The intended audience for these credentials,
+            target_audience (str): The intended audience for these credentials,
             used when requesting the ID Token.
         Returns:
             google.auth.service_account.IDTokenCredentials: A new credentials
                 instance.
         """
         return self.__class__(
-            request=self._request,
+            self._signer,
             service_account_email=self._service_account_email,
-            target_audience=audience)
+            token_uri=self._token_uri,
+            target_audience=target_audience,
+            additional_claims=self._additional_claims.copy())
 
     @_helpers.copy_docstring(credentials.Credentials)
     def refresh(self, request):
@@ -170,6 +190,19 @@ class IDTokenCredentials(credentials.Credentials):
         self.expiry = expiry
 
     @property
+    @_helpers.copy_docstring(credentials.Signing)
+    def signer(self):
+        return self._signer
+
+    @_helpers.copy_docstring(credentials.Signing)
+    def sign_bytes(self, message):
+        return self._signer.sign(message)
+
+    @property
     def service_account_email(self):
         """The service account email."""
+        return self._service_account_email
+
+    @property
+    def signer_email(self):
         return self._service_account_email

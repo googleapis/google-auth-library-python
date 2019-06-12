@@ -14,7 +14,7 @@ also provides integration with several HTTP libraries.
 
 - Support for Google :func:`Application Default Credentials <google.auth.default>`.
 - Support for signing and verifying :mod:`JWTs <google.auth.jwt>`.
-- Support for creating :doc:`Google ID Tokens <user-guide>`.
+- Support for creating `Google ID Tokens`_.
 - Support for verifying and decoding :mod:`ID Tokens <google.oauth2.id_token>`.
 - Support for Google :mod:`Service Account credentials <google.oauth2.service_account>`.
 - Support for Google :mod:`Impersonated Credentials <google.auth.impersonated_credentials>`.
@@ -26,6 +26,7 @@ also provides integration with several HTTP libraries.
   :mod:`gRPC <google.auth.transport.grpc>`.
 
 .. note:: ``oauth2client`` was recently deprecated in favor of this library. For more details on the deprecation, see :doc:`oauth2client-deprecation`.
+.. _Google ID Tokens: user-guide.html#identity-tokens
 
 Installing
 ----------

@@ -151,23 +151,49 @@ class TestIDTokenCredentials(object):
     test_audience = 'https://example.com'
 
     @mock.patch('google.auth.compute_engine._metadata.get', autospec=True)
-    def test_refresh_error(self, get):
+    def test_default_state(self, get):
         get.side_effect = [{
             'email': 'service-account@example.com',
-            'scopes': ['one', 'two']
-        }, exceptions.TransportError('not found')]
+            'scope': ['one', 'two'],
+        }]
 
         request = mock.create_autospec(transport.Request, instance=True)
         self.credentials = credentials.IDTokenCredentials(
-            request=request, target_audience=self.test_audience)
+            request=request, target_audience="https://example.com")
 
-        with pytest.raises(exceptions.TransportError) as excinfo:
-            self.credentials.refresh(None)
-
-        assert excinfo.match(r'not found')
+        assert not self.credentials.valid
+        # Expiration hasn't been set yet
+        assert not self.credentials.expired
+        # Service account email hasn't been populated
+        assert (self.credentials.service_account_email
+                == 'service-account@example.com')
+        # Signer is initialized
+        assert self.credentials.signer
+        assert self.credentials.signer_email == 'service-account@example.com'
 
     @mock.patch('google.auth.compute_engine._metadata.get', autospec=True)
-    def test_without_target_audience(self, get, token_factory):
+    def test_with_service_account(self, get, token_factory):
+        service_account = 'service-account@example.com'
+        expire_at = _helpers.datetime_to_secs(
+            _helpers.utcnow() + datetime.timedelta(hours=1))
+        claims = {'exp': expire_at, 'aud': self.test_audience,
+                  'iss': service_account}
+
+        tok = token_factory(claims=claims)
+
+        get.side_effect = [tok]
+
+        request = mock.create_autospec(transport.Request, instance=True)
+        self.credentials = credentials.IDTokenCredentials(
+            request=request, target_audience=self.test_audience,
+            service_account_email=service_account)
+
+        self.credentials.refresh(None)
+
+        assert self.credentials.service_account_email == service_account
+
+    @mock.patch('google.auth.compute_engine._metadata.get', autospec=True)
+    def test_additional_claims(self, get, token_factory):
         expire_at = _helpers.datetime_to_secs(
             _helpers.utcnow() + datetime.timedelta(hours=1))
         claims = {'exp': expire_at, 'aud': self.test_audience}
@@ -181,7 +207,8 @@ class TestIDTokenCredentials(object):
 
         request = mock.create_autospec(transport.Request, instance=True)
         self.credentials = credentials.IDTokenCredentials(
-            request=request, target_audience=self.test_audience)
+            request=request, target_audience=self.test_audience,
+            additional_claims={'foo': 'bar'})
 
         self.credentials.refresh(None)
         token = self.credentials.token
@@ -191,10 +218,10 @@ class TestIDTokenCredentials(object):
         assert self.credentials.expiry == (
             datetime.datetime.utcfromtimestamp(expire_at))
         assert payload['aud'] == self.test_audience
+        assert self.credentials.valid
 
     @mock.patch('google.auth.compute_engine._metadata.get', autospec=True)
     def test_with_target_audience(self, get, token_factory):
-
         expire_at = _helpers.datetime_to_secs(
             _helpers.utcnow() + datetime.timedelta(hours=1))
         claims = {'exp': expire_at, 'aud': self.test_audience}
@@ -220,26 +247,103 @@ class TestIDTokenCredentials(object):
         assert self.credentials.expiry == (
             datetime.datetime.utcfromtimestamp(expire_at))
         assert payload['aud'] == self.test_audience
+        assert self.credentials.valid
 
     @mock.patch('google.auth.compute_engine._metadata.get', autospec=True)
-    def test_get_service_account(self, get, token_factory):
-        service_account = 'service-account@example.com'
+    def test_refresh_success(self, get, token_factory):
         expire_at = _helpers.datetime_to_secs(
             _helpers.utcnow() + datetime.timedelta(hours=1))
-        claims = {'exp': expire_at, 'aud': self.test_audience,
-                  'iss': service_account}
+        claims = {'exp': expire_at, 'aud': self.test_audience}
 
         tok = token_factory(claims=claims)
 
         get.side_effect = [{
-            'email': service_account,
+            'email': 'service-account@example.com',
             'scopes': ['one', 'two']
         },  tok]
 
         request = mock.create_autospec(transport.Request, instance=True)
         self.credentials = credentials.IDTokenCredentials(
-            request=request, target_audience=self.test_audience)
+            request=request, target_audience=None)
 
         self.credentials.refresh(None)
+        token = self.credentials.token
+        payload = jwt.decode(token, verify=False)
 
-        assert self.credentials.service_account_email == service_account
+        assert self.credentials.token == tok
+        assert self.credentials.expiry == (
+            datetime.datetime.utcfromtimestamp(expire_at))
+        assert payload['aud'] == self.test_audience
+
+        assert self.credentials.valid
+
+    @mock.patch('google.auth.compute_engine._metadata.get', autospec=True)
+    def test_refresh_error(self, get):
+        get.side_effect = [{
+            'email': 'service-account@example.com',
+            'scopes': ['one', 'two']
+        }, exceptions.TransportError('not found')]
+
+        request = mock.create_autospec(transport.Request, instance=True)
+        self.credentials = credentials.IDTokenCredentials(
+            request=request, target_audience=self.test_audience)
+
+        with pytest.raises(exceptions.TransportError) as excinfo:
+            self.credentials.refresh(None)
+
+        assert excinfo.match(r'not found')
+
+    @mock.patch('google.auth.compute_engine._metadata.get', autospec=True)
+    def test_before_request_refreshes(self, get, token_factory):
+        expire_at = _helpers.datetime_to_secs(
+            _helpers.utcnow() + datetime.timedelta(hours=1))
+        claims = {'exp': expire_at, 'aud': self.test_audience}
+
+        tok = token_factory(claims=claims)
+
+        get.side_effect = [{
+            'email': 'service-account@example.com',
+            'scopes': ['one', 'two']
+        },  tok]
+
+        request = mock.create_autospec(transport.Request, instance=True)
+        self.credentials = credentials.IDTokenCredentials(
+            request=request, target_audience=None)
+
+        # Credentials should start as invalid
+        assert not self.credentials.valid
+
+        # before_request should cause a refresh
+        request = mock.create_autospec(transport.Request, instance=True)
+        self.credentials.before_request(
+            request, 'GET', 'http://example.com?a=1#3', {})
+
+        # The refresh endpoint should've been called.
+        assert get.called
+
+        # Credentials should now be valid.
+        assert self.credentials.valid
+
+    @mock.patch('google.auth.compute_engine._metadata.get', autospec=True)
+    @mock.patch('google.auth.iam.Signer.sign', autospec=True)
+    def test_sign_bytes(self, sign, get):
+        get.side_effect = [{
+            'email': 'service-account@example.com',
+            'scopes': ['one', 'two']
+        }]
+        sign.side_effect = [b'signature']
+
+        request = mock.create_autospec(transport.Request, instance=True)
+        response = mock.Mock()
+        response.data = b'{"signature": "c2lnbmF0dXJl"}'
+        response.status = 200
+        request.side_effect = [response]
+
+        self.credentials = credentials.IDTokenCredentials(
+            request=request, target_audience="https://audience.com")
+
+        # Generate authorization grant:
+        signature = self.credentials.sign_bytes(b"some bytes")
+
+        # The JWT token signature is 'signature' encoded in base 64:
+        assert signature == b'signature'
