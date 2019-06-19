@@ -62,10 +62,13 @@ class TestImpersonatedCredentials(object):
     SOURCE_CREDENTIALS = service_account.Credentials(
             SIGNER, SERVICE_ACCOUNT_EMAIL, TOKEN_URI)
 
-    def make_credentials(self, lifetime=LIFETIME):
+    def make_credentials(self, lifetime=LIFETIME, target_principal=None):
+        if target_principal is None:
+            target_principal = self.TARGET_PRINCIPAL
+
         return Credentials(
             source_credentials=self.SOURCE_CREDENTIALS,
-            target_principal=self.TARGET_PRINCIPAL,
+            target_principal=target_principal,
             target_scopes=self.TARGET_SCOPES,
             delegates=self.DELEGATES,
             lifetime=lifetime)
@@ -176,3 +179,93 @@ class TestImpersonatedCredentials(object):
     def test_expired(self):
         credentials = self.make_credentials(lifetime=None)
         assert credentials.expired
+
+    def test_signer(self):
+        credentials = self.make_credentials()
+        assert isinstance(credentials.signer,
+                          impersonated_credentials.Credentials)
+
+    def test_signer_email(self):
+        credentials = self.make_credentials(
+            target_principal=self.TARGET_PRINCIPAL)
+        assert credentials.signer_email == self.TARGET_PRINCIPAL
+
+    def test_service_account_email(self):
+        credentials = self.make_credentials(
+            target_principal=self.TARGET_PRINCIPAL)
+        assert credentials.service_account_email == self.TARGET_PRINCIPAL
+
+    def test_sign_bytes(self, mock_donor_credentials):
+        credentials = self.make_credentials(lifetime=None)
+        token = 'token'
+
+        expire_time = (
+            _helpers.utcnow().replace(microsecond=0) +
+            datetime.timedelta(seconds=500)).isoformat('T') + 'Z'
+        response_body = {
+            "accessToken": token,
+            "expireTime": expire_time
+        }
+
+        request = self.make_request(
+            data=json.dumps(response_body),
+            status=http_client.OK)
+
+#        sign_response_body = {
+#            "keyId": "1",
+#            "signedBlob": "c2lnbmF0dXJl"
+#        }
+#        sign_response = mock.create_autospec(transport.Response,
+#                                             instance=True)
+#        sign_response.data = sign_response_body
+#        sign_response.status = http_client.OK
+#        sign_request = self.make_request(
+#            data=json.dumps(sign_response_body),
+#            status=http_client.OK, side_effect=[sign_response])
+
+        credentials.refresh(request)
+
+        assert credentials.valid
+        assert not credentials.expired
+
+#        signature = credentials.sign_bytes(b"some bytes")
+#        assert signature == b'signature'
+
+    def test_id_token_success(self, mock_donor_credentials):
+        credentials = self.make_credentials(lifetime=None)
+        token = 'token'
+#        idtoken = 'idtoken'
+#        target_audience = 'https://foo.bar'
+
+        expire_time = (
+            _helpers.utcnow().replace(microsecond=0) +
+            datetime.timedelta(seconds=500)).isoformat('T') + 'Z'
+        response_body = {
+            "accessToken": token,
+            "expireTime": expire_time
+        }
+
+        request = self.make_request(
+            data=json.dumps(response_body),
+            status=http_client.OK)
+
+#        id_token_response_body = {
+#            "token": idtoken
+#        }
+#        id_token_response = mock.create_autospec(transport.Response,
+#                                                 instance=True)
+#        id_token_response.data = id_token_response_body
+#        id_token_response.status = http_client.OK
+#        sign_request = self.make_request(
+#            data=json.dumps(id_token_response_body),
+#            status=http_client.OK)
+
+        credentials.refresh(request)
+
+        assert credentials.valid
+        assert not credentials.expired
+
+#        id_creds = impersonated_credentials.IDTokenCredentials(
+#            credentials, target_audience=target_audience)
+#        id_creds.refresh(request)
+#        assert id_creds.token == idtoken

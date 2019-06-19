@@ -25,6 +25,7 @@ service account.
         https://cloud.google.com/iam/credentials/reference/rest/
 """
 
+import base64
 import copy
 from datetime import datetime
 import json
@@ -35,6 +36,8 @@ from six.moves import http_client
 from google.auth import _helpers
 from google.auth import credentials
 from google.auth import exceptions
+from google.auth import jwt
+from google.auth.transport.requests import AuthorizedSession
 
 _DEFAULT_TOKEN_LIFETIME_SECS = 3600  # 1 hour in seconds
 
@@ -42,6 +45,12 @@ _IAM_SCOPE = ['https://www.googleapis.com/auth/iam']
 
 _IAM_ENDPOINT = ('https://iamcredentials.googleapis.com/v1/projects/-' +
                  '/serviceAccounts/{}:generateAccessToken')
+
+_IAM_SIGN_ENDPOINT = ('https://iamcredentials.googleapis.com/v1/projects/-' +
+                      '/serviceAccounts/{}:signBlob')
+
+_IAM_IDTOKEN_ENDPOINT = ('https://iamcredentials.googleapis.com/v1/' +
+                         'projects/-/serviceAccounts/{}:generateIdToken')
 
 _REFRESH_ERROR = 'Unable to acquire impersonated credentials'
 
@@ -94,7 +103,7 @@ def _make_iam_token_request(request, principal, headers, body):
         six.raise_from(new_exc, caught_exc)
 
 
-class Credentials(credentials.Credentials):
+class Credentials(credentials.Credentials,  credentials.Signing):
     """This module defines impersonated credentials which are essentially
     impersonated identities.
 
@@ -172,7 +181,8 @@ class Credentials(credentials.Credentials):
                 granted to the prceeding identity.  For example, if set to
                 [serviceAccountB, serviceAccountC], the source_credential
                 must have the Token Creator role on serviceAccountB.
-                serviceAccountB must have the Token Creator on serviceAccountC.
+                credentials.refresh(request) must have the Token Creator on
+                serviceAccountC.
                 Finally, C must have Token Creator on target_principal.
                 If left unset, source_credential must have that role on
                 target_principal.
@@ -229,3 +239,104 @@ class Credentials(credentials.Credentials):
             principal=self._target_principal,
             headers=headers,
             body=body)
+
+    def sign_bytes(self, message):
+
+        iam_sign_endpoint = _IAM_SIGN_ENDPOINT.format(self._target_principal)
+
+        body = {
+            "payload": base64.b64encode(message),
+            "delegates": self._delegates
+        }
+
+        headers = {
+            'Content-Type': 'application/json',
+        }
+
+        authed_session = AuthorizedSession(self._source_credentials)
+
+        response = authed_session.post(
+            url=iam_sign_endpoint,
+            headers=headers,
+            data=json.dumps(body))
+
+        return base64.b64decode(response.json()['signedBlob'])
+
+    @property
+    def signer_email(self):
+        return self._target_principal
+
+    @property
+    def service_account_email(self):
+        return self._target_principal
+
+    @property
+    def signer(self):
+        return self
+
+
+_DEFAULT_TOKEN_LIFETIME_SECS = 3600  # 1 hour in seconds
+_DEFAULT_TOKEN_URI = 'https://www.googleapis.com/oauth2/v4/token'
+
+
+class IDTokenCredentials(credentials.Credentials):
+    """Open ID Connect ID Token-based service account credentials.
+
+    """
+    def __init__(self, target_credentials,
+                 target_audience=None):
+        """
+        Args:
+            targete_credentials (google.auth.Credentials): The target
+                credential used as to acquire the id tokens for.
+            target_audience (string):
+            additional_claims (Sequece[str]):
+        """
+        super(IDTokenCredentials, self).__init__()
+
+        if not isinstance(target_credentials,
+                          Credentials):
+            raise exceptions.GoogleAuthError("Provided Credential must be "
+                                             "impersonated_credentials")
+        self._target_credentials = target_credentials
+        self._target_audience = target_audience
+
+    def from_credentials(self, target_credentials,
+                         target_audience=None):
+        return self.__class__(
+            target_credentials=self._target_credentials,
+            target_audience=target_audience)
+
+    def with_target_audience(self, target_audience):
+        return self.__class__(
+            target_credentials=self._target_credentials,
+            target_audience=target_audience)
+
+    @_helpers.copy_docstring(credentials.Credentials)
+    def refresh(self, request):
+
+        iam_sign_endpoint = _IAM_IDTOKEN_ENDPOINT.format(self.
+                                                         _target_credentials.
+                                                         signer_email)
+
+        body = {
+            "audience": self._target_audience,
+            "delegates": self._target_credentials._delegates
+        }
+
+        headers = {
+            'Content-Type': 'application/json',
+        }
+
+        authed_session = AuthorizedSession(self._target_credentials.
+                                           _source_credentials)
+
+        response = authed_session.post(
+            url=iam_sign_endpoint,
+            headers=headers,
+            data=json.dumps(body))
+
+        id_token = response.json()['token']
+        self.token = id_token
+        self.expiry = datetime.fromtimestamp(jwt.decode(id_token,
+                                             verify=False)['exp'])
