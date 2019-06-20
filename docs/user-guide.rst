@@ -234,6 +234,56 @@ In the example above `source_credentials` does not have direct access to list bu
 in the target project.  Using `ImpersonatedCredentials` will allow the source_credentials
 to assume the identity of a target_principal that does have access.
 
+Identity Tokens
++++++++++++++++
+
+`Google OpenID Connect`_ tokens are avaiable through both ServiceAccount, ImpersonatedCredentials,
+and Compute modules.  These tokens can be used to authenticate against `Cloud Functions`_,
+`Cloud Run`_, a user service behind `Identity Aware Proxy`_ or any other service capable
+of verifying a `Google ID Token`_.
+
+ServiceAccount ::
+
+    from google.oauth2 import service_account
+
+    target_audience = 'https://example.com'
+
+    creds = service_account.IDTokenCredentials.from_service_account_file(
+            '/path/to/svc.json',
+            target_audience=target_audience)
+
+
+Compute ::
+
+    from google.auth import compute_engine
+    import google.auth.transport.requests
+
+    target_audience = 'https://example.com'
+
+    request = google.auth.transport.requests.Request()
+    creds = compute_engine.IDTokenCredentials(request,
+                            target_audience=target_audience)
+
+Impersonated ::
+
+    from google.auth import impersonated_credentials
+
+    # get target_credentials from a source_credentials
+
+    target_audience = 'https://example.com'
+
+    creds = impersonated_credentials.IDTokenCredentials(
+                                      target_credentials,
+                                      target_audience=target_audience)
+
+IDToken verification can be done for various type of IDTokens using the :class:`google.oauth2.id_token` module 
+
+.. _Cloud Functions: https://cloud.google.com/functions/
+.. _Cloud Run: https://cloud.google.com/run/
+.. _Identity Aware Proxy: https://cloud.google.com/iap/
+.. _Google OpenID Connect: https://developers.google.com/identity/protocols/OpenIDConnect
+.. _Google ID Token: https://developers.google.com/identity/protocols/OpenIDConnect#validatinganidtoken
+
 Making authenticated requests
 -----------------------------
 

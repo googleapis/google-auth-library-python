@@ -258,7 +258,7 @@ class Credentials(credentials.Credentials,  credentials.Signing):
         response = authed_session.post(
             url=iam_sign_endpoint,
             headers=headers,
-            data=json.dumps(body))
+            data=json.dumps(body).encode('utf-8'))
 
         return base64.b64decode(response.json()['signedBlob'])
 
@@ -289,8 +289,7 @@ class IDTokenCredentials(credentials.Credentials):
         Args:
             targete_credentials (google.auth.Credentials): The target
                 credential used as to acquire the id tokens for.
-            target_audience (string):
-            additional_claims (Sequece[str]):
+            target_audience (string): Audience to issue the token for.
         """
         super(IDTokenCredentials, self).__init__()
 
@@ -334,7 +333,7 @@ class IDTokenCredentials(credentials.Credentials):
         response = authed_session.post(
             url=iam_sign_endpoint,
             headers=headers,
-            data=json.dumps(body))
+            data=json.dumps(body).encode('utf-8'))
 
         id_token = response.json()['token']
         self.token = id_token
