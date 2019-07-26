@@ -62,9 +62,8 @@ class TestImpersonatedCredentials(object):
     SOURCE_CREDENTIALS = service_account.Credentials(
             SIGNER, SERVICE_ACCOUNT_EMAIL, TOKEN_URI)
 
-    def make_credentials(self, lifetime=LIFETIME, target_principal=None):
-        if target_principal is None:
-            target_principal = self.TARGET_PRINCIPAL
+    def make_credentials(self, lifetime=LIFETIME,
+                         target_principal=TARGET_PRINCIPAL):
 
         return Credentials(
             source_credentials=self.SOURCE_CREDENTIALS,

@@ -54,6 +54,10 @@ _IAM_IDTOKEN_ENDPOINT = ('https://iamcredentials.googleapis.com/v1/' +
 
 _REFRESH_ERROR = 'Unable to acquire impersonated credentials'
 
+_DEFAULT_TOKEN_LIFETIME_SECS = 3600  # 1 hour in seconds
+
+_DEFAULT_TOKEN_URI = 'https://oauth2.googleapis.com/token'
+
 
 def _make_iam_token_request(request, principal, headers, body):
     """Makes a request to the Google Cloud IAM service for an access token.
@@ -275,21 +279,18 @@ class Credentials(credentials.Credentials,  credentials.Signing):
         return self
 
 
-_DEFAULT_TOKEN_LIFETIME_SECS = 3600  # 1 hour in seconds
-_DEFAULT_TOKEN_URI = 'https://www.googleapis.com/oauth2/v4/token'
-
-
 class IDTokenCredentials(credentials.Credentials):
     """Open ID Connect ID Token-based service account credentials.
 
     """
     def __init__(self, target_credentials,
-                 target_audience=None):
+                 target_audience=None, include_email=False):
         """
         Args:
-            targete_credentials (google.auth.Credentials): The target
+            target_credentials (google.auth.Credentials): The target
                 credential used as to acquire the id tokens for.
             target_audience (string): Audience to issue the token for.
+            include_email (bool): Include email in IdToken
         """
         super(IDTokenCredentials, self).__init__()
 
@@ -299,6 +300,7 @@ class IDTokenCredentials(credentials.Credentials):
                                              "impersonated_credentials")
         self._target_credentials = target_credentials
         self._target_audience = target_audience
+        self._include_email = include_email
 
     def from_credentials(self, target_credentials,
                          target_audience=None):
@@ -311,6 +313,12 @@ class IDTokenCredentials(credentials.Credentials):
             target_credentials=self._target_credentials,
             target_audience=target_audience)
 
+    def with_include_email(self, include_email):
+        return self.__class__(
+            target_credentials=self._target_credentials,
+            target_audience=self._target_audience,
+            include_email=include_email)
+
     @_helpers.copy_docstring(credentials.Credentials)
     def refresh(self, request):
 
@@ -320,7 +328,8 @@ class IDTokenCredentials(credentials.Credentials):
 
         body = {
             "audience": self._target_audience,
-            "delegates": self._target_credentials._delegates
+            "delegates": self._target_credentials._delegates,
+            "includeEmail": self._include_email
         }
 
         headers = {
