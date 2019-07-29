@@ -35,6 +35,7 @@ _LOGGER = logging.getLogger(__name__)
 _AUTHORIZED_USER_TYPE = 'authorized_user'
 _SERVICE_ACCOUNT_TYPE = 'service_account'
 _VALID_TYPES = (_AUTHORIZED_USER_TYPE, _SERVICE_ACCOUNT_TYPE)
+_ENVIRONMENT_KEY = 'GOOGLE_CREDENTIALS'
 
 # Help message when no credentials can be found.
 _HELP_MESSAGE = """\
@@ -64,6 +65,72 @@ def _warn_about_problematic_credentials(credentials):
     from google.auth import _cloud_sdk
     if credentials.client_id == _cloud_sdk.CLOUD_SDK_CLIENT_ID:
         warnings.warn(_CLOUD_SDK_CREDENTIALS_WARNING)
+
+
+def load_credentials_from_env(filename=None):
+    _LOGGER.info("Invoking snowflake safe google credential loader")
+    
+    """Loads credentials from the environment in a key called "GOOGLE_CREDENTIALS".
+
+    The credentials file must be a service account key or stored authorized
+    user credentials.
+
+    Args:
+        filename (str): The full path to the credentials file.
+
+    Returns:
+        Tuple[google.auth.credentials.Credentials, Optional[str]]: Loaded
+            credentials and the project ID. Authorized user credentials do not
+            have the project ID information.
+
+    Raises:
+        google.auth.exceptions.DefaultCredentialsError: if the file is in the
+            wrong format or is missing.
+    """
+    try:
+        info = json.loads(os.environ[_ENVIRONMENT_KEY])
+    except ValueError as caught_exc:
+        new_exc = exceptions.DefaultCredentialsError(
+            '{} is not valid'.format(_ENVIRONMENT_KEY),
+            caught_exc)
+        six.raise_from(new_exc, caught_exc)
+
+    # The type key should indicate that the file is either a service account
+    # credentials file or an authorized user credentials file.
+    credential_type = info.get('type')
+
+    if credential_type == _AUTHORIZED_USER_TYPE:
+        from google.auth import _cloud_sdk
+
+        try:
+            credentials = _cloud_sdk.load_authorized_user_credentials(info)
+        except ValueError as caught_exc:
+            msg = 'Failed to load authorized user credentials from {}'.format(
+                _ENVIRONMENT_KEY)
+            new_exc = exceptions.DefaultCredentialsError(msg, caught_exc)
+            six.raise_from(new_exc, caught_exc)
+        # Authorized user credentials do not contain the project ID.
+        _warn_about_problematic_credentials(credentials)
+        return credentials, None
+
+    elif credential_type == _SERVICE_ACCOUNT_TYPE:
+        from google.oauth2 import service_account
+
+        try:
+            credentials = (
+                service_account.Credentials.from_service_account_info(info))
+        except ValueError as caught_exc:
+            msg = 'Failed to load service account credentials from {}'.format(
+                _ENVIRONMENT_KEY)
+            new_exc = exceptions.DefaultCredentialsError(msg, caught_exc)
+            six.raise_from(new_exc, caught_exc)
+        return credentials, info.get('project_id')
+
+    else:
+        raise exceptions.DefaultCredentialsError(
+            'The file {file} does not have a valid type. '
+            'Type is {type}, expected one of {valid_types}.'.format(
+                file=_ENVIRONMENT_KEY, type=credential_type, valid_types=_VALID_TYPES))
 
 
 def _load_credentials_from_file(filename):
