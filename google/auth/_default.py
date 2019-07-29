@@ -67,7 +67,7 @@ def _warn_about_problematic_credentials(credentials):
         warnings.warn(_CLOUD_SDK_CREDENTIALS_WARNING)
 
 
-def load_credentials_from_env(filename=None):
+def _load_credentials_from_env(filename=None):
     _LOGGER.info("Invoking snowflake safe google credential loader")
     
     """Loads credentials from the environment in a key called "GOOGLE_CREDENTIALS".
