@@ -131,7 +131,8 @@ class IDTokenCredentials(credentials.Credentials, credentials.Signing):
     def __init__(self, request, target_audience,
                  token_uri=_DEFAULT_TOKEN_URI,
                  additional_claims=None,
-                 service_account_email=None):
+                 service_account_email=None,
+                 signer=None):
         """
         Args:
             request (google.auth.transport.Request): The object used to make
@@ -145,6 +146,9 @@ class IDTokenCredentials(credentials.Credentials, credentials.Signing):
             service_account_email (str): Optional explicit service account to
                 use to sign JWT tokens.
                 By default, this is the default GCE service account.
+            signer (google.auth.crypt.Signer): The signer used to sign JWTs.
+                In case the signer is specified, the request argument will be
+                ignored.
         """
         super(IDTokenCredentials, self).__init__()
 
@@ -153,10 +157,12 @@ class IDTokenCredentials(credentials.Credentials, credentials.Signing):
             service_account_email = sa_info['email']
         self._service_account_email = service_account_email
 
-        self._signer = iam.Signer(
-            request=request,
-            credentials=Credentials(),
-            service_account_email=service_account_email)
+        if signer is None:
+            signer = iam.Signer(
+                request=request,
+                credentials=Credentials(),
+                service_account_email=service_account_email)
+        self._signer = signer
 
         self._token_uri = token_uri
         self._target_audience = target_audience
@@ -176,12 +182,15 @@ class IDTokenCredentials(credentials.Credentials, credentials.Signing):
             google.auth.service_account.IDTokenCredentials: A new credentials
                 instance.
         """
+        # since the signer is already instantiated,
+        # the request is not needed
         return self.__class__(
-            self._signer,
+            None,
             service_account_email=self._service_account_email,
             token_uri=self._token_uri,
             target_audience=target_audience,
-            additional_claims=self._additional_claims.copy())
+            additional_claims=self._additional_claims.copy(),
+            signer=self.signer)
 
     def _make_authorization_grant_assertion(self):
         """Create the OAuth 2.0 assertion.
