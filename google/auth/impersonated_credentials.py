@@ -262,7 +262,7 @@ class Credentials(credentials.Credentials,  credentials.Signing):
         response = authed_session.post(
             url=iam_sign_endpoint,
             headers=headers,
-            data=json.dumps(body).encode('utf-8'))
+            json=body)
 
         return base64.b64decode(response.json()['signedBlob'])
 

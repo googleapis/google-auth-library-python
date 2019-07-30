@@ -237,10 +237,11 @@ to assume the identity of a target_principal that does have access.
 Identity Tokens
 +++++++++++++++
 
-`Google OpenID Connect`_ tokens are avaiable through both ServiceAccount, ImpersonatedCredentials,
-and Compute modules.  These tokens can be used to authenticate against `Cloud Functions`_,
-`Cloud Run`_, a user service behind `Identity Aware Proxy`_ or any other service capable
-of verifying a `Google ID Token`_.
+`Google OpenID Connect`_ tokens are avaiable through :mod:`Service Account <google.oauth2.service_account>`,
+:mod:`Impersonated <google.auth.impersonated_credentials>`,
+and :mod:`Compute Engine <google.auth.compute_engine>`.  These tokens can be used to
+authenticate against `Cloud Functions`_, `Cloud Run`_, a user service behind
+`Identity Aware Proxy`_ or any other service capable of verifying a `Google ID Token`_.
 
 ServiceAccount ::
 
@@ -268,7 +269,7 @@ Impersonated ::
 
     from google.auth import impersonated_credentials
 
-    # get target_credentials from a source_credentials
+    # get target_credentials from a source_credential
 
     target_audience = 'https://example.com'
 
@@ -277,6 +278,33 @@ Impersonated ::
                                       target_audience=target_audience)
 
 IDToken verification can be done for various type of IDTokens using the :class:`google.oauth2.id_token` module 
+
+A sample end-to-end flow using an ID Token against a Cloud Run endpoint maybe ::
+
+    from google.oauth2 import id_token
+    from google.oauth2 import service_account
+    import google.auth
+    import google.auth.transport.requests
+    from google.auth.transport.requests import AuthorizedSession
+
+    target_audience = 'https://your-cloud-run-app.a.run.app'
+    url = 'https://your-cloud-run-app.a.run.app'
+
+    creds = service_account.IDTokenCredentials.from_service_account_file(
+            '/path/to/svc.json', target_audience=target_audience)
+
+    authed_session = AuthorizedSession(creds)
+
+    # make authenticated request and print the response, status_code
+    resp = authed_session.get(url)
+    print resp.status_code
+    print resp.text
+
+    # to verify an ID Token
+    request = google.auth.transport.requests.Request()
+    token = creds.token
+    print token
+    print id_token.verify_token(token,request)
 
 .. _Cloud Functions: https://cloud.google.com/functions/
 .. _Cloud Run: https://cloud.google.com/run/

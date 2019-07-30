@@ -35,6 +35,14 @@ with open(os.path.join(DATA_DIR, 'privatekey.pem'), 'rb') as fh:
 
 SERVICE_ACCOUNT_JSON_FILE = os.path.join(DATA_DIR, 'service_account.json')
 
+ID_TOKEN_DATA = ('eyJhbGciOiJSUzI1NiIsImtpZCI6ImRmMzc1ODkwOGI3OTIyOTNhZDk3N2Ew'
+                 'Yjk5MWQ5OGE3N2Y0ZWVlY2QiLCJ0eXAiOiJKV1QifQ.eyJhdWQiOiJodHRwc'
+                 'zovL2Zvby5iYXIiLCJhenAiOiIxMDIxMDE1NTA4MzQyMDA3MDg1NjgiLCJle'
+                 'HAiOjE1NjQ0NzUwNTEsImlhdCI6MTU2NDQ3MTQ1MSwiaXNzIjoiaHR0cHM6L'
+                 'y9hY2NvdW50cy5nb29nbGUuY29tIiwic3ViIjoiMTAyMTAxNTUwODM0MjAwN'
+                 'zA4NTY4In0.redacted')
+ID_TOKEN_EXPIRY = 1564475051
+
 with open(SERVICE_ACCOUNT_JSON_FILE, 'r') as fh:
     SERVICE_ACCOUNT_INFO = json.load(fh)
 
@@ -50,6 +58,38 @@ def mock_donor_credentials():
             _helpers.utcnow() + datetime.timedelta(seconds=500),
             {})
         yield grant
+
+
+class MockResponse:
+    def __init__(self, json_data, status_code):
+        self.json_data = json_data
+        self.status_code = status_code
+
+    def json(self):
+        return self.json_data
+
+
+@pytest.fixture
+def mock_authorizedsession_sign():
+    with mock.patch('google.auth.transport.requests.AuthorizedSession.request',
+                    autospec=True) as auth_session:
+        data = {
+            "keyId": "1",
+            "signedBlob": "c2lnbmF0dXJl"
+        }
+        auth_session.return_value = MockResponse(data, http_client.OK)
+        yield auth_session
+
+
+@pytest.fixture
+def mock_authorizedsession_idtoken():
+    with mock.patch('google.auth.transport.requests.AuthorizedSession.request',
+                    autospec=True) as auth_session:
+        data = {
+            "token": ID_TOKEN_DATA
+        }
+        auth_session.return_value = MockResponse(data, http_client.OK)
+        yield auth_session
 
 
 class TestImpersonatedCredentials(object):
@@ -194,9 +234,39 @@ class TestImpersonatedCredentials(object):
             target_principal=self.TARGET_PRINCIPAL)
         assert credentials.service_account_email == self.TARGET_PRINCIPAL
 
-    def test_sign_bytes(self, mock_donor_credentials):
+    def test_sign_bytes(self, mock_donor_credentials,
+                        mock_authorizedsession_sign):
         credentials = self.make_credentials(lifetime=None)
         token = 'token'
+
+        expire_time = (
+            _helpers.utcnow().replace(microsecond=0) +
+            datetime.timedelta(seconds=500)).isoformat('T') + 'Z'
+        token_response_body = {
+            "accessToken": token,
+            "expireTime": expire_time
+        }
+
+        response = mock.create_autospec(transport.Response, instance=False)
+        response.status = http_client.OK
+        response.data = _helpers.to_bytes(json.dumps(token_response_body))
+
+        request = mock.create_autospec(transport.Request, instance=False)
+        request.return_value = response
+
+        credentials.refresh(request)
+
+        assert credentials.valid
+        assert not credentials.expired
+
+        signature = credentials.sign_bytes(b'signed bytes')
+        assert signature == b'signature'
+
+    def test_id_token_success(self, mock_donor_credentials,
+                              mock_authorizedsession_idtoken):
+        credentials = self.make_credentials(lifetime=None)
+        token = 'token'
+        target_audience = 'https://foo.bar'
 
         expire_time = (
             _helpers.utcnow().replace(microsecond=0) +
@@ -210,31 +280,24 @@ class TestImpersonatedCredentials(object):
             data=json.dumps(response_body),
             status=http_client.OK)
 
-#        sign_response_body = {
-#            "keyId": "1",
-#            "signedBlob": "c2lnbmF0dXJl"
-#        }
-#        sign_response = mock.create_autospec(transport.Response,
-#                                             instance=True)
-#        sign_response.data = sign_response_body
-#        sign_response.status = http_client.OK
-#        sign_request = self.make_request(
-#            data=json.dumps(sign_response_body),
-#            status=http_client.OK, side_effect=[sign_response])
-
         credentials.refresh(request)
 
         assert credentials.valid
         assert not credentials.expired
 
-#        signature = credentials.sign_bytes(b"some bytes")
-#        assert signature == b'signature'
+        id_creds = impersonated_credentials.IDTokenCredentials(
+            credentials, target_audience=target_audience)
+        id_creds.refresh(request)
 
-    def test_id_token_success(self, mock_donor_credentials):
+        assert id_creds.token == ID_TOKEN_DATA
+        assert id_creds.expiry == datetime.datetime.fromtimestamp(
+                                  ID_TOKEN_EXPIRY)
+
+    def test_id_token_from_credential(self, mock_donor_credentials,
+                                      mock_authorizedsession_idtoken):
         credentials = self.make_credentials(lifetime=None)
         token = 'token'
-#        idtoken = 'idtoken'
-#        target_audience = 'https://foo.bar'
+        target_audience = 'https://foo.bar'
 
         expire_time = (
             _helpers.utcnow().replace(microsecond=0) +
@@ -248,23 +311,87 @@ class TestImpersonatedCredentials(object):
             data=json.dumps(response_body),
             status=http_client.OK)
 
-#        id_token_response_body = {
-#            "token": idtoken
-#        }
-#        id_token_response = mock.create_autospec(transport.Response,
-#                                                 instance=True)
-#        id_token_response.data = id_token_response_body
-#        id_token_response.status = http_client.OK
-#        sign_request = self.make_request(
-#            data=json.dumps(id_token_response_body),
-#            status=http_client.OK)
+        credentials.refresh(request)
+
+        assert credentials.valid
+        assert not credentials.expired
+
+        id_creds = impersonated_credentials.IDTokenCredentials(
+            credentials, target_audience=target_audience)
+        id_creds = id_creds.from_credentials(target_credentials=credentials)
+        id_creds.refresh(request)
+
+        assert id_creds.token == ID_TOKEN_DATA
+
+    def test_id_token_with_target_audience(self, mock_donor_credentials,
+                                           mock_authorizedsession_idtoken):
+        credentials = self.make_credentials(lifetime=None)
+        token = 'token'
+        target_audience = 'https://foo.bar'
+
+        expire_time = (
+            _helpers.utcnow().replace(microsecond=0) +
+            datetime.timedelta(seconds=500)).isoformat('T') + 'Z'
+        response_body = {
+            "accessToken": token,
+            "expireTime": expire_time
+        }
+
+        request = self.make_request(
+            data=json.dumps(response_body),
+            status=http_client.OK)
 
         credentials.refresh(request)
 
         assert credentials.valid
         assert not credentials.expired
 
-#        id_creds = impersonated_credentials.IDTokenCredentials(
-#            credentials, target_audience=target_audience)
-#        id_creds.refresh(request)
-#        assert id_creds.token == idtoken
+        id_creds = impersonated_credentials.IDTokenCredentials(
+            credentials)
+        id_creds = id_creds.with_target_audience(
+                   target_audience=target_audience)
+        id_creds.refresh(request)
+
+        assert id_creds.token == ID_TOKEN_DATA
+        assert id_creds.expiry == datetime.datetime.fromtimestamp(
+                                  ID_TOKEN_EXPIRY)
+
+    def test_id_token_invalid_cred(self, mock_donor_credentials,
+                                   mock_authorizedsession_idtoken):
+        credentials = None
+
+        with pytest.raises(exceptions.GoogleAuthError) as excinfo:
+            impersonated_credentials.IDTokenCredentials(credentials)
+
+        assert excinfo.match('Provided Credential must be'
+                             ' impersonated_credentials')
+
+    def test_id_token_with_include_email(self, mock_donor_credentials,
+                                         mock_authorizedsession_idtoken):
+        credentials = self.make_credentials(lifetime=None)
+        token = 'token'
+        target_audience = 'https://foo.bar'
+
+        expire_time = (
+            _helpers.utcnow().replace(microsecond=0) +
+            datetime.timedelta(seconds=500)).isoformat('T') + 'Z'
+        response_body = {
+            "accessToken": token,
+            "expireTime": expire_time
+        }
+
+        request = self.make_request(
+            data=json.dumps(response_body),
+            status=http_client.OK)
+
+        credentials.refresh(request)
+
+        assert credentials.valid
+        assert not credentials.expired
+
+        id_creds = impersonated_credentials.IDTokenCredentials(
+            credentials, target_audience=target_audience)
+        id_creds = id_creds.with_include_email(True)
+        id_creds.refresh(request)
+
+        assert id_creds.token == ID_TOKEN_DATA
