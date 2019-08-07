@@ -166,7 +166,7 @@ class Credentials(credentials.Credentials,  credentials.Signing):
         client = storage.Client(credentials=target_credentials)
         buckets = client.list_buckets(project='your_project')
         for bucket in buckets:
-          print bucket.name
+          print(bucket.name)
     """
 
     def __init__(self, source_credentials,  target_principal,
