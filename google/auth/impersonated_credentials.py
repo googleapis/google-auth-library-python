@@ -185,7 +185,7 @@ class Credentials(credentials.Credentials,  credentials.Signing):
                 granted to the prceeding identity.  For example, if set to
                 [serviceAccountB, serviceAccountC], the source_credential
                 must have the Token Creator role on serviceAccountB.
-                credentials.refresh(request) must have the Token Creator on
+                serviceAccountB must have the Token Creator on
                 serviceAccountC.
                 Finally, C must have Token Creator on target_principal.
                 If left unset, source_credential must have that role on
