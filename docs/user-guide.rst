@@ -227,7 +227,7 @@ the "Service Account Token Creator" IAM role. ::
     client = storage.Client(credentials=target_credentials)
     buckets = client.list_buckets(project='your_project')
     for bucket in buckets:
-        print bucket.name
+        print(bucket.name)
 
 
 In the example above `source_credentials` does not have direct access to list buckets
@@ -297,14 +297,14 @@ A sample end-to-end flow using an ID Token against a Cloud Run endpoint maybe ::
 
     # make authenticated request and print the response, status_code
     resp = authed_session.get(url)
-    print resp.status_code
-    print resp.text
+    print(resp.status_code)
+    print(resp.text)
 
     # to verify an ID Token
     request = google.auth.transport.requests.Request()
     token = creds.token
-    print token
-    print id_token.verify_token(token,request)
+    print(token)
+    print(id_token.verify_token(token,request))
 
 .. _Cloud Functions: https://cloud.google.com/functions/
 .. _Cloud Run: https://cloud.google.com/run/
