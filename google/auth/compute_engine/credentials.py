@@ -19,17 +19,13 @@ Engine using the Compute Engine metadata server.
 
 """
 
-import datetime
-
 import six
 
 from google.auth import _helpers
 from google.auth import credentials
 from google.auth import exceptions
 from google.auth import iam
-from google.auth import jwt
 from google.auth.compute_engine import _metadata
-from google.oauth2 import _client
 
 
 class Credentials(credentials.ReadOnlyScoped, credentials.Credentials):
@@ -131,7 +127,9 @@ class IDTokenCredentials(credentials.Credentials, credentials.Signing):
     def __init__(self, request, target_audience,
                  token_uri=_DEFAULT_TOKEN_URI,
                  additional_claims=None,
-                 service_account_email=None):
+                 service_account_email=None,
+                 token_format='standard',
+                 include_license=False):
         """
         Args:
             request (google.auth.transport.Request): The object used to make
@@ -160,64 +158,44 @@ class IDTokenCredentials(credentials.Credentials, credentials.Signing):
 
         self._token_uri = token_uri
         self._target_audience = target_audience
+        self._request = request
 
         if additional_claims is not None:
             self._additional_claims = additional_claims
         else:
             self._additional_claims = {}
 
-    def with_target_audience(self, target_audience):
+        self._include_license = include_license
+        self._token_format = token_format
+        if include_license:
+            self._token_format = 'full'
+
+    def with_target_audience(self, audience):
         """Create a copy of these credentials with the specified target
         audience.
         Args:
-            target_audience (str): The intended audience for these credentials,
+            audience (str): The intended audience for these credentials,
             used when requesting the ID Token.
         Returns:
             google.auth.service_account.IDTokenCredentials: A new credentials
                 instance.
         """
         return self.__class__(
-            self._signer,
+            request=self._request,
             service_account_email=self._service_account_email,
             token_uri=self._token_uri,
-            target_audience=target_audience,
-            additional_claims=self._additional_claims.copy())
-
-    def _make_authorization_grant_assertion(self):
-        """Create the OAuth 2.0 assertion.
-        This assertion is used during the OAuth 2.0 grant to acquire an
-        ID token.
-        Returns:
-            bytes: The authorization grant assertion.
-        """
-        now = _helpers.utcnow()
-        lifetime = datetime.timedelta(seconds=_DEFAULT_TOKEN_LIFETIME_SECS)
-        expiry = now + lifetime
-
-        payload = {
-            'iat': _helpers.datetime_to_secs(now),
-            'exp': _helpers.datetime_to_secs(expiry),
-            # The issuer must be the service account email.
-            'iss': self.service_account_email,
-            # The audience must be the auth token endpoint's URI
-            'aud': self._token_uri,
-            # The target audience specifies which service the ID token is
-            # intended for.
-            'target_audience': self._target_audience
-        }
-
-        payload.update(self._additional_claims)
-
-        token = jwt.encode(self._signer, payload)
-
-        return token
+            additional_claims=self._additional_claims.copy(),
+            token_format=self._token_format,
+            include_license=self._include_license,
+            target_audience=audience)
 
     @_helpers.copy_docstring(credentials.Credentials)
     def refresh(self, request):
-        assertion = self._make_authorization_grant_assertion()
-        access_token, expiry, _ = _client.id_token_jwt_grant(
-            request, self._token_uri, assertion)
-        self.token = access_token
+        id_token, expiry = _metadata.get_id_token(
+            request,
+            self._service_account_email, self._target_audience,
+            self._token_format, self._include_license)
+        self.token = id_token
         self.expiry = expiry
 
     @property
@@ -237,3 +215,42 @@ class IDTokenCredentials(credentials.Credentials, credentials.Signing):
     @property
     def signer_email(self):
         return self._service_account_email
+
+    def with_token_format(self, token_format):
+        """Create a copy of these credentials but also add on the specified
+        format to the id_token
+        Args:
+            token_format (str): Format for the id_token:  valid values
+            (standard or full)
+        Returns:
+            google.auth.service_account.IDTokenCredentials: A new credentials
+                instance.
+        """
+        return self.__class__(
+            self._signer,
+            service_account_email=self._service_account_email,
+            token_uri=self._token_uri,
+            target_audience=self._target_audience,
+            additional_claims=self._additional_claims.copy(),
+            token_format=token_format,
+            include_license=self._include_license)
+
+    def with_license(self, include_license):
+        """Create a copy of these credentials but also add on license
+        informaton to the id_token
+        Args:
+            include_license (bool): Add license information to the id_token
+        Returns:
+            google.auth.service_account.IDTokenCredentials: A new credentials
+                instance.
+        """
+        if include_license:
+            self._token_format = 'full'
+        return self.__class__(
+            self._signer,
+            service_account_email=self._service_account_email,
+            token_uri=self._token_uri,
+            target_audience=self._target_audience,
+            additional_claims=self._additional_claims.copy(),
+            token_format=self._token_format,
+            include_license=include_license)
