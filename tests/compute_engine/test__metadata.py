@@ -20,14 +20,73 @@ import mock
 import pytest
 from six.moves import http_client
 from six.moves import reload_module
+from six.moves import urllib
 
 from google.auth import _helpers
+from google.auth import crypt
 from google.auth import environment_vars
 from google.auth import exceptions
+from google.auth import jwt
 from google.auth import transport
 from google.auth.compute_engine import _metadata
 
 PATH = 'instance/service-accounts/default'
+
+DATA_DIR = os.path.join(os.path.dirname(__file__), '..', 'data')
+
+with open(os.path.join(DATA_DIR, 'privatekey.pem'), 'rb') as fh:
+    PRIVATE_KEY_BYTES = fh.read()
+
+with open(os.path.join(DATA_DIR, 'public_cert.pem'), 'rb') as fh:
+    PUBLIC_CERT_BYTES = fh.read()
+
+with open(os.path.join(DATA_DIR, 'other_cert.pem'), 'rb') as fh:
+    OTHER_CERT_BYTES = fh.read()
+
+SERVICE_ACCOUNT_JSON_FILE = os.path.join(DATA_DIR, 'service_account.json')
+
+with open(SERVICE_ACCOUNT_JSON_FILE, 'r') as fh:
+    SERVICE_ACCOUNT_INFO = json.load(fh)
+
+
+@pytest.fixture
+def signer():
+    return crypt.RSASigner.from_string(PRIVATE_KEY_BYTES, '1')
+
+
+@pytest.fixture
+def token_factory(signer):
+    def factory(claims=None, use_full_format=False, include_license=False):
+        now = _helpers.datetime_to_secs(_helpers.utcnow())
+        payload = {
+            'aud': 'https://example.com',
+            'iat': now,
+            'exp': now + 300
+        }
+        payload.update(claims or {})
+        extended_format = {}
+        if use_full_format:
+            extended_format = {
+                "google": {
+                    "compute_engine": {
+                        "project_id": "foo"
+                    }
+                }
+            }
+        if include_license:
+            extended_format = {
+                "google": {
+                    "compute_engine": {
+                        "project_id": "foo",
+                        "license_id": [
+                            "bar"
+                            ]
+                    }
+                }
+            }
+        payload.update(extended_format)
+        return jwt.encode(signer, payload)
+    return factory
 
 
 def make_request(data, status=http_client.OK, headers=None):
@@ -196,6 +255,95 @@ def test_get_service_account_token(utcnow):
         headers=_metadata._METADATA_HEADERS)
     assert token == 'token'
     assert expiry == utcnow() + datetime.timedelta(seconds=ttl)
+
+
+def test_get_id_token_default(token_factory):
+    service_account = 'default'
+    target_audience = 'https://example.com'
+
+    expire_at = _helpers.datetime_to_secs(
+        _helpers.utcnow() + datetime.timedelta(hours=1))
+    claims = {'exp': expire_at, 'aud': target_audience}
+
+    tok = token_factory(claims=claims)
+
+    request = make_request(
+        tok,
+        headers={'content-type': 'text/html'})
+
+    token, expiry = _metadata.get_id_token(
+      request, service_account=service_account,
+      target_audience=target_audience)
+
+    request.assert_called_once_with(
+        method='GET',
+        url=_metadata._METADATA_ROOT + PATH + '/identity?audience=' +
+        urllib.parse.quote_plus(target_audience) +
+        '&format=standard&licenses=FALSE',
+        headers=_metadata._METADATA_HEADERS)
+
+    assert token == tok.decode("utf-8")
+    assert expiry == datetime.datetime.utcfromtimestamp(expire_at)
+
+
+def test_get_id_token_full(token_factory):
+    service_account = 'default'
+    target_audience = 'https://example.com'
+
+    expire_at = _helpers.datetime_to_secs(
+        _helpers.utcnow() + datetime.timedelta(hours=1))
+    claims = {'exp': expire_at, 'aud': target_audience}
+
+    tok = token_factory(claims=claims, use_full_format=True)
+
+    request = make_request(
+        tok,
+        headers={'content-type': 'text/html'})
+
+    token, expiry = _metadata.get_id_token(
+      request, service_account=service_account,
+      target_audience=target_audience, token_format="full",
+      include_license="FALSE")
+
+    request.assert_called_once_with(
+        method='GET',
+        url=_metadata._METADATA_ROOT + PATH + '/identity?audience=' +
+        urllib.parse.quote_plus(target_audience) +
+        '&format=full&licenses=FALSE',
+        headers=_metadata._METADATA_HEADERS)
+
+    assert token == tok.decode("utf-8")
+    assert expiry == datetime.datetime.utcfromtimestamp(expire_at)
+
+
+def test_get_id_token_with_license(token_factory):
+    service_account = 'default'
+    target_audience = 'https://example.com'
+
+    expire_at = _helpers.datetime_to_secs(
+        _helpers.utcnow() + datetime.timedelta(hours=1))
+    claims = {'exp': expire_at, 'aud': target_audience}
+
+    tok = token_factory(claims=claims, include_license=True)
+
+    request = make_request(
+        tok,
+        headers={'content-type': 'text/html'})
+
+    token, expiry = _metadata.get_id_token(
+      request, service_account=service_account,
+      target_audience=target_audience, token_format="full",
+      include_license="TRUE")
+
+    request.assert_called_once_with(
+        method='GET',
+        url=_metadata._METADATA_ROOT + PATH + '/identity?audience=' +
+        urllib.parse.quote_plus(target_audience) +
+        '&format=full&licenses=TRUE',
+        headers=_metadata._METADATA_HEADERS)
+
+    assert token == tok.decode("utf-8")
+    assert expiry == datetime.datetime.utcfromtimestamp(expire_at)
 
 
 def test_get_service_account_info():

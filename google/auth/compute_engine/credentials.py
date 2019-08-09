@@ -119,10 +119,12 @@ _DEFAULT_TOKEN_URI = 'https://www.googleapis.com/oauth2/v4/token'
 class IDTokenCredentials(credentials.Credentials, credentials.Signing):
     """Open ID Connect ID Token-based service account credentials.
 
-    These credentials relies on the default service account of a GCE instance.
+    These credentials relies on the default service account and metadata
+    server of a GCE instance.
 
-    In order for this to work, the GCE instance must have been started with
-    a service account that has access to the IAM Cloud API.
+    In order to using the signer or sign_bytes capability directly, the GCE
+    instance must have been started with a service account that has access
+    to the IAM Cloud API.
     """
     def __init__(self, request, target_audience,
                  token_uri=_DEFAULT_TOKEN_URI,
@@ -138,11 +140,10 @@ class IDTokenCredentials(credentials.Credentials, credentials.Signing):
                 used when requesting the ID Token. The ID Token's ``aud`` claim
                 will be set to this string.
             token_uri (str): The OAuth 2.0 Token URI.
-            additional_claims (Mapping[str, str]): Any additional claims for
-                the JWT assertion used in the authorization grant.
+            additional_claims (Mapping[str, str]): Unused.
             service_account_email (str): Optional explicit service account to
-                use to sign JWT tokens.
-                By default, this is the default GCE service account.
+                sign with.  For id tokens, this must be set to `default` or
+                to the service account the VM runs as.
         """
         super(IDTokenCredentials, self).__init__()
 
@@ -235,7 +236,7 @@ class IDTokenCredentials(credentials.Credentials, credentials.Signing):
             token_format=token_format,
             include_license=self._include_license)
 
-    def with_license(self, include_license):
+    def with_license(self, include_license=False):
         """Create a copy of these credentials but also add on license
         informaton to the id_token
         Args:
@@ -244,8 +245,7 @@ class IDTokenCredentials(credentials.Credentials, credentials.Signing):
             google.auth.service_account.IDTokenCredentials: A new credentials
                 instance.
         """
-        if include_license:
-            self._token_format = 'full'
+        self._token_format = 'full'
         return self.__class__(
             self._signer,
             service_account_email=self._service_account_email,

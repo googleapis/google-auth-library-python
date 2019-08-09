@@ -29,6 +29,7 @@ from six.moves.urllib import parse as urlparse
 from google.auth import _helpers
 from google.auth import environment_vars
 from google.auth import exceptions
+from google.auth import jwt
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -210,6 +211,7 @@ def get_service_account_token(request, service_account='default'):
         seconds=token_json['expires_in'])
     return token_json['access_token'], token_expiry
 
+
 def get_id_token(request, service_account='default', target_audience=None,
                  token_format='standard', include_license="FALSE"):
     """Get the OAuth 2.0 access token for a service account.
@@ -233,7 +235,8 @@ def get_id_token(request, service_account='default', target_audience=None,
 
     token_jwt = get(
         request,
-        'instance/service-accounts/{0}/identity?audience={1}&format={2}&licenses={3}'.format(
+        ('instance/service-accounts/{0}/identity?audience={1}'
+         '&format={2}&licenses={3}').format(
             service_account, target_audience, token_format, include_license))
     payload = jwt.decode(token_jwt, verify=False)
     expiry = datetime.datetime.utcfromtimestamp(payload['exp'])

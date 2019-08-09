@@ -248,6 +248,7 @@ In the example above `source_credentials` does not have direct access to list bu
 in the target project.  Using `ImpersonatedCredentials` will allow the source_credentials
 to assume the identity of a target_principal that does have access.
 
+<<<<<<< HEAD
 Identity Tokens
 +++++++++++++++
 
@@ -256,6 +257,16 @@ Identity Tokens
 and :mod:`Compute Engine <google.auth.compute_engine>`.  These tokens can be used to
 authenticate against `Cloud Functions`_, `Cloud Run`_, a user service behind
 `Identity Aware Proxy`_ or any other service capable of verifying a `Google ID Token`_.
+=======
+
+Identity Tokens
++++++++++++++++
+
+`Google OpenID Connect`_ tokens are avaiable through both ServiceAccount and Compute modules.  
+These tokens can be used to authenticate against `Cloud Functions`_, `Cloud Run`_,
+against a service behind `Identity Aware Proxy`_ or any other service capable of verifying
+a `Google ID Token`_.
+>>>>>>> 48f5233b8c91aca541188684f2764b5f03d43574
 
 ServiceAccount ::
 
@@ -279,6 +290,7 @@ Compute ::
     creds = compute_engine.IDTokenCredentials(request,
                             target_audience=target_audience)
 
+<<<<<<< HEAD
 Impersonated ::
 
     from google.auth import impersonated_credentials
@@ -320,6 +332,10 @@ A sample end-to-end flow using an ID Token against a Cloud Run endpoint maybe ::
     print(token)
     print(id_token.verify_token(token,request))
 
+=======
+IDToken verification can be done for various type of IDTokens using the :class:`google.oauth2.id_token` module 
+
+>>>>>>> 48f5233b8c91aca541188684f2764b5f03d43574
 .. _Cloud Functions: https://cloud.google.com/functions/
 .. _Cloud Run: https://cloud.google.com/run/
 .. _Identity Aware Proxy: https://cloud.google.com/iap/
