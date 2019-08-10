@@ -20,7 +20,7 @@ import mock
 import pytest
 from six.moves import http_client
 from six.moves import reload_module
-from six.moves import urllib
+from six.moves.urllib import parse as urlparse
 
 from google.auth import _helpers
 from google.auth import crypt
@@ -275,11 +275,14 @@ def test_get_id_token_default(token_factory):
       request, service_account=service_account,
       target_audience=target_audience)
 
+    base_url = urlparse.urljoin(_metadata._METADATA_ROOT, PATH + '/identity')
+    query_params = {'format': 'standard', 'licenses': 'FALSE',
+                    'audience': target_audience}
+    url = _helpers.update_query(base_url, query_params)
+
     request.assert_called_once_with(
         method='GET',
-        url=_metadata._METADATA_ROOT + PATH + '/identity?audience=' +
-        urllib.parse.quote_plus(target_audience) +
-        '&format=standard&licenses=FALSE',
+        url=url,
         headers=_metadata._METADATA_HEADERS)
 
     assert token == tok.decode("utf-8")
@@ -305,11 +308,14 @@ def test_get_id_token_full(token_factory):
       target_audience=target_audience, token_format="full",
       include_license="FALSE")
 
+    base_url = urlparse.urljoin(_metadata._METADATA_ROOT, PATH + '/identity')
+    query_params = {'format': 'full', 'licenses': 'FALSE',
+                    'audience': target_audience}
+    url = _helpers.update_query(base_url, query_params)
+
     request.assert_called_once_with(
         method='GET',
-        url=_metadata._METADATA_ROOT + PATH + '/identity?audience=' +
-        urllib.parse.quote_plus(target_audience) +
-        '&format=full&licenses=FALSE',
+        url=url,
         headers=_metadata._METADATA_HEADERS)
 
     assert token == tok.decode("utf-8")
@@ -335,11 +341,14 @@ def test_get_id_token_with_license(token_factory):
       target_audience=target_audience, token_format="full",
       include_license="TRUE")
 
+    base_url = urlparse.urljoin(_metadata._METADATA_ROOT, PATH + '/identity')
+    query_params = {'format': 'full', 'licenses': 'TRUE',
+                    'audience': target_audience}
+    url = _helpers.update_query(base_url, query_params)
+
     request.assert_called_once_with(
         method='GET',
-        url=_metadata._METADATA_ROOT + PATH + '/identity?audience=' +
-        urllib.parse.quote_plus(target_audience) +
-        '&format=full&licenses=TRUE',
+        url=url,
         headers=_metadata._METADATA_HEADERS)
 
     assert token == tok.decode("utf-8")

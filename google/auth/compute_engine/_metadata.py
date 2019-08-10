@@ -232,12 +232,17 @@ def get_id_token(request, service_account='default', target_audience=None,
         google.auth.exceptions.TransportError: if an error occurred while
             retrieving metadata.
     """
+    PATH = 'instance/service-accounts/{0}'.format(service_account)
+    base_url = urlparse.urljoin(_METADATA_ROOT, PATH + '/identity')
+    query_params = {'format': token_format, 'licenses': include_license,
+                    'audience': target_audience}
+    url = _helpers.update_query(base_url, query_params)
+    parts = urlparse.urlparse(url)
 
     token_jwt = get(
         request,
-        ('instance/service-accounts/{0}/identity?audience={1}'
-         '&format={2}&licenses={3}').format(
-            service_account, target_audience, token_format, include_license))
+        ('instance/service-accounts/{0}/identity?{1}').format(
+            service_account, parts.query))
     payload = jwt.decode(token_jwt, verify=False)
     expiry = datetime.datetime.utcfromtimestamp(payload['exp'])
     return token_jwt, expiry
