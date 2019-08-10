@@ -29,6 +29,7 @@ from six.moves.urllib import parse as urlparse
 from google.auth import _helpers
 from google.auth import environment_vars
 from google.auth import exceptions
+from google.auth import jwt
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -209,3 +210,39 @@ def get_service_account_token(request, service_account='default'):
     token_expiry = _helpers.utcnow() + datetime.timedelta(
         seconds=token_json['expires_in'])
     return token_json['access_token'], token_expiry
+
+
+def get_id_token(request, service_account='default', target_audience=None,
+                 token_format='standard', include_license="FALSE"):
+    """Get the OAuth 2.0 access token for a service account.
+
+    Args:
+        request (google.auth.transport.Request): A callable used to make
+            HTTP requests.
+        service_account (str): The string 'default' or a service account email
+            address. This determines which Authorized party (`azp:`, `email:`)
+            that the token is issued to
+        target_audience (str): The audience for this id_token will be issued
+            (`aud:` field)
+
+    Returns:
+        Union[str, datetime]: The id token and its expiration.
+
+    Raises:
+        google.auth.exceptions.TransportError: if an error occurred while
+            retrieving metadata.
+    """
+    PATH = 'instance/service-accounts/{0}'.format(service_account)
+    base_url = urlparse.urljoin(_METADATA_ROOT, PATH + '/identity')
+    query_params = {'format': token_format, 'licenses': include_license,
+                    'audience': target_audience}
+    url = _helpers.update_query(base_url, query_params)
+    parts = urlparse.urlparse(url)
+
+    token_jwt = get(
+        request,
+        ('instance/service-accounts/{0}/identity?{1}').format(
+            service_account, parts.query))
+    payload = jwt.decode(token_jwt, verify=False)
+    expiry = datetime.datetime.utcfromtimestamp(payload['exp'])
+    return token_jwt, expiry

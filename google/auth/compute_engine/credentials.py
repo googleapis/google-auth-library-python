@@ -19,17 +19,13 @@ Engine using the Compute Engine metadata server.
 
 """
 
-import datetime
-
 import six
 
 from google.auth import _helpers
 from google.auth import credentials
 from google.auth import exceptions
 from google.auth import iam
-from google.auth import jwt
 from google.auth.compute_engine import _metadata
-from google.oauth2 import _client
 
 
 class Credentials(credentials.ReadOnlyScoped, credentials.Credentials):
@@ -123,15 +119,38 @@ _DEFAULT_TOKEN_URI = 'https://www.googleapis.com/oauth2/v4/token'
 class IDTokenCredentials(credentials.Credentials, credentials.Signing):
     """Open ID Connect ID Token-based service account credentials.
 
-    These credentials relies on the default service account of a GCE instance.
+    These credentials relies on the default service account and metadata
+    server of a GCE instance.
 
-    In order for this to work, the GCE instance must have been started with
-    a service account that has access to the IAM Cloud API.
+    The ID Token provided by this credential is provideb by the Compute
+    metadata server service account.  For more information about the ID,
+    see `Obtaining the instance identity token`_.
+
+    In order to use the signer or sign_bytes capability directly, the GCE
+    instance must have been started with a service account that has access
+    to the IAM Cloud API and specifically the service account must be granted
+    the `roles/iam.serviceAccountTokenCreator` role.  For more information on
+    IAM roles, see `Understanding Roles`_.
+
+    NOTE:  The ID Token is provided by the Metadata server and does _not_
+    require this IAM role since the token is provided directly by the metadata
+    server.  If you do need to `Singer` capability with this credential type,
+    consider using :class:`~google.auth.impersonated_credentials` instead
+    since signing bytes directly with
+    :class:`compute_engine.IDTokenCredentials` internally should not be
+    exposed.
+
+    .. _Obtaining the instance identity token:
+        https://cloud.google.com/compute/docs/instances/verifying-instance-identity#request_signature
+    .. _Understanding Roles:
+        https://cloud.google.com/iam/docs/understanding-roles#service-accounts-roles
     """
     def __init__(self, request, target_audience,
                  token_uri=_DEFAULT_TOKEN_URI,
                  additional_claims=None,
-                 service_account_email=None):
+                 service_account_email=None,
+                 token_format='standard',
+                 include_license=False):
         """
         Args:
             request (google.auth.transport.Request): The object used to make
@@ -140,11 +159,15 @@ class IDTokenCredentials(credentials.Credentials, credentials.Signing):
                 used when requesting the ID Token. The ID Token's ``aud`` claim
                 will be set to this string.
             token_uri (str): The OAuth 2.0 Token URI.
-            additional_claims (Mapping[str, str]): Any additional claims for
-                the JWT assertion used in the authorization grant.
+            additional_claims (Mapping[str, str]): Unused.
             service_account_email (str): Optional explicit service account to
-                use to sign JWT tokens.
-                By default, this is the default GCE service account.
+                sign with.  For id tokens, this must be set to `default` or
+                to the service account the VM runs as.
+            token_format (str): ID Token format to return with the request.
+                Valid options are 'standard' or 'full'.
+            include_license (bool):  Flag to include the license information
+                within the ID Token.  Using this flag will automatically enable
+                full token_format.
         """
         super(IDTokenCredentials, self).__init__()
 
@@ -160,64 +183,44 @@ class IDTokenCredentials(credentials.Credentials, credentials.Signing):
 
         self._token_uri = token_uri
         self._target_audience = target_audience
+        self._request = request
 
         if additional_claims is not None:
             self._additional_claims = additional_claims
         else:
             self._additional_claims = {}
 
-    def with_target_audience(self, target_audience):
+        self._include_license = include_license
+        self._token_format = token_format
+        if include_license:
+            self._token_format = 'full'
+
+    def with_target_audience(self, audience):
         """Create a copy of these credentials with the specified target
         audience.
         Args:
-            target_audience (str): The intended audience for these credentials,
+            audience (str): The intended audience for these credentials,
             used when requesting the ID Token.
         Returns:
             google.auth.service_account.IDTokenCredentials: A new credentials
                 instance.
         """
         return self.__class__(
-            self._signer,
+            request=self._request,
             service_account_email=self._service_account_email,
             token_uri=self._token_uri,
-            target_audience=target_audience,
-            additional_claims=self._additional_claims.copy())
-
-    def _make_authorization_grant_assertion(self):
-        """Create the OAuth 2.0 assertion.
-        This assertion is used during the OAuth 2.0 grant to acquire an
-        ID token.
-        Returns:
-            bytes: The authorization grant assertion.
-        """
-        now = _helpers.utcnow()
-        lifetime = datetime.timedelta(seconds=_DEFAULT_TOKEN_LIFETIME_SECS)
-        expiry = now + lifetime
-
-        payload = {
-            'iat': _helpers.datetime_to_secs(now),
-            'exp': _helpers.datetime_to_secs(expiry),
-            # The issuer must be the service account email.
-            'iss': self.service_account_email,
-            # The audience must be the auth token endpoint's URI
-            'aud': self._token_uri,
-            # The target audience specifies which service the ID token is
-            # intended for.
-            'target_audience': self._target_audience
-        }
-
-        payload.update(self._additional_claims)
-
-        token = jwt.encode(self._signer, payload)
-
-        return token
+            additional_claims=self._additional_claims.copy(),
+            token_format=self._token_format,
+            include_license=self._include_license,
+            target_audience=audience)
 
     @_helpers.copy_docstring(credentials.Credentials)
     def refresh(self, request):
-        assertion = self._make_authorization_grant_assertion()
-        access_token, expiry, _ = _client.id_token_jwt_grant(
-            request, self._token_uri, assertion)
-        self.token = access_token
+        id_token, expiry = _metadata.get_id_token(
+            request,
+            self._service_account_email, self._target_audience,
+            self._token_format, self._include_license)
+        self.token = id_token
         self.expiry = expiry
 
     @property
@@ -237,3 +240,41 @@ class IDTokenCredentials(credentials.Credentials, credentials.Signing):
     @property
     def signer_email(self):
         return self._service_account_email
+
+    def with_token_format(self, token_format):
+        """Create a copy of these credentials but also add on the specified
+        format to the id_token
+        Args:
+            token_format (str): Format for the id_token:  valid values
+            (standard or full)
+        Returns:
+            google.auth.service_account.IDTokenCredentials: A new credentials
+                instance.
+        """
+        return self.__class__(
+            self._signer,
+            service_account_email=self._service_account_email,
+            token_uri=self._token_uri,
+            target_audience=self._target_audience,
+            additional_claims=self._additional_claims.copy(),
+            token_format=token_format,
+            include_license=self._include_license)
+
+    def with_license(self, include_license=False):
+        """Create a copy of these credentials but also add on license
+        informaton to the id_token
+        Args:
+            include_license (bool): Add license information to the id_token
+        Returns:
+            google.auth.service_account.IDTokenCredentials: A new credentials
+                instance.
+        """
+        self._token_format = 'full'
+        return self.__class__(
+            self._signer,
+            service_account_email=self._service_account_email,
+            token_uri=self._token_uri,
+            target_audience=self._target_audience,
+            additional_claims=self._additional_claims.copy(),
+            token_format=self._token_format,
+            include_license=include_license)
