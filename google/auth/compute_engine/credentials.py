@@ -122,9 +122,9 @@ class IDTokenCredentials(credentials.Credentials, credentials.Signing):
     These credentials relies on the default service account and metadata
     server of a GCE instance.
 
-    The ID Token provided by this credential is provideb by the Compute
-    metadata server service account.  For more information about the ID,
-    see `Obtaining the instance identity token`_.
+    The ID Token provided by this credential is by the Compute
+    metadata server service account.  For more information about this token
+    type, see `Obtaining the instance identity token`_.
 
     In order to use the signer or sign_bytes capability directly, the GCE
     instance must have been started with a service account that has access
@@ -198,9 +198,11 @@ class IDTokenCredentials(credentials.Credentials, credentials.Signing):
     def with_target_audience(self, audience):
         """Create a copy of these credentials with the specified target
         audience.
+
         Args:
             audience (str): The intended audience for these credentials,
-            used when requesting the ID Token.
+                used when requesting the ID Token.
+
         Returns:
             google.auth.service_account.IDTokenCredentials: A new credentials
                 instance.
@@ -244,9 +246,11 @@ class IDTokenCredentials(credentials.Credentials, credentials.Signing):
     def with_token_format(self, token_format):
         """Create a copy of these credentials but also add on the specified
         format to the id_token
+
         Args:
             token_format (str): Format for the id_token:  valid values
-            (standard or full)
+                (standard or full)
+
         Returns:
             google.auth.service_account.IDTokenCredentials: A new credentials
                 instance.
@@ -263,8 +267,10 @@ class IDTokenCredentials(credentials.Credentials, credentials.Signing):
     def with_license(self, include_license=False):
         """Create a copy of these credentials but also add on license
         informaton to the id_token
+
         Args:
             include_license (bool): Add license information to the id_token
+
         Returns:
             google.auth.service_account.IDTokenCredentials: A new credentials
                 instance.

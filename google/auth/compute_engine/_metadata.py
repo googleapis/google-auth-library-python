@@ -213,7 +213,7 @@ def get_service_account_token(request, service_account='default'):
 
 
 def get_id_token(request, service_account='default', target_audience=None,
-                 token_format='standard', include_license="FALSE"):
+                 token_format='standard', include_license=False):
     """Get the OAuth 2.0 access token for a service account.
 
     Args:
@@ -224,6 +224,9 @@ def get_id_token(request, service_account='default', target_audience=None,
             that the token is issued to
         target_audience (str): The audience for this id_token will be issued
             (`aud:` field)
+        token_format (str): ID token format.  Either 'full' or 'standard'
+            (default)
+        include_license (bool):  Include any license information in the token.
 
     Returns:
         Union[str, datetime]: The id token and its expiration.

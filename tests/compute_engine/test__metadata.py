@@ -276,7 +276,7 @@ def test_get_id_token_default(token_factory):
       target_audience=target_audience)
 
     base_url = urlparse.urljoin(_metadata._METADATA_ROOT, PATH + '/identity')
-    query_params = {'format': 'standard', 'licenses': 'FALSE',
+    query_params = {'format': 'standard', 'licenses': False,
                     'audience': target_audience}
     url = _helpers.update_query(base_url, query_params)
 
@@ -306,10 +306,10 @@ def test_get_id_token_full(token_factory):
     token, expiry = _metadata.get_id_token(
       request, service_account=service_account,
       target_audience=target_audience, token_format="full",
-      include_license="FALSE")
+      include_license=False)
 
     base_url = urlparse.urljoin(_metadata._METADATA_ROOT, PATH + '/identity')
-    query_params = {'format': 'full', 'licenses': 'FALSE',
+    query_params = {'format': 'full', 'licenses': False,
                     'audience': target_audience}
     url = _helpers.update_query(base_url, query_params)
 
@@ -339,10 +339,10 @@ def test_get_id_token_with_license(token_factory):
     token, expiry = _metadata.get_id_token(
       request, service_account=service_account,
       target_audience=target_audience, token_format="full",
-      include_license="TRUE")
+      include_license=True)
 
     base_url = urlparse.urljoin(_metadata._METADATA_ROOT, PATH + '/identity')
-    query_params = {'format': 'full', 'licenses': 'TRUE',
+    query_params = {'format': 'full', 'licenses': True,
                     'audience': target_audience}
     url = _helpers.update_query(base_url, query_params)
 
