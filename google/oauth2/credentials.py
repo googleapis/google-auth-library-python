@@ -33,6 +33,7 @@ Authorization Code grant flow.
 
 import io
 import json
+import copy
 
 import six
 
@@ -157,17 +158,14 @@ class Credentials(credentials.ReadOnlyScoped, credentials.Credentials):
     @classmethod
     def from_authorized_user_info(cls, info, scopes=None):
         """Creates a Credentials instance from parsed authorized user info.
-
         Args:
             info (Mapping[str, str]): The authorized user info in Google
                 format.
             scopes (Sequence[str]): Optional list of scopes to include in the
                 credentials.
-
         Returns:
             google.oauth2.credentials.Credentials: The constructed
                 credentials.
-
         Raises:
             ValueError: If the info is not in the expected format.
         """
@@ -179,30 +177,132 @@ class Credentials(credentials.ReadOnlyScoped, credentials.Credentials):
                 'Authorized user info was not in the expected format, missing '
                 'fields {}.'.format(', '.join(missing)))
 
+        # Scopes shouldn't be needed for authorized credentials, but can be
+        # useful to keep for accounting of stored credentials.
+        # This lets stored scopes be imported, instead of relying solely on
+        # scopes passed as method arguments.
+        if scopes is not None:
+            _scopes = set(scopes+info.get('scopes'))
+        else:
+            _scopes = info.get('scopes')
+
+        # TODO: what is the idea behind passing scopes as arguments here and in
+        # `from_authorized_user_file` below? Should it go away? Should it be
+        # passed in a more consistent way, together with `info`? Why should they
+        # be separate from `info`?
+
         return cls(
+            # TODO: ignoring the access token and letting the upper layers
+            # handle token refresh works, but is it the right way to do? We
+            # could have a valid token that doesn't need refresh in case a
+            # script runs every few minutes.
             None,  # No access token, must be refreshed.
             refresh_token=info['refresh_token'],
             token_uri=_GOOGLE_OAUTH2_TOKEN_ENDPOINT,
-            scopes=scopes,
+            scopes=_scopes,
             client_id=info['client_id'],
             client_secret=info['client_secret'])
 
     @classmethod
     def from_authorized_user_file(cls, filename, scopes=None):
         """Creates a Credentials instance from an authorized user json file.
-
         Args:
             filename (str): The path to the authorized user json file.
             scopes (Sequence[str]): Optional list of scopes to include in the
                 credentials.
-
         Returns:
             google.oauth2.credentials.Credentials: The constructed
                 credentials.
-
         Raises:
             ValueError: If the file is not in the expected format.
         """
         with io.open(filename, 'r', encoding='utf-8') as json_file:
             data = json.load(json_file)
             return cls.from_authorized_user_info(data, scopes)
+
+    def to_json(self, strip=None, to_serialize=None, indent=2):
+        """Utility function that creates JSON repr. of a Credentials object.
+        Args:
+            strip: array, (Optional) An array of names of members to exclude
+                   from the JSON.
+            to_serialize: dict, (Optional) The properties for this object
+                          that will be serialized. This allows callers to
+                          modify before serializing.
+        Returns:
+            string, a JSON representation of this instance, suitable to pass to
+            from_json().
+
+        Adjusted from https://github.com/googleapis/oauth2client.
+        """
+        # curr_type = self.__class__
+
+        # if to_serialize is not None:
+        #     # Assumes it is a str->str dictionary, so we don't deep copy.
+        #     to_serialize = copy.copy(to_serialize)
+        # else:
+        #     # With Google.auth, most Credentials attributes are protected
+        #     # Due to the way we retrieve them for serialization then storing,
+        #     # we copy the attributes one by one and remove the `_` prefix
+        #     # when present.
+        #     RM_PREFIX = '_'
+        #     to_serialize = {}
+        #     for obj_key in self.__dict__:
+        #         # Case where we remove the `_`
+        #         if obj_key.startswith(RM_PREFIX):
+        #             sanitized_key = obj_key.split(RM_PREFIX, maxsplit=1)[-1]
+        #             to_serialize[sanitized_key] = self.__dict__[obj_key]
+        #         # Other cases:
+        #         else:
+        #             to_serialize[obj_key] = self.__dict__[obj_key]
+
+        # if strip is not None:
+        #     for member in strip:
+        #         if member in to_serialize:
+        #             del to_serialize[member]
+
+        # # Convert time from `datetime.datetime` object into a string
+        # # This lib uses the `expiry` property, therefore checking for
+        # # that keyword only.
+        # if to_serialize.get('expiry'):
+        #     to_serialize['expiry'] = _helpers.parse_expiry(
+        #             to_serialize['expiry'])
+
+        # # Add in information we will need later to reconstitute this instance.
+        # to_serialize['_class'] = curr_type.__name__
+        # to_serialize['_module'] = curr_type.__module__
+
+        # for key, val in to_serialize.items():
+        #     if isinstance(val, bytes):
+        #         to_serialize[key] = val.decode('utf-8')
+        #     if isinstance(val, set):
+        #         to_serialize[key] = list(val)
+
+        # return json.dumps(to_serialize, indent=indent)
+
+
+        # The above was taken and adjusted from oauth2client
+        # https://github.com/googleapis/oauth2client/blob/master/oauth2client/client.py
+        # It seems unnecessarily complicated.
+        # Perhaps this would be a lot simpler and readable?
+
+        # Case where we have a `to_serialize` argument given
+        if to_serialize is not None:
+            to_serialize = copy.copy(to_serialize)
+        # Otherwise, prepare the response
+        else:
+            to_serialize = {
+                    'token':            self.token,
+                    'refresh_token':    self.refresh_token,
+                    'token_uri':        self.token_uri,
+                    'client_id':        self.client_id,
+                    'client_secret':    self.client_secret,
+                    'scopes':           self.scopes,
+                    'expiry':           self.expiry.timestamp()}
+            # If a `strip` argument is given, we remove those members from the
+            # compiled dict/JSON here
+            if strip is not None:
+                for member in strip:
+                    if member in to_serialize:
+                        del to_serialize[member]
+
+        return json.dumps(to_serialize, indent=indent)

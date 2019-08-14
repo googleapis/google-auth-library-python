@@ -17,6 +17,9 @@
 import base64
 import calendar
 import datetime
+import pathlib
+import warnings
+import datetime
 
 import six
 from six.moves import urllib
@@ -24,6 +27,13 @@ from six.moves import urllib
 
 CLOCK_SKEW_SECS = 300  # 5 minutes in seconds
 CLOCK_SKEW = datetime.timedelta(seconds=CLOCK_SKEW_SECS)
+
+_SYM_LINK_MESSAGE = 'File: {0}: Is a symbolic link.'
+_IS_DIR_MESSAGE = '{0}: Is a directory'
+_MISSING_FILE_MESSAGE = 'Cannot access {0}: No such file or directory'
+
+# Expiry is stored in RFC3339 UTC format
+EXPIRY_FORMAT = '%Y-%m-%dT%H:%M:%SZ'
 
 
 def copy_docstring(source_class):
@@ -232,3 +242,36 @@ def unpadded_urlsafe_b64encode(value):
         Union[str|bytes]: The encoded value
     """
     return base64.urlsafe_b64encode(value).rstrip(b'=')
+
+
+def validate_file(filename):
+    """Adjusted from https://github.com/googleapis/oauth2client
+
+    Checks if `filename` is a valid filename.
+
+    Args:
+        filename (str): Filename to check
+
+    Returns:
+        NoneType
+
+    Raises:
+        IOError: in case the filename is a symlink or is a directory
+
+    Warnings:
+        In case the filename doesn't exists
+    """
+    pp = pathlib.Path(filename)
+
+    if pp.is_symlink():
+        raise IOError(_SYM_LINK_MESSAGE.format(filename))
+    elif pp.is_dir():
+        raise IOError(_IS_DIR_MESSAGE.format(filename))
+    elif not pp.is_file():
+        warnings.warn(_MISSING_FILE_MESSAGE.format(filename))
+
+def parse_expiry(expiry):
+    if expiry and isinstance(expiry, datetime.datetime):
+        return expiry.strftime(EXPIRY_FORMAT)
+    else:
+        return None
