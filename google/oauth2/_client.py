@@ -103,13 +103,11 @@ def _token_endpoint_request(request, token_uri, body):
     }
 
     retry = 0
-
     # retry to fetch token for maximum of two times if any internal failure
     # occurs.
     while True:
         response = request(
             method='POST', url=token_uri, headers=headers, body=body)
-
         response_body = response.data.decode('utf-8')
 
         if response.status == http_client.OK:
