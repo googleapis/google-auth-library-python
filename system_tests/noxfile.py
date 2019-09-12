@@ -26,6 +26,7 @@ import os
 import subprocess
 
 from nox.command import which
+import nox
 import py.path
 
 
@@ -166,66 +167,55 @@ def configure_cloud_sdk(
 
 # Test sesssions
 
-
-def session_service_account(session):
-    session.virtualenv = False
+@nox.session(python=False)
+def service_account(session):
     session.run('pytest', 'test_service_account.py')
 
-
-def session_oauth2_credentials(session):
-    session.virtualenv = False
+@nox.session(python=False)
+def oauth2_credentials(session):
     session.run('pytest', 'test_oauth2_credentials.py')
 
-
+@nox.session(python=False)
 def session_default_explicit_service_account(session):
-    session.virtualenv = False
     session.env[EXPLICIT_CREDENTIALS_ENV] = SERVICE_ACCOUNT_FILE
     session.env[EXPECT_PROJECT_ENV] = '1'
     session.run('pytest', 'test_default.py')
 
-
-def session_default_explicit_authorized_user(session):
-    session.virtualenv = False
+@nox.session(python=False)
+def default_explicit_authorized_user(session):
     session.env[EXPLICIT_CREDENTIALS_ENV] = AUTHORIZED_USER_FILE
     session.run('pytest', 'test_default.py')
 
-
-def session_default_explicit_authorized_user_explicit_project(session):
-    session.virtualenv = False
+@nox.session(python=False)
+def default_explicit_authorized_user_explicit_project(session):
     session.env[EXPLICIT_CREDENTIALS_ENV] = AUTHORIZED_USER_FILE
     session.env[EXPLICIT_PROJECT_ENV] = 'example-project'
     session.env[EXPECT_PROJECT_ENV] = '1'
     session.run('pytest', 'test_default.py')
 
-
-def session_default_cloud_sdk_service_account(session):
-    session.virtualenv = False
+@nox.session(python=False)
+def default_cloud_sdk_service_account(session):
     configure_cloud_sdk(session, SERVICE_ACCOUNT_FILE)
     session.env[EXPECT_PROJECT_ENV] = '1'
     session.run('pytest', 'test_default.py')
 
-
-def session_default_cloud_sdk_authorized_user(session):
-    session.virtualenv = False
+@nox.session(python=False)
+def default_cloud_sdk_authorized_user(session):
     configure_cloud_sdk(session, AUTHORIZED_USER_FILE)
     session.run('pytest', 'test_default.py')
 
-
-def session_default_cloud_sdk_authorized_user_configured_project(session):
-    session.virtualenv = False
+@nox.session(python=False)
+def default_cloud_sdk_authorized_user_configured_project(session):
     configure_cloud_sdk(session, AUTHORIZED_USER_FILE, project=True)
     session.env[EXPECT_PROJECT_ENV] = '1'
     session.run('pytest', 'test_default.py')
 
-
-def session_compute_engine(session):
-    session.virtualenv = False
+@nox.session(python=False)
+def compute_engine(session):
     session.run('pytest', 'test_compute_engine.py')
 
-
-def session_app_engine(session):
-    session.virtualenv = False
-
+@nox.session(python=False)
+def app_engine(session):
     if SKIP_GAE_TEST_ENV in os.environ:
         session.log('Skipping App Engine tests.')
         return
@@ -260,8 +250,7 @@ def session_app_engine(session):
     session.chdir(HERE)
     session.run('pytest', 'test_app_engine.py')
 
-
-def session_grpc(session):
-    session.virtualenv = False
+@nox.session(python=False)
+def grpc(session):
     session.env[EXPLICIT_CREDENTIALS_ENV] = SERVICE_ACCOUNT_FILE
     session.run('pytest', 'test_grpc.py')
