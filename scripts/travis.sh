@@ -38,5 +38,5 @@ if [[ -n $SYSTEM_TEST ]]; then
 fi
 
 # Run nox.
-echo "Running tox..."
+echo "Running nox..."
 nox
