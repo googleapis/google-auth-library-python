@@ -16,31 +16,49 @@ A few notes on making changes to ``google-auth-libary-python``.
 - If you've added a new feature or modified an existing feature, be sure to
   add or update any applicable documentation in docstrings and in the
   documentation (in ``docs/``). You can re-generate the reference documentation
-  using ``tox -e docgen``.
+  using ``nox -s docgen``.
 
 - The change must work fully on the following CPython versions: 2.7,
-  3.4, and 3.5 across macOS, Linux, and Windows.
+  3.5, 3.6, 3.7 across macOS, Linux, and Windows.
 
 - The codebase *must* have 100% test statement coverage after each commit.
-  You can test coverage via ``tox -e cover``.
+  You can test coverage via ``nox -e cover``.
 
 Testing changes
 ---------------
 
-To test your changes, run unit tests with ``tox``::
+To test your changes, run unit tests with ``nox``::
 
-    $ tox -e py27
-    $ tox -e py34
-    $ tox -e py35
+    $ nox -s unit
+
+To run system tests locally, you will need to set up a data directory.
+
+    $ mkdir system/data
+
+Add a service account file and authorized user file to the data directory.
+Your directory should look like this. The files must be named exactly `service_account.json`
+and `authorized_user.json`. See `Creating and Managing Service Account Keys`_ and
+` and `Creating User Tokens`_ for obtaining the files.
+
+.. _Creating and Managing Service Account Keys: https://cloud.google.com/iam/docs/creating-managing-service-account-keys
+.. _Creating Authorization Credentials: https://developers.google.com/identity/protocols/OAuth2WebServer#creatingcred
+
+system_tests/data
+    service_account.json
+    authorized_user.json
+
+Now you can run the system tests with ``nox``::
+
+    $ nox -s system
 
 Coding Style
 ------------
 
 This library is PEP8 & Pylint compliant. Our Pylint config is defined at
 ``pylintrc`` for package code and ``pylintrc.tests`` for test code. Use
-``tox`` to check for non-compliant code::
+``nox`` to check for non-compliant code::
 
-   $ tox -e lint
+   $ nox -s lint
 
 Documentation Coverage and Building HTML Documentation
 ------------------------------------------------------
