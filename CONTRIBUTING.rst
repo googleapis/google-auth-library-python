@@ -31,25 +31,53 @@ To test your changes, run unit tests with ``nox``::
 
     $ nox -s unit
 
+
+Running system tests
+--------------------
+
+You can run the system tests with ``nox``::
+
+    $ nox -s system
+
+To run a single session, specify it with ``nox -s``::
+
+    $ nox -s service_account
+
+
 To run system tests locally, you will need to set up a data directory.
 
-    $ mkdir system/data
+    $ mkdir system_tests/data
 
 Add a service account file and authorized user file to the data directory.
-Your directory should look like this. The files must be named exactly `service_account.json`
-and `authorized_user.json`. See `Creating and Managing Service Account Keys`_ and
-` and `Creating User Tokens`_ for obtaining the files.
-
-.. _Creating and Managing Service Account Keys: https://cloud.google.com/iam/docs/creating-managing-service-account-keys
-.. _Creating Authorization Credentials: https://developers.google.com/identity/protocols/OAuth2WebServer#creatingcred
+Your directory should look like this.
 
 system_tests/data
     service_account.json
     authorized_user.json
 
-Now you can run the system tests with ``nox``::
+The files must be named exactly ``service_account.json``
+and ``authorized_user.json``. See `Creating and Managing Service Account Keys`_ for how to
+obtain a service account. 
 
-    $ nox -s system
+.. _Creating and Managing Service Account Keys: https://cloud.google.com/iam/docs/creating-managing-service-account-keys
+
+To get a authorized user file, run 
+``gcloud auth default-application login --scopes=https://www.googleapis.com/auth/userinfo.email,https://www.googleapis.com/auth/cloud-platform``.
+You will see something like
+```Credentials saved to file: [/usr/local/home/.config/gcloud/application_default_credentials.json]```
+Copy the contents of the file to ``authorized_user.json``.
+
+
+To run the App Engine tests, you will need to deploy a default App Engine project.
+Edit app.yaml so ``service`` is ``default`` instead of ``gogole-auth-system-tests``.
+Then do the following.
+
+    $ pip install --target-lib -r requirements.txt
+    $ gcloud app deploy -q app.yaml
+
+You should now be able to run the App Engine tests:
+
+    $ nox -s app_engine
 
 Coding Style
 ------------
