@@ -55,11 +55,9 @@ def unit(session):
 # nox can run python 2 sessions but needs to be invoked from python 3
 @nox.session(python=["3.7"])
 def system(session):
-    session.install(*TEST_DEPENDENCIES)
     session.install(
         "nox",
     )
-    session.install(".")
     session.chdir("system_tests")
     session.run("nox")
 
