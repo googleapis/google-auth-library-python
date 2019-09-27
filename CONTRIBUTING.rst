@@ -43,7 +43,6 @@ To run a single session, specify it with ``nox -s``::
 
     $ nox -s service_account
 
-
 To run system tests locally, you will need to set up a data directory.
 
     $ mkdir system_tests/data
@@ -62,20 +61,23 @@ obtain a service account.
 .. _Creating and Managing Service Account Keys: https://cloud.google.com/iam/docs/creating-managing-service-account-keys
 
 To get a authorized user file, run 
-``gcloud auth default-application login --scopes=https://www.googleapis.com/auth/userinfo.email,https://www.googleapis.com/auth/cloud-platform``.
+``gcloud auth application-default login --scopes=https://www.googleapis.com/auth/userinfo.email,https://www.googleapis.com/auth/cloud-platform,openid``.
 You will see something like
 ```Credentials saved to file: [/usr/local/home/.config/gcloud/application_default_credentials.json]```
 Copy the contents of the file to ``authorized_user.json``.
 
 
-To run the App Engine tests, you will need to deploy a default App Engine project.
-Edit app.yaml so ``service`` is ``default`` instead of ``gogole-auth-system-tests``.
+To run the App Engine tests, you wil need to deploy a default App Engine service.
+If you already have a default service associated with your project, you can skip this step.
+
+Edit ``app.yaml`` so ``service`` is ``default`` instead of ``google-auth-system-tests``.
 Then do the following.
 
     $ pip install --target-lib -r requirements.txt
     $ gcloud app deploy -q app.yaml
 
-You should now be able to run the App Engine tests:
+After the app is deployed, change ``service`` in ``app.yaml`` back to ``google-auth-system-tests``. 
+You can now run the App Engine tests:
 
     $ nox -s app_engine
 
@@ -96,9 +98,9 @@ documentation in this package which references that API or behavior must be
 changed to reflect the bug fix, ideally in the same commit that fixes the bug
 or adds the feature.
 
-To build and review docs use  ``tox``::
+To build and review docs use  ``nox``::
 
-   $ tox -e docs
+   $ nox -s docs
 
 The HTML version of the docs will be built in ``docs/_build/html``
 
