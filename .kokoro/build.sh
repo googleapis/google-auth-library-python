@@ -35,6 +35,9 @@ export PROJECT_ID=$(cat "${KOKORO_GFILE_DIR}/project-id.json")
 # Activate gcloud with service account credentials
 gcloud auth activate-service-account --key-file=$GOOGLE_APPLICATION_CREDENTIALS
 
+# Decrypt system test secrets
+./scripts/decrypt-secrets.sh
+
 # Remove old nox
 python3.6 -m pip uninstall --yes --quiet nox-automation
 
