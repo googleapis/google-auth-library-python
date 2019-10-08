@@ -27,10 +27,10 @@ env | grep KOKORO
 # Setup service account credentials.
 
 # add creds to gfile dir
-export GOOGLE_APPLICATION_CREDENTIALS=${KOKORO_GFILE_DIR}/google-auth-library-python/service-account.json
+export GOOGLE_APPLICATION_CREDENTIALS=${KOKORO_GFILE_DIR}/service-account.json
 
 # Setup project id.
-export PROJECT_ID=$(cat "${KOKORO_GFILE_DIR}/google-auth-library-python/project-id.json")
+export PROJECT_ID=$(cat "${KOKORO_GFILE_DIR}/project-id.json")
 
 # Activate gcloud with service account credentials
 gcloud auth activate-service-account --key-file=$GOOGLE_APPLICATION_CREDENTIALS
