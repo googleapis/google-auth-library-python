@@ -34,6 +34,7 @@ export PROJECT_ID=$(cat "${KOKORO_GFILE_DIR}/project-id.txt")
 
 # Activate gcloud with service account credentials
 gcloud auth activate-service-account --key-file=$GOOGLE_APPLICATION_CREDENTIALS
+gcloud config set project $PROJECT_ID
 
 # Decrypt system test secrets
 ./scripts/decrypt-secrets.sh
