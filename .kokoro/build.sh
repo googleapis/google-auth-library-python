@@ -25,10 +25,15 @@ export PYTHONUNBUFFERED=1
 env | grep KOKORO
 
 # Setup service account credentials.
-export GOOGLE_APPLICATION_CREDENTIALS=${KOKORO_GFILE_DIR}/service-account.json
+
+# add creds to gfile dir
+export GOOGLE_APPLICATION_CREDENTIALS=${KOKORO_GFILE_DIR}/google-auth-library-python/service-account.json
 
 # Setup project id.
-export PROJECT_ID=$(cat "${KOKORO_GFILE_DIR}/project-id.json")
+export PROJECT_ID=$(cat "${KOKORO_GFILE_DIR}/google-auth-library-python/project-id.json")
+
+# Activate gcloud with service account credentials
+gcloud auth activate-service-account --key-file=$GOOGLE_APPLICATION_CREDENTIALS
 
 # Remove old nox
 python3.6 -m pip uninstall --yes --quiet nox-automation
