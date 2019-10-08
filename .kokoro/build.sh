@@ -47,3 +47,4 @@ python3.6 -m pip install --upgrade --quiet nox
 python3.6 -m nox --version
 
 python3.6 -m nox
+python3.6 -m nox -f system_tests/noxfile.py

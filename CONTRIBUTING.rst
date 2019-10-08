@@ -66,12 +66,11 @@ You will see something like
 ```Credentials saved to file: [/usr/local/home/.config/gcloud/application_default_credentials.json]```
 Copy the contents of the file to ``authorized_user.json``.
 
-
 To run the App Engine tests, you wil need to deploy a default App Engine service.
 If you already have a default service associated with your project, you can skip this step.
 
 Edit ``app.yaml`` so ``service`` is ``default`` instead of ``google-auth-system-tests``.
-Then do the following.
+From ``system_tests/app_engine_test_app`` run the following commands.
 
     $ pip install --target-lib -r requirements.txt
     $ gcloud app deploy -q app.yaml

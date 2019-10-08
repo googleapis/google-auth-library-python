@@ -14,24 +14,29 @@
 
 import nox
 
-TEST_DEPENDENCIES = ["certifi",
-        "flask",
-        "mock",
-        "oauth2client",
-        "pytest",
-        "pytest-cov",
-        "pytest-localserver",
-        "requests",
-        "requests-oauthlib",
-        "urllib3",
-        "cryptography",
-        "grpcio",
+TEST_DEPENDENCIES = [
+    "certifi",
+    "flask",
+    "mock",
+    "oauth2client",
+    "pytest",
+    "pytest-cov",
+    "pytest-localserver",
+    "requests",
+    "requests-oauthlib",
+    "urllib3",
+    "cryptography",
+    "grpcio",
 ]
+BLACK_VERSION = "black==19.3b0"
+BLACK_PATHS = ["google", "tests", "noxfile.py", "setup.py"]
+
 
 @nox.session(python="3.7")
 def lint(session):
-    session.install("flake8", "flake8-import-order", "docutils")
+    session.install("flake8", "flake8-import-order", "docutils", BLACK_VERSION)
     session.install(".")
+    session.run("black", "--check", *BLACK_PATHS)
     session.run(
         "flake8",
         "--import-order-style=google",
@@ -44,6 +49,20 @@ def lint(session):
     )
 
 
+@nox.session(python="3.6")
+def blacken(session):
+    """Run black.
+
+    Format code to uniform standard.
+
+    This currently uses Python 3.6 due to the automated Kokoro run of synthtool.
+    That run uses an image that doesn't have 3.6 installed. Before updating this
+    check the state of the `gcp_ubuntu_config` we use for that Kokoro run.
+    """
+    session.install(BLACK_VERSION)
+    session.run("black", *BLACK_PATHS)
+
+
 @nox.session(python=["2.7", "3.5", "3.6", "3.7"])
 def unit(session):
     session.install(*TEST_DEPENDENCIES)
@@ -51,15 +70,6 @@ def unit(session):
     session.run(
         "pytest", "--cov=google.auth", "--cov=google.oauth2", "--cov=tests", "tests"
     )
-
-# nox can run python 2 sessions but needs to be invoked from python 3
-@nox.session(python=["3.7"])
-def system(session):
-    session.install(
-        "nox",
-    )
-    session.chdir("system_tests")
-    session.run("nox")
 
 
 @nox.session(python="3.7")
@@ -108,11 +118,3 @@ def pypy(session):
     session.run(
         "pytest", "--cov=google.auth", "--cov=google.oauth2", "--cov=tests", "tests"
     )
-
-
-@nox.session(python="3.7")
-def pytype(session):
-    session.install(*TEST_DEPENDENCIES)
-    session.install("pytype")
-    session.install(".")
-    session.run("pytype")
