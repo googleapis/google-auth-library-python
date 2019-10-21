@@ -11,7 +11,7 @@ Here are some guidelines for hacking on ``google-auth-library-python``.
 Making changes
 --------------
 
-A few notes on making changes to ``google-auth-libary-python``.
+A few notes on making changes to ``google-auth-library-python``.
 
 - If you've added a new feature or modified an existing feature, be sure to
   add or update any applicable documentation in docstrings and in the
@@ -37,11 +37,11 @@ Running system tests
 
 You can run the system tests with ``nox``::
 
-    $ nox -s system
+    $ nox -f system_tests/noxfile.py
 
 To run a single session, specify it with ``nox -s``::
 
-    $ nox -s service_account
+    $ nox -f system_tests/noxfile.py -s service_account
 
 To run system tests locally, you will need to set up a data directory.
 
@@ -78,7 +78,7 @@ From ``system_tests/app_engine_test_app`` run the following commands.
 After the app is deployed, change ``service`` in ``app.yaml`` back to ``google-auth-system-tests``. 
 You can now run the App Engine tests:
 
-    $ nox -s app_engine
+    $ nox -f system_tests/noxfile.py -s app_engine
 
 Coding Style
 ------------
