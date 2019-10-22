@@ -29,7 +29,7 @@ TEST_DEPENDENCIES = [
     "grpcio",
 ]
 BLACK_VERSION = "black==19.3b0"
-BLACK_PATHS = ["google", "tests", "noxfile.py", "setup.py"]
+BLACK_PATHS = ["google", "tests", "noxfile.py", "setup.py", "docs/conf.py"]
 
 
 @nox.session(python="3.7")
