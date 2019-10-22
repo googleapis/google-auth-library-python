@@ -32,8 +32,8 @@ import google.auth.transport._http_client
 _LOGGER = logging.getLogger(__name__)
 
 # Valid types accepted for file-based credentials.
-_AUTHORIZED_USER_TYPE = 'authorized_user'
-_SERVICE_ACCOUNT_TYPE = 'service_account'
+_AUTHORIZED_USER_TYPE = "authorized_user"
+_SERVICE_ACCOUNT_TYPE = "service_account"
 _VALID_TYPES = (_AUTHORIZED_USER_TYPE, _SERVICE_ACCOUNT_TYPE)
 
 # Help message when no credentials can be found.
@@ -41,8 +41,10 @@ _HELP_MESSAGE = """\
 Could not automatically determine credentials. Please set {env} or \
 explicitly create credentials and re-run the application. For more \
 information, please see \
-https://developers.google.com/accounts/docs/application-default-credentials.
-""".format(env=environment_vars.CREDENTIALS).strip()
+https://cloud.google.com/docs/authentication/getting-started
+""".format(
+    env=environment_vars.CREDENTIALS
+).strip()
 
 # Warning when using Cloud SDK user credentials
 _CLOUD_SDK_CREDENTIALS_WARNING = """\
@@ -51,7 +53,7 @@ Cloud SDK. We recommend that most server applications use service accounts \
 instead. If your application continues to use end user credentials from Cloud \
 SDK, you might receive a "quota exceeded" or "API not enabled" error. For \
 more information about service accounts, see \
-https://cloud.google.com/docs/authentication/."""
+https://cloud.google.com/docs/authentication/"""
 
 
 def _warn_about_problematic_credentials(credentials):
@@ -62,6 +64,7 @@ def _warn_about_problematic_credentials(credentials):
     quota. If this is the case, warn about it.
     """
     from google.auth import _cloud_sdk
+
     if credentials.client_id == _cloud_sdk.CLOUD_SDK_CLIENT_ID:
         warnings.warn(_CLOUD_SDK_CREDENTIALS_WARNING)
 
@@ -86,20 +89,21 @@ def _load_credentials_from_file(filename):
     """
     if not os.path.exists(filename):
         raise exceptions.DefaultCredentialsError(
-            'File {} was not found.'.format(filename))
+            "File {} was not found.".format(filename)
+        )
 
-    with io.open(filename, 'r') as file_obj:
+    with io.open(filename, "r") as file_obj:
         try:
             info = json.load(file_obj)
         except ValueError as caught_exc:
             new_exc = exceptions.DefaultCredentialsError(
-                'File {} is not a valid json file.'.format(filename),
-                caught_exc)
+                "File {} is not a valid json file.".format(filename), caught_exc
+            )
             six.raise_from(new_exc, caught_exc)
 
     # The type key should indicate that the file is either a service account
     # credentials file or an authorized user credentials file.
-    credential_type = info.get('type')
+    credential_type = info.get("type")
 
     if credential_type == _AUTHORIZED_USER_TYPE:
         from google.auth import _cloud_sdk
@@ -107,8 +111,7 @@ def _load_credentials_from_file(filename):
         try:
             credentials = _cloud_sdk.load_authorized_user_credentials(info)
         except ValueError as caught_exc:
-            msg = 'Failed to load authorized user credentials from {}'.format(
-                filename)
+            msg = "Failed to load authorized user credentials from {}".format(filename)
             new_exc = exceptions.DefaultCredentialsError(msg, caught_exc)
             six.raise_from(new_exc, caught_exc)
         # Authorized user credentials do not contain the project ID.
@@ -119,20 +122,20 @@ def _load_credentials_from_file(filename):
         from google.oauth2 import service_account
 
         try:
-            credentials = (
-                service_account.Credentials.from_service_account_info(info))
+            credentials = service_account.Credentials.from_service_account_info(info)
         except ValueError as caught_exc:
-            msg = 'Failed to load service account credentials from {}'.format(
-                filename)
+            msg = "Failed to load service account credentials from {}".format(filename)
             new_exc = exceptions.DefaultCredentialsError(msg, caught_exc)
             six.raise_from(new_exc, caught_exc)
-        return credentials, info.get('project_id')
+        return credentials, info.get("project_id")
 
     else:
         raise exceptions.DefaultCredentialsError(
-            'The file {file} does not have a valid type. '
-            'Type is {type}, expected one of {valid_types}.'.format(
-                file=filename, type=credential_type, valid_types=_VALID_TYPES))
+            "The file {file} does not have a valid type. "
+            "Type is {type}, expected one of {valid_types}.".format(
+                file=filename, type=credential_type, valid_types=_VALID_TYPES
+            )
+        )
 
 
 def _get_gcloud_sdk_credentials():
@@ -140,14 +143,12 @@ def _get_gcloud_sdk_credentials():
     from google.auth import _cloud_sdk
 
     # Check if application default credentials exist.
-    credentials_filename = (
-        _cloud_sdk.get_application_default_credentials_path())
+    credentials_filename = _cloud_sdk.get_application_default_credentials_path()
 
     if not os.path.isfile(credentials_filename):
         return None, None
 
-    credentials, project_id = _load_credentials_from_file(
-        credentials_filename)
+    credentials, project_id = _load_credentials_from_file(credentials_filename)
 
     if not project_id:
         project_id = _cloud_sdk.get_project_id()
@@ -162,7 +163,8 @@ def _get_explicit_environ_credentials():
 
     if explicit_file is not None:
         credentials, project_id = _load_credentials_from_file(
-            os.environ[environment_vars.CREDENTIALS])
+            os.environ[environment_vars.CREDENTIALS]
+        )
 
         return credentials, project_id
 
@@ -172,7 +174,12 @@ def _get_explicit_environ_credentials():
 
 def _get_gae_credentials():
     """Gets Google App Engine App Identity credentials and project ID."""
-    from google.auth import app_engine
+    # While this library is normally bundled with app_engine, there are
+    # some cases where it's not available, so we tolerate ImportError.
+    try:
+        import google.auth.app_engine as app_engine
+    except ImportError:
+        return None, None
 
     try:
         credentials = app_engine.Credentials()
@@ -188,8 +195,14 @@ def _get_gce_credentials(request=None):
     # to require no arguments. So, we'll use the _http_client transport which
     # uses http.client. This is only acceptable because the metadata server
     # doesn't do SSL and never requires proxies.
-    from google.auth import compute_engine
-    from google.auth.compute_engine import _metadata
+
+    # While this library is normally bundled with compute_engine, there are
+    # some cases where it's not available, so we tolerate ImportError.
+    try:
+        from google.auth import compute_engine
+        from google.auth.compute_engine import _metadata
+    except ImportError:
+        return None, None
 
     if request is None:
         request = google.auth.transport._http_client.Request()
@@ -282,14 +295,15 @@ def default(scopes=None, request=None):
     from google.auth.credentials import with_scopes_if_required
 
     explicit_project_id = os.environ.get(
-        environment_vars.PROJECT,
-        os.environ.get(environment_vars.LEGACY_PROJECT))
+        environment_vars.PROJECT, os.environ.get(environment_vars.LEGACY_PROJECT)
+    )
 
     checkers = (
         _get_explicit_environ_credentials,
         _get_gcloud_sdk_credentials,
         _get_gae_credentials,
-        lambda: _get_gce_credentials(request))
+        lambda: _get_gce_credentials(request),
+    )
 
     for checker in checkers:
         credentials, project_id = checker()
@@ -298,10 +312,11 @@ def default(scopes=None, request=None):
             effective_project_id = explicit_project_id or project_id
             if not effective_project_id:
                 _LOGGER.warning(
-                    'No project ID could be determined. Consider running '
-                    '`gcloud config set project` or setting the %s '
-                    'environment variable',
-                    environment_vars.PROJECT)
+                    "No project ID could be determined. Consider running "
+                    "`gcloud config set project` or setting the %s "
+                    "environment variable",
+                    environment_vars.PROJECT,
+                )
             return credentials, effective_project_id
 
     raise exceptions.DefaultCredentialsError(_HELP_MESSAGE)

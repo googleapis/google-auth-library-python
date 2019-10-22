@@ -56,7 +56,7 @@ Service account private key files
 A service account private key file can be used to obtain credentials for a
 service account. You can create a private key using the `Credentials page of the
 Google Cloud Console`_. Once you have a private key you can either obtain
-credentials one of two ways:
+credentials one of three ways:
 
 1. Set the ``GOOGLE_APPLICATION_CREDENTIALS`` environment variable to the full
    path to your service account private key file
@@ -77,6 +77,20 @@ credentials one of two ways:
 
         credentials = service_account.Credentials.from_service_account_file(
             '/path/to/key.json')
+
+        scoped_credentials = credentials.with_scopes(
+            ['https://www.googleapis.com/auth/cloud-platform'])
+
+3. Use :meth:`service_account.Credentials.from_service_account_info
+   <google.oauth2.service_account.Credentials.from_service_account_info>`::
+
+        import json
+
+        from google.oauth2 import service_account
+
+        json_acct_info = json.loads(function_to_get_json_creds())
+        credentials = service_account.Credentials.from_service_account_info(
+            json_acct_info)
 
         scoped_credentials = credentials.with_scopes(
             ['https://www.googleapis.com/auth/cloud-platform'])
@@ -204,6 +218,113 @@ You can also use :class:`google_auth_oauthlib.flow.Flow` to perform the OAuth
     https://pypi.python.org/pypi/google-auth-oauthlib
 .. _requests-oauthlib:
     https://requests-oauthlib.readthedocs.io/en/latest/
+
+Impersonated credentials
+++++++++++++++++++++++++
+
+Impersonated Credentials allows one set of credentials issued to a user or service account
+to impersonate another.  The source credentials must be granted 
+the "Service Account Token Creator" IAM role. ::
+
+    from google.auth import impersonated_credentials
+
+    target_scopes = ['https://www.googleapis.com/auth/devstorage.read_only']
+    source_credentials = service_account.Credentials.from_service_account_file(
+        '/path/to/svc_account.json',
+        scopes=target_scopes)
+
+    target_credentials = impersonated_credentials.Credentials(
+        source_credentials=source_credentials,
+        target_principal='impersonated-account@_project_.iam.gserviceaccount.com',
+        target_scopes=target_scopes,
+        lifetime=500)
+    client = storage.Client(credentials=target_credentials)
+    buckets = client.list_buckets(project='your_project')
+    for bucket in buckets:
+        print(bucket.name)
+
+
+In the example above `source_credentials` does not have direct access to list buckets
+in the target project.  Using `ImpersonatedCredentials` will allow the source_credentials
+to assume the identity of a target_principal that does have access.
+
+Identity Tokens
++++++++++++++++
+
+`Google OpenID Connect`_ tokens are avaiable through :mod:`Service Account <google.oauth2.service_account>`,
+:mod:`Impersonated <google.auth.impersonated_credentials>`,
+and :mod:`Compute Engine <google.auth.compute_engine>`.  These tokens can be used to
+authenticate against `Cloud Functions`_, `Cloud Run`_, a user service behind
+`Identity Aware Proxy`_ or any other service capable of verifying a `Google ID Token`_.
+
+ServiceAccount ::
+
+    from google.oauth2 import service_account
+
+    target_audience = 'https://example.com'
+
+    creds = service_account.IDTokenCredentials.from_service_account_file(
+            '/path/to/svc.json',
+            target_audience=target_audience)
+
+
+Compute ::
+
+    from google.auth import compute_engine
+    import google.auth.transport.requests
+
+    target_audience = 'https://example.com'
+
+    request = google.auth.transport.requests.Request()
+    creds = compute_engine.IDTokenCredentials(request,
+                            target_audience=target_audience)
+
+Impersonated ::
+
+    from google.auth import impersonated_credentials
+
+    # get target_credentials from a source_credential
+
+    target_audience = 'https://example.com'
+
+    creds = impersonated_credentials.IDTokenCredentials(
+                                      target_credentials,
+                                      target_audience=target_audience)
+
+IDToken verification can be done for various type of IDTokens using the :class:`google.oauth2.id_token` module 
+
+A sample end-to-end flow using an ID Token against a Cloud Run endpoint maybe ::
+
+    from google.oauth2 import id_token
+    from google.oauth2 import service_account
+    import google.auth
+    import google.auth.transport.requests
+    from google.auth.transport.requests import AuthorizedSession
+
+    target_audience = 'https://your-cloud-run-app.a.run.app'
+    url = 'https://your-cloud-run-app.a.run.app'
+
+    creds = service_account.IDTokenCredentials.from_service_account_file(
+            '/path/to/svc.json', target_audience=target_audience)
+
+    authed_session = AuthorizedSession(creds)
+
+    # make authenticated request and print the response, status_code
+    resp = authed_session.get(url)
+    print(resp.status_code)
+    print(resp.text)
+
+    # to verify an ID Token
+    request = google.auth.transport.requests.Request()
+    token = creds.token
+    print(token)
+    print(id_token.verify_token(token,request))
+
+.. _Cloud Functions: https://cloud.google.com/functions/
+.. _Cloud Run: https://cloud.google.com/run/
+.. _Identity Aware Proxy: https://cloud.google.com/iap/
+.. _Google OpenID Connect: https://developers.google.com/identity/protocols/OpenIDConnect
+.. _Google ID Token: https://developers.google.com/identity/protocols/OpenIDConnect#validatinganidtoken
 
 Making authenticated requests
 -----------------------------

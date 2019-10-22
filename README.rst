@@ -1,7 +1,7 @@
 Google Auth Python Library
 ==========================
 
-|build| |docs| |pypi|
+|build| |docs| |pypi| |compat_check_pypi| |compat_check_github|
 
 This library simplifies using Google's various server-to-server authentication
 mechanisms to access Google APIs.
@@ -12,6 +12,10 @@ mechanisms to access Google APIs.
    :target: https://google-auth.readthedocs.io/en/latest/
 .. |pypi| image:: https://img.shields.io/pypi/v/google-auth.svg
    :target: https://pypi.python.org/pypi/google-auth
+.. |compat_check_pypi| image:: https://python-compatibility-tools.appspot.com/one_badge_image?package=google-auth
+   :target: https://python-compatibility-tools.appspot.com/one_badge_target?package=google-auth
+.. |compat_check_github| image:: https://python-compatibility-tools.appspot.com/one_badge_image?package=git%2Bgit%3A//github.com/googleapis/google-auth-library-python.git
+   :target: https://python-compatibility-tools.appspot.com/one_badge_target?package=git%2Bgit%3A//github.com/googleapis/google-auth-library-python.git
 
 Installing
 ----------
@@ -26,15 +30,27 @@ For more information on setting up your Python development environment, please r
 
 .. _`Python Development Environment Setup Guide`: https://cloud.google.com/python/setup
 
+Supported Python Versions
+^^^^^^^^^^^^^^^^^^^^^^^^^
+Python >= 3.4
+
+Deprecated Python Versions
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+Python == 2.7. Python 2.7 support will be removed on January 1, 2020.
+
 Documentation
 -------------
 
 Google Auth Python Library has usage and reference documentation at `google-auth.readthedocs.io <https://google-auth.readthedocs.io>`_.
 
-Maintainers
------------
+Current Maintainers
+-------------------
+- `@busunkim96 <https://github.com/busunkim96>`_ (Bu Sun Kim)
 
-- `@jonparrott <https://github.com/jonparrott>`_ (Jon Wayne Parrott)
+Authors
+-------
+
+- `@theacodes <https://github.com/theacodes>`_ (Thea Flowers)
 - `@dhermes <https://github.com/dhermes>`_ (Danny Hermes)
 - `@lukesneeringer <https://github.com/lukesneeringer>`_ (Luke Sneeringer)
 

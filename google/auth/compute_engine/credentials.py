@@ -46,15 +46,18 @@ class Credentials(credentials.Scoped, credentials.Credentials):
         https://cloud.google.com/compute/docs/authentication#using
     """
 
-    def __init__(self, service_account_email='default'):
+    def __init__(self, service_account_email="default", scopes=None):
         """
         Args:
             service_account_email (str): The service account email to use, or
                 'default'. A Compute Engine instance may have multiple service
                 accounts.
+            scopes (Sequence[str]): Scopes to request from the metadata service. Only valid
+                for App Engine, Cloud Run, and Cloud Functions. Ignored on GCE instances.
         """
         super(Credentials, self).__init__()
         self._service_account_email = service_account_email
+        self._requested_scopes = scopes
 
     def _retrieve_info(self, request):
         """Retrieve information about the service account.
@@ -66,11 +69,14 @@ class Credentials(credentials.Scoped, credentials.Credentials):
                 HTTP requests.
         """
         info = _metadata.get_service_account_info(
-            request,
-            service_account=self._service_account_email)
+            request, service_account=self._service_account_email
+        )
 
-        self._service_account_email = info['email']
-        self._scopes = info['scopes']
+        self._service_account_email = info["email"]
+        if not self._requested_scopes:
+            self._scopes = info["scopes"]
+        else:
+            self._scopes = self._requested_scopes
 
     def refresh(self, request):
         """Refresh the access token and scopes.
@@ -89,7 +95,7 @@ class Credentials(credentials.Scoped, credentials.Credentials):
             self.token, self.expiry = _metadata.get_service_account_token(
                 request,
                 service_account=self._service_account_email,
-                scopes=self._scopes)
+                scopes=self._requested_scopes)
         except exceptions.TransportError as caught_exc:
             new_exc = exceptions.RefreshError(caught_exc)
             six.raise_from(new_exc, caught_exc)
@@ -106,21 +112,21 @@ class Credentials(credentials.Scoped, credentials.Credentials):
     @property
     def requires_scopes(self):
         """Compute Engine can be scoped by providing scopes to the metadata
-        service.
+        service, but have default scopes.
 
         Returns:
-            bool: True if there are no scopes set otherwise False.
+            bool: Always False for this credential type
         """
-        return not self._scopes
+        return False
 
     @_helpers.copy_docstring(credentials.Scoped)
     def with_scopes(self, scopes):
         return self.__class__(
-            scopes=scopes, service_account_id=self._service_account_id)
+            scopes=scopes, service_account_email=self._service_account_email)
 
 
 _DEFAULT_TOKEN_LIFETIME_SECS = 3600  # 1 hour in seconds
-_DEFAULT_TOKEN_URI = 'https://www.googleapis.com/oauth2/v4/token'
+_DEFAULT_TOKEN_URI = "https://www.googleapis.com/oauth2/v4/token"
 
 
 class IDTokenCredentials(credentials.Credentials, credentials.Signing):
@@ -131,10 +137,15 @@ class IDTokenCredentials(credentials.Credentials, credentials.Signing):
     In order for this to work, the GCE instance must have been started with
     a service account that has access to the IAM Cloud API.
     """
-    def __init__(self, request, target_audience,
-                 token_uri=_DEFAULT_TOKEN_URI,
-                 additional_claims=None,
-                 service_account_email=None):
+
+    def __init__(
+        self,
+        request,
+        target_audience,
+        token_uri=_DEFAULT_TOKEN_URI,
+        additional_claims=None,
+        service_account_email=None,
+    ):
         """
         Args:
             request (google.auth.transport.Request): The object used to make
@@ -153,13 +164,14 @@ class IDTokenCredentials(credentials.Credentials, credentials.Signing):
 
         if service_account_email is None:
             sa_info = _metadata.get_service_account_info(request)
-            service_account_email = sa_info['email']
+            service_account_email = sa_info["email"]
         self._service_account_email = service_account_email
 
         self._signer = iam.Signer(
             request=request,
             credentials=Credentials(),
-            service_account_email=service_account_email)
+            service_account_email=service_account_email,
+        )
 
         self._token_uri = token_uri
         self._target_audience = target_audience
@@ -184,7 +196,8 @@ class IDTokenCredentials(credentials.Credentials, credentials.Signing):
             service_account_email=self._service_account_email,
             token_uri=self._token_uri,
             target_audience=target_audience,
-            additional_claims=self._additional_claims.copy())
+            additional_claims=self._additional_claims.copy(),
+        )
 
     def _make_authorization_grant_assertion(self):
         """Create the OAuth 2.0 assertion.
@@ -198,15 +211,15 @@ class IDTokenCredentials(credentials.Credentials, credentials.Signing):
         expiry = now + lifetime
 
         payload = {
-            'iat': _helpers.datetime_to_secs(now),
-            'exp': _helpers.datetime_to_secs(expiry),
+            "iat": _helpers.datetime_to_secs(now),
+            "exp": _helpers.datetime_to_secs(expiry),
             # The issuer must be the service account email.
-            'iss': self.service_account_email,
+            "iss": self.service_account_email,
             # The audience must be the auth token endpoint's URI
-            'aud': self._token_uri,
+            "aud": self._token_uri,
             # The target audience specifies which service the ID token is
             # intended for.
-            'target_audience': self._target_audience
+            "target_audience": self._target_audience,
         }
 
         payload.update(self._additional_claims)
@@ -219,7 +232,8 @@ class IDTokenCredentials(credentials.Credentials, credentials.Signing):
     def refresh(self, request):
         assertion = self._make_authorization_grant_assertion()
         access_token, expiry, _ = _client.id_token_jwt_grant(
-            request, self._token_uri, assertion)
+            request, self._token_uri, assertion
+        )
         self.token = access_token
         self.expiry = expiry
 
