@@ -249,7 +249,7 @@ def compute_engine(session):
     session.run("pytest", "test_compute_engine.py")
 
 
-@nox.session(python=["2.7", "3.7"])
+@nox.session(python=["2.7"])
 def app_engine(session):
     if SKIP_GAE_TEST_ENV in os.environ:
         session.log("Skipping App Engine tests.")
