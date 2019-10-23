@@ -43,40 +43,49 @@ To run a single session, specify it with ``nox -s``::
 
     $ nox -f system_tests/noxfile.py -s service_account
 
-To run system tests locally, you will need to set up a data directory.
+To run system tests locally, you will need to set up a data directory. ::
 
     $ mkdir system_tests/data
 
 Add a service account file and authorized user file to the data directory.
-Your directory should look like this.
+Your directory should look like this. ::
 
-system_tests/data
-    service_account.json
-    authorized_user.json
+  system_tests/
+      data/
+        service_account.json
+        authorized_user.json
 
 The files must be named exactly ``service_account.json``
 and ``authorized_user.json``. See `Creating and Managing Service Account Keys`_ for how to
 obtain a service account. 
 
-.. _Creating and Managing Service Account Keys: https://cloud.google.com/iam/docs/creating-managing-service-account-keys
+Use the `gcloud CLI` to get an authorized user file. ::
 
-To get a authorized user file, run 
-``gcloud auth application-default login --scopes=https://www.googleapis.com/auth/userinfo.email,https://www.googleapis.com/auth/cloud-platform,openid``.
-You will see something like
-```Credentials saved to file: [/usr/local/home/.config/gcloud/application_default_credentials.json]```
+    $ gcloud auth application-default login --scopes=https://www.googleapis.com/auth/userinfo.email,https://www.googleapis.com/auth/cloud-platform,openid
+
+You will see something like::
+
+    Credentials saved to file: [/usr/local/home/.config/gcloud/application_default_credentials.json]```
+
 Copy the contents of the file to ``authorized_user.json``.
+
+.. _Creating and Managing Service Account Keys: https://cloud.google.com/iam/docs/creating-managing-service-account-keys
+.. _gcloud CLI: https://cloud.google.com/sdk/gcloud/
+
+App Engine System Tests
+^^^^^^^^^^^^^^^^^^^^^^^
 
 To run the App Engine tests, you wil need to deploy a default App Engine service.
 If you already have a default service associated with your project, you can skip this step.
 
 Edit ``app.yaml`` so ``service`` is ``default`` instead of ``google-auth-system-tests``.
-From ``system_tests/app_engine_test_app`` run the following commands.
+From ``system_tests/app_engine_test_app`` run the following commands. ::
 
     $ pip install --target-lib -r requirements.txt
     $ gcloud app deploy -q app.yaml
 
 After the app is deployed, change ``service`` in ``app.yaml`` back to ``google-auth-system-tests``. 
-You can now run the App Engine tests:
+You can now run the App Engine tests: ::
 
     $ nox -f system_tests/noxfile.py -s app_engine
 
