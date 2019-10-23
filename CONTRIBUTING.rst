@@ -43,12 +43,12 @@ To run a single session, specify it with ``nox -s``::
 
     $ nox -f system_tests/noxfile.py -s service_account
 
-To run system tests locally, you will need to set up a data directory. ::
+To run system tests locally, you will need to set up a data directory ::
 
     $ mkdir system_tests/data
 
 Add a service account file and authorized user file to the data directory.
-Your directory should look like this. ::
+Your directory should look like this ::
 
   system_tests/
       data/
@@ -59,7 +59,7 @@ The files must be named exactly ``service_account.json``
 and ``authorized_user.json``. See `Creating and Managing Service Account Keys`_ for how to
 obtain a service account. 
 
-Use the `gcloud CLI` to get an authorized user file. ::
+Use the `gcloud CLI`_ to get an authorized user file ::
 
     $ gcloud auth application-default login --scopes=https://www.googleapis.com/auth/userinfo.email,https://www.googleapis.com/auth/cloud-platform,openid
 
@@ -79,7 +79,7 @@ To run the App Engine tests, you wil need to deploy a default App Engine service
 If you already have a default service associated with your project, you can skip this step.
 
 Edit ``app.yaml`` so ``service`` is ``default`` instead of ``google-auth-system-tests``.
-From ``system_tests/app_engine_test_app`` run the following commands. ::
+From ``system_tests/app_engine_test_app`` run the following commands ::
 
     $ pip install --target-lib -r requirements.txt
     $ gcloud app deploy -q app.yaml

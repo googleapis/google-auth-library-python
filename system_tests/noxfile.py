@@ -170,23 +170,23 @@ def configure_cloud_sdk(session, application_default_credentials, project=False)
 # Test sesssions
 
 TEST_DEPENDENCIES = ["pytest", "requests"]
+PYTHON_VERSIONS=['2.7', '3.7']
 
-
-@nox.session(python=["2.7", "3.7"])
+@nox.session(python=PYTHON_VERSIONS)
 def service_account(session):
     session.install(*TEST_DEPENDENCIES)
     session.install(LIBRARY_DIR)
     session.run("pytest", "test_service_account.py")
 
 
-@nox.session(python=["2.7", "3.7"])
+@nox.session(python=PYTHON_VERSIONS)
 def oauth2_credentials(session):
     session.install(*TEST_DEPENDENCIES)
     session.install(LIBRARY_DIR)
     session.run("pytest", "test_oauth2_credentials.py")
 
 
-@nox.session(python=["2.7", "3.7"])
+@nox.session(python=PYTHON_VERSIONS)
 def default_explicit_service_account(session):
     session.env[EXPLICIT_CREDENTIALS_ENV] = SERVICE_ACCOUNT_FILE
     session.env[EXPECT_PROJECT_ENV] = "1"
@@ -195,7 +195,7 @@ def default_explicit_service_account(session):
     session.run("pytest", "test_default.py")
 
 
-@nox.session(python=["2.7", "3.7"])
+@nox.session(python=PYTHON_VERSIONS)
 def default_explicit_authorized_user(session):
     session.env[EXPLICIT_CREDENTIALS_ENV] = AUTHORIZED_USER_FILE
     session.install(*TEST_DEPENDENCIES)
@@ -203,7 +203,7 @@ def default_explicit_authorized_user(session):
     session.run("pytest", "test_default.py")
 
 
-@nox.session(python=["2.7", "3.7"])
+@nox.session(python=PYTHON_VERSIONS)
 def default_explicit_authorized_user_explicit_project(session):
     session.env[EXPLICIT_CREDENTIALS_ENV] = AUTHORIZED_USER_FILE
     session.env[EXPLICIT_PROJECT_ENV] = "example-project"
@@ -213,7 +213,7 @@ def default_explicit_authorized_user_explicit_project(session):
     session.run("pytest", "test_default.py")
 
 
-@nox.session(python=["2.7", "3.7"])
+@nox.session(python=PYTHON_VERSIONS)
 def default_cloud_sdk_service_account(session):
     configure_cloud_sdk(session, SERVICE_ACCOUNT_FILE)
     session.env[EXPECT_PROJECT_ENV] = "1"
@@ -222,7 +222,7 @@ def default_cloud_sdk_service_account(session):
     session.run("pytest", "test_default.py")
 
 
-@nox.session(python=["2.7", "3.7"])
+@nox.session(python=PYTHON_VERSIONS)
 def default_cloud_sdk_authorized_user(session):
     configure_cloud_sdk(session, AUTHORIZED_USER_FILE)
     session.install(*TEST_DEPENDENCIES)
@@ -230,7 +230,7 @@ def default_cloud_sdk_authorized_user(session):
     session.run("pytest", "test_default.py")
 
 
-@nox.session(python=["2.7", "3.7"])
+@nox.session(python=PYTHON_VERSIONS)
 def default_cloud_sdk_authorized_user_configured_project(session):
     configure_cloud_sdk(session, AUTHORIZED_USER_FILE, project=True)
     session.env[EXPECT_PROJECT_ENV] = "1"
@@ -239,7 +239,7 @@ def default_cloud_sdk_authorized_user_configured_project(session):
     session.run("pytest", "test_default.py")
 
 
-@nox.session(python=["2.7", "3.7"])
+@nox.session(python=PYTHON_VERSIONS)
 def compute_engine(session):
     session.install(*TEST_DEPENDENCIES)
     # unset Application Default Credentials so
@@ -291,7 +291,7 @@ def app_engine(session):
     session.run("pytest", "test_app_engine.py")
 
 
-@nox.session(python=["2.7", "3.7"])
+@nox.session(python=PYTHON_VERSIONS)
 def grpc(session):
     session.install(LIBRARY_DIR)
     session.install(*TEST_DEPENDENCIES, "google-cloud-pubsub==1.0.0")
