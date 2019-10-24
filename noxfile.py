@@ -15,7 +15,6 @@
 import nox
 
 TEST_DEPENDENCIES = [
-    "certifi",
     "flask",
     "mock",
     "oauth2client",
@@ -23,7 +22,6 @@ TEST_DEPENDENCIES = [
     "pytest-cov",
     "pytest-localserver",
     "requests",
-    "requests-oauthlib",
     "urllib3",
     "cryptography",
     "grpcio",
