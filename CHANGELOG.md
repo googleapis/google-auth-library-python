@@ -2,7 +2,7 @@
 
 [PyPI History][1]
 
-[1]: https://pypi.org/project/DISTRIBUTION NAME/#history
+[1]: https://pypi.org/project/google-auth/#history
 
 ## 1.7.0
 
@@ -42,7 +42,7 @@
 ### Implementation Changes
 
 - follow rfc 7515 : strip padding from JWS segments #324 ([#324](https://github.com/googleapis/google-auth-library-python/pull/324))
-- Add retry to _metadata.ping() ([#323](https://github.com/googleapis/google-auth-library-python/pull/323))
+- Add retry to ``_metadata.ping()`` ([#323](https://github.com/googleapis/google-auth-library-python/pull/323))
 
 ## v1.6.2
 
@@ -89,7 +89,7 @@
 - Fix check for error text on Python 3.7. ([#278](https://github.com/googleapis/google-auth-library-python/pull/#278))
 - Use new Auth URIs. ([#281](https://github.com/googleapis/google-auth-library-python/pull/#281))
 - Add code-of-conduct document. ([#270](https://github.com/googleapis/google-auth-library-python/pull/#270))
-- Fix some typos in test_urllib3.py ([#268](https://github.com/googleapis/google-auth-library-python/pull/#268))
+- Fix some typos in ``test_urllib3.py`` ([#268](https://github.com/googleapis/google-auth-library-python/pull/#268))
 
 ## v1.5.0
 
