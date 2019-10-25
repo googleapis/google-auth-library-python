@@ -79,7 +79,7 @@
 
 ### Internal / Testing Changes
 
-- Update trampoline.sh ([#302] (https://github.com/googleapis/google-auth-library-python/pull/302))
+- Update trampoline.sh ([#302](https://github.com/googleapis/google-auth-library-python/pull/302))
 - Enable static type checking with pytype ([#298](https://github.com/googleapis/google-auth-library-python/pull/298))
 - Make classifiers in setup.py an array. ([#280](https://github.com/googleapis/google-auth-library-python/pull/280))
 
