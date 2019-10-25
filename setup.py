@@ -26,13 +26,14 @@ DEPENDENCIES = (
     "six>=1.9.0",
 )
 
+version = "1.7.0"
 
 with io.open("README.rst", "r") as fh:
     long_description = fh.read()
 
 setup(
     name="google-auth",
-    version = "1.7.0",
+    version=version,
     author="Google Cloud Platform",
     author_email="jonwayne+google-auth@google.com",
     description="Google Authentication Library",
