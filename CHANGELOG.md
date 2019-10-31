@@ -44,8 +44,8 @@
 
 ### Implementation Changes
 
-- follow rfc 7515 : strip padding from JWS segments #324 ([#324](https://github.com/googleapis/google-auth-library-python/pull/324))
-- Add retry to _metadata.ping() ([#323](https://github.com/googleapis/google-auth-library-python/pull/323))
+- follow rfc 7515 : strip padding from JWS segments  ([#324](https://github.com/googleapis/google-auth-library-python/pull/324))
+- Add retry to `_metadata.ping()` ([#323](https://github.com/googleapis/google-auth-library-python/pull/323))
 
 ## 1.6.2
 
@@ -70,7 +70,7 @@
 
 ### New Features
 
-- Add google.auth.impersonated_credentials ([#299](https://github.com/googleapis/google-auth-library-python/pull/299))
+- Add `google.auth.impersonated_credentials` ([#299](https://github.com/googleapis/google-auth-library-python/pull/299))
 
 ### Documentation
 
@@ -144,11 +144,11 @@
 ## 1.1.0
 
 - Added ``service_account.Credentials.project_id``. ([#187](https://github.com/googleapis/google-auth-library-python/pull/#187))
-- Move read-only methods of ``credentials.Scoped`` into new interface ``credentials.ReadOnlyScoped``. ([#195](https://github.com/googleapis/google-auth-library-python/pull/#195>`_, `#196 <https://github.com/googleapis/google-auth-library-python/pull/#196))
+- Move read-only methods of ``credentials.Scoped`` into new interface ``credentials.ReadOnlyScoped``. ([#195](https://github.com/googleapis/google-auth-library-python/pull/#195), [#196](https://github.com/googleapis/google-auth-library-python/pull/#196))
 - Make ``compute_engine.Credentials`` derive from ``ReadOnlyScoped`` instead of ``Scoped``. ([#195](https://github.com/googleapis/google-auth-library-python/pull/#195))
 - Fix App Engine's expiration calculation ([#197](https://github.com/googleapis/google-auth-library-python/pull/#197))
 - Split ``crypt`` module into a package to allow alternative implementations. ([#189](https://github.com/googleapis/google-auth-library-python/pull/#189))
-- Add error message to handle case of empty string or missing file for GOOGLE_APPLICATION_CREDENTIALS ([#188](https://github.com/googleapis/google-auth-library-python/pull/#188))
+- Add error message to handle case of empty string or missing file for `GOOGLE_APPLICATION_CREDENTIALS` ([#188](https://github.com/googleapis/google-auth-library-python/pull/#188))
 
 ## 1.0.2
 
@@ -179,7 +179,7 @@ No significant changes since v0.10.0
 ## 0.9.0
 
 - Added ``service_account.Credentials.with_claims``. ([#140](https://github.com/googleapis/google-auth-library-python/pull/140))
-- Moved ``google.auth.oauthlib`` and ``google.auth.flow`` to a new separate package ``google_auth_oauthlib``. ([#137](https://github.com/googleapis/google-auth-library-python/pull/137>`_, [#139](https://github.com/googleapis/google-auth-library-python/pull/139>`_, `#135 <https://github.com/googleapis/google-auth-library-python/pull/135), `#126 <https://github.com/googleapis/google-auth-library-python/pull/126))
+- Moved ``google.auth.oauthlib`` and ``google.auth.flow`` to a new separate package ``google_auth_oauthlib``. ([#137](https://github.com/googleapis/google-auth-library-python/pull/137), [#139](https://github.com/googleapis/google-auth-library-python/pull/139), [#135](https://github.com/googleapis/google-auth-library-python/pull/135), [#126](https://github.com/googleapis/google-auth-library-python/pull/126))
 - Added ``InstalledAppFlow`` to ``google_auth_oauthlib``. ([#128](https://github.com/googleapis/google-auth-library-python/pull/128))
 - Fixed some packaging and documentation issues. ([#131](https://github.com/googleapis/google-auth-library-python/pull/131))
 - Added a helpful error message when importing optional dependencies. ([#125](https://github.com/googleapis/google-auth-library-python/pull/125))
@@ -201,7 +201,7 @@ No significant changes since v0.10.0
 
 ## 0.6.0
 
-- Added experimental integration with ``requests-oauthlib`` in ``google.oauth2.oauthlib`` and ``google.oauth2.flow``. ([#100](https://github.com/googleapis/google-auth-library-python/pull/100>`_, [#105](https://github.com/googleapis/google-auth-library-python/pull/105), `#106 <https://github.com/googleapis/google-auth-library-python/pull/106))
+- Added experimental integration with ``requests-oauthlib`` in ``google.oauth2.oauthlib`` and ``google.oauth2.flow``. ([#100](https://github.com/googleapis/google-auth-library-python/pull/100), [#105](https://github.com/googleapis/google-auth-library-python/pull/105), [#106](https://github.com/googleapis/google-auth-library-python/pull/106))
 - Fixed typo in ``google_auth_httplib2``'s README. ([#105](https://github.com/googleapis/google-auth-library-python/pull/105))
 
 ## 0.5.0
