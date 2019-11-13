@@ -123,6 +123,15 @@ def test__token_endpoint_request_internal_failure_error():
             {"error": "internal_failure", "error_description": "internal_failure"},
         )
 
+    request = make_request(
+        {"error": "internal_failure"}, status=http_client.BAD_REQUEST
+    )
+
+    with pytest.raises(exceptions.RefreshError):
+        _client._token_endpoint_request(
+            request, "http://example.com", {"error": "internal_failure"}
+        )
+
 
 def verify_request_params(request, params):
     request_body = request.call_args[1]["body"]
