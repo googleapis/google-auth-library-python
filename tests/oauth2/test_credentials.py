@@ -303,6 +303,7 @@ class TestCredentials(object):
         assert creds.refresh_token == info["refresh_token"]
         assert creds.token_uri == credentials._GOOGLE_OAUTH2_TOKEN_ENDPOINT
         assert creds.scopes is None
+        assert creds.quota_project = info["quota_project"]
 
         scopes = ["email", "profile"]
         creds = credentials.Credentials.from_authorized_user_info(info, scopes)
@@ -311,6 +312,7 @@ class TestCredentials(object):
         assert creds.refresh_token == info["refresh_token"]
         assert creds.token_uri == credentials._GOOGLE_OAUTH2_TOKEN_ENDPOINT
         assert creds.scopes == scopes
+        assert creds.quota_project = info["quota_project"]
 
     def test_from_authorized_user_file(self):
         info = AUTH_USER_INFO.copy()
@@ -321,6 +323,7 @@ class TestCredentials(object):
         assert creds.refresh_token == info["refresh_token"]
         assert creds.token_uri == credentials._GOOGLE_OAUTH2_TOKEN_ENDPOINT
         assert creds.scopes is None
+        assert creds.quota_project = info["quota_project"]
 
         scopes = ["email", "profile"]
         creds = credentials.Credentials.from_authorized_user_file(
@@ -331,3 +334,4 @@ class TestCredentials(object):
         assert creds.refresh_token == info["refresh_token"]
         assert creds.token_uri == credentials._GOOGLE_OAUTH2_TOKEN_ENDPOINT
         assert creds.scopes == scopes
+        assert creds.quota_project = info["quota_project"]
