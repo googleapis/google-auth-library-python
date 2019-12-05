@@ -294,21 +294,21 @@ class TestCredentials(object):
         # expired.)
         assert creds.valid
 
-    def test_apply_with_quota_project(self):
+    def test_apply_with_quota_project_id(self):
         creds = credentials.Credentials(
             token="token",
             refresh_token=self.REFRESH_TOKEN,
             token_uri=self.TOKEN_URI,
             client_id=self.CLIENT_ID,
             client_secret=self.CLIENT_SECRET,
-            quota_project="quota-project-123",
+            quota_project_id="quota-project-123",
         )
 
         headers = {}
         creds.apply(headers)
         assert headers["x-goog-user-project"] == "quota-project-123"
 
-    def test_apply_with_no_quota_project(self):
+    def test_apply_with_no_quota_project_id(self):
         creds = credentials.Credentials(
             token="token",
             refresh_token=self.REFRESH_TOKEN,
