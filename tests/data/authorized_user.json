@@ -2,6 +2,5 @@
   "client_id": "123",
   "client_secret": "secret",
   "refresh_token": "alabalaportocala",
-  "type": "authorized_user",
-  "quota_project": "offiredulassed"
+  "type": "authorized_user"
 }
