@@ -339,19 +339,19 @@ class TestCredentials(object):
         # Test with no `strip` arg
         json_output = creds.to_json()
         json_asdict = json.loads(json_output)
-        assert json_asdict.get('token') == creds.token
-        assert json_asdict.get('refresh_token') == creds.refresh_token
-        assert json_asdict.get('token_uri') == creds.token_uri
-        assert json_asdict.get('client_id') == creds.client_id
-        assert json_asdict.get('scopes') == creds.scopes
-        assert json_asdict.get('client_secret') == creds.client_secret
+        assert json_asdict.get("token") == creds.token
+        assert json_asdict.get("refresh_token") == creds.refresh_token
+        assert json_asdict.get("token_uri") == creds.token_uri
+        assert json_asdict.get("client_id") == creds.client_id
+        assert json_asdict.get("scopes") == creds.scopes
+        assert json_asdict.get("client_secret") == creds.client_secret
 
         # Test with a `strip` arg
-        json_output = creds.to_json(strip=['client_secret'])
+        json_output = creds.to_json(strip=["client_secret"])
         json_asdict = json.loads(json_output)
-        assert json_asdict.get('token') == creds.token
-        assert json_asdict.get('refresh_token') == creds.refresh_token
-        assert json_asdict.get('token_uri') == creds.token_uri
-        assert json_asdict.get('client_id') == creds.client_id
-        assert json_asdict.get('scopes') == creds.scopes
-        assert json_asdict.get('client_secret') is None
+        assert json_asdict.get("token") == creds.token
+        assert json_asdict.get("refresh_token") == creds.refresh_token
+        assert json_asdict.get("token_uri") == creds.token_uri
+        assert json_asdict.get("client_id") == creds.client_id
+        assert json_asdict.get("scopes") == creds.scopes
+        assert json_asdict.get("client_secret") is None

@@ -237,12 +237,13 @@ class Credentials(credentials.ReadOnlyScoped, credentials.Credentials):
                  from_json().
         """
         prep = {
-            'token': self.token,
-            'refresh_token': self.refresh_token,
-            'token_uri': self.token_uri,
-            'client_id': self.client_id,
-            'client_secret': self.client_secret,
-            'scopes': self.scopes}
+            "token": self.token,
+            "refresh_token": self.refresh_token,
+            "token_uri": self.token_uri,
+            "client_id": self.client_id,
+            "client_secret": self.client_secret,
+            "scopes": self.scopes,
+        }
 
         # Remove empty entries
         prep = {k: v for k, v in prep.items() if v is not None}
