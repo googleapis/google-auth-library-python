@@ -181,7 +181,7 @@ class Credentials(credentials.ReadOnlyScoped, credentials.Credentials):
 
     @_helpers.copy_docstring(credentials.Credentials)
     def apply(self, headers, token=None):
-        super().apply(headers, token=token)
+        super(Credentials, self).apply(headers, token=token)
         if self.quota_project is not None:
             headers["x-goog-user-project"] = self.quota_project
 
