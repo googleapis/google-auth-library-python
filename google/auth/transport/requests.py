@@ -18,6 +18,7 @@ from __future__ import absolute_import
 
 import functools
 import logging
+import numbers
 import time
 
 try:
@@ -67,6 +68,16 @@ class _Response(transport.Response):
 
 class TimeoutGuard(object):
     """A context manager raising an error if the suite execution took too long.
+
+    Args:
+        timeout ([Union[None, float, Tuple[float, float]]]):
+            The maximum number of seconds a suite can run without the context
+            manager raising a timeout exception on exit. If passed as a tuple,
+            the smaller of the values is taken as a timeout. If ``None``, a
+            timeout error is never raised.
+        timeout_error_type (Optional[Exception]):
+            The type of the error to raise on timeout. Defaults to
+            :class:`requests.exceptions.Timeout`.
     """
 
     def __init__(self, timeout, timeout_error_type=requests.exceptions.Timeout):
@@ -86,9 +97,16 @@ class TimeoutGuard(object):
             return  # nothing to do, the timeout was not specified
 
         elapsed = time.time() - self._start
-        self.remaining_timeout = self._timeout - elapsed
+        deadline_hit = False
 
-        if self.remaining_timeout <= 0:
+        if isinstance(self._timeout, numbers.Number):
+            self.remaining_timeout = self._timeout - elapsed
+            deadline_hit = self.remaining_timeout <= 0
+        else:
+            self.remaining_timeout = tuple(x - elapsed for x in self._timeout)
+            deadline_hit = min(self.remaining_timeout) <= 0
+
+        if deadline_hit:
             raise self._timeout_error_type()
 
 
@@ -224,8 +242,15 @@ class AuthorizedSession(requests.Session):
     def request(self, method, url, data=None, headers=None, timeout=None, **kwargs):
         """Implementation of Requests' request.
 
-        The ``timeout`` argument is interpreted as the approximate total time
-        of **all** requests that are made under the hood.
+        Args:
+            timeout (Optional[Union[float, Tuple[float, float]]]): The number
+                of seconds to wait before raising a ``Timeout`` exception. If
+                multiple requests are made under the hood, ``timeout`` is
+                interpreted as the approximate total time of **all** requests.
+
+                If passed as a tuple ``(connect_timeout, read_timeout)``, the
+                smaller of the values is taken as the total allowed time across
+                all requests.
         """
         # pylint: disable=arguments-differ
         # Requests has a ton of arguments to request, but only two
@@ -281,11 +306,12 @@ class AuthorizedSession(requests.Session):
             )
 
             if self._refresh_timeout is not None:
-                timeout = (
-                    self._refresh_timeout
-                    if timeout is None
-                    else min(timeout, self._refresh_timeout)
-                )
+                if timeout is None:
+                    timeout = self._refresh_timeout
+                elif isinstance(timeout, numbers.Number):
+                    timeout = min(timeout, self._refresh_timeout)
+                else:
+                    timeout = tuple(min(x, self._refresh_timeout) for x in timeout)
 
             # Do not apply the timeout unconditionally in order to not override the
             # _auth_request's default timeout.
