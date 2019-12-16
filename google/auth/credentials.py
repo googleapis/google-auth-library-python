@@ -49,19 +49,6 @@ class Credentials(object):
         self.expiry = None
         """Optional[datetime]: When the token expires and is no longer valid.
         If this is None, the token is assumed to never expire."""
-    
-    def __getstate__(self):
-        """A __getstate__ method must exist for the __setstate__ to be called
-        This is identical to the default implementation."""
-        return self.__dict__
-
-    def __setstate__(self, d):
-        """Credentials pickled with older versions of the class do not have
-        all the attributes. Skip an attribute if it doesn't exist."""
-        for k, v in d.items():
-            if hasattr(self, k):
-                self.__dict__[k] = v
-
 
     @property
     def expired(self):
