@@ -96,6 +96,26 @@ class Credentials(credentials.ReadOnlyScoped, credentials.Credentials):
         self._client_secret = client_secret
         self._quota_project_id = quota_project_id
 
+    def __getstate__(self):
+        """A __getstate__ method must exist for the __setstate__ to be called
+        This is identical to the default implementation.
+        See https://docs.python.org/3.7/library/pickle.html#object.__setstate__
+        """
+        return self.__dict__
+
+    def __setstate__(self, d):
+        """Credentials pickled with older versions of the class do not have
+        all the attributes."""
+        self.token = d.get('token')
+        self.expiry = d.get('expiry')
+        self._refresh_token = d.get('_refresh_token')
+        self._id_token = d.get('_id_token')
+        self._scopes = d.get('_scopes')
+        self._token_uri = d.get('_token_uri')
+        self._client_id = d.get('_client_id')
+        self._client_secret = d.get('_client_secret')
+        self._quota_project_id = d.get('_quota_project_id')
+
     @property
     def refresh_token(self):
         """Optional[str]: The OAuth 2.0 refresh token."""
