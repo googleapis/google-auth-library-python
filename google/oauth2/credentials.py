@@ -106,15 +106,15 @@ class Credentials(credentials.ReadOnlyScoped, credentials.Credentials):
     def __setstate__(self, d):
         """Credentials pickled with older versions of the class do not have
         all the attributes."""
-        self.token = d.get('token')
-        self.expiry = d.get('expiry')
-        self._refresh_token = d.get('_refresh_token')
-        self._id_token = d.get('_id_token')
-        self._scopes = d.get('_scopes')
-        self._token_uri = d.get('_token_uri')
-        self._client_id = d.get('_client_id')
-        self._client_secret = d.get('_client_secret')
-        self._quota_project_id = d.get('_quota_project_id')
+        self.token = d.get("token")
+        self.expiry = d.get("expiry")
+        self._refresh_token = d.get("_refresh_token")
+        self._id_token = d.get("_id_token")
+        self._scopes = d.get("_scopes")
+        self._token_uri = d.get("_token_uri")
+        self._client_id = d.get("_client_id")
+        self._client_secret = d.get("_client_secret")
+        self._quota_project_id = d.get("_quota_project_id")
 
     @property
     def refresh_token(self):

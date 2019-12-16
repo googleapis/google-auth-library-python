@@ -383,9 +383,8 @@ class TestCredentials(object):
         assert json_asdict.get("client_id") == creds.client_id
         assert json_asdict.get("scopes") == creds.scopes
         assert json_asdict.get("client_secret") is None
-    
+
     def test_pickle_and_unpickle(self):
-        info = AUTH_USER_INFO.copy()
         creds = self.make_credentials()
         unpickled = pickle.loads(pickle.dumps(creds))
 
@@ -394,15 +393,16 @@ class TestCredentials(object):
 
         for attr in list(creds.__dict__):
             assert getattr(creds, attr) == getattr(unpickled, attr)
-    
+
     def test_pickle_with_missing_attribute(self):
         creds = self.make_credentials()
 
         # remove an optional attribute before pickling
-        # this mimics a pickle created with a previous class definition
-        del creds.__dict__['_quota_project_id']
-        
+        # this mimics a pickle created with a previous class definition with
+        # fewer attributes
+        del creds.__dict__["_quota_project_id"]
+
         unpickled = pickle.loads(pickle.dumps(creds))
 
-        # Attribute should be initialized by __setstate__
-        assert unpickled.quota_project_id == None
+        # Attribute should be initialized by `__setstate__`
+        assert unpickled.quota_project_id is None
