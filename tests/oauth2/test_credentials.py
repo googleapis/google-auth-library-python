@@ -16,6 +16,7 @@ import datetime
 import json
 import os
 import pickle
+import sys
 
 import mock
 import pytest
@@ -406,3 +407,14 @@ class TestCredentials(object):
 
         # Attribute should be initialized by `__setstate__`
         assert unpickled.quota_project_id is None
+
+    # pickles are not compatible across versions
+    @pytest.mark.skipif(
+        sys.version_info < (3, 5),
+        reason="pickle file can only be loaded with Python >= 3.5",
+    )
+    def test_unpickle_old_credentials_pickle(self):
+        # make sure a credentials file pickled with an older
+        # library version (google-auth==1.5.1) can be unpickled
+        with open(os.path.join(DATA_DIR, "old_oauth_credentials.pickle"), "rb") as f:
+            pickle.load(f)
