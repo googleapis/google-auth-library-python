@@ -416,5 +416,8 @@ class TestCredentials(object):
     def test_unpickle_old_credentials_pickle(self):
         # make sure a credentials file pickled with an older
         # library version (google-auth==1.5.1) can be unpickled
-        with open(os.path.join(DATA_DIR, "old_oauth_credentials.pickle"), "rb") as f:
-            pickle.load(f)
+        with open(
+            os.path.join(DATA_DIR, "old_oauth_credentials_py3.pickle"), "rb"
+        ) as f:
+            credentials = pickle.load(f)
+            assert credentials.quota_project_id is None
