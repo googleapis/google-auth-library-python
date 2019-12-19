@@ -60,6 +60,7 @@ library like `CacheControl`_ to create a cache-aware
 
 import json
 
+import six
 from six.moves import http_client
 
 from google.auth import exceptions
@@ -99,7 +100,7 @@ def _fetch_certs(request, certs_url):
             "Could not fetch certificates at {}".format(certs_url)
         )
 
-    return json.loads(response.data.decode("utf-8"))
+    return json.loads(six.ensure_text(response.data, "utf-8"))
 
 
 def verify_token(id_token, request, audience=None, certs_url=_GOOGLE_OAUTH2_CERTS_URL):

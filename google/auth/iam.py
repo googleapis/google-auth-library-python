@@ -22,6 +22,7 @@ API`_'s auth-related functionality.
 import base64
 import json
 
+import six
 from six.moves import http_client
 
 from google.auth import _helpers
@@ -80,7 +81,7 @@ class Signer(crypt.Signer):
                 "Error calling the IAM signBytes API: {}".format(response.data)
             )
 
-        return json.loads(response.data.decode("utf-8"))
+        return json.loads(six.ensure_text(response.data, "utf-8"))
 
     @property
     def key_id(self):

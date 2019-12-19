@@ -103,11 +103,7 @@ def _token_endpoint_request(request, token_uri, body):
     # occurs.
     while True:
         response = request(method="POST", url=token_uri, headers=headers, body=body)
-        response_body = (
-            response.data.decode("utf-8")
-            if hasattr(response.data, "decode")
-            else response.data
-        )
+        response_body = six.ensure_text(response.data, "utf-8")
         response_data = json.loads(response_body)
 
         if response.status == http_client.OK:
