@@ -119,7 +119,7 @@ def from_bytes(value):
     Raises:
         ValueError: If the value could not be converted to unicode.
     """
-    result = six.ensure_text(value, "utf-8") if isinstance(value, six.binary_type) else value
+    result = six.ensure_text(value, "utf-8")
     if isinstance(result, six.text_type):
         return result
     else:
