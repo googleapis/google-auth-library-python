@@ -218,7 +218,7 @@ def decode(token, certs=None, verify=True, audience=None):
 
     # If certs is specified as a dictionary of key IDs to certificates, then
     # use the certificate identified by the key ID in the token header.
-    if isinstance(certs, collections.abc.Mapping):
+    if isinstance(certs, Mapping):
         key_id = header.get("kid")
         if key_id:
             if key_id not in certs:
