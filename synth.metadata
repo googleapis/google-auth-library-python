@@ -1,12 +1,491 @@
 {
-  "updateTime": "2019-09-12T22:40:28.148018Z",
+  "updateTime": "2020-01-22T13:11:58.722342Z",
   "sources": [
     {
       "template": {
-        "name": "python_library",
+        "name": "python_split_library",
         "origin": "synthtool.gcp",
-        "version": "2019.5.2"
+        "version": "2019.10.17"
       }
+    }
+  ],
+  "newFiles": [
+    {
+      "path": ".coveragerc"
+    },
+    {
+      "path": ".flake8"
+    },
+    {
+      "path": ".github/CONTRIBUTING.md"
+    },
+    {
+      "path": ".github/ISSUE_TEMPLATE/bug_report.md"
+    },
+    {
+      "path": ".github/ISSUE_TEMPLATE/feature_request.md"
+    },
+    {
+      "path": ".github/ISSUE_TEMPLATE/support_request.md"
+    },
+    {
+      "path": ".github/release-please.yml"
+    },
+    {
+      "path": ".gitignore"
+    },
+    {
+      "path": ".kokoro/build.sh"
+    },
+    {
+      "path": ".kokoro/common.cfg"
+    },
+    {
+      "path": ".kokoro/continuous/common.cfg"
+    },
+    {
+      "path": ".kokoro/continuous/continuous.cfg"
+    },
+    {
+      "path": ".kokoro/docs/common.cfg"
+    },
+    {
+      "path": ".kokoro/docs/docs.cfg"
+    },
+    {
+      "path": ".kokoro/presubmit/common.cfg"
+    },
+    {
+      "path": ".kokoro/presubmit/presubmit.cfg"
+    },
+    {
+      "path": ".kokoro/publish-docs.sh"
+    },
+    {
+      "path": ".kokoro/release.sh"
+    },
+    {
+      "path": ".kokoro/release/common.cfg"
+    },
+    {
+      "path": ".kokoro/release/release.cfg"
+    },
+    {
+      "path": ".kokoro/trampoline.sh"
+    },
+    {
+      "path": ".repo-metadata.json"
+    },
+    {
+      "path": "CHANGELOG.md"
+    },
+    {
+      "path": "CODE_OF_CONDUCT.md"
+    },
+    {
+      "path": "CONTRIBUTING.rst"
+    },
+    {
+      "path": "CONTRIBUTORS.md"
+    },
+    {
+      "path": "LICENSE"
+    },
+    {
+      "path": "MANIFEST.in"
+    },
+    {
+      "path": "README.rst"
+    },
+    {
+      "path": "docs/Makefile"
+    },
+    {
+      "path": "docs/_static/custom.css"
+    },
+    {
+      "path": "docs/conf.py"
+    },
+    {
+      "path": "docs/index.rst"
+    },
+    {
+      "path": "docs/oauth2client-deprecation.rst"
+    },
+    {
+      "path": "docs/reference/google.auth.app_engine.rst"
+    },
+    {
+      "path": "docs/reference/google.auth.compute_engine.credentials.rst"
+    },
+    {
+      "path": "docs/reference/google.auth.compute_engine.rst"
+    },
+    {
+      "path": "docs/reference/google.auth.credentials.rst"
+    },
+    {
+      "path": "docs/reference/google.auth.crypt.base.rst"
+    },
+    {
+      "path": "docs/reference/google.auth.crypt.rsa.rst"
+    },
+    {
+      "path": "docs/reference/google.auth.crypt.rst"
+    },
+    {
+      "path": "docs/reference/google.auth.environment_vars.rst"
+    },
+    {
+      "path": "docs/reference/google.auth.exceptions.rst"
+    },
+    {
+      "path": "docs/reference/google.auth.iam.rst"
+    },
+    {
+      "path": "docs/reference/google.auth.impersonated_credentials.rst"
+    },
+    {
+      "path": "docs/reference/google.auth.jwt.rst"
+    },
+    {
+      "path": "docs/reference/google.auth.rst"
+    },
+    {
+      "path": "docs/reference/google.auth.transport.grpc.rst"
+    },
+    {
+      "path": "docs/reference/google.auth.transport.requests.rst"
+    },
+    {
+      "path": "docs/reference/google.auth.transport.rst"
+    },
+    {
+      "path": "docs/reference/google.auth.transport.urllib3.rst"
+    },
+    {
+      "path": "docs/reference/google.oauth2.credentials.rst"
+    },
+    {
+      "path": "docs/reference/google.oauth2.id_token.rst"
+    },
+    {
+      "path": "docs/reference/google.oauth2.rst"
+    },
+    {
+      "path": "docs/reference/google.oauth2.service_account.rst"
+    },
+    {
+      "path": "docs/reference/google.rst"
+    },
+    {
+      "path": "docs/reference/modules.rst"
+    },
+    {
+      "path": "docs/requirements-docs.txt"
+    },
+    {
+      "path": "docs/user-guide.rst"
+    },
+    {
+      "path": "google/__init__.py"
+    },
+    {
+      "path": "google/auth/__init__.py"
+    },
+    {
+      "path": "google/auth/_cloud_sdk.py"
+    },
+    {
+      "path": "google/auth/_default.py"
+    },
+    {
+      "path": "google/auth/_helpers.py"
+    },
+    {
+      "path": "google/auth/_oauth2client.py"
+    },
+    {
+      "path": "google/auth/_service_account_info.py"
+    },
+    {
+      "path": "google/auth/app_engine.py"
+    },
+    {
+      "path": "google/auth/compute_engine/__init__.py"
+    },
+    {
+      "path": "google/auth/compute_engine/_metadata.py"
+    },
+    {
+      "path": "google/auth/compute_engine/credentials.py"
+    },
+    {
+      "path": "google/auth/credentials.py"
+    },
+    {
+      "path": "google/auth/crypt/__init__.py"
+    },
+    {
+      "path": "google/auth/crypt/_cryptography_rsa.py"
+    },
+    {
+      "path": "google/auth/crypt/_helpers.py"
+    },
+    {
+      "path": "google/auth/crypt/_python_rsa.py"
+    },
+    {
+      "path": "google/auth/crypt/base.py"
+    },
+    {
+      "path": "google/auth/crypt/rsa.py"
+    },
+    {
+      "path": "google/auth/environment_vars.py"
+    },
+    {
+      "path": "google/auth/exceptions.py"
+    },
+    {
+      "path": "google/auth/iam.py"
+    },
+    {
+      "path": "google/auth/impersonated_credentials.py"
+    },
+    {
+      "path": "google/auth/jwt.py"
+    },
+    {
+      "path": "google/auth/transport/__init__.py"
+    },
+    {
+      "path": "google/auth/transport/_http_client.py"
+    },
+    {
+      "path": "google/auth/transport/grpc.py"
+    },
+    {
+      "path": "google/auth/transport/requests.py"
+    },
+    {
+      "path": "google/auth/transport/urllib3.py"
+    },
+    {
+      "path": "google/oauth2/__init__.py"
+    },
+    {
+      "path": "google/oauth2/_client.py"
+    },
+    {
+      "path": "google/oauth2/credentials.py"
+    },
+    {
+      "path": "google/oauth2/id_token.py"
+    },
+    {
+      "path": "google/oauth2/service_account.py"
+    },
+    {
+      "path": "noxfile.py"
+    },
+    {
+      "path": "renovate.json"
+    },
+    {
+      "path": "scripts/decrypt-secrets.sh"
+    },
+    {
+      "path": "scripts/encrypt-secrets.sh"
+    },
+    {
+      "path": "scripts/travis.sh"
+    },
+    {
+      "path": "setup.cfg"
+    },
+    {
+      "path": "setup.py"
+    },
+    {
+      "path": "synth.metadata"
+    },
+    {
+      "path": "synth.py"
+    },
+    {
+      "path": "system_tests/.gitignore"
+    },
+    {
+      "path": "system_tests/__init__.py"
+    },
+    {
+      "path": "system_tests/app_engine_test_app/.gitignore"
+    },
+    {
+      "path": "system_tests/app_engine_test_app/app.yaml"
+    },
+    {
+      "path": "system_tests/app_engine_test_app/appengine_config.py"
+    },
+    {
+      "path": "system_tests/app_engine_test_app/main.py"
+    },
+    {
+      "path": "system_tests/app_engine_test_app/requirements.txt"
+    },
+    {
+      "path": "system_tests/conftest.py"
+    },
+    {
+      "path": "system_tests/noxfile.py"
+    },
+    {
+      "path": "system_tests/secrets.tar.enc"
+    },
+    {
+      "path": "system_tests/test_app_engine.py"
+    },
+    {
+      "path": "system_tests/test_compute_engine.py"
+    },
+    {
+      "path": "system_tests/test_default.py"
+    },
+    {
+      "path": "system_tests/test_grpc.py"
+    },
+    {
+      "path": "system_tests/test_oauth2_credentials.py"
+    },
+    {
+      "path": "system_tests/test_service_account.py"
+    },
+    {
+      "path": "tests/__init__.py"
+    },
+    {
+      "path": "tests/compute_engine/__init__.py"
+    },
+    {
+      "path": "tests/compute_engine/test__metadata.py"
+    },
+    {
+      "path": "tests/compute_engine/test_credentials.py"
+    },
+    {
+      "path": "tests/conftest.py"
+    },
+    {
+      "path": "tests/crypt/__init__.py"
+    },
+    {
+      "path": "tests/crypt/test__cryptography_rsa.py"
+    },
+    {
+      "path": "tests/crypt/test__python_rsa.py"
+    },
+    {
+      "path": "tests/crypt/test_crypt.py"
+    },
+    {
+      "path": "tests/data/authorized_user.json"
+    },
+    {
+      "path": "tests/data/authorized_user_cloud_sdk.json"
+    },
+    {
+      "path": "tests/data/client_secrets.json"
+    },
+    {
+      "path": "tests/data/cloud_sdk_config.json"
+    },
+    {
+      "path": "tests/data/old_oauth_credentials_py3.pickle"
+    },
+    {
+      "path": "tests/data/other_cert.pem"
+    },
+    {
+      "path": "tests/data/pem_from_pkcs12.pem"
+    },
+    {
+      "path": "tests/data/privatekey.p12"
+    },
+    {
+      "path": "tests/data/privatekey.pem"
+    },
+    {
+      "path": "tests/data/privatekey.pub"
+    },
+    {
+      "path": "tests/data/public_cert.pem"
+    },
+    {
+      "path": "tests/data/service_account.json"
+    },
+    {
+      "path": "tests/oauth2/__init__.py"
+    },
+    {
+      "path": "tests/oauth2/test__client.py"
+    },
+    {
+      "path": "tests/oauth2/test_credentials.py"
+    },
+    {
+      "path": "tests/oauth2/test_id_token.py"
+    },
+    {
+      "path": "tests/oauth2/test_service_account.py"
+    },
+    {
+      "path": "tests/test__cloud_sdk.py"
+    },
+    {
+      "path": "tests/test__default.py"
+    },
+    {
+      "path": "tests/test__helpers.py"
+    },
+    {
+      "path": "tests/test__oauth2client.py"
+    },
+    {
+      "path": "tests/test__service_account_info.py"
+    },
+    {
+      "path": "tests/test_app_engine.py"
+    },
+    {
+      "path": "tests/test_credentials.py"
+    },
+    {
+      "path": "tests/test_iam.py"
+    },
+    {
+      "path": "tests/test_impersonated_credentials.py"
+    },
+    {
+      "path": "tests/test_jwt.py"
+    },
+    {
+      "path": "tests/transport/__init__.py"
+    },
+    {
+      "path": "tests/transport/compliance.py"
+    },
+    {
+      "path": "tests/transport/test__http_client.py"
+    },
+    {
+      "path": "tests/transport/test_grpc.py"
+    },
+    {
+      "path": "tests/transport/test_requests.py"
+    },
+    {
+      "path": "tests/transport/test_urllib3.py"
     }
   ]
 }
