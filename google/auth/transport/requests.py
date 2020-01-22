@@ -340,7 +340,7 @@ class AuthorizedSession(requests.Session):
             remaining_time = guard.remaining_timeout
 
             # Recurse. Pass in the original headers, not our modified set, but
-            # do pass the adjusted timeout (i.e. the remaining time).
+            # do pass the adjusted max allowed time (i.e. the remaining total time).
             return self.request(
                 method,
                 url,
