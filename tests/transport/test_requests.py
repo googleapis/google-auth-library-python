@@ -304,7 +304,7 @@ class TestAuthorizedHttp(object):
         )
         authed_session.mount(self.TEST_URL, adapter)
 
-        # An UNATHORIZED response triggers a refresh (an extra request), thus
+        # An UNAUTHORIZED response triggers a refresh (an extra request), thus
         # the final request that otherwise succeeds results in a timeout error
         # (all three requests together last 3 mocked seconds).
         with pytest.raises(requests.exceptions.Timeout):
