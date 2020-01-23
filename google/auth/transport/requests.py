@@ -149,7 +149,7 @@ class Request(transport.Request):
         body=None,
         headers=None,
         timeout=_DEFAULT_TIMEOUT,
-        **kwargs,
+        **kwargs
     ):
         """Make an HTTP request using requests.
 
@@ -255,7 +255,7 @@ class AuthorizedSession(requests.Session):
         headers=None,
         max_allowed_time=None,
         timeout=_DEFAULT_TIMEOUT,
-        **kwargs,
+        **kwargs
     ):
         """Implementation of Requests' request.
 
@@ -314,7 +314,7 @@ class AuthorizedSession(requests.Session):
                 data=data,
                 headers=request_headers,
                 timeout=timeout,
-                **kwargs,
+                **kwargs
             )
         remaining_time = guard.remaining_timeout
 
@@ -357,7 +357,7 @@ class AuthorizedSession(requests.Session):
                 max_allowed_time=remaining_time,
                 timeout=timeout,
                 _credential_refresh_attempt=_credential_refresh_attempt + 1,
-                **kwargs,
+                **kwargs
             )
 
         return response
