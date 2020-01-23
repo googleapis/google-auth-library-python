@@ -42,6 +42,8 @@ from google.auth import transport
 
 _LOGGER = logging.getLogger(__name__)
 
+_DEFAULT_TIMEOUT = 120  # in seconds
+
 
 class _Response(transport.Response):
     """Requests transport response adapter.
@@ -141,7 +143,13 @@ class Request(transport.Request):
         self.session = session
 
     def __call__(
-        self, url, method="GET", body=None, headers=None, timeout=120, **kwargs
+        self,
+        url,
+        method="GET",
+        body=None,
+        headers=None,
+        timeout=_DEFAULT_TIMEOUT,
+        **kwargs,
     ):
         """Make an HTTP request using requests.
 
@@ -246,8 +254,8 @@ class AuthorizedSession(requests.Session):
         data=None,
         headers=None,
         max_allowed_time=None,
-        timeout=None,
-        **kwargs
+        timeout=_DEFAULT_TIMEOUT,
+        **kwargs,
     ):
         """Implementation of Requests' request.
 
@@ -306,7 +314,7 @@ class AuthorizedSession(requests.Session):
                 data=data,
                 headers=request_headers,
                 timeout=timeout,
-                **kwargs
+                **kwargs,
             )
         remaining_time = guard.remaining_timeout
 
@@ -349,7 +357,7 @@ class AuthorizedSession(requests.Session):
                 max_allowed_time=remaining_time,
                 timeout=timeout,
                 _credential_refresh_attempt=_credential_refresh_attempt + 1,
-                **kwargs
+                **kwargs,
             )
 
         return response
