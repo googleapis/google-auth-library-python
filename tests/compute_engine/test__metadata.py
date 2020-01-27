@@ -27,51 +27,68 @@ from google.auth import exceptions
 from google.auth import transport
 from google.auth.compute_engine import _metadata
 
-PATH = 'instance/service-accounts/default'
+PATH = "instance/service-accounts/default"
 
 
-def make_request(data, status=http_client.OK, headers=None):
+def make_request(data, status=http_client.OK, headers=None, retry=False):
     response = mock.create_autospec(transport.Response, instance=True)
     response.status = status
     response.data = _helpers.to_bytes(data)
     response.headers = headers or {}
 
     request = mock.create_autospec(transport.Request)
-    request.return_value = response
+    if retry:
+        request.side_effect = [exceptions.TransportError(), response]
+    else:
+        request.return_value = response
 
     return request
 
 
 def test_ping_success():
-    request = make_request('', headers=_metadata._METADATA_HEADERS)
+    request = make_request("", headers=_metadata._METADATA_HEADERS)
 
     assert _metadata.ping(request)
 
     request.assert_called_once_with(
-        method='GET',
+        method="GET",
         url=_metadata._METADATA_IP_ROOT,
         headers=_metadata._METADATA_HEADERS,
-        timeout=_metadata._METADATA_DEFAULT_TIMEOUT)
+        timeout=_metadata._METADATA_DEFAULT_TIMEOUT,
+    )
+
+
+def test_ping_success_retry():
+    request = make_request("", headers=_metadata._METADATA_HEADERS, retry=True)
+
+    assert _metadata.ping(request)
+
+    request.assert_called_with(
+        method="GET",
+        url=_metadata._METADATA_IP_ROOT,
+        headers=_metadata._METADATA_HEADERS,
+        timeout=_metadata._METADATA_DEFAULT_TIMEOUT,
+    )
+    assert request.call_count == 2
 
 
 def test_ping_failure_bad_flavor():
-    request = make_request(
-        '', headers={_metadata._METADATA_FLAVOR_HEADER: 'meep'})
+    request = make_request("", headers={_metadata._METADATA_FLAVOR_HEADER: "meep"})
 
     assert not _metadata.ping(request)
 
 
 def test_ping_failure_connection_failed():
-    request = make_request('')
+    request = make_request("")
     request.side_effect = exceptions.TransportError()
 
     assert not _metadata.ping(request)
 
 
 def test_ping_success_custom_root():
-    request = make_request('', headers=_metadata._METADATA_HEADERS)
+    request = make_request("", headers=_metadata._METADATA_HEADERS)
 
-    fake_ip = '1.2.3.4'
+    fake_ip = "1.2.3.4"
     os.environ[environment_vars.GCE_METADATA_IP] = fake_ip
     reload_module(_metadata)
 
@@ -82,46 +99,66 @@ def test_ping_success_custom_root():
         reload_module(_metadata)
 
     request.assert_called_once_with(
-        method='GET',
-        url='http://' + fake_ip,
+        method="GET",
+        url="http://" + fake_ip,
         headers=_metadata._METADATA_HEADERS,
-        timeout=_metadata._METADATA_DEFAULT_TIMEOUT)
+        timeout=_metadata._METADATA_DEFAULT_TIMEOUT,
+    )
 
 
 def test_get_success_json():
-    key, value = 'foo', 'bar'
+    key, value = "foo", "bar"
 
     data = json.dumps({key: value})
-    request = make_request(
-        data, headers={'content-type': 'application/json'})
+    request = make_request(data, headers={"content-type": "application/json"})
 
     result = _metadata.get(request, PATH)
 
     request.assert_called_once_with(
-        method='GET',
+        method="GET",
         url=_metadata._METADATA_ROOT + PATH,
-        headers=_metadata._METADATA_HEADERS)
+        headers=_metadata._METADATA_HEADERS,
+    )
+    assert result[key] == value
+
+
+def test_get_success_retry():
+    key, value = "foo", "bar"
+
+    data = json.dumps({key: value})
+    request = make_request(
+        data, headers={"content-type": "application/json"}, retry=True
+    )
+
+    result = _metadata.get(request, PATH)
+
+    request.assert_called_with(
+        method="GET",
+        url=_metadata._METADATA_ROOT + PATH,
+        headers=_metadata._METADATA_HEADERS,
+    )
+    assert request.call_count == 2
     assert result[key] == value
 
 
 def test_get_success_text():
-    data = 'foobar'
-    request = make_request(data, headers={'content-type': 'text/plain'})
+    data = "foobar"
+    request = make_request(data, headers={"content-type": "text/plain"})
 
     result = _metadata.get(request, PATH)
 
     request.assert_called_once_with(
-        method='GET',
+        method="GET",
         url=_metadata._METADATA_ROOT + PATH,
-        headers=_metadata._METADATA_HEADERS)
+        headers=_metadata._METADATA_HEADERS,
+    )
     assert result == data
 
 
 def test_get_success_custom_root():
-    request = make_request(
-        '{}', headers={'content-type': 'application/json'})
+    request = make_request("{}", headers={"content-type": "application/json"})
 
-    fake_root = 'another.metadata.service'
+    fake_root = "another.metadata.service"
     os.environ[environment_vars.GCE_METADATA_ROOT] = fake_root
     reload_module(_metadata)
 
@@ -132,83 +169,104 @@ def test_get_success_custom_root():
         reload_module(_metadata)
 
     request.assert_called_once_with(
-        method='GET',
-        url='http://{}/computeMetadata/v1/{}'.format(fake_root, PATH),
-        headers=_metadata._METADATA_HEADERS)
+        method="GET",
+        url="http://{}/computeMetadata/v1/{}".format(fake_root, PATH),
+        headers=_metadata._METADATA_HEADERS,
+    )
 
 
 def test_get_failure():
-    request = make_request(
-        'Metadata error', status=http_client.NOT_FOUND)
+    request = make_request("Metadata error", status=http_client.NOT_FOUND)
 
     with pytest.raises(exceptions.TransportError) as excinfo:
         _metadata.get(request, PATH)
 
-    assert excinfo.match(r'Metadata error')
+    assert excinfo.match(r"Metadata error")
 
     request.assert_called_once_with(
-        method='GET',
+        method="GET",
         url=_metadata._METADATA_ROOT + PATH,
-        headers=_metadata._METADATA_HEADERS)
+        headers=_metadata._METADATA_HEADERS,
+    )
+
+
+def test_get_failure_connection_failed():
+    request = make_request("")
+    request.side_effect = exceptions.TransportError()
+
+    with pytest.raises(exceptions.TransportError) as excinfo:
+        _metadata.get(request, PATH)
+
+    assert excinfo.match(r"Compute Engine Metadata server unavailable")
+
+    request.assert_called_with(
+        method="GET",
+        url=_metadata._METADATA_ROOT + PATH,
+        headers=_metadata._METADATA_HEADERS,
+    )
+    assert request.call_count == 5
 
 
 def test_get_failure_bad_json():
-    request = make_request(
-        '{', headers={'content-type': 'application/json'})
+    request = make_request("{", headers={"content-type": "application/json"})
 
     with pytest.raises(exceptions.TransportError) as excinfo:
         _metadata.get(request, PATH)
 
-    assert excinfo.match(r'invalid JSON')
+    assert excinfo.match(r"invalid JSON")
 
     request.assert_called_once_with(
-        method='GET',
+        method="GET",
         url=_metadata._METADATA_ROOT + PATH,
-        headers=_metadata._METADATA_HEADERS)
+        headers=_metadata._METADATA_HEADERS,
+    )
 
 
 def test_get_project_id():
-    project = 'example-project'
-    request = make_request(
-        project, headers={'content-type': 'text/plain'})
+    project = "example-project"
+    request = make_request(project, headers={"content-type": "text/plain"})
 
     project_id = _metadata.get_project_id(request)
 
     request.assert_called_once_with(
-        method='GET',
-        url=_metadata._METADATA_ROOT + 'project/project-id',
-        headers=_metadata._METADATA_HEADERS)
+        method="GET",
+        url=_metadata._METADATA_ROOT + "project/project-id",
+        headers=_metadata._METADATA_HEADERS,
+    )
     assert project_id == project
 
 
-@mock.patch('google.auth._helpers.utcnow', return_value=datetime.datetime.min)
+@mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
 def test_get_service_account_token(utcnow):
     ttl = 500
     request = make_request(
-        json.dumps({'access_token': 'token', 'expires_in': ttl}),
-        headers={'content-type': 'application/json'})
+        json.dumps({"access_token": "token", "expires_in": ttl}),
+        headers={"content-type": "application/json"},
+    )
 
     token, expiry = _metadata.get_service_account_token(request)
 
     request.assert_called_once_with(
-        method='GET',
-        url=_metadata._METADATA_ROOT + PATH + '/token',
-        headers=_metadata._METADATA_HEADERS)
-    assert token == 'token'
+        method="GET",
+        url=_metadata._METADATA_ROOT + PATH + "/token",
+        headers=_metadata._METADATA_HEADERS,
+    )
+    assert token == "token"
     assert expiry == utcnow() + datetime.timedelta(seconds=ttl)
 
 
 def test_get_service_account_info():
-    key, value = 'foo', 'bar'
+    key, value = "foo", "bar"
     request = make_request(
-        json.dumps({key: value}),
-        headers={'content-type': 'application/json'})
+        json.dumps({key: value}), headers={"content-type": "application/json"}
+    )
 
     info = _metadata.get_service_account_info(request)
 
     request.assert_called_once_with(
-        method='GET',
-        url=_metadata._METADATA_ROOT + PATH + '/?recursive=true',
-        headers=_metadata._METADATA_HEADERS)
+        method="GET",
+        url=_metadata._METADATA_ROOT + PATH + "/?recursive=true",
+        headers=_metadata._METADATA_HEADERS,
+    )
 
     assert info[key] == value

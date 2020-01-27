@@ -16,14 +16,17 @@
 
 from __future__ import absolute_import
 
+from concurrent import futures
+
 import six
+
 try:
     import grpc
 except ImportError as caught_exc:  # pragma: NO COVER
     six.raise_from(
         ImportError(
-            'gRPC is not installed, please install the grpcio package '
-            'to use the gRPC transport.'
+            "gRPC is not installed, please install the grpcio package "
+            "to use the gRPC transport."
         ),
         caught_exc,
     )
@@ -42,6 +45,7 @@ class AuthMetadataPlugin(grpc.AuthMetadataPlugin):
         request (google.auth.transport.Request): A HTTP transport request
             object used to refresh credentials as needed.
     """
+
     def __init__(self, credentials, request):
         # pylint: disable=no-value-for-parameter
         # pylint doesn't realize that the super method takes no arguments
@@ -49,6 +53,7 @@ class AuthMetadataPlugin(grpc.AuthMetadataPlugin):
         super(AuthMetadataPlugin, self).__init__()
         self._credentials = credentials
         self._request = request
+        self._pool = futures.ThreadPoolExecutor(max_workers=1)
 
     def _get_authorization_headers(self, context):
         """Gets the authorization headers for a request.
@@ -59,12 +64,17 @@ class AuthMetadataPlugin(grpc.AuthMetadataPlugin):
         """
         headers = {}
         self._credentials.before_request(
-            self._request,
-            context.method_name,
-            context.service_url,
-            headers)
+            self._request, context.method_name, context.service_url, headers
+        )
 
         return list(six.iteritems(headers))
+
+    @staticmethod
+    def _callback_wrapper(callback):
+        def wrapped(future):
+            callback(future.result(), None)
+
+        return wrapped
 
     def __call__(self, context, callback):
         """Passes authorization metadata into the given callback.
@@ -74,11 +84,16 @@ class AuthMetadataPlugin(grpc.AuthMetadataPlugin):
             callback (grpc.AuthMetadataPluginCallback): The callback that will
                 be invoked to pass in the authorization metadata.
         """
-        callback(self._get_authorization_headers(context), None)
+        future = self._pool.submit(self._get_authorization_headers, context)
+        future.add_done_callback(self._callback_wrapper(callback))
+
+    def __del__(self):
+        self._pool.shutdown(wait=False)
 
 
 def secure_authorized_channel(
-        credentials, request, target, ssl_credentials=None, **kwargs):
+    credentials, request, target, ssl_credentials=None, **kwargs
+):
     """Creates a secure authorized gRPC channel.
 
     This creates a channel with SSL and :class:`AuthMetadataPlugin`. This
@@ -130,6 +145,7 @@ def secure_authorized_channel(
 
     # Combine the ssl credentials and the authorization credentials.
     composite_credentials = grpc.composite_channel_credentials(
-        ssl_credentials, google_auth_credentials)
+        ssl_credentials, google_auth_credentials
+    )
 
     return grpc.secure_channel(target, composite_credentials, **kwargs)
