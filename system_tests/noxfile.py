@@ -231,7 +231,7 @@ def default_cloud_sdk_authorized_user(session):
 
 
 @nox.session(python=PYTHON_VERSIONS)
-def default_cloud_sdk_authorized_user_configured_project(session):
+def default_cloud_sdk_authed_user_confed_proj(session):
     configure_cloud_sdk(session, AUTHORIZED_USER_FILE, project=True)
     session.env[EXPECT_PROJECT_ENV] = "1"
     session.install(*TEST_DEPENDENCIES)
