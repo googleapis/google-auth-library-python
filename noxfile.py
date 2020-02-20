@@ -25,6 +25,7 @@ TEST_DEPENDENCIES = [
     "requests",
     "urllib3",
     "cryptography",
+    "pyopenssl",
     "responses",
     "grpcio",
 ]

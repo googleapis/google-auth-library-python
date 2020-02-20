@@ -14,17 +14,26 @@
 
 import datetime
 import functools
+import os
 
 import freezegun
 import mock
+import OpenSSL
 import pytest
 import requests
 import requests.adapters
 from six.moves import http_client
 
 import google.auth.credentials
+import google.auth.transport._mtls_helper
 import google.auth.transport.requests
 from tests.transport import compliance
+
+DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
+with open(os.path.join(DATA_DIR, "privatekey.pem"), "rb") as fh:
+    PRIVATE_KEY_BYTES = fh.read()
+with open(os.path.join(DATA_DIR, "public_cert.pem"), "rb") as fh:
+    PUBLIC_CERT_BYTES = fh.read()
 
 
 @pytest.fixture
@@ -150,6 +159,34 @@ class TimeTickAdapterStub(AdapterStub):
         return super(TimeTickAdapterStub, self).send(request, **kwargs)
 
 
+class TestMutualTlsAdapter(object):
+    @mock.patch.object(requests.adapters.HTTPAdapter, "init_poolmanager")
+    @mock.patch.object(requests.adapters.HTTPAdapter, "proxy_manager_for")
+    def test_success(self, mock_proxy_manager_for, mock_init_poolmanager):
+        adapter = google.auth.transport.requests._MutualTlsAdapter(
+            PUBLIC_CERT_BYTES, PRIVATE_KEY_BYTES
+        )
+
+        adapter.init_poolmanager()
+        mock_init_poolmanager.assert_called_with(ssl_context=adapter._ctx_poolmanager)
+
+        adapter.proxy_manager_for()
+        mock_proxy_manager_for.assert_called_with(ssl_context=adapter._ctx_proxymanager)
+
+    def test_invalid_cert_or_key(self):
+        with pytest.raises(OpenSSL.crypto.Error):
+            google.auth.transport.requests._MutualTlsAdapter(
+                b"invalid cert", b"invalid key"
+            )
+
+    @mock.patch.dict("sys.modules", {"OpenSSL.crypto": None})
+    def test_import_error(self):
+        with pytest.raises(ImportError):
+            google.auth.transport.requests._MutualTlsAdapter(
+                PUBLIC_CERT_BYTES, PRIVATE_KEY_BYTES
+            )
+
+
 def make_response(status=http_client.OK, data=None):
     response = requests.Response()
     response.status_code = status
@@ -157,7 +194,7 @@ def make_response(status=http_client.OK, data=None):
     return response
 
 
-class TestAuthorizedHttp(object):
+class TestAuthorizedSession(object):
     TEST_URL = "http://example.com/"
 
     def test_constructor(self):
@@ -326,3 +363,58 @@ class TestAuthorizedHttp(object):
             authed_session.request(
                 "GET", self.TEST_URL, timeout=60, max_allowed_time=2.9
             )
+
+    def test_configure_mtls_channel_with_callback(self):
+        mock_callback = mock.Mock()
+        mock_callback.return_value = (True, PUBLIC_CERT_BYTES, PRIVATE_KEY_BYTES)
+
+        auth_session = google.auth.transport.requests.AuthorizedSession(
+            credentials=mock.Mock()
+        )
+        auth_session.configure_mtls_channel(mock_callback)
+
+        assert auth_session.is_mtls
+        assert isinstance(
+            auth_session.adapters["https://"],
+            google.auth.transport.requests._MutualTlsAdapter,
+        )
+
+    @mock.patch(
+        "google.auth.transport._mtls_helper.get_client_cert_and_key", autospec=True
+    )
+    def test_configure_mtls_channel_with_metadata(self, mock_get_client_cert_and_key):
+        mock_get_client_cert_and_key.return_value = (
+            True,
+            PUBLIC_CERT_BYTES,
+            PRIVATE_KEY_BYTES,
+        )
+
+        auth_session = google.auth.transport.requests.AuthorizedSession(
+            credentials=mock.Mock()
+        )
+        auth_session.configure_mtls_channel()
+
+        assert auth_session.is_mtls
+        assert isinstance(
+            auth_session.adapters["https://"],
+            google.auth.transport.requests._MutualTlsAdapter,
+        )
+
+    @mock.patch.object(google.auth.transport.requests._MutualTlsAdapter, "__init__")
+    @mock.patch(
+        "google.auth.transport._mtls_helper.get_client_cert_and_key", autospec=True
+    )
+    def test_configure_mtls_channel_non_mtls(
+        self, mock_get_client_cert_and_key, mock_adapter_ctor
+    ):
+        mock_get_client_cert_and_key.return_value = (False, None, None)
+
+        auth_session = google.auth.transport.requests.AuthorizedSession(
+            credentials=mock.Mock()
+        )
+        auth_session.configure_mtls_channel()
+
+        assert not auth_session.is_mtls
+
+        # Assert _MutualTlsAdapter constructor is not called.
+        mock_adapter_ctor.assert_not_called()
