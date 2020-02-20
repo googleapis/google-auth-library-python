@@ -17,8 +17,11 @@
 from __future__ import absolute_import
 
 from concurrent import futures
+from sys import platform
 
 import six
+
+from google.auth.transport import _mtls_helper
 
 try:
     import grpc
@@ -149,3 +152,37 @@ def secure_authorized_channel(
     )
 
     return grpc.secure_channel(target, composite_credentials, **kwargs)
+
+
+class SslCredentials:
+    """Class for application default SSL credentials. For Linux with endpoint
+    verification support, device certificate will be automatically loaded if
+    available and mutual TLS will be established.
+    """
+
+    def __init__(self):
+        self._is_mtls = False
+
+        # Load client SSL credentials.
+        context_aware_metadata = _mtls_helper.read_metadata_file(
+            _mtls_helper.CONTEXT_AWARE_METADATA_PATH
+        )
+        if context_aware_metadata:
+            self._is_mtls, cert, key, _, _ = _mtls_helper.get_client_ssl_credentials(
+                context_aware_metadata, platform
+            )
+
+        if self._is_mtls:
+            self._ssl_credentials = grpc.ssl_channel_credentials(
+                certificate_chain=cert, private_key=key
+            )
+        else:
+            self._ssl_credentials = grpc.ssl_channel_credentials()
+
+    @property
+    def ssl_credentials(self):
+        return self._ssl_credentials
+
+    @property
+    def is_mtls(self):
+        return self._is_mtls

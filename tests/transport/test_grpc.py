@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import datetime
+import os
 import time
 
 import mock
@@ -154,3 +155,83 @@ def test_secure_authorized_channel_explicit_ssl(
     composite_channel_credentials.assert_called_once_with(
         ssl_credentials, metadata_call_credentials.return_value
     )
+
+
+@mock.patch("grpc.ssl_channel_credentials", autospec=True)
+@mock.patch(
+    "google.auth.transport._mtls_helper.get_client_ssl_credentials", autospec=True
+)
+@mock.patch("google.auth.transport._mtls_helper.read_metadata_file", autospec=True)
+class TestSslCredentials(object):
+    def test_no_context_aware_metadata(
+        self,
+        mock_read_metadata_file,
+        mock_get_client_ssl_credentials,
+        mock_ssl_channel_credentials,
+    ):
+        # Mock that read_metadata_file function returns no metadata.
+        mock_read_metadata_file.return_value = None
+
+        ssl_credentials = google.auth.transport.grpc.SslCredentials()
+
+        # Since no context aware metadata is found, we wouldn't call
+        # get_client_ssl_credentials, and the SSL channel credentials created is
+        # non mTLS.
+        mock_get_client_ssl_credentials.assert_not_called()
+        mock_ssl_channel_credentials.assert_called_once_with()
+        assert ssl_credentials.ssl_credentials is not None
+        assert not ssl_credentials.is_mtls
+
+    def test_get_client_ssl_credentials_failure(
+        self,
+        mock_read_metadata_file,
+        mock_get_client_ssl_credentials,
+        mock_ssl_channel_credentials,
+    ):
+        mock_read_metadata_file.return_value = {
+            "cert_provider_command": ["some command"]
+        }
+
+        # Mock that client cert and key are not loaded.
+        mock_get_client_ssl_credentials.return_value = (False, None, None, None, None)
+
+        ssl_credentials = google.auth.transport.grpc.SslCredentials()
+
+        # Since we failed to get_client_ssl_credentials, the SSL channel
+        # credentials created is non mTLS.
+        mock_get_client_ssl_credentials.assert_called_once()
+        mock_ssl_channel_credentials.assert_called_once_with()
+        assert ssl_credentials.ssl_credentials is not None
+        assert not ssl_credentials.is_mtls
+
+    def test_get_client_ssl_credentials_success(
+        self,
+        mock_read_metadata_file,
+        mock_get_client_ssl_credentials,
+        mock_ssl_channel_credentials,
+    ):
+        mock_read_metadata_file.return_value = {
+            "cert_provider_command": ["some command"]
+        }
+
+        DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
+        with open(os.path.join(DATA_DIR, "privatekey.pub"), "rb") as fh:
+            PRIVATE_KEY_BYTES = fh.read()
+        with open(os.path.join(DATA_DIR, "public_cert.pem"), "rb") as fh:
+            PUBLIC_CERT_BYTES = fh.read()
+        mock_get_client_ssl_credentials.return_value = (
+            True,
+            PUBLIC_CERT_BYTES,
+            PRIVATE_KEY_BYTES,
+            None,
+            None,
+        )
+
+        ssl_credentials = google.auth.transport.grpc.SslCredentials()
+
+        mock_get_client_ssl_credentials.assert_called_once()
+        mock_ssl_channel_credentials.assert_called_once_with(
+            certificate_chain=PUBLIC_CERT_BYTES, private_key=PRIVATE_KEY_BYTES
+        )
+        assert ssl_credentials.ssl_credentials is not None
+        assert ssl_credentials.is_mtls
