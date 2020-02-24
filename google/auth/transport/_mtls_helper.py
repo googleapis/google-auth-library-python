@@ -44,7 +44,7 @@ def read_metadata_file(metadata_path):
     with open(metadata_path) as f:
         try:
             metadata = json.load(f)
-        except json.decoder.JSONDecodeError as e:
+        except Exception as e:
             _LOGGER.debug(
                 "Failed to decode context_aware_metadata.json with error: %s", str(e)
             )
