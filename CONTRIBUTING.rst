@@ -42,8 +42,11 @@ You can run the system tests with ``nox``::
 To run a single session, specify it with ``nox -s``::
 
     $ nox -f system_tests/noxfile.py -s service_account
+    
+First, set the environemnt variable ``GOOGLE_APPLICATION_CREDENTIALS`` to a valid service account.
+See `Creating and Managing Service Account Keys`_ for how to obtain a service account. 
 
-To run system tests locally, you will need to set up a data directory ::
+To run system tests locally, you will also need to set up a data directory ::
 
     $ mkdir system_tests/data
 
@@ -88,6 +91,17 @@ After the app is deployed, change ``service`` in ``app.yaml`` back to ``google-a
 You can now run the App Engine tests: ::
 
     $ nox -f system_tests/noxfile.py -s app_engine
+    
+Compute Engine Tests
+^^^^^^^^^^^^^^^^^^^^
+
+These tests cannot be run locally and will be skipped if they are run outside of Google Compute Engine.
+    
+grpc Tests
+^^^^^^^^^^^^
+
+These tests use the Pub/Sub API. Grant the service account specified by `GOOGLE_APPLICATION_CREDENTIALS`
+permissions to list topics. The service account should have at least `roles/pubsub.viewer`.
 
 Coding Style
 ------------
