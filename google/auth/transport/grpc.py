@@ -17,7 +17,7 @@
 from __future__ import absolute_import
 
 from concurrent import futures
-from sys import platform
+import logging
 
 import six
 
@@ -33,6 +33,8 @@ except ImportError as caught_exc:  # pragma: NO COVER
         ),
         caught_exc,
     )
+
+_LOGGER = logging.getLogger(__name__)
 
 
 class AuthMetadataPlugin(grpc.AuthMetadataPlugin):
@@ -164,13 +166,20 @@ class SslCredentials:
         self._is_mtls = False
 
         # Load client SSL credentials.
-        context_aware_metadata = _mtls_helper.read_metadata_file(
+        context_aware_metadata = _mtls_helper._read_dca_metadata_file(
             _mtls_helper.CONTEXT_AWARE_METADATA_PATH
         )
         if context_aware_metadata:
-            self._is_mtls, cert, key, _, _ = _mtls_helper.get_client_ssl_credentials(
-                context_aware_metadata, platform
-            )
+            try:
+                cert, key = _mtls_helper.get_client_ssl_credentials(
+                    context_aware_metadata
+                )
+                self._is_mtls = True
+
+            except (NotImplementedError, OSError, RuntimeError, ValueError) as e:
+                _LOGGER.debug(
+                    "Failed to get client SSL credentials with error: %s", str(e)
+                )
 
         if self._is_mtls:
             self._ssl_credentials = grpc.ssl_channel_credentials(

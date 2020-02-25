@@ -161,16 +161,16 @@ def test_secure_authorized_channel_explicit_ssl(
 @mock.patch(
     "google.auth.transport._mtls_helper.get_client_ssl_credentials", autospec=True
 )
-@mock.patch("google.auth.transport._mtls_helper.read_metadata_file", autospec=True)
+@mock.patch("google.auth.transport._mtls_helper._read_dca_metadata_file", autospec=True)
 class TestSslCredentials(object):
     def test_no_context_aware_metadata(
         self,
-        mock_read_metadata_file,
+        mock_read_dca_metadata_file,
         mock_get_client_ssl_credentials,
         mock_ssl_channel_credentials,
     ):
-        # Mock that read_metadata_file function returns no metadata.
-        mock_read_metadata_file.return_value = None
+        # Mock that _read_dca_metadata_file function returns no metadata.
+        mock_read_dca_metadata_file.return_value = None
 
         ssl_credentials = google.auth.transport.grpc.SslCredentials()
 
@@ -184,11 +184,11 @@ class TestSslCredentials(object):
 
     def test_get_client_ssl_credentials_failure(
         self,
-        mock_read_metadata_file,
+        mock_read_dca_metadata_file,
         mock_get_client_ssl_credentials,
         mock_ssl_channel_credentials,
     ):
-        mock_read_metadata_file.return_value = {
+        mock_read_dca_metadata_file.return_value = {
             "cert_provider_command": ["some command"]
         }
 
@@ -206,11 +206,11 @@ class TestSslCredentials(object):
 
     def test_get_client_ssl_credentials_success(
         self,
-        mock_read_metadata_file,
+        mock_read_dca_metadata_file,
         mock_get_client_ssl_credentials,
         mock_ssl_channel_credentials,
     ):
-        mock_read_metadata_file.return_value = {
+        mock_read_dca_metadata_file.return_value = {
             "cert_provider_command": ["some command"]
         }
 
@@ -220,11 +220,8 @@ class TestSslCredentials(object):
         with open(os.path.join(DATA_DIR, "public_cert.pem"), "rb") as fh:
             PUBLIC_CERT_BYTES = fh.read()
         mock_get_client_ssl_credentials.return_value = (
-            True,
             PUBLIC_CERT_BYTES,
             PRIVATE_KEY_BYTES,
-            None,
-            None,
         )
 
         ssl_credentials = google.auth.transport.grpc.SslCredentials()
