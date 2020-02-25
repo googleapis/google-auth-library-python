@@ -81,7 +81,7 @@ If you already have a default service associated with your project, you can skip
 Edit ``app.yaml`` so ``service`` is ``default`` instead of ``google-auth-system-tests``.
 From ``system_tests/app_engine_test_app`` run the following commands ::
 
-    $ pip install --target-lib -r requirements.txt
+    $ pip install --target lib -r requirements.txt
     $ gcloud app deploy -q app.yaml
 
 After the app is deployed, change ``service`` in ``app.yaml`` back to ``google-auth-system-tests``. 
