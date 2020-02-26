@@ -133,7 +133,9 @@ def secure_authorized_channel(
             without using a standard http transport.
         target (str): The host and port of the service.
         ssl_credentials (grpc.ChannelCredentials): Optional SSL channel
-            credentials. This can be used to specify different certificates.
+            credentials. This can be used to specify different certificates. If
+            not provided, application default SSL channel credentials will be
+            used.
         kwargs: Additional arguments to pass to :func:`grpc.secure_channel`.
 
     Returns:
@@ -146,7 +148,8 @@ def secure_authorized_channel(
     google_auth_credentials = grpc.metadata_call_credentials(metadata_plugin)
 
     if ssl_credentials is None:
-        ssl_credentials = grpc.ssl_channel_credentials()
+        adc_ssl_credentils = SslCredentials()
+        ssl_credentials = adc_ssl_credentils.ssl_credentials
 
     # Combine the ssl credentials and the authorization credentials.
     composite_credentials = grpc.composite_channel_credentials(
@@ -157,9 +160,11 @@ def secure_authorized_channel(
 
 
 class SslCredentials:
-    """Class for application default SSL credentials. For Linux with endpoint
-    verification support, device certificate will be automatically loaded if
-    available and mutual TLS will be established.
+    """Class for application default SSL credentials.
+
+    For Linux with endpoint verification support, device certificate will be
+    automatically loaded if available and mutual TLS will be established.
+    See https://cloud.google.com/endpoint-verification/docs/overview.
     """
 
     def __init__(self):
@@ -190,8 +195,10 @@ class SslCredentials:
 
     @property
     def ssl_credentials(self):
+        """Get the created SSL channel credentials."""
         return self._ssl_credentials
 
     @property
     def is_mtls(self):
+        """"Property indicting if the created SSL channel credentials is mutual TLS."""
         return self._is_mtls
