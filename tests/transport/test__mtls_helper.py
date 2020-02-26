@@ -13,43 +13,97 @@
 # limitations under the License.
 
 import os
+import re
 
 import mock
+import pytest
 
 from google.auth.transport import _mtls_helper
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
 
-with open(os.path.join(DATA_DIR, "privatekey.pub"), "rb") as fh:
+with open(os.path.join(DATA_DIR, "privatekey.pem"), "rb") as fh:
     PRIVATE_KEY_BYTES = fh.read()
 
 with open(os.path.join(DATA_DIR, "public_cert.pem"), "rb") as fh:
     PUBLIC_CERT_BYTES = fh.read()
-
-CLIENT_SSL_CREDENTIALS = PUBLIC_CERT_BYTES + PRIVATE_KEY_BYTES
 
 CONTEXT_AWARE_METADATA = {"cert_provider_command": ["some command"]}
 
 CONTEXT_AWARE_METADATA_NO_CERT_PROVIDER_COMMAND = {}
 
 
+def check_cert_and_key(content, expected_cert, expected_key):
+    success = True
+
+    cert_match = re.findall(_mtls_helper._CERT_REGEX, content)
+    success = success and len(cert_match) == 1 and cert_match[0] == expected_cert
+
+    key_match = re.findall(_mtls_helper._KEY_REGEX, content)
+    success = success and len(key_match) == 1 and key_match[0] == expected_key
+
+    return success
+
+
+class TestCertAndKeyRegex(object):
+    def test_cert_and_key(self):
+        # Test signle cert and single key
+        check_cert_and_key(
+            PUBLIC_CERT_BYTES + PRIVATE_KEY_BYTES, PUBLIC_CERT_BYTES, PRIVATE_KEY_BYTES
+        )
+        check_cert_and_key(
+            PRIVATE_KEY_BYTES + PUBLIC_CERT_BYTES, PUBLIC_CERT_BYTES, PRIVATE_KEY_BYTES
+        )
+
+        # Test cert chain and single key
+        check_cert_and_key(
+            PUBLIC_CERT_BYTES + PUBLIC_CERT_BYTES + PRIVATE_KEY_BYTES,
+            PUBLIC_CERT_BYTES + PUBLIC_CERT_BYTES,
+            PRIVATE_KEY_BYTES,
+        )
+        check_cert_and_key(
+            PRIVATE_KEY_BYTES + PUBLIC_CERT_BYTES + PUBLIC_CERT_BYTES,
+            PUBLIC_CERT_BYTES + PUBLIC_CERT_BYTES,
+            PRIVATE_KEY_BYTES,
+        )
+
+    def test_key(self):
+        # Create some fake keys for regex check.
+        KEY = b"""-----BEGIN PRIVATE KEY-----
+        MIIBCgKCAQEA4ej0p7bQ7L/r4rVGUz9RN4VQWoej1Bg1mYWIDYslvKrk1gpj7wZg
+        /fy3ZpsL7WqgsZS7Q+0VRK8gKfqkxg5OYQIDAQAB
+        -----END PRIVATE KEY-----"""
+        RSA_KEY = b"""-----BEGIN RSA PRIVATE KEY-----
+        MIIBCgKCAQEA4ej0p7bQ7L/r4rVGUz9RN4VQWoej1Bg1mYWIDYslvKrk1gpj7wZg
+        /fy3ZpsL7WqgsZS7Q+0VRK8gKfqkxg5OYQIDAQAB
+        -----END RSA PRIVATE KEY-----"""
+        EC_KEY = b"""-----BEGIN EC PRIVATE KEY-----
+        MIIBCgKCAQEA4ej0p7bQ7L/r4rVGUz9RN4VQWoej1Bg1mYWIDYslvKrk1gpj7wZg
+        /fy3ZpsL7WqgsZS7Q+0VRK8gKfqkxg5OYQIDAQAB
+        -----END EC PRIVATE KEY-----"""
+
+        check_cert_and_key(PUBLIC_CERT_BYTES + KEY, PUBLIC_CERT_BYTES, KEY)
+        check_cert_and_key(PUBLIC_CERT_BYTES + RSA_KEY, PUBLIC_CERT_BYTES, RSA_KEY)
+        check_cert_and_key(PUBLIC_CERT_BYTES + EC_KEY, PUBLIC_CERT_BYTES, EC_KEY)
+
+
 class TestReadMetadataFile(object):
     def test_success(self):
         metadata_path = os.path.join(DATA_DIR, "context_aware_metadata.json")
-        metadata = _mtls_helper.read_metadata_file(metadata_path)
+        metadata = _mtls_helper._read_dca_metadata_file(metadata_path)
 
         assert "cert_provider_command" in metadata
 
     def test_file_not_exist(self):
         metadata_path = os.path.join(DATA_DIR, "not_exist.json")
-        metadata = _mtls_helper.read_metadata_file(metadata_path)
+        metadata = _mtls_helper._read_dca_metadata_file(metadata_path)
 
         assert metadata is None
 
     def test_file_not_json(self):
         # read a file which is not json format.
         metadata_path = os.path.join(DATA_DIR, "privatekey.pem")
-        metadata = _mtls_helper.read_metadata_file(metadata_path)
+        metadata = _mtls_helper._read_dca_metadata_file(metadata_path)
 
         assert metadata is None
 
@@ -63,126 +117,56 @@ class TestGetClientSslCredentials(object):
         # subprocess.Popen. The mock process returns the given output and error
         # when mock_process.communicate() is called.
         mock_process = mock.Mock()
-        attrs = {"communicate.return_value": (output, error)}
+        attrs = {"communicate.return_value": (output, error), "returncode": 0}
         mock_process.configure_mock(**attrs)
         return mock_process
 
     @mock.patch("subprocess.Popen", autospec=True)
     def test_success(self, mock_popen):
-        mock_popen.return_value = self.create_mock_process(CLIENT_SSL_CREDENTIALS, b"")
-        success, cert, key, output, error = _mtls_helper.get_client_ssl_credentials(
-            CONTEXT_AWARE_METADATA, "linux"
+        mock_popen.return_value = self.create_mock_process(
+            PUBLIC_CERT_BYTES + PRIVATE_KEY_BYTES, b""
         )
+        cert, key = _mtls_helper.get_client_ssl_credentials(CONTEXT_AWARE_METADATA)
+        assert cert == PUBLIC_CERT_BYTES
+        assert key == PRIVATE_KEY_BYTES
 
-        assert all(
-            [
-                a == b
-                for a, b in zip(
-                    (success, cert, key, output, error),
-                    (
-                        True,
-                        PUBLIC_CERT_BYTES,
-                        PRIVATE_KEY_BYTES,
-                        CLIENT_SSL_CREDENTIALS,
-                        b"",
-                    ),
-                )
-            ]
+    @mock.patch("subprocess.Popen", autospec=True)
+    def test_success_with_cert_chain(self, mock_popen):
+        PUBLIC_CERT_CHAIN_BYTES = PUBLIC_CERT_BYTES + PUBLIC_CERT_BYTES
+        mock_popen.return_value = self.create_mock_process(
+            PUBLIC_CERT_CHAIN_BYTES + PRIVATE_KEY_BYTES, b""
         )
-
-    def test_not_linux_platform(self):
-        success, cert, key, stdout, stderr = _mtls_helper.get_client_ssl_credentials(
-            CONTEXT_AWARE_METADATA, "win32"
-        )
-
-        assert all(
-            [
-                a == b
-                for a, b in zip(
-                    (success, cert, key, stdout, stderr),
-                    (False, None, None, None, None),
-                )
-            ]
-        )
+        cert, key = _mtls_helper.get_client_ssl_credentials(CONTEXT_AWARE_METADATA)
+        assert cert == PUBLIC_CERT_CHAIN_BYTES
+        assert key == PRIVATE_KEY_BYTES
 
     def test_missing_cert_provider_command(self):
-        success, cert, key, stdout, stderr = _mtls_helper.get_client_ssl_credentials(
-            CONTEXT_AWARE_METADATA_NO_CERT_PROVIDER_COMMAND, "linux"
-        )
-
-        assert all(
-            [
-                a == b
-                for a, b in zip(
-                    (success, cert, key, stdout, stderr),
-                    (False, None, None, None, None),
-                )
-            ]
-        )
+        with pytest.raises(ValueError):
+            assert _mtls_helper.get_client_ssl_credentials(
+                CONTEXT_AWARE_METADATA_NO_CERT_PROVIDER_COMMAND
+            )
 
     @mock.patch("subprocess.Popen", autospec=True)
     def test_missing_cert(self, mock_popen):
         mock_popen.return_value = self.create_mock_process(PRIVATE_KEY_BYTES, b"")
-        success, cert, key, output, error = _mtls_helper.get_client_ssl_credentials(
-            CONTEXT_AWARE_METADATA, "linux"
-        )
-
-        assert all(
-            [
-                a == b
-                for a, b in zip(
-                    (success, cert, key, output, error),
-                    (False, None, None, PRIVATE_KEY_BYTES, b""),
-                )
-            ]
-        )
+        with pytest.raises(ValueError):
+            assert _mtls_helper.get_client_ssl_credentials(CONTEXT_AWARE_METADATA)
 
     @mock.patch("subprocess.Popen", autospec=True)
     def test_missing_key(self, mock_popen):
         mock_popen.return_value = self.create_mock_process(PUBLIC_CERT_BYTES, b"")
-        success, cert, key, output, error = _mtls_helper.get_client_ssl_credentials(
-            CONTEXT_AWARE_METADATA, "linux"
-        )
-
-        assert all(
-            [
-                a == b
-                for a, b in zip(
-                    (success, cert, key, output, error),
-                    (False, None, None, PUBLIC_CERT_BYTES, b""),
-                )
-            ]
-        )
+        with pytest.raises(ValueError):
+            assert _mtls_helper.get_client_ssl_credentials(CONTEXT_AWARE_METADATA)
 
     @mock.patch("subprocess.Popen", autospec=True)
     def test_cert_provider_returns_error(self, mock_popen):
         mock_popen.return_value = self.create_mock_process(b"", b"some error")
-        success, cert, key, output, error = _mtls_helper.get_client_ssl_credentials(
-            CONTEXT_AWARE_METADATA, "linux"
-        )
-
-        assert all(
-            [
-                a == b
-                for a, b in zip(
-                    (success, cert, key, output, error),
-                    (False, None, None, b"", b"some error"),
-                )
-            ]
-        )
+        mock_popen.return_value.returncode = 1
+        with pytest.raises(RuntimeError):
+            assert _mtls_helper.get_client_ssl_credentials(CONTEXT_AWARE_METADATA)
 
     @mock.patch("subprocess.Popen", autospec=True)
     def test_popen_raise_exception(self, mock_popen):
         mock_popen.side_effect = OSError()
-        success, cert, key, output, error = _mtls_helper.get_client_ssl_credentials(
-            CONTEXT_AWARE_METADATA, "linux"
-        )
-
-        assert all(
-            [
-                a == b
-                for a, b in zip(
-                    (success, cert, key, output, error), (False, None, None, None, None)
-                )
-            ]
-        )
+        with pytest.raises(OSError):
+            assert _mtls_helper.get_client_ssl_credentials(CONTEXT_AWARE_METADATA)
