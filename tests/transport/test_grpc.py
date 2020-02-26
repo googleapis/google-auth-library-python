@@ -32,6 +32,11 @@ try:
 except ImportError:  # pragma: NO COVER
     HAS_GRPC = False
 
+DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
+with open(os.path.join(DATA_DIR, "privatekey.pem"), "rb") as fh:
+    PRIVATE_KEY_BYTES = fh.read()
+with open(os.path.join(DATA_DIR, "public_cert.pem"), "rb") as fh:
+    PUBLIC_CERT_BYTES = fh.read()
 
 pytestmark = pytest.mark.skipif(not HAS_GRPC, reason="gRPC is unavailable.")
 
@@ -88,73 +93,179 @@ class TestAuthMetadataPlugin(object):
         )
 
 
+@mock.patch(
+    "google.auth.transport._mtls_helper.get_client_ssl_credentials", autospec=True
+)
 @mock.patch("grpc.composite_channel_credentials", autospec=True)
 @mock.patch("grpc.metadata_call_credentials", autospec=True)
 @mock.patch("grpc.ssl_channel_credentials", autospec=True)
 @mock.patch("grpc.secure_channel", autospec=True)
-def test_secure_authorized_channel(
-    secure_channel,
-    ssl_channel_credentials,
-    metadata_call_credentials,
-    composite_channel_credentials,
-):
-    credentials = CredentialsStub()
-    request = mock.create_autospec(transport.Request)
-    target = "example.com:80"
-
-    channel = google.auth.transport.grpc.secure_authorized_channel(
-        credentials, request, target, options=mock.sentinel.options
+class TestSecureAuthorizedChannel(object):
+    @mock.patch(
+        "google.auth.transport._mtls_helper._read_dca_metadata_file", autospec=True
     )
+    def test_secure_authorized_channel(
+        self,
+        read_dca_metadata_file,
+        secure_channel,
+        ssl_channel_credentials,
+        metadata_call_credentials,
+        composite_channel_credentials,
+        get_client_ssl_credentials,
+    ):
+        credentials = CredentialsStub()
+        request = mock.create_autospec(transport.Request)
+        target = "example.com:80"
 
-    # Check the auth plugin construction.
-    auth_plugin = metadata_call_credentials.call_args[0][0]
-    assert isinstance(auth_plugin, google.auth.transport.grpc.AuthMetadataPlugin)
-    assert auth_plugin._credentials == credentials
-    assert auth_plugin._request == request
+        # Mock the context aware metadata and client cert/key so mTLS SSL channel
+        # will be used.
+        read_dca_metadata_file.return_value = {
+            "cert_provider_command": ["some command"]
+        }
+        get_client_ssl_credentials.return_value = (PUBLIC_CERT_BYTES, PRIVATE_KEY_BYTES)
 
-    # Check the ssl channel call.
-    assert ssl_channel_credentials.called
+        channel = google.auth.transport.grpc.secure_authorized_channel(
+            credentials, request, target, options=mock.sentinel.options
+        )
 
-    # Check the composite credentials call.
-    composite_channel_credentials.assert_called_once_with(
-        ssl_channel_credentials.return_value, metadata_call_credentials.return_value
+        # Check the auth plugin construction.
+        auth_plugin = metadata_call_credentials.call_args[0][0]
+        assert isinstance(auth_plugin, google.auth.transport.grpc.AuthMetadataPlugin)
+        assert auth_plugin._credentials == credentials
+        assert auth_plugin._request == request
+
+        # Check the ssl channel call.
+        ssl_channel_credentials.assert_called_once_with(
+            certificate_chain=PUBLIC_CERT_BYTES, private_key=PRIVATE_KEY_BYTES
+        )
+
+        # Check the composite credentials call.
+        composite_channel_credentials.assert_called_once_with(
+            ssl_channel_credentials.return_value, metadata_call_credentials.return_value
+        )
+
+        # Check the channel call.
+        secure_channel.assert_called_once_with(
+            target,
+            composite_channel_credentials.return_value,
+            options=mock.sentinel.options,
+        )
+        assert channel == secure_channel.return_value
+
+    def test_secure_authorized_channel_explicit_ssl(
+        self,
+        secure_channel,
+        ssl_channel_credentials,
+        metadata_call_credentials,
+        composite_channel_credentials,
+        get_client_ssl_credentials,
+    ):
+        credentials = mock.Mock()
+        request = mock.Mock()
+        target = "example.com:80"
+        ssl_credentials = mock.Mock()
+
+        google.auth.transport.grpc.secure_authorized_channel(
+            credentials, request, target, ssl_credentials=ssl_credentials
+        )
+
+        # Since explicit SSL credentials are provided, get_client_ssl_credentials
+        # shouldn't be called.
+        assert not get_client_ssl_credentials.called
+
+        # Check the ssl channel call.
+        assert not ssl_channel_credentials.called
+
+        # Check the composite credentials call.
+        composite_channel_credentials.assert_called_once_with(
+            ssl_credentials, metadata_call_credentials.return_value
+        )
+
+    def test_secure_authorized_channel_mutual_exclusive(
+        self,
+        secure_channel,
+        ssl_channel_credentials,
+        metadata_call_credentials,
+        composite_channel_credentials,
+        get_client_ssl_credentials,
+    ):
+        credentials = mock.Mock()
+        request = mock.Mock()
+        target = "example.com:80"
+        ssl_credentials = mock.Mock()
+        client_cert_callback = mock.Mock()
+
+        with pytest.raises(ValueError):
+            google.auth.transport.grpc.secure_authorized_channel(
+                credentials,
+                request,
+                target,
+                ssl_credentials=ssl_credentials,
+                client_cert_callback=client_cert_callback,
+            )
+
+    def test_secure_authorized_channel_with_client_cert_callback_success(
+        self,
+        secure_channel,
+        ssl_channel_credentials,
+        metadata_call_credentials,
+        composite_channel_credentials,
+        get_client_ssl_credentials,
+    ):
+        credentials = mock.Mock()
+        request = mock.Mock()
+        target = "example.com:80"
+        client_cert_callback = mock.Mock()
+        client_cert_callback.return_value = (True, PUBLIC_CERT_BYTES, PRIVATE_KEY_BYTES)
+
+        google.auth.transport.grpc.secure_authorized_channel(
+            credentials, request, target, client_cert_callback=client_cert_callback
+        )
+
+        client_cert_callback.assert_called_once()
+
+        # Check we are using the cert and key provided by client_cert_callback.
+        ssl_channel_credentials.assert_called_once_with(
+            certificate_chain=PUBLIC_CERT_BYTES, private_key=PRIVATE_KEY_BYTES
+        )
+
+        # Check the composite credentials call.
+        composite_channel_credentials.assert_called_once_with(
+            ssl_channel_credentials.return_value, metadata_call_credentials.return_value
+        )
+
+    @mock.patch(
+        "google.auth.transport._mtls_helper._read_dca_metadata_file", autospec=True
     )
+    def test_secure_authorized_channel_with_client_cert_callback_failure(
+        self,
+        read_dca_metadata_file,
+        secure_channel,
+        ssl_channel_credentials,
+        metadata_call_credentials,
+        composite_channel_credentials,
+        get_client_ssl_credentials,
+    ):
+        credentials = mock.Mock()
+        request = mock.Mock()
+        target = "example.com:80"
+        client_cert_callback = mock.Mock()
+        client_cert_callback.return_value = (False, None, None)
 
-    # Check the channel call.
-    secure_channel.assert_called_once_with(
-        target,
-        composite_channel_credentials.return_value,
-        options=mock.sentinel.options,
-    )
-    assert channel == secure_channel.return_value
+        # Set DCA metadata to None to not trigger mTLS DCA for test simplicity.
+        read_dca_metadata_file.return_value = None
 
+        google.auth.transport.grpc.secure_authorized_channel(
+            credentials, request, target, client_cert_callback=client_cert_callback
+        )
 
-@mock.patch("grpc.composite_channel_credentials", autospec=True)
-@mock.patch("grpc.metadata_call_credentials", autospec=True)
-@mock.patch("grpc.ssl_channel_credentials", autospec=True)
-@mock.patch("grpc.secure_channel", autospec=True)
-def test_secure_authorized_channel_explicit_ssl(
-    secure_channel,
-    ssl_channel_credentials,
-    metadata_call_credentials,
-    composite_channel_credentials,
-):
-    credentials = mock.Mock()
-    request = mock.Mock()
-    target = "example.com:80"
-    ssl_credentials = mock.Mock()
+        client_cert_callback.assert_called_once()
+        ssl_channel_credentials.assert_called_once_with()
 
-    google.auth.transport.grpc.secure_authorized_channel(
-        credentials, request, target, ssl_credentials=ssl_credentials
-    )
-
-    # Check the ssl channel call.
-    assert not ssl_channel_credentials.called
-
-    # Check the composite credentials call.
-    composite_channel_credentials.assert_called_once_with(
-        ssl_credentials, metadata_call_credentials.return_value
-    )
+        # Check the composite credentials call.
+        composite_channel_credentials.assert_called_once_with(
+            ssl_channel_credentials.return_value, metadata_call_credentials.return_value
+        )
 
 
 @mock.patch("grpc.ssl_channel_credentials", autospec=True)
@@ -177,10 +288,10 @@ class TestSslCredentials(object):
         # Since no context aware metadata is found, we wouldn't call
         # get_client_ssl_credentials, and the SSL channel credentials created is
         # non mTLS.
-        mock_get_client_ssl_credentials.assert_not_called()
-        mock_ssl_channel_credentials.assert_called_once_with()
         assert ssl_credentials.ssl_credentials is not None
         assert not ssl_credentials.is_mtls
+        mock_get_client_ssl_credentials.assert_not_called()
+        mock_ssl_channel_credentials.assert_called_once_with()
 
     def test_get_client_ssl_credentials_failure(
         self,
@@ -192,17 +303,11 @@ class TestSslCredentials(object):
             "cert_provider_command": ["some command"]
         }
 
-        # Mock that client cert and key are not loaded.
-        mock_get_client_ssl_credentials.return_value = (False, None, None, None, None)
+        # Mock that client cert and key are not loaded and exception is raised.
+        mock_get_client_ssl_credentials.side_effect = ValueError()
 
-        ssl_credentials = google.auth.transport.grpc.SslCredentials()
-
-        # Since we failed to get_client_ssl_credentials, the SSL channel
-        # credentials created is non mTLS.
-        mock_get_client_ssl_credentials.assert_called_once()
-        mock_ssl_channel_credentials.assert_called_once_with()
-        assert ssl_credentials.ssl_credentials is not None
-        assert not ssl_credentials.is_mtls
+        with pytest.raises(ValueError):
+            assert google.auth.transport.grpc.SslCredentials().ssl_credentials
 
     def test_get_client_ssl_credentials_success(
         self,
@@ -213,12 +318,6 @@ class TestSslCredentials(object):
         mock_read_dca_metadata_file.return_value = {
             "cert_provider_command": ["some command"]
         }
-
-        DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
-        with open(os.path.join(DATA_DIR, "privatekey.pub"), "rb") as fh:
-            PRIVATE_KEY_BYTES = fh.read()
-        with open(os.path.join(DATA_DIR, "public_cert.pem"), "rb") as fh:
-            PUBLIC_CERT_BYTES = fh.read()
         mock_get_client_ssl_credentials.return_value = (
             PUBLIC_CERT_BYTES,
             PRIVATE_KEY_BYTES,
@@ -226,9 +325,9 @@ class TestSslCredentials(object):
 
         ssl_credentials = google.auth.transport.grpc.SslCredentials()
 
+        assert ssl_credentials.ssl_credentials is not None
+        assert ssl_credentials.is_mtls
         mock_get_client_ssl_credentials.assert_called_once()
         mock_ssl_channel_credentials.assert_called_once_with(
             certificate_chain=PUBLIC_CERT_BYTES, private_key=PRIVATE_KEY_BYTES
         )
-        assert ssl_credentials.ssl_credentials is not None
-        assert ssl_credentials.is_mtls

@@ -83,6 +83,8 @@ def get_client_ssl_credentials(metadata_json):
             execution of this command doesn't produce both client certicate and
             client key.
     """
+    # TODO: implement an in-memory cache of cert and key so we don't have to
+    # run cert provider command every time.
 
     # Check the cert provider command existence in the metadata json file.
     if _CERT_PROVIDER_COMMAND not in metadata_json:
