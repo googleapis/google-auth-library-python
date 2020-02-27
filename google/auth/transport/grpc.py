@@ -97,7 +97,12 @@ class AuthMetadataPlugin(grpc.AuthMetadataPlugin):
 
 
 def secure_authorized_channel(
-    credentials, request, target, ssl_credentials=None, **kwargs
+    credentials,
+    request,
+    target,
+    ssl_credentials=None,
+    client_cert_callback=None,
+    **kwargs
 ):
     """Creates a secure authorized gRPC channel.
 
@@ -133,19 +138,50 @@ def secure_authorized_channel(
             without using a standard http transport.
         target (str): The host and port of the service.
         ssl_credentials (grpc.ChannelCredentials): Optional SSL channel
-            credentials. This can be used to specify different certificates. If
-            not provided, application default SSL channel credentials will be
+            credentials. This can be used to specify different certificates.
+            This argument is mutually exclusive with ```client_cert_callback```;
+            providing both will raise an exception.
+            If ```ssl_credentials``` is ```None``` and ```client_cert_callback```
+            is ```None``` or fails, application default SSL credentials will be
+            used.
+        client_cert_callback (Callable[[], (bool, bytes, bytes)]): Optional
+            callback function to obtain client certicate and key for mutual TLS
+            connection. This argument is mutually exclusive with
+            ```ssl_credentials```; providing both will raise an exception.
+            If ```ssl_credentials``` is ```None``` and ```client_cert_callback```
+            is ```None``` or fails, application default SSL credentials will be
             used.
         kwargs: Additional arguments to pass to :func:`grpc.secure_channel`.
 
     Returns:
         grpc.Channel: The created gRPC channel.
+
+    Raises:
+        If ```ssl_credentials``` is ```None``` and ```client_cert_callback```
+        is ```None``` or fails, application default SSL credentials will be
+        used. For device with endpoint verification support, exceptions might be
+        raised during the application default SSL credentials creation
+        procedure. Please check :func:`~.SslCredentials.ssl_credentials` for the
+        possible exceptions.
     """
     # Create the metadata plugin for inserting the authorization header.
     metadata_plugin = AuthMetadataPlugin(credentials, request)
 
     # Create a set of grpc.CallCredentials using the metadata plugin.
     google_auth_credentials = grpc.metadata_call_credentials(metadata_plugin)
+
+    if ssl_credentials and client_cert_callback:
+        raise ValueError(
+            "Received both ssl_credentials and client_cert_callback; "
+            "these are mutually exclusive."
+        )
+
+    if client_cert_callback:
+        success, cert, key = client_cert_callback()
+        if success:
+            ssl_credentials = grpc.ssl_channel_credentials(
+                certificate_chain=cert, private_key=key
+            )
 
     if ssl_credentials is None:
         adc_ssl_credentils = SslCredentials()
@@ -162,40 +198,47 @@ def secure_authorized_channel(
 class SslCredentials:
     """Class for application default SSL credentials.
 
-    For Linux with endpoint verification support, device certificate will be
-    automatically loaded if available and mutual TLS will be established.
+    For device with endpoint verification support, device certificate will be
+    automatically loaded and mutual TLS will be established.
     See https://cloud.google.com/endpoint-verification/docs/overview.
     """
 
     def __init__(self):
-        self._is_mtls = False
-
         # Load client SSL credentials.
-        context_aware_metadata = _mtls_helper._read_dca_metadata_file(
+        self._context_aware_metadata = _mtls_helper._read_dca_metadata_file(
             _mtls_helper.CONTEXT_AWARE_METADATA_PATH
         )
-        if context_aware_metadata:
-            try:
-                cert, key = _mtls_helper.get_client_ssl_credentials(
-                    context_aware_metadata
-                )
-                self._is_mtls = True
+        if self._context_aware_metadata:
+            self._is_mtls = True
+        else:
+            self._is_mtls = False
 
-            except (NotImplementedError, OSError, RuntimeError, ValueError) as e:
-                _LOGGER.debug(
-                    "Failed to get client SSL credentials with error: %s", str(e)
-                )
+    @property
+    def ssl_credentials(self):
+        """Get the created SSL channel credentials.
 
-        if self._is_mtls:
+        For device with endpoint verification support, if device certificate
+        loading has any problems, corresponding exceptions will be raised. For
+        device without endpoint verification support, no exceptions will be
+        raised.
+
+        Raises:
+            OSError: cert provider command launch failure
+            RuntimeError: cert provider command runtime error
+            ValueError:
+                if context aware metadata file is malformed, or cert provider
+                command doesn't produce both client certicate and key.
+        """
+        if self._context_aware_metadata:
+            cert, key = _mtls_helper.get_client_ssl_credentials(
+                self._context_aware_metadata
+            )
             self._ssl_credentials = grpc.ssl_channel_credentials(
                 certificate_chain=cert, private_key=key
             )
         else:
             self._ssl_credentials = grpc.ssl_channel_credentials()
 
-    @property
-    def ssl_credentials(self):
-        """Get the created SSL channel credentials."""
         return self._ssl_credentials
 
     @property
