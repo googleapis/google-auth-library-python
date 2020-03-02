@@ -139,30 +139,33 @@ def secure_authorized_channel(
         target (str): The host and port of the service.
         ssl_credentials (grpc.ChannelCredentials): Optional SSL channel
             credentials. This can be used to specify different certificates.
-            This argument is mutually exclusive with ```client_cert_callback```;
+            This argument is mutually exclusive with client_cert_callback;
             providing both will raise an exception.
-            If ```ssl_credentials``` is ```None``` and ```client_cert_callback```
-            is ```None``` or fails, application default SSL credentials will be
-            used.
+            If ssl_credentials is None and client_cert_callback is None or
+            fails, application default SSL credentials will be used.
         client_cert_callback (Callable[[], (bool, bytes, bytes)]): Optional
             callback function to obtain client certicate and key for mutual TLS
             connection. This argument is mutually exclusive with
-            ```ssl_credentials```; providing both will raise an exception.
-            If ```ssl_credentials``` is ```None``` and ```client_cert_callback```
-            is ```None``` or fails, application default SSL credentials will be
-            used.
+            ssl_credentials; providing both will raise an exception.
+            If ssl_credentials is None and client_cert_callback is None or
+            fails, application default SSL credentials will be used.
         kwargs: Additional arguments to pass to :func:`grpc.secure_channel`.
 
     Returns:
         grpc.Channel: The created gRPC channel.
 
     Raises:
-        If ```ssl_credentials``` is ```None``` and ```client_cert_callback```
-        is ```None``` or fails, application default SSL credentials will be
-        used. For device with endpoint verification support, exceptions might be
-        raised during the application default SSL credentials creation
-        procedure. Please check :func:`~.SslCredentials.ssl_credentials` for the
-        possible exceptions.
+        OSError: cert provider command launch failure, in application default SSL
+            credentials loading process on devices with endpoint verification
+            support.
+        RuntimeError: cert provider command runtime error, in application
+            default SSL credentials loading process on devices with endpoint
+            verification support.
+        ValueError:
+            if context aware metadata file is malformed, or cert provider
+            command doesn't produce both client certicate and key, in application
+            default SSL credentials loading process on devices with endpoint
+            verification support.
     """
     # Create the metadata plugin for inserting the authorization header.
     metadata_plugin = AuthMetadataPlugin(credentials, request)
@@ -205,10 +208,10 @@ class SslCredentials:
 
     def __init__(self):
         # Load client SSL credentials.
-        self._context_aware_metadata = _mtls_helper._read_dca_metadata_file(
+        self._context_aware_metadata_path = _mtls_helper._check_dca_metadata_path(
             _mtls_helper.CONTEXT_AWARE_METADATA_PATH
         )
-        if self._context_aware_metadata:
+        if self._context_aware_metadata_path:
             self._is_mtls = True
         else:
             self._is_mtls = False
@@ -229,10 +232,11 @@ class SslCredentials:
                 if context aware metadata file is malformed, or cert provider
                 command doesn't produce both client certicate and key.
         """
-        if self._context_aware_metadata:
-            cert, key = _mtls_helper.get_client_ssl_credentials(
-                self._context_aware_metadata
+        if self._context_aware_metadata_path:
+            metadata = _mtls_helper._read_dca_metadata_file(
+                self._context_aware_metadata_path
             )
+            cert, key = _mtls_helper.get_client_ssl_credentials(metadata)
             self._ssl_credentials = grpc.ssl_channel_credentials(
                 certificate_chain=cert, private_key=key
             )
@@ -243,5 +247,5 @@ class SslCredentials:
 
     @property
     def is_mtls(self):
-        """"Property indicting if the created SSL channel credentials is mutual TLS."""
+        """Property indicting if the created SSL channel credentials is mutual TLS."""
         return self._is_mtls

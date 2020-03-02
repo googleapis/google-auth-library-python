@@ -33,6 +33,7 @@ except ImportError:  # pragma: NO COVER
     HAS_GRPC = False
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
+METADATA_PATH = os.path.join(DATA_DIR, "context_aware_metadata.json")
 with open(os.path.join(DATA_DIR, "privatekey.pem"), "rb") as fh:
     PRIVATE_KEY_BYTES = fh.read()
 with open(os.path.join(DATA_DIR, "public_cert.pem"), "rb") as fh:
@@ -104,8 +105,12 @@ class TestSecureAuthorizedChannel(object):
     @mock.patch(
         "google.auth.transport._mtls_helper._read_dca_metadata_file", autospec=True
     )
+    @mock.patch(
+        "google.auth.transport._mtls_helper._check_dca_metadata_path", autospec=True
+    )
     def test_secure_authorized_channel(
         self,
+        check_dca_metadata_path,
         read_dca_metadata_file,
         secure_channel,
         ssl_channel_credentials,
@@ -119,6 +124,7 @@ class TestSecureAuthorizedChannel(object):
 
         # Mock the context aware metadata and client cert/key so mTLS SSL channel
         # will be used.
+        check_dca_metadata_path.return_value = METADATA_PATH
         read_dca_metadata_file.return_value = {
             "cert_provider_command": ["some command"]
         }
@@ -237,8 +243,12 @@ class TestSecureAuthorizedChannel(object):
     @mock.patch(
         "google.auth.transport._mtls_helper._read_dca_metadata_file", autospec=True
     )
+    @mock.patch(
+        "google.auth.transport._mtls_helper._check_dca_metadata_path", autospec=True
+    )
     def test_secure_authorized_channel_with_client_cert_callback_failure(
         self,
+        check_dca_metadata_path,
         read_dca_metadata_file,
         secure_channel,
         ssl_channel_credentials,
@@ -253,7 +263,7 @@ class TestSecureAuthorizedChannel(object):
         client_cert_callback.return_value = (False, None, None)
 
         # Set DCA metadata to None to not trigger mTLS DCA for test simplicity.
-        read_dca_metadata_file.return_value = None
+        check_dca_metadata_path.return_value = None
 
         google.auth.transport.grpc.secure_authorized_channel(
             credentials, request, target, client_cert_callback=client_cert_callback
@@ -273,15 +283,19 @@ class TestSecureAuthorizedChannel(object):
     "google.auth.transport._mtls_helper.get_client_ssl_credentials", autospec=True
 )
 @mock.patch("google.auth.transport._mtls_helper._read_dca_metadata_file", autospec=True)
+@mock.patch(
+    "google.auth.transport._mtls_helper._check_dca_metadata_path", autospec=True
+)
 class TestSslCredentials(object):
     def test_no_context_aware_metadata(
         self,
+        mock_check_dca_metadata_path,
         mock_read_dca_metadata_file,
         mock_get_client_ssl_credentials,
         mock_ssl_channel_credentials,
     ):
-        # Mock that _read_dca_metadata_file function returns no metadata.
-        mock_read_dca_metadata_file.return_value = None
+        # Mock that the metadata file doesn't exist.
+        mock_check_dca_metadata_path.return_value = None
 
         ssl_credentials = google.auth.transport.grpc.SslCredentials()
 
@@ -295,10 +309,12 @@ class TestSslCredentials(object):
 
     def test_get_client_ssl_credentials_failure(
         self,
+        mock_check_dca_metadata_path,
         mock_read_dca_metadata_file,
         mock_get_client_ssl_credentials,
         mock_ssl_channel_credentials,
     ):
+        mock_check_dca_metadata_path.return_value = METADATA_PATH
         mock_read_dca_metadata_file.return_value = {
             "cert_provider_command": ["some command"]
         }
@@ -311,10 +327,12 @@ class TestSslCredentials(object):
 
     def test_get_client_ssl_credentials_success(
         self,
+        mock_check_dca_metadata_path,
         mock_read_dca_metadata_file,
         mock_get_client_ssl_credentials,
         mock_ssl_channel_credentials,
     ):
+        mock_check_dca_metadata_path.return_value = METADATA_PATH
         mock_read_dca_metadata_file.return_value = {
             "cert_provider_command": ["some command"]
         }

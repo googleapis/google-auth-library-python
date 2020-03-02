@@ -87,6 +87,18 @@ class TestCertAndKeyRegex(object):
         check_cert_and_key(PUBLIC_CERT_BYTES + EC_KEY, PUBLIC_CERT_BYTES, EC_KEY)
 
 
+class TestCheckaMetadataPath(object):
+    def test_success(self):
+        metadata_path = os.path.join(DATA_DIR, "context_aware_metadata.json")
+        returned_path = _mtls_helper._check_dca_metadata_path(metadata_path)
+        assert returned_path is not None
+
+    def test_failure(self):
+        metadata_path = os.path.join(DATA_DIR, "not_exists.json")
+        returned_path = _mtls_helper._check_dca_metadata_path(metadata_path)
+        assert returned_path is None
+
+
 class TestReadMetadataFile(object):
     def test_success(self):
         metadata_path = os.path.join(DATA_DIR, "context_aware_metadata.json")
@@ -94,18 +106,11 @@ class TestReadMetadataFile(object):
 
         assert "cert_provider_command" in metadata
 
-    def test_file_not_exist(self):
-        metadata_path = os.path.join(DATA_DIR, "not_exist.json")
-        metadata = _mtls_helper._read_dca_metadata_file(metadata_path)
-
-        assert metadata is None
-
     def test_file_not_json(self):
         # read a file which is not json format.
         metadata_path = os.path.join(DATA_DIR, "privatekey.pem")
-        metadata = _mtls_helper._read_dca_metadata_file(metadata_path)
-
-        assert metadata is None
+        with pytest.raises(ValueError):
+            _mtls_helper._read_dca_metadata_file(metadata_path)
 
 
 class TestGetClientSslCredentials(object):

@@ -38,6 +38,24 @@ _KEY_REGEX = re.compile(
 _LOGGER = logging.getLogger(__name__)
 
 
+def _check_dca_metadata_path(metadata_path):
+    """Check the existence of context aware metadata. If exists, return the
+    absolute path; otherwise return None.
+
+    Args:
+        metadata_path (str): context aware metadata path.
+
+    Returns:
+        str: absolute path if exists and None otherwise.
+    """
+    metadata_path = path.expanduser(metadata_path)
+    print(metadata_path)
+    if not path.exists(metadata_path):
+        _LOGGER.debug("%s is not found, skip client SSL authentication.", metadata_path)
+        return None
+    return metadata_path
+
+
 def _read_dca_metadata_file(metadata_path):
     """Function to load context aware metadata from the given path.
 
@@ -45,22 +63,13 @@ def _read_dca_metadata_file(metadata_path):
         metadata_path (str): context aware metadata path.
 
     Returns:
-        Dict[str, str]:
-            The metadata. If metadata reading or parsing fails, return None.
-    """
-    metadata_path = path.expanduser(metadata_path)
-    if not path.exists(metadata_path):
-        _LOGGER.debug("%s is not found, skip client SSL authentication.", metadata_path)
-        return None
+        Dict[str, str]: The metadata.
 
+    Raises:
+        ValueError: If failed to parse metadata as JSON.
+    """
     with open(metadata_path) as f:
-        try:
-            metadata = json.load(f)
-        except Exception as e:
-            _LOGGER.debug(
-                "Failed to decode context_aware_metadata.json with error: %s", str(e)
-            )
-            return None
+        metadata = json.load(f)
 
     return metadata
 
