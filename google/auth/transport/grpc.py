@@ -247,5 +247,5 @@ class SslCredentials:
 
     @property
     def is_mtls(self):
-        """Property indicting if the created SSL channel credentials is mutual TLS."""
+        """Property indicating if the created SSL channel credentials is mutual TLS."""
         return self._is_mtls
