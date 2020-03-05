@@ -39,8 +39,8 @@ _LOGGER = logging.getLogger(__name__)
 
 
 def _check_dca_metadata_path(metadata_path):
-    """Check the existence of context aware metadata. If exists, return the
-    absolute path; otherwise return None.
+    """Checks for context aware metadata. If it exists, returns the absolute path;
+    otherwise returns None.
 
     Args:
         metadata_path (str): context aware metadata path.
@@ -49,7 +49,6 @@ def _check_dca_metadata_path(metadata_path):
         str: absolute path if exists and None otherwise.
     """
     metadata_path = path.expanduser(metadata_path)
-    print(metadata_path)
     if not path.exists(metadata_path):
         _LOGGER.debug("%s is not found, skip client SSL authentication.", metadata_path)
         return None
@@ -57,7 +56,7 @@ def _check_dca_metadata_path(metadata_path):
 
 
 def _read_dca_metadata_file(metadata_path):
-    """Function to load context aware metadata from the given path.
+    """Loads context aware metadata from the given path.
 
     Args:
         metadata_path (str): context aware metadata path.
@@ -75,22 +74,19 @@ def _read_dca_metadata_file(metadata_path):
 
 
 def get_client_ssl_credentials(metadata_json):
-    """Function to get mTLS client side cert and key.
+    """Returns the client side mTLS cert and key.
 
     Args:
-        metadata_json (Dict[str]): metadata JSON file which contains the cert
+        metadata_json (Dict[str, str]): metadata JSON file which contains the cert
             provider command.
 
     Returns:
         Tuple[bytes, bytes]: client certificate and key, both in PEM format.
 
     Raises:
-        OSError: subprocess throws OSError if failed to run cert provider command
-        RuntimeError: if cert provider command has runtime error
-        ValueError:
-            if metadata json file doesn't contain cert provider command, or the
-            execution of this command doesn't produce both client certicate and
-            client key.
+        OSError: If the cert provider command failed to run.
+        RuntimeError: If the cert provider command has a runtime error.
+        ValueError: If the metadata json file doesn't contain the cert provider command or if the command doesn't produce both the client certificate and client key.
     """
     # TODO: implement an in-memory cache of cert and key so we don't have to
     # run cert provider command every time.
@@ -103,13 +99,11 @@ def get_client_ssl_credentials(metadata_json):
     command = metadata_json[_CERT_PROVIDER_COMMAND]
     process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = process.communicate()
-    process_return_code = process.returncode
 
     # Check cert provider command execution error.
-    if process_return_code != 0:
+    if process.returncode != 0:
         raise RuntimeError(
-            "Cert provider command returns non-zero status code %s"
-            % process_return_code
+            "Cert provider command returns non-zero status code %s" % process.returncode
         )
 
     # Extract certificate (chain) and key.

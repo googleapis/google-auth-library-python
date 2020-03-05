@@ -47,7 +47,7 @@ def check_cert_and_key(content, expected_cert, expected_key):
 
 class TestCertAndKeyRegex(object):
     def test_cert_and_key(self):
-        # Test signle cert and single key
+        # Test single cert and single key
         check_cert_and_key(
             PUBLIC_CERT_BYTES + PRIVATE_KEY_BYTES, PUBLIC_CERT_BYTES, PRIVATE_KEY_BYTES
         )

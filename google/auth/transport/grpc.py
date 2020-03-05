@@ -124,10 +124,90 @@ def secure_authorized_channel(
 
         # Create a channel.
         channel = google.auth.transport.grpc.secure_authorized_channel(
-            credentials, 'speech.googleapis.com:443', request)
+            credentials, regular_endpoint, request,
+            ssl_credentials=grpc.ssl_channel_credentials())
 
         # Use the channel to create a stub.
         cloud_speech.create_Speech_stub(channel)
+
+        # There are actually a couple of options to create a channel, depending
+        # on if you want to create a regular or mutual TLS channel.
+        # First let's list the endpoints (regular vs mutual TLS) to choose from.
+        regular_endpoint = 'speech.googleapis.com:443'
+        mtls_endpoint = 'speech.mtls.googleapis.com:443'
+
+        # Option 1: create a regular (non-mutual) TLS channel by explicitly
+        # setting the ssl_credentials.
+        regular_ssl_credentials = grpc.ssl_channel_credentials()
+        channel = google.auth.transport.grpc.secure_authorized_channel(
+            credentials, regular_endpoint, request,
+            ssl_credentials=regular_ssl_credentials)
+
+        # Option 2: create a mutual TLS channel by calling a callback which
+        # returns the call status, the client side certificate and the key.
+        def my_client_cert_callback():
+            code_to_load_client_cert_and_key()
+            if loaded:
+                return (True, pem_cert_bytes, pem_key_bytes)
+            raise MyClientCertFailureException()
+
+        try:
+            channel = google.auth.transport.grpc.secure_authorized_channel(
+                credentials, mtls_endpoint, request,
+                client_cert_callback=my_client_cert_callback)
+        except MyClientCertFailureException:
+            # handle the exception or use regular endpoint instead.
+
+        # Alternatively you don't throw exceptions in the callback and return a
+        # False status instead. In this case `secure_authorized_channel` creates
+        # a regular TLS channel. Since you are still using mtls_endpoint, future
+        # API calls using this channel will be rejected.
+        def my_client_cert_callback():
+            code_to_load_client_cert_and_key()
+            if loaded:
+                return (True, pem_cert_bytes, pem_key_bytes)
+            else:
+                return (False, None, None)
+
+        channel = google.auth.transport.grpc.secure_authorized_channel(
+            credentials, mtls_endpoint, request,
+            client_cert_callback=my_client_cert_callback)
+
+        # Option 3: use application default SSL credentials. It searches and uses
+        # the command in a context aware metadata file, which is available on
+        # devices with endpoint verification support.
+        # See https://cloud.google.com/endpoint-verification/docs/overview.
+        try:
+            default_ssl_credentials = SslCredentials()
+        except:
+            # Exception can be raised if the context aware metadata is malformed.
+            # See :class:`SslCredentials` for the possible exceptions.
+
+        # Choose the endpoint based on the SSL credentials type.
+        if default_ssl_credentials.is_mtls:
+            endpoint_to_use = mtls_endpoint
+        else:
+            endpoint_to_use = regular_endpoint
+        channel = google.auth.transport.grpc.secure_authorized_channel(
+            credentials, endpoint_to_use, request,
+            ssl_credentials=default_ssl_credentials)
+
+        # Option 4: not setting ssl_credentials and client_cert_callback. For
+        # devices without endpoint verification support, a regular TLS channel
+        # is created; otherwise, a mutual TLS channel is created, however, the
+        # call should be wrapped in a try/except block in case of malformed
+        # context aware metadata.
+
+        # The following code uses regular_endpoint, it works the same no matter
+        # the created channle is regular or mutual TLS. Regular endpoint ignores
+        # client certificate and key.
+        channel = google.auth.transport.grpc.secure_authorized_channel(
+            credentials, regular_endpoint, request)
+
+        # The following code uses mtls_endpoint, if the created channle is regular,
+        # future API calls using this channel will be rejected.
+        channel = google.auth.transport.grpc.secure_authorized_channel(
+            credentials, mtls_endpoint, request)
 
     Args:
         credentials (google.auth.credentials.Credentials): The credentials to
@@ -155,17 +235,17 @@ def secure_authorized_channel(
         grpc.Channel: The created gRPC channel.
 
     Raises:
-        OSError: cert provider command launch failure, in application default SSL
-            credentials loading process on devices with endpoint verification
-            support.
-        RuntimeError: cert provider command runtime error, in application
+        OSError: If the cert provider command launch fails during the application
             default SSL credentials loading process on devices with endpoint
             verification support.
+        RuntimeError: If the cert provider command has a runtime error during the
+            application default SSL credentials loading process on devices with
+            endpoint verification support.
         ValueError:
-            if context aware metadata file is malformed, or cert provider
-            command doesn't produce both client certicate and key, in application
-            default SSL credentials loading process on devices with endpoint
-            verification support.
+            If the context aware metadata file is malformed or if the cert provider
+            command doesn't produce both client certificate and key during the
+            application default SSL credentials loading process on devices with
+            endpoint verification support.
     """
     # Create the metadata plugin for inserting the authorization header.
     metadata_plugin = AuthMetadataPlugin(credentials, request)
@@ -201,7 +281,7 @@ def secure_authorized_channel(
 class SslCredentials:
     """Class for application default SSL credentials.
 
-    For device with endpoint verification support, device certificate will be
+    For devices with endpoint verification support, a device certificate will be
     automatically loaded and mutual TLS will be established.
     See https://cloud.google.com/endpoint-verification/docs/overview.
     """
@@ -220,17 +300,20 @@ class SslCredentials:
     def ssl_credentials(self):
         """Get the created SSL channel credentials.
 
-        For device with endpoint verification support, if device certificate
+        For devices with endpoint verification support, if the device certificate
         loading has any problems, corresponding exceptions will be raised. For
-        device without endpoint verification support, no exceptions will be
+        a device without endpoint verification support, no exceptions will be
         raised.
 
+        Returns:
+            grpc.ChannelCredentials: The created grpc channel credentials.
+
         Raises:
-            OSError: cert provider command launch failure
-            RuntimeError: cert provider command runtime error
+            OSError: If the cert provider command launch fails.
+            RuntimeError: If the cert provider command has a runtime error.
             ValueError:
-                if context aware metadata file is malformed, or cert provider
-                command doesn't produce both client certicate and key.
+                If the context aware metadata file is malformed or if the cert provider
+                command doesn't produce both the client certificate and key.
         """
         if self._context_aware_metadata_path:
             metadata = _mtls_helper._read_dca_metadata_file(
@@ -247,5 +330,5 @@ class SslCredentials:
 
     @property
     def is_mtls(self):
-        """Property indicating if the created SSL channel credentials is mutual TLS."""
+        """Indicates if the created SSL channel credentials is mutual TLS."""
         return self._is_mtls
