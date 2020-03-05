@@ -130,21 +130,28 @@ def secure_authorized_channel(
         # Use the channel to create a stub.
         cloud_speech.create_Speech_stub(channel)
 
-        # There are actually a couple of options to create a channel, depending
-        # on if you want to create a regular or mutual TLS channel.
-        # First let's list the endpoints (regular vs mutual TLS) to choose from.
+    Usage:
+
+    There are actually a couple of options to create a channel, depending on if
+    you want to create a regular or mutual TLS channel.
+
+    First let's list the endpoints (regular vs mutual TLS) to choose from::
+
         regular_endpoint = 'speech.googleapis.com:443'
         mtls_endpoint = 'speech.mtls.googleapis.com:443'
 
-        # Option 1: create a regular (non-mutual) TLS channel by explicitly
-        # setting the ssl_credentials.
+    Option 1: create a regular (non-mutual) TLS channel by explicitly setting
+    the ssl_credentials::
+
         regular_ssl_credentials = grpc.ssl_channel_credentials()
+
         channel = google.auth.transport.grpc.secure_authorized_channel(
             credentials, regular_endpoint, request,
             ssl_credentials=regular_ssl_credentials)
 
-        # Option 2: create a mutual TLS channel by calling a callback which
-        # returns the call status, the client side certificate and the key.
+    Option 2: create a mutual TLS channel by calling a callback which returns
+    the call status, the client side certificate and the key::
+
         def my_client_cert_callback():
             code_to_load_client_cert_and_key()
             if loaded:
@@ -158,10 +165,11 @@ def secure_authorized_channel(
         except MyClientCertFailureException:
             # handle the exception or use regular endpoint instead.
 
-        # Alternatively you don't throw exceptions in the callback and return a
-        # False status instead. In this case `secure_authorized_channel` creates
-        # a regular TLS channel. Since you are still using mtls_endpoint, future
-        # API calls using this channel will be rejected.
+    Alternatively you don't throw exceptions in the callback and return a False
+    status instead. In this case `secure_authorized_channel` creates a regular
+    TLS channel. If your API mtls_endpoint is confgured to require client SSL
+    credentials, then API calls using this channel will be rejected::
+
         def my_client_cert_callback():
             code_to_load_client_cert_and_key()
             if loaded:
@@ -173,10 +181,11 @@ def secure_authorized_channel(
             credentials, mtls_endpoint, request,
             client_cert_callback=my_client_cert_callback)
 
-        # Option 3: use application default SSL credentials. It searches and uses
-        # the command in a context aware metadata file, which is available on
-        # devices with endpoint verification support.
-        # See https://cloud.google.com/endpoint-verification/docs/overview.
+    Option 3: use application default SSL credentials. It searches and uses
+    the command in a context aware metadata file, which is available on devices
+    with endpoint verification support.
+    See https://cloud.google.com/endpoint-verification/docs/overview::
+
         try:
             default_ssl_credentials = SslCredentials()
         except:
@@ -192,20 +201,22 @@ def secure_authorized_channel(
             credentials, endpoint_to_use, request,
             ssl_credentials=default_ssl_credentials)
 
-        # Option 4: not setting ssl_credentials and client_cert_callback. For
-        # devices without endpoint verification support, a regular TLS channel
-        # is created; otherwise, a mutual TLS channel is created, however, the
-        # call should be wrapped in a try/except block in case of malformed
-        # context aware metadata.
+    Option 4: not setting ssl_credentials and client_cert_callback. For devices
+    without endpoint verification support, a regular TLS channel is created;
+    otherwise, a mutual TLS channel is created, however, the call should be
+    wrapped in a try/except block in case of malformed context aware metadata.
 
-        # The following code uses regular_endpoint, it works the same no matter
-        # the created channle is regular or mutual TLS. Regular endpoint ignores
-        # client certificate and key.
+    The following code uses regular_endpoint, it works the same no matter the
+    created channle is regular or mutual TLS. Regular endpoint ignores client
+    certificate and key::
+
         channel = google.auth.transport.grpc.secure_authorized_channel(
             credentials, regular_endpoint, request)
 
-        # The following code uses mtls_endpoint, if the created channle is regular,
-        # future API calls using this channel will be rejected.
+    The following code uses mtls_endpoint, if the created channle is regular,
+    and API mtls_endpoint is confgured to require client SSL credentials, API
+    calls using this channel will be rejected::
+
         channel = google.auth.transport.grpc.secure_authorized_channel(
             credentials, mtls_endpoint, request)
 
