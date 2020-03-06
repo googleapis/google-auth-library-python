@@ -26,8 +26,8 @@ from google.auth import exceptions
 from google.auth import impersonated_credentials
 from google.auth import transport
 from google.auth.impersonated_credentials import Credentials
-from google.oauth2 import service_account
 from google.oauth2 import credentials
+from google.oauth2 import service_account
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "", "data")
 
