@@ -81,15 +81,10 @@ def test_refresh_with_service_account_credentials_as_source(
     impersonated_service_account_credentials,
     token_info,
 ):
-    # the specific scopes here are unimportant, but a SA 
-    # needs scopes
     source_credentials = service_account_credentials.with_scopes(["email"])
-
     source_credentials.refresh(http_request)
-
     assert source_credentials.token
 
-    # use the user credential as a donor credential
     target_scopes = [
         "https://www.googleapis.com/auth/devstorage.read_only",
         "https://www.googleapis.com/auth/analytics",
