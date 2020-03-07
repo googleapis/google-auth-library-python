@@ -71,7 +71,7 @@ Use the `gcloud CLI`_ to get an authorized user file ::
 
 You will see something like::
 
-    Credentials saved to file: [/usr/local/home/.config/gcloud/application_default_credentials.json]```
+    Credentials saved to file: [/usr/local/home/.config/gcloud/application_default_credentials.json]
 
 Copy the contents of the file to ``authorized_user.json``.
 
