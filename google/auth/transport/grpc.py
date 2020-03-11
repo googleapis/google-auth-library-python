@@ -216,12 +216,14 @@ def secure_authorized_channel(
             credentials. This can be used to specify different certificates.
             This argument is mutually exclusive with client_cert_callback;
             providing both will raise an exception.
-            If ssl_credentials is None and client_cert_callback is None or
-            fails, application default SSL credentials will be used.
+            If ssl_credentials and client_cert_callback are None, application
+            default SSL credentials will be used.
         client_cert_callback (Callable[[], (bytes, bytes)]): Optional
             callback function to obtain client certicate and key for mutual TLS
             connection. This argument is mutually exclusive with
             ssl_credentials; providing both will raise an exception.
+            If ssl_credentials and client_cert_callback are None, application
+            default SSL credentials will be used.
         kwargs: Additional arguments to pass to :func:`grpc.secure_channel`.
 
     Returns:
