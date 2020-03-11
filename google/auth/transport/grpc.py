@@ -150,12 +150,12 @@ def secure_authorized_channel(
             ssl_credentials=regular_ssl_credentials)
 
     Option 2: create a mutual TLS channel by calling a callback which returns
-    the call status, the client side certificate and the key::
+    the client side certificate and the key::
 
         def my_client_cert_callback():
             code_to_load_client_cert_and_key()
             if loaded:
-                return (True, pem_cert_bytes, pem_key_bytes)
+                return (pem_cert_bytes, pem_key_bytes)
             raise MyClientCertFailureException()
 
         try:
@@ -163,23 +163,7 @@ def secure_authorized_channel(
                 credentials, mtls_endpoint, request,
                 client_cert_callback=my_client_cert_callback)
         except MyClientCertFailureException:
-            # handle the exception or use regular endpoint instead.
-
-    Alternatively you don't throw exceptions in the callback and return a False
-    status instead. In this case `secure_authorized_channel` creates a regular
-    TLS channel. If your API mtls_endpoint is confgured to require client SSL
-    credentials, then API calls using this channel will be rejected::
-
-        def my_client_cert_callback():
-            code_to_load_client_cert_and_key()
-            if loaded:
-                return (True, pem_cert_bytes, pem_key_bytes)
-            else:
-                return (False, None, None)
-
-        channel = google.auth.transport.grpc.secure_authorized_channel(
-            credentials, mtls_endpoint, request,
-            client_cert_callback=my_client_cert_callback)
+            # handle the exception
 
     Option 3: use application default SSL credentials. It searches and uses
     the command in a context aware metadata file, which is available on devices
@@ -234,12 +218,10 @@ def secure_authorized_channel(
             providing both will raise an exception.
             If ssl_credentials is None and client_cert_callback is None or
             fails, application default SSL credentials will be used.
-        client_cert_callback (Callable[[], (bool, bytes, bytes)]): Optional
+        client_cert_callback (Callable[[], (bytes, bytes)]): Optional
             callback function to obtain client certicate and key for mutual TLS
             connection. This argument is mutually exclusive with
             ssl_credentials; providing both will raise an exception.
-            If ssl_credentials is None and client_cert_callback is None or
-            fails, application default SSL credentials will be used.
         kwargs: Additional arguments to pass to :func:`grpc.secure_channel`.
 
     Returns:
@@ -270,16 +252,18 @@ def secure_authorized_channel(
             "these are mutually exclusive."
         )
 
-    if client_cert_callback:
-        success, cert, key = client_cert_callback()
-        if success:
+    # If SSL credentials are not explicitly set, try client_cert_callback and ADC.
+    if not ssl_credentials:
+        if client_cert_callback:
+            # Use the callback if provided.
+            cert, key = client_cert_callback()
             ssl_credentials = grpc.ssl_channel_credentials(
                 certificate_chain=cert, private_key=key
             )
-
-    if ssl_credentials is None:
-        adc_ssl_credentils = SslCredentials()
-        ssl_credentials = adc_ssl_credentils.ssl_credentials
+        else:
+            # Use application default SSL credentials.
+            adc_ssl_credentils = SslCredentials()
+            ssl_credentials = adc_ssl_credentils.ssl_credentials
 
     # Combine the ssl credentials and the authorization credentials.
     composite_credentials = grpc.composite_channel_credentials(

@@ -108,7 +108,7 @@ class TestSecureAuthorizedChannel(object):
     @mock.patch(
         "google.auth.transport._mtls_helper._check_dca_metadata_path", autospec=True
     )
-    def test_secure_authorized_channel(
+    def test_secure_authorized_channel_adc(
         self,
         check_dca_metadata_path,
         read_dca_metadata_file,
@@ -222,7 +222,7 @@ class TestSecureAuthorizedChannel(object):
         request = mock.Mock()
         target = "example.com:80"
         client_cert_callback = mock.Mock()
-        client_cert_callback.return_value = (True, PUBLIC_CERT_BYTES, PRIVATE_KEY_BYTES)
+        client_cert_callback.return_value = (PUBLIC_CERT_BYTES, PRIVATE_KEY_BYTES)
 
         google.auth.transport.grpc.secure_authorized_channel(
             credentials, request, target, client_cert_callback=client_cert_callback
@@ -259,23 +259,16 @@ class TestSecureAuthorizedChannel(object):
         credentials = mock.Mock()
         request = mock.Mock()
         target = "example.com:80"
+
         client_cert_callback = mock.Mock()
-        client_cert_callback.return_value = (False, None, None)
+        client_cert_callback.side_effect = Exception("callback exception")
 
-        # Set DCA metadata to None to not trigger mTLS DCA for test simplicity.
-        check_dca_metadata_path.return_value = None
+        with pytest.raises(Exception) as excinfo:
+            google.auth.transport.grpc.secure_authorized_channel(
+                credentials, request, target, client_cert_callback=client_cert_callback
+            )
 
-        google.auth.transport.grpc.secure_authorized_channel(
-            credentials, request, target, client_cert_callback=client_cert_callback
-        )
-
-        client_cert_callback.assert_called_once()
-        ssl_channel_credentials.assert_called_once_with()
-
-        # Check the composite credentials call.
-        composite_channel_credentials.assert_called_once_with(
-            ssl_channel_credentials.return_value, metadata_call_credentials.return_value
-        )
+        assert str(excinfo.value) == "callback exception"
 
 
 @mock.patch("grpc.ssl_channel_credentials", autospec=True)
