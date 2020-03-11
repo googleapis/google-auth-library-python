@@ -360,7 +360,6 @@ class TestAuthorizedSession(object):
     def test_configure_mtls_channel_with_callback(self):
         mock_callback = mock.Mock()
         mock_callback.return_value = (
-            True,
             pytest.public_cert_bytes,
             pytest.private_key_bytes,
         )

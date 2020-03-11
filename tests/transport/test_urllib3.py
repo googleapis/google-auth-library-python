@@ -166,11 +166,8 @@ class TestAuthorizedHttp(object):
     @mock.patch("google.auth.transport.urllib3._make_mutual_tls_http", autospec=True)
     def test_configure_mtls_channel_with_callback(self, mock_make_mutual_tls_http):
         callback = mock.Mock()
-        callback.return_value = (
-            True,
-            pytest.public_cert_bytes,
-            pytest.private_key_bytes,
-        )
+        callback.return_value = (pytest.public_cert_bytes, pytest.private_key_bytes)
+
         authed_http = google.auth.transport.urllib3.AuthorizedHttp(
             credentials=mock.Mock(), http=mock.Mock()
         )

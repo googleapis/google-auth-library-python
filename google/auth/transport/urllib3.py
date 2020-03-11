@@ -202,11 +202,11 @@ class AuthorizedHttp(urllib3.request.RequestMethods):
     credentials' headers to the request and refreshing credentials as needed.
 
     This class also supports mutual TLS via :meth:`configure_mtls_channel`
-    method. This method first tries to load client certificate and private key
-    using the given client_cert_callabck; if callback is None or fails, it tries
-    to load application default SSL credentials. Exceptions are raised if there
-    are problems with the certificate, private key, or the loading process, so
-    it should be called within a try/except block.
+    method. If client_cert_callabck is provided, client certificate and private
+    key are loaded using the callback; if client_cert_callabck is None,
+    application default SSL credentials will be used. Exceptions are raised if
+    there are problems with the certificate, private key, or the loading process,
+    so it should be called within a try/except block.
 
     First we create an :class:`AuthorizedHttp` instance and specify the endpoints::
 
@@ -222,9 +222,8 @@ class AuthorizedHttp(urllib3.request.RequestMethods):
             # PEM format.
             some_code_to_load_client_cert_and_key()
             if loaded:
-                return True, cert, key
-            else:
-                return False, None, None
+                return cert, key
+            raise MyClientCertFailureException()
 
         # Always call configure_mtls_channel within a try/except block.
         try:
@@ -288,11 +287,10 @@ class AuthorizedHttp(urllib3.request.RequestMethods):
         constructor will be overwritten.
 
         Args:
-            client_cert_callabck (Optional[Callable[[], (bool, bytes, bytes)]]):
-                The optional callback returns a boolean indicating if the call
-                is successful, and the client certificate and private key bytes
-                both in PEM format.
-                If the call is not succesful, application default SSL credentials
+            client_cert_callabck (Optional[Callable[[], (bytes, bytes)]]):
+                The optional callback returns the client certificate and private
+                key bytes both in PEM format.
+                If the callback is None, application default SSL credentials
                 will be used.
 
         Returns:

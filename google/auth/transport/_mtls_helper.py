@@ -125,9 +125,9 @@ def get_client_cert_and_key(client_cert_callback=None):
     default SSL credentials.
 
     Args:
-        client_cert_callback (Optional[Callable[[], (bool, bytes, bytes)]]): A
-            callback which returns a bool indicating if the call is successful,
-            and client certificate bytes and private key bytes both in PEM format.
+        client_cert_callback (Optional[Callable[[], (bytes, bytes)]]): An
+            optional callback which returns client certificate bytes and private
+            key bytes both in PEM format.
 
     Returns:
         Tuple[bool, bytes, bytes]:
@@ -142,7 +142,8 @@ def get_client_cert_and_key(client_cert_callback=None):
             and client key.
     """
     if client_cert_callback:
-        return client_cert_callback()
+        cert, key = client_cert_callback()
+        return True, cert, key
 
     metadata_path = _check_dca_metadata_path(CONTEXT_AWARE_METADATA_PATH)
     if metadata_path:
