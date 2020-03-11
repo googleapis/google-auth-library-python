@@ -23,7 +23,7 @@ from google.auth.crypt import base
 from google.auth.crypt import es256
 
 
-DATA_DIR = os.path.join(os.path.dirname(__file__), '..', 'data')
+DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
 
 # To generate es256_privatekey.pem, es256_privatekey.pub, and
 # es256_public_cert.pem:
@@ -32,26 +32,25 @@ DATA_DIR = os.path.join(os.path.dirname(__file__), '..', 'data')
 #   $ openssl req -new -x509 -key es256_privatekey.pem -out \
 #   >     es256_public_cert.pem
 
-with open(os.path.join(DATA_DIR, 'es256_privatekey.pem'), 'rb') as fh:
+with open(os.path.join(DATA_DIR, "es256_privatekey.pem"), "rb") as fh:
     PRIVATE_KEY_BYTES = fh.read()
     PKCS1_KEY_BYTES = PRIVATE_KEY_BYTES
 
-with open(os.path.join(DATA_DIR, 'es256_publickey.pem'), 'rb') as fh:
+with open(os.path.join(DATA_DIR, "es256_publickey.pem"), "rb") as fh:
     PUBLIC_KEY_BYTES = fh.read()
 
-with open(os.path.join(DATA_DIR, 'es256_public_cert.pem'), 'rb') as fh:
+with open(os.path.join(DATA_DIR, "es256_public_cert.pem"), "rb") as fh:
     PUBLIC_CERT_BYTES = fh.read()
 
-SERVICE_ACCOUNT_JSON_FILE = os.path.join(
-    DATA_DIR, 'es256_service_account.json')
+SERVICE_ACCOUNT_JSON_FILE = os.path.join(DATA_DIR, "es256_service_account.json")
 
-with open(SERVICE_ACCOUNT_JSON_FILE, 'r') as fh:
+with open(SERVICE_ACCOUNT_JSON_FILE, "r") as fh:
     SERVICE_ACCOUNT_INFO = json.load(fh)
 
 
 class Testes256Verifier(object):
     def test_verify_success(self):
-        to_sign = b'foo'
+        to_sign = b"foo"
         signer = es256.ES256Signer.from_string(PRIVATE_KEY_BYTES)
         actual_signature = signer.sign(to_sign)
 
@@ -59,7 +58,7 @@ class Testes256Verifier(object):
         assert verifier.verify(to_sign, actual_signature)
 
     def test_verify_unicode_success(self):
-        to_sign = u'foo'
+        to_sign = u"foo"
         signer = es256.ES256Signer.from_string(PRIVATE_KEY_BYTES)
         actual_signature = signer.sign(to_sign)
 
@@ -68,10 +67,10 @@ class Testes256Verifier(object):
 
     def test_verify_failure(self):
         verifier = es256.ES256Verifier.from_string(PUBLIC_KEY_BYTES)
-        bad_signature1 = b''
-        assert not verifier.verify(b'foo', bad_signature1)
-        bad_signature2 = b'a'
-        assert not verifier.verify(b'foo', bad_signature2)
+        bad_signature1 = b""
+        assert not verifier.verify(b"foo", bad_signature1)
+        bad_signature2 = b"a"
+        assert not verifier.verify(b"foo", bad_signature2)
 
     def test_from_string_pub_key(self):
         verifier = es256.ES256Verifier.from_string(PUBLIC_KEY_BYTES)
@@ -109,16 +108,14 @@ class TestRSASigner(object):
         assert isinstance(signer._key, ec.EllipticCurvePrivateKey)
 
     def test_from_string_bogus_key(self):
-        key_bytes = 'bogus-key'
+        key_bytes = "bogus-key"
         with pytest.raises(ValueError):
             es256.ES256Signer.from_string(key_bytes)
 
     def test_from_service_account_info(self):
-        signer = es256.ES256Signer.from_service_account_info(
-            SERVICE_ACCOUNT_INFO)
+        signer = es256.ES256Signer.from_service_account_info(SERVICE_ACCOUNT_INFO)
 
-        assert signer.key_id == SERVICE_ACCOUNT_INFO[
-            base._JSON_FILE_PRIVATE_KEY_ID]
+        assert signer.key_id == SERVICE_ACCOUNT_INFO[base._JSON_FILE_PRIVATE_KEY_ID]
         assert isinstance(signer._key, ec.EllipticCurvePrivateKey)
 
     def test_from_service_account_info_missing_key(self):
@@ -128,9 +125,7 @@ class TestRSASigner(object):
         assert excinfo.match(base._JSON_FILE_PRIVATE_KEY)
 
     def test_from_service_account_file(self):
-        signer = es256.ES256Signer.from_service_account_file(
-            SERVICE_ACCOUNT_JSON_FILE)
+        signer = es256.ES256Signer.from_service_account_file(SERVICE_ACCOUNT_JSON_FILE)
 
-        assert signer.key_id == SERVICE_ACCOUNT_INFO[
-            base._JSON_FILE_PRIVATE_KEY_ID]
+        assert signer.key_id == SERVICE_ACCOUNT_INFO[base._JSON_FILE_PRIVATE_KEY_ID]
         assert isinstance(signer._key, ec.EllipticCurvePrivateKey)

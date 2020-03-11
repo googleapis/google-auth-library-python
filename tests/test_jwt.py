@@ -202,30 +202,26 @@ def test_decode_no_key_id(token_factory):
 
 
 def test_decode_unknown_alg():
-    headers = json.dumps({u'kid': u'1', u'alg': u'fakealg'})
-    token = b'.'.join(map(lambda seg: base64.b64encode(seg.encode('utf-8')), [
-        headers,
-        u'{}',
-        u'sig'
-    ]))
+    headers = json.dumps({u"kid": u"1", u"alg": u"fakealg"})
+    token = b".".join(
+        map(lambda seg: base64.b64encode(seg.encode("utf-8")), [headers, u"{}", u"sig"])
+    )
 
     with pytest.raises(ValueError) as excinfo:
         jwt.decode(token)
-    assert excinfo.match(r'fakealg')
+    assert excinfo.match(r"fakealg")
 
 
 def test_decode_missing_crytography_alg(monkeypatch):
-    monkeypatch.delitem(jwt._ALGORITHM_TO_VERIFIER_CLASS, 'ES256')
-    headers = json.dumps({u'kid': u'1', u'alg': u'ES256'})
-    token = b'.'.join(map(lambda seg: base64.b64encode(seg.encode('utf-8')), [
-        headers,
-        u'{}',
-        u'sig'
-    ]))
+    monkeypatch.delitem(jwt._ALGORITHM_TO_VERIFIER_CLASS, "ES256")
+    headers = json.dumps({u"kid": u"1", u"alg": u"ES256"})
+    token = b".".join(
+        map(lambda seg: base64.b64encode(seg.encode("utf-8")), [headers, u"{}", u"sig"])
+    )
 
     with pytest.raises(ValueError) as excinfo:
         jwt.decode(token)
-    assert excinfo.match(r'cryptography')
+    assert excinfo.match(r"cryptography")
 
 
 def test_roundtrip_explicit_key_id(token_factory):
