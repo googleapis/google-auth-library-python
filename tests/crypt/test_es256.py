@@ -48,7 +48,7 @@ with open(SERVICE_ACCOUNT_JSON_FILE, "r") as fh:
     SERVICE_ACCOUNT_INFO = json.load(fh)
 
 
-class Testes256Verifier(object):
+class TestES256Verifier(object):
     def test_verify_success(self):
         to_sign = b"foo"
         signer = es256.ES256Signer.from_string(PRIVATE_KEY_BYTES)
@@ -95,7 +95,7 @@ class Testes256Verifier(object):
         assert isinstance(verifier._pubkey, ec.EllipticCurvePublicKey)
 
 
-class TestRSASigner(object):
+class TestES256Signer(object):
     def test_from_string_pkcs1(self):
         signer = es256.ES256Signer.from_string(PKCS1_KEY_BYTES)
         assert isinstance(signer, es256.ES256Signer)
