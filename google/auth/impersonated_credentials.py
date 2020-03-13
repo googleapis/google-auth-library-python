@@ -208,7 +208,7 @@ class Credentials(credentials.Credentials, credentials.Signing):
         # Service account source credentials must have the _IAM_SCOPE
         # added to refresh correctly. User credentials cannot have
         # their original scopes modified.
-        try:
+        if isinstance(self._source_credentials, credentials.Scoped):
             self._source_credentials = self._source_credentials.with_scopes(_IAM_SCOPE)
         except AttributeError:
             pass
