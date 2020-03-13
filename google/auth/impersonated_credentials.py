@@ -210,8 +210,6 @@ class Credentials(credentials.Credentials, credentials.Signing):
         # their original scopes modified.
         if isinstance(self._source_credentials, credentials.Scoped):
             self._source_credentials = self._source_credentials.with_scopes(_IAM_SCOPE)
-        except AttributeError:
-            pass
         self._target_principal = target_principal
         self._target_scopes = target_scopes
         self._delegates = delegates
