@@ -46,6 +46,12 @@ class AuthMetadataPlugin(grpc.AuthMetadataPlugin):
             object used to refresh credentials as needed.
     """
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self._pool.shutdown(wait=False)
+
     def __init__(self, credentials, request):
         # pylint: disable=no-value-for-parameter
         # pylint doesn't realize that the super method takes no arguments
@@ -86,9 +92,6 @@ class AuthMetadataPlugin(grpc.AuthMetadataPlugin):
         """
         future = self._pool.submit(self._get_authorization_headers, context)
         future.add_done_callback(self._callback_wrapper(callback))
-
-    def __del__(self):
-        self._pool.shutdown(wait=False)
 
 
 def secure_authorized_channel(
@@ -135,17 +138,16 @@ def secure_authorized_channel(
         grpc.Channel: The created gRPC channel.
     """
     # Create the metadata plugin for inserting the authorization header.
-    metadata_plugin = AuthMetadataPlugin(credentials, request)
+    with AuthMetadataPlugin(credentials, request) as metadata_plugin:
+        # Create a set of grpc.CallCredentials using the metadata plugin.
+        google_auth_credentials = grpc.metadata_call_credentials(metadata_plugin)
 
-    # Create a set of grpc.CallCredentials using the metadata plugin.
-    google_auth_credentials = grpc.metadata_call_credentials(metadata_plugin)
+        if ssl_credentials is None:
+            ssl_credentials = grpc.ssl_channel_credentials()
 
-    if ssl_credentials is None:
-        ssl_credentials = grpc.ssl_channel_credentials()
+        # Combine the ssl credentials and the authorization credentials.
+        composite_credentials = grpc.composite_channel_credentials(
+            ssl_credentials, google_auth_credentials
+        )
 
-    # Combine the ssl credentials and the authorization credentials.
-    composite_credentials = grpc.composite_channel_credentials(
-        ssl_credentials, google_auth_credentials
-    )
-
-    return grpc.secure_channel(target, composite_credentials, **kwargs)
+        return grpc.secure_channel(target, composite_credentials, **kwargs)
