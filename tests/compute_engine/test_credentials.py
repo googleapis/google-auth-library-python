@@ -558,3 +558,33 @@ class TestIDTokenCredentials(object):
         with pytest.raises(exceptions.RefreshError) as excinfo:
             cred.refresh(request=mock.Mock())
         assert excinfo.match(r"transport error")
+
+    def test_get_id_token_from_metadata_constructor(self):
+        with pytest.raises(ValueError):
+            credentials.IDTokenCredentials(
+                mock.Mock(),
+                "audience",
+                use_metadata_identity_endpoint=True,
+                token_uri="token_uri",
+            )
+        with pytest.raises(ValueError):
+            credentials.IDTokenCredentials(
+                mock.Mock(),
+                "audience",
+                use_metadata_identity_endpoint=True,
+                signer=mock.Mock(),
+            )
+        with pytest.raises(ValueError):
+            credentials.IDTokenCredentials(
+                mock.Mock(),
+                "audience",
+                use_metadata_identity_endpoint=True,
+                additional_claims={"key", "value"},
+            )
+        with pytest.raises(ValueError):
+            credentials.IDTokenCredentials(
+                mock.Mock(),
+                "audience",
+                use_metadata_identity_endpoint=True,
+                service_account_email="foo@example.com",
+            )

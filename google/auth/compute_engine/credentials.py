@@ -138,7 +138,7 @@ class IDTokenCredentials(credentials.Credentials, credentials.Signing):
         self,
         request,
         target_audience,
-        token_uri=_DEFAULT_TOKEN_URI,
+        token_uri=None,
         additional_claims=None,
         service_account_email=None,
         signer=None,
@@ -162,39 +162,52 @@ class IDTokenCredentials(credentials.Credentials, credentials.Signing):
                 ignored.
             use_metadata_identity_endpoint (bool): Whether to use GCE metadata
                 identity endpoint. For backward compatibility the default value
-                is False. If set to True, ``request`` argument and all other
-                keyword arguments (``token_uri``, ``additional_claims``,
-                ``service_account_email``, ``signer``) will be ignored.
+                is False. If set to True, ``token_uri``, ``additional_claims``,
+                ``service_account_email``, ``signer`` argument should not be set;
+                otherwise ValueError will be raised.
+
+        Raises:
+            ValueError:
+                If ``use_metadata_identity_endpoint`` is set to True, and one of
+                ``token_uri``, ``additional_claims``, ``service_account_email``,
+                 ``signer`` arguments is set.
         """
         super(IDTokenCredentials, self).__init__()
 
-        if use_metadata_identity_endpoint or service_account_email is None:
-            sa_info = _metadata.get_service_account_info(request)
-            service_account_email = sa_info["email"]
-        self._service_account_email = service_account_email
-
-        self._target_audience = target_audience
-        self._additional_claims = {}
         self._use_metadata_identity_endpoint = use_metadata_identity_endpoint
+        self._target_audience = target_audience
 
         if use_metadata_identity_endpoint:
-            # If metadata identity endpoint is used, ignore all other keyword
-            # arguments
+            if token_uri or additional_claims or service_account_email or signer:
+                raise ValueError(
+                    "If use_metadata_identity_endpoint is set, token_uri, "
+                    "additional_claims, service_account_email, signer arguments"
+                    " must not be set"
+                )
             self._token_uri = None
+            self._additional_claims = None
             self._signer = None
+
+        if service_account_email is None:
+            sa_info = _metadata.get_service_account_info(request)
+            self._service_account_email = sa_info["email"]
         else:
+            self._service_account_email = service_account_email
+
+        if not use_metadata_identity_endpoint:
             if signer is None:
                 signer = iam.Signer(
                     request=request,
                     credentials=Credentials(),
-                    service_account_email=service_account_email,
+                    service_account_email=self._service_account_email,
                 )
             self._signer = signer
-
-            self._token_uri = token_uri
+            self._token_uri = _DEFAULT_TOKEN_URI
 
             if additional_claims is not None:
                 self._additional_claims = additional_claims
+            else:
+                self._additional_claims = {}
 
     def with_target_audience(self, target_audience):
         """Create a copy of these credentials with the specified target
@@ -208,15 +221,22 @@ class IDTokenCredentials(credentials.Credentials, credentials.Signing):
         """
         # since the signer is already instantiated,
         # the request is not needed
-        return self.__class__(
-            None,
-            service_account_email=self._service_account_email,
-            token_uri=self._token_uri,
-            target_audience=target_audience,
-            additional_claims=self._additional_claims.copy(),
-            signer=self.signer,
-            use_metadata_identity_endpoint=self._use_metadata_identity_endpoint,
-        )
+        if self._use_metadata_identity_endpoint:
+            return self.__class__(
+                None,
+                target_audience=target_audience,
+                use_metadata_identity_endpoint=True,
+            )
+        else:
+            return self.__class__(
+                None,
+                service_account_email=self._service_account_email,
+                token_uri=self._token_uri,
+                target_audience=target_audience,
+                additional_claims=self._additional_claims.copy(),
+                signer=self.signer,
+                use_metadata_identity_endpoint=False,
+            )
 
     def _make_authorization_grant_assertion(self):
         """Create the OAuth 2.0 assertion.
@@ -262,7 +282,7 @@ class IDTokenCredentials(credentials.Credentials, credentials.Signing):
         try:
             id_token = _metadata.get(
                 request,
-                "instance/service-accounts/default/identity?audience={}".format(
+                "instance/service-accounts/default/identity?audience={}&format=full".format(
                     self._target_audience
                 ),
             )
