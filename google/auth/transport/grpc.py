@@ -49,7 +49,7 @@ class AuthMetadataPlugin(grpc.AuthMetadataPlugin):
     # Python 2.7 has no default for max_workers.
     # In Python >= 3.5, ThreadPoolExecutor defaults to the
     # number of processors on the machine, multiplied by 5.
-    if six.PY2:
+    if six.PY2:  # pragma: NO COVER
         max_workers = 5
     else:
         max_workers = None
