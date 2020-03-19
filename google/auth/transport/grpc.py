@@ -46,7 +46,14 @@ class AuthMetadataPlugin(grpc.AuthMetadataPlugin):
             object used to refresh credentials as needed.
     """
 
-    _AUTH_THREAD_POOL = futures.ThreadPoolExecutor()
+    # Python 2.7 has no default for max_workers.
+    # In Python >= 3.5, ThreadPoolExecutor defaults to the
+    # number of processors on the machine, multiplied by 5.
+    if six.PY2:
+        max_workers = 5
+    else:
+        max_workers = None
+    _AUTH_THREAD_POOL = futures.ThreadPoolExecutor(max_workers=max_workers)
 
     def __init__(self, credentials, request):
         # pylint: disable=no-value-for-parameter
