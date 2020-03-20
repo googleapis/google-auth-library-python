@@ -28,6 +28,7 @@ TEST_DEPENDENCIES = [
     "responses",
     "grpcio",
 ]
+PY3_TEST_DEPENDENCIES = ["aiohttp", "pytest-asyncio"]
 BLACK_VERSION = "black==19.3b0"
 BLACK_PATHS = ["google", "tests", "noxfile.py", "setup.py", "docs/conf.py"]
 
@@ -68,6 +69,23 @@ def unit(session):
     session.install(*TEST_DEPENDENCIES)
     session.install(".")
     session.run(
+        "pytest",
+        "--cov=google.auth",
+        "--cov=google.oauth2",
+        "--cov=tests",
+        "--ignore=tests/aio",
+        "--ignore=tests/transport/aio",
+        "--ignore=tests/oauth2/aio",
+        "tests",
+    )
+
+
+@nox.session(python=["3.5", "3.6", "3.7"])
+def unit_py3(session):
+    session.install(*TEST_DEPENDENCIES)
+    session.install(*PY3_TEST_DEPENDENCIES)
+    session.install(".")
+    session.run(
         "pytest", "--cov=google.auth", "--cov=google.oauth2", "--cov=tests", "tests"
     )
 
@@ -75,6 +93,7 @@ def unit(session):
 @nox.session(python="3.7")
 def cover(session):
     session.install(*TEST_DEPENDENCIES)
+    session.install(*PY3_TEST_DEPENDENCIES)
     session.install(".")
     session.run(
         "pytest",
@@ -91,6 +110,7 @@ def cover(session):
 def docgen(session):
     session.env["SPHINX_APIDOC_OPTIONS"] = "members,inherited-members,show-inheritance"
     session.install(*TEST_DEPENDENCIES)
+    session.install(*PY3_TEST_DEPENDENCIES)
     session.install("sphinx")
     session.install(".")
     session.run("rm", "-r", "docs/reference")
@@ -114,6 +134,7 @@ def docs(session):
 @nox.session(python="pypy")
 def pypy(session):
     session.install(*TEST_DEPENDENCIES)
+    session.install(*PY3_TEST_DEPENDENCIES)
     session.install(".")
     session.run(
         "pytest", "--cov=google.auth", "--cov=google.oauth2", "--cov=tests", "tests"
