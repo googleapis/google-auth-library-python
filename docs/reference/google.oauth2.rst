@@ -6,6 +6,13 @@ google.oauth2 package
    :inherited-members:
    :show-inheritance:
 
+Subpackages
+-----------
+
+.. toctree::
+
+   google.oauth2.aio
+
 Submodules
 ----------
 

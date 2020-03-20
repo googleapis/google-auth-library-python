@@ -437,3 +437,22 @@ to a gRPC service::
     http://www.grpc.io/docs/guides/wire.html
 .. _Call Credentials:
     http://www.grpc.io/docs/guides/auth.html
+
+aiohttp
++++++++
+
+:mod:`aiohttp` is an HTTP library for use with asyncio.
+:mod:`google.auth.transport.aio.aiohttp` presents a coroutine interface for
+authenticated request headers::
+
+    import aiohttp
+    from google.auth.transport.aio import aiohttp as aiohttp_transport
+
+    session = aiohttp.ClientSession()
+    headers = {}
+    request = aiohttp_transport.Request(session)
+    await aio_credentials.before_request(
+        request, 'get', 'https//www.googleapis.com/storage/v1/b')
+    with session.get(
+        'https//www.googleapis.com/storage/v1/b', headers=headers) as resp:
+        ...

@@ -6,6 +6,13 @@ google.auth.transport package
    :inherited-members:
    :show-inheritance:
 
+Subpackages
+-----------
+
+.. toctree::
+
+   google.auth.transport.aio
+
 Submodules
 ----------
 
