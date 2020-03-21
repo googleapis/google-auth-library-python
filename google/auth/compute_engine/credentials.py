@@ -202,7 +202,7 @@ class IDTokenCredentials(credentials.Credentials, credentials.Signing):
                     service_account_email=self._service_account_email,
                 )
             self._signer = signer
-            self._token_uri = _DEFAULT_TOKEN_URI
+            self._token_uri = token_uri or _DEFAULT_TOKEN_URI
 
             if additional_claims is not None:
                 self._additional_claims = additional_claims

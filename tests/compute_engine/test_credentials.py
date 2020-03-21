@@ -256,6 +256,26 @@ class TestIDTokenCredentials(object):
             "foo": "bar",
         }
 
+    def test_token_uri(self):
+        request = mock.create_autospec(transport.Request, instance=True)
+
+        self.credentials = credentials.IDTokenCredentials(
+            request=request,
+            signer=mock.Mock(),
+            service_account_email="foo@example.com",
+            target_audience="https://audience.com",
+        )
+        assert self.credentials._token_uri == credentials._DEFAULT_TOKEN_URI
+
+        self.credentials = credentials.IDTokenCredentials(
+            request=request,
+            signer=mock.Mock(),
+            service_account_email="foo@example.com",
+            target_audience="https://audience.com",
+            token_uri="https://example.com/token",
+        )
+        assert self.credentials._token_uri == "https://example.com/token"
+
     @mock.patch(
         "google.auth._helpers.utcnow",
         return_value=datetime.datetime.utcfromtimestamp(0),
