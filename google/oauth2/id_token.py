@@ -59,9 +59,11 @@ library like `CacheControl`_ to create a cache-aware
 """
 
 import json
+import os
 
 from six.moves import http_client
 
+from google.auth import compute_engine
 from google.auth import exceptions
 from google.auth import jwt
 
@@ -158,4 +160,98 @@ def verify_firebase_token(id_token, request, audience=None):
     """
     return verify_token(
         id_token, request, audience=audience, certs_url=_GOOGLE_APIS_CERTS_URL
+    )
+
+
+def fetch_id_token(audience):
+    """Fetch the ID Token from the current environment.
+
+    This function acquires ID token from the environment in the following order:
+
+    1. If the application is running in Compute Engine, App Engine or Cloud Run,
+       then the ID token are obtained from the metadata server.
+    2. If the environment variable ``GOOGLE_APPLICATION_CREDENTIALS`` is set
+       to the path of a valid service account JSON file, then ID token is
+       acquired using this service account credentials.
+    3. If Google Cloud SDK (gcloud) is installed and has application default
+       service account credentials set, then ID token is acquired using this
+       service account credentials.
+    4. If metadata server doesn't exist and no valid service account credentials
+       are found, :class:`~google.auth.exceptions.DefaultCredentialsError` will
+       be raised.
+
+    Example::
+
+        import google.oauth2
+
+        id_token = google.oauth.id_token.fetch_id_token("target_audience")
+
+    Args:
+        audience (str): The audience that this ID token is intended for.
+
+    Returns:
+        str: The ID token.
+
+    Raises:
+        ~google.auth.exceptions.DefaultCredentialsError:
+            If metadata server doesn't exist and no valid service account
+            credentials are found.
+    """
+    import google.auth.transport
+
+    request = google.auth.transport._http_client.Request()
+
+    # 1. First try to fetch ID token from metada server if it exists. The code
+    # works for GAE and cloud run metadata server as well.
+    try:
+        credentials = compute_engine.IDTokenCredentials(
+            request, audience, use_metadata_identity_endpoint=True
+        )
+        credentials.refresh(request)
+        return credentials.token
+    except exceptions.TransportError:
+        # Metadata server doesn't exist.
+        pass
+
+    # 2. Try to use service account credentials to get ID token.
+
+    # Try to get credentials from the GOOGLE_APPLICATION_CREDENTIALS environment
+    # variable.
+    credentials_filename = os.environ.get(environment_vars.CREDENTIALS)
+
+    # If GOOGLE_APPLICATION_CREDENTIALS environment variable doesn't exist, try
+    # to get from the Cloud SDK.
+    if not credentials_filename:
+        from google.auth import _cloud_sdk
+
+        credentials_filename = _cloud_sdk.get_application_default_credentials_path()
+
+    if (
+        credentials_filename
+        and os.path.exists(credentials_filename)
+        and os.path.isfile(credentials_filename)
+    ):
+        with open(credentials_filename, "r") as f:
+            try:
+                info = json.load(f)
+                if info.get("type") == "service_account":
+                    from google.oauth2 import service_account
+
+                    credentials = service_account.IDTokenCredentials.from_service_account_info(
+                        info
+                    ).with_target_audience(
+                        audience
+                    )
+                    credentials.refresh(request)
+                    return credentials.token
+            except ValueError as caught_exc:
+                new_exc = exceptions.DefaultCredentialsError(
+                    "File {} is not a valid json file.".format(credentials_filename),
+                    caught_exc,
+                )
+                six.raise_from(new_exc, caught_exc)
+
+    raise exceptions.DefaultCredentialsError(
+        "Failed to obtain ID token because metadata server and valid service "
+        "account credentials file don't exist."
     )
