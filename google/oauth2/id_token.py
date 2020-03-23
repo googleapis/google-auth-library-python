@@ -182,7 +182,7 @@ def fetch_id_token(audience):
 
     Example::
 
-        import google.oauth2
+        import google.oauth2.id_token
 
         id_token = google.oauth.id_token.fetch_id_token("target_audience")
 
@@ -197,9 +197,9 @@ def fetch_id_token(audience):
             If metadata server doesn't exist and no valid service account
             credentials are found.
     """
-    import google.auth.transport
+    import google.auth.transport.requests
 
-    request = google.auth.transport._http_client.Request()
+    request = google.auth.transport.requests.Request()
 
     # 1. First try to fetch ID token from metada server if it exists. The code
     # works for GAE and cloud run metadata server as well.
@@ -217,6 +217,8 @@ def fetch_id_token(audience):
 
     # Try to get credentials from the GOOGLE_APPLICATION_CREDENTIALS environment
     # variable.
+    from google.auth import environment_vars
+
     credentials_filename = os.environ.get(environment_vars.CREDENTIALS)
 
     # If GOOGLE_APPLICATION_CREDENTIALS environment variable doesn't exist, try
@@ -238,9 +240,7 @@ def fetch_id_token(audience):
                     from google.oauth2 import service_account
 
                     credentials = service_account.IDTokenCredentials.from_service_account_info(
-                        info
-                    ).with_target_audience(
-                        audience
+                        info, target_audience=audience
                     )
                     credentials.refresh(request)
                     return credentials.token
