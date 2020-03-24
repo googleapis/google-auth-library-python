@@ -313,3 +313,21 @@ def mtls_http(session):
     session.install(*TEST_DEPENDENCIES, "pyopenssl")
     session.env[EXPLICIT_CREDENTIALS_ENV] = SERVICE_ACCOUNT_FILE
     session.run("pytest", "test_mtls_http.py")
+
+
+@nox.session(python=PYTHON_VERSIONS)
+def fetch_id_token_default_explicit_service_account(session):
+    session.env[EXPLICIT_CREDENTIALS_ENV] = SERVICE_ACCOUNT_FILE
+    session.env[EXPECT_PROJECT_ENV] = "1"
+    session.install(*TEST_DEPENDENCIES)
+    session.install(LIBRARY_DIR)
+    session.run("pytest", "test_id_token.py")
+
+
+@nox.session(python=PYTHON_VERSIONS)
+def fetch_id_token_default_cloud_sdk_service_account(session):
+    configure_cloud_sdk(session, SERVICE_ACCOUNT_FILE)
+    session.env[EXPECT_PROJECT_ENV] = "1"
+    session.install(*TEST_DEPENDENCIES)
+    session.install(LIBRARY_DIR)
+    session.run("pytest", "test_id_token.py")

@@ -20,6 +20,7 @@ from google.auth import _helpers
 from google.auth import exceptions
 from google.auth import jwt
 from google.auth.compute_engine import _metadata
+import google.oauth2.id_token
 
 
 @pytest.fixture(autouse=True)
@@ -60,3 +61,11 @@ def test_id_token_from_metadata(http_request):
     _, payload, _, _ = jwt._unverified_decode(credentials.token)
     assert payload["aud"] == "target_audience"
     assert payload["exp"] == credentials.expiry
+
+
+def test_id_token_adc(http_request):
+    pubsub_api = "https://pubsub.googleapis.com"
+    id_token = google.oauth2.id_token.fetch_id_token(pubsub_api)
+
+    _, payload, _, _ = jwt._unverified_decode(id_token)
+    assert payload["aud"] == pubsub_api
