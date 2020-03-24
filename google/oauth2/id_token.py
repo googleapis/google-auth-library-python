@@ -183,7 +183,7 @@ def fetch_id_token(audience):
 
         import google.oauth2.id_token
 
-        id_token = google.oauth.id_token.fetch_id_token("target_audience")
+        id_token = google.oauth2.id_token.fetch_id_token("target_audience")
 
     Args:
         audience (str): The audience that this ID token is intended for.
