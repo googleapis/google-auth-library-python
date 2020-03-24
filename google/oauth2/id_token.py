@@ -63,7 +63,6 @@ import os
 
 from six.moves import http_client
 
-from google.auth import compute_engine
 from google.auth import exceptions
 from google.auth import jwt
 
@@ -197,6 +196,7 @@ def fetch_id_token(audience):
             If metadata server doesn't exist and no valid service account
             credentials are found.
     """
+    from google.auth import compute_engine
     import google.auth.transport.requests
 
     request = google.auth.transport.requests.Request()
