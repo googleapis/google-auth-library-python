@@ -203,7 +203,7 @@ def fetch_id_token(request, audience):
             credentials are found.
     """
     # 1. First try to fetch ID token from metada server if it exists. The code
-    # works for GAE and cloud run metadata server as well.
+    # works for GAE and Cloud Run metadata server as well.
     try:
         from google.auth import compute_engine
 
