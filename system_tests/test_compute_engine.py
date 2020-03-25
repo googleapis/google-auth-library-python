@@ -22,8 +22,6 @@ from google.auth import jwt
 from google.auth.compute_engine import _metadata
 import google.oauth2.id_token
 
-AUDIENCE = "https://pubsub.googleapis.com"
-
 
 @pytest.fixture(autouse=True)
 def check_gce_environment(http_request):
@@ -66,7 +64,8 @@ def test_id_token_from_metadata(http_request):
 
 
 def test_fetch_id_token(http_request):
-    token = google.oauth2.id_token.fetch_id_token(http_request, AUDIENCE)
+    audience = "https://pubsub.googleapis.com"
+    token = google.oauth2.id_token.fetch_id_token(http_request, audience)
 
     _, payload, _, _ = jwt._unverified_decode(token)
-    assert payload["aud"] == AUDIENCE
+    assert payload["aud"] == audience
