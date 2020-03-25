@@ -64,7 +64,6 @@ import os
 import six
 from six.moves import http_client
 
-from google.auth import _cloud_sdk
 from google.auth import environment_vars
 from google.auth import exceptions
 from google.auth import jwt
@@ -176,10 +175,7 @@ def fetch_id_token(request, audience):
     2. If the environment variable ``GOOGLE_APPLICATION_CREDENTIALS`` is set
        to the path of a valid service account JSON file, then ID token is
        acquired using this service account credentials.
-    3. If Google Cloud SDK (gcloud) is installed and has application default
-       service account credentials set, then ID token is acquired using this
-       service account credentials.
-    4. If metadata server doesn't exist and no valid service account credentials
+    3. If metadata server doesn't exist and no valid service account credentials
        are found, :class:`~google.auth.exceptions.DefaultCredentialsError` will
        be raised.
 
@@ -224,36 +220,33 @@ def fetch_id_token(request, audience):
     # Try to get credentials from the GOOGLE_APPLICATION_CREDENTIALS environment
     # variable.
     credentials_filename = os.environ.get(environment_vars.CREDENTIALS)
-
-    # If GOOGLE_APPLICATION_CREDENTIALS environment variable doesn't exist, try
-    # to get from the Cloud SDK.
-    if not credentials_filename:
-        credentials_filename = _cloud_sdk.get_application_default_credentials_path()
-
-    if (
+    if not (
         credentials_filename
         and os.path.exists(credentials_filename)
         and os.path.isfile(credentials_filename)
     ):
+        raise exceptions.DefaultCredentialsError(
+            "Neither metadata server or valid service account credentials are found."
+        )
+
+    try:
         with open(credentials_filename, "r") as f:
-            try:
-                info = json.load(f)
-                if info.get("type") == "service_account":
-                    from google.oauth2 import service_account
+            info = json.load(f)
+            credentials_content = (
+                (info.get("type") == "service_account") and info or None
+            )
 
-                    credentials = service_account.IDTokenCredentials.from_service_account_info(
-                        info, target_audience=audience
-                    )
-                    credentials.refresh(request)
-                    return credentials.token
-            except ValueError as caught_exc:
-                new_exc = exceptions.DefaultCredentialsError(
-                    "File {} is not a valid json file.".format(credentials_filename),
-                    caught_exc,
-                )
-                six.raise_from(new_exc, caught_exc)
+            from google.oauth2 import service_account
 
-    raise exceptions.DefaultCredentialsError(
-        "Failed to obtain ID token because metadata server and valid service "
-        "account credentials file don't exist."
-    )
+            credentials = service_account.IDTokenCredentials.from_service_account_info(
+                credentials_content, target_audience=audience
+            )
+    except ValueError as caught_exc:
+        new_exc = exceptions.DefaultCredentialsError(
+            "Neither metadata server or valid service account credentials are found.",
+            caught_exc,
+        )
+        six.raise_from(new_exc, caught_exc)
+
+    credentials.refresh(request)
+    return credentials.token

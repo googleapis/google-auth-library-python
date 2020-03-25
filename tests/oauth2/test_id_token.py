@@ -24,7 +24,6 @@ from google.auth import transport
 import google.auth.compute_engine._metadata
 from google.oauth2 import id_token
 
-
 SERVICE_ACCOUNT_FILE = os.path.join(
     os.path.dirname(__file__), "../data/service_account.json"
 )
@@ -158,40 +157,12 @@ def test_fetch_id_token_from_explicit_cred_json_file(mock_init, monkeypatch):
         assert token == "id_token"
 
 
-@mock.patch(
-    "google.auth._cloud_sdk.get_application_default_credentials_path",
-    return_value=SERVICE_ACCOUNT_FILE,
-)
 @mock.patch.object(
     google.auth.compute_engine.IDTokenCredentials,
     "__init__",
     side_effect=exceptions.TransportError(),
 )
-def test_fetch_id_token_from_gcloud_cred_json_file(
-    mock_init, mock_sdk_adc_path, monkeypatch
-):
-    monkeypatch.delenv(environment_vars.CREDENTIALS, raising=False)
-
-    def mock_refresh(self, request):
-        self.token = "id_token"
-
-    with mock.patch.object(
-        google.oauth2.service_account.IDTokenCredentials, "refresh", mock_refresh
-    ):
-        request = mock.Mock()
-        token = id_token.fetch_id_token(request, "https://pubsub.googleapis.com")
-        assert token == "id_token"
-
-
-@mock.patch(
-    "google.auth._cloud_sdk.get_application_default_credentials_path", return_value=None
-)
-@mock.patch.object(
-    google.auth.compute_engine.IDTokenCredentials,
-    "__init__",
-    side_effect=exceptions.TransportError(),
-)
-def test_fetch_id_token_no_cred_file(mock_init, mock_sdk_adc_path, monkeypatch):
+def test_fetch_id_token_no_cred_json_file(mock_init, monkeypatch):
     monkeypatch.delenv(environment_vars.CREDENTIALS, raising=False)
 
     with pytest.raises(exceptions.DefaultCredentialsError):
@@ -205,8 +176,8 @@ def test_fetch_id_token_no_cred_file(mock_init, mock_sdk_adc_path, monkeypatch):
     side_effect=exceptions.TransportError(),
 )
 def test_fetch_id_token_invalid_cred_file(mock_init, monkeypatch):
-    no_json_file = os.path.join(os.path.dirname(__file__), "../data/public_cert.pem")
-    monkeypatch.setenv(environment_vars.CREDENTIALS, no_json_file)
+    not_json_file = os.path.join(os.path.dirname(__file__), "../data/public_cert.pem")
+    monkeypatch.setenv(environment_vars.CREDENTIALS, not_json_file)
 
     with pytest.raises(exceptions.DefaultCredentialsError):
         request = mock.Mock()
