@@ -35,9 +35,6 @@ except ImportError as caught_exc:  # pragma: NO COVER
     )
 import requests.adapters  # pylint: disable=ungrouped-imports
 import requests.exceptions  # pylint: disable=ungrouped-imports
-from requests.packages.urllib3.util.ssl_ import (
-    create_urllib3_context,
-)  # pylint: disable=ungrouped-imports
 import six  # pylint: disable=ungrouped-imports
 
 from google.auth import exceptions
@@ -202,6 +199,7 @@ class _MutualTlsAdapter(requests.adapters.HTTPAdapter):
     def __init__(self, cert, key):
         import certifi
         from OpenSSL import crypto
+        from requests.packages.urllib3.util.ssl_ import create_urllib3_context
         import urllib3.contrib.pyopenssl
 
         urllib3.contrib.pyopenssl.inject_into_urllib3()
