@@ -29,7 +29,7 @@ class RefreshError(GoogleAuthError):
 
 
 class UserAccessTokenError(GoogleAuthError):
-    """Used to indicate `gcloud auth print-access-token` command failed."""
+    """Used to indicate ``gcloud auth print-access-token`` command failed."""
 
 
 class DefaultCredentialsError(GoogleAuthError):

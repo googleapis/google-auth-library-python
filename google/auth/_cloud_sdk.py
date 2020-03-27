@@ -114,7 +114,7 @@ def get_project_id():
 
 
 def get_auth_access_token(account=None):
-    """Load user access token with the `gcloud auth print-access-token` command.
+    """Load user access token with the ``gcloud auth print-access-token`` command.
 
     Args:
         account (Optional[str]): Account to get the access token for. If not
@@ -144,7 +144,7 @@ def get_auth_access_token(account=None):
 
         access_token = subprocess.check_output(command, stderr=subprocess.STDOUT)
         # remove the trailing "\n"
-        return access_token.decode("utf-8")[:-1]
+        return access_token.decode("utf-8").strip()
     except (subprocess.CalledProcessError, OSError, IOError) as caught_exc:
         new_exc = exceptions.UserAccessTokenError(
             "Failed to obtain access token", caught_exc

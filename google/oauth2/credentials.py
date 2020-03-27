@@ -299,7 +299,7 @@ class UserAccessTokenCredentials(credentials.Credentials):
     """Access token credentials for user account.
 
     Obtain the access token for a given user account or the current active
-    usr account with the `gcloud auth print-access-token` command.
+    user account with the ``gcloud auth print-access-token`` command.
 
     Args:
         account (Optional[str]): Account to get the access token for. If not
