@@ -34,3 +34,7 @@ class UserAccessTokenError(GoogleAuthError):
 
 class DefaultCredentialsError(GoogleAuthError):
     """Used to indicate that acquiring default credentials failed."""
+
+
+class MutualTlsChannelError(GoogleAuthError):
+    """Used to indicate that mutual TLS channel creation is failed."""
