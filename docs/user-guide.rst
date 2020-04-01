@@ -291,7 +291,35 @@ Impersonated ::
                                       target_credentials,
                                       target_audience=target_audience)
 
-IDToken verification can be done for various type of IDTokens using the :class:`google.oauth2.id_token` module 
+If your application runs on `App Engine`_, `Cloud Run`_, `Compute Engine`_, or
+has application default credentials set via `GOOGLE_APPLICATION_CREDENTIALS`
+environment variable, you can also use `google.oauth2.id_token.fetch_id_token`
+to obtain an ID token from your current running environment. The following is an
+example ::
+
+    import google.oauth2.id_token
+    import google.auth.transport.requests
+
+    request = google.auth.transport.requests.Request()
+    target_audience = "https://pubsub.googleapis.com"
+
+    id_token = google.oauth2.id_token.fetch_id_token(request, target_audience)
+
+IDToken verification can be done for various type of IDTokens using the
+:class:`google.oauth2.id_token` module. It supports ID token signed with RS256
+and ES256 algorithms. However, ES256 algorithm won't be available unless
+`cryptography` dependency of version at least 1.4.0 is installed. You can check
+the dependency with `pip freeze` or try `from google.auth.crypt import es256`.
+The following is an example of verifying ID tokens:
+
+    from google.auth2 import id_token
+
+    request = google.auth.transport.requests.Request()
+
+    try:
+      decoded_token = id_token.verify_token(token_to_verify,request)
+    except ValueError:
+      # Verification failed.
 
 A sample end-to-end flow using an ID Token against a Cloud Run endpoint maybe ::
 
@@ -320,8 +348,10 @@ A sample end-to-end flow using an ID Token against a Cloud Run endpoint maybe ::
     print(token)
     print(id_token.verify_token(token,request))
 
+.. _App Engine: https://cloud.google.com/appengine/
 .. _Cloud Functions: https://cloud.google.com/functions/
 .. _Cloud Run: https://cloud.google.com/run/
+.. _Compute Engine: https://cloud.google.com/compute/
 .. _Identity Aware Proxy: https://cloud.google.com/iap/
 .. _Google OpenID Connect: https://developers.google.com/identity/protocols/OpenIDConnect
 .. _Google ID Token: https://developers.google.com/identity/protocols/OpenIDConnect#validatinganidtoken
