@@ -297,13 +297,13 @@ class AuthorizedHttp(urllib3.request.RequestMethods):
             True if the channel is mutual TLS and False otherwise.
 
         Raises:
-            google.auth.exceptions.MutualTlsChannelError: If mutual TLS channel
+            google.auth.exceptions.MutualTLSChannelError: If mutual TLS channel
                 creation failed for any reason.
         """
         try:
             import OpenSSL
         except ImportError as caught_exc:
-            new_exc = exceptions.MutualTlsChannelError(caught_exc)
+            new_exc = exceptions.MutualTLSChannelError(caught_exc)
             six.raise_from(new_exc, caught_exc)
 
         try:
@@ -322,7 +322,7 @@ class AuthorizedHttp(urllib3.request.RequestMethods):
             RuntimeError,
             ValueError,
         ) as caught_exc:
-            new_exc = exceptions.MutualTlsChannelError(caught_exc)
+            new_exc = exceptions.MutualTLSChannelError(caught_exc)
             six.raise_from(new_exc, caught_exc)
 
         if self._has_user_provided_http:

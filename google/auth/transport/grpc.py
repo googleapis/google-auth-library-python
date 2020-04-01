@@ -218,7 +218,7 @@ def secure_authorized_channel(
         grpc.Channel: The created gRPC channel.
 
     Raises:
-        google.auth.exceptions.MutualTlsChannelError: If mutual TLS channel
+        google.auth.exceptions.MutualTLSChannelError: If mutual TLS channel
             creation failed for any reason.
     """
     # Create the metadata plugin for inserting the authorization header.
@@ -285,7 +285,7 @@ class SslCredentials:
             grpc.ChannelCredentials: The created grpc channel credentials.
 
         Raises:
-            google.auth.exceptions.MutualTlsChannelError: If mutual TLS channel
+            google.auth.exceptions.MutualTLSChannelError: If mutual TLS channel
                 creation failed for any reason.
         """
         if self._context_aware_metadata_path:
@@ -298,7 +298,7 @@ class SslCredentials:
                     certificate_chain=cert, private_key=key
                 )
             except (OSError, RuntimeError, ValueError) as caught_exc:
-                new_exc = exceptions.MutualTlsChannelError(caught_exc)
+                new_exc = exceptions.MutualTLSChannelError(caught_exc)
                 six.raise_from(new_exc, caught_exc)
         else:
             self._ssl_credentials = grpc.ssl_channel_credentials()

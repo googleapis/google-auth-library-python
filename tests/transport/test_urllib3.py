@@ -234,11 +234,11 @@ class TestAuthorizedHttp(object):
         )
 
         mock_get_client_cert_and_key.side_effect = ValueError()
-        with pytest.raises(exceptions.MutualTlsChannelError):
+        with pytest.raises(exceptions.MutualTLSChannelError):
             authed_http.configure_mtls_channel()
 
         mock_get_client_cert_and_key.return_value = (False, None, None)
         with mock.patch.dict("sys.modules"):
             sys.modules["OpenSSL"] = None
-            with pytest.raises(exceptions.MutualTlsChannelError):
+            with pytest.raises(exceptions.MutualTLSChannelError):
                 authed_http.configure_mtls_channel()

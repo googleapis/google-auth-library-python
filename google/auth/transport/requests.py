@@ -355,13 +355,13 @@ class AuthorizedSession(requests.Session):
                 will be used.
 
         Raises:
-            google.auth.exceptions.MutualTlsChannelError: If mutual TLS channel
+            google.auth.exceptions.MutualTLSChannelError: If mutual TLS channel
                 creation failed for any reason.
         """
         try:
             import OpenSSL
         except ImportError as caught_exc:
-            new_exc = exceptions.MutualTlsChannelError(caught_exc)
+            new_exc = exceptions.MutualTLSChannelError(caught_exc)
             six.raise_from(new_exc, caught_exc)
 
         try:
@@ -379,7 +379,7 @@ class AuthorizedSession(requests.Session):
             RuntimeError,
             ValueError,
         ) as caught_exc:
-            new_exc = exceptions.MutualTlsChannelError(caught_exc)
+            new_exc = exceptions.MutualTLSChannelError(caught_exc)
             six.raise_from(new_exc, caught_exc)
 
     def request(
