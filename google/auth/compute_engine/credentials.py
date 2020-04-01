@@ -275,8 +275,7 @@ class IDTokenCredentials(credentials.Credentials, credentials.Signing):
                 HTTP requests.
 
         Returns:
-            str: The ID token.
-            datetime.datetime: Expiry of the ID token.
+            Tuple[str, datetime.datetime]: The ID token and the expiry of the ID token.
 
         Raises:
             google.auth.exceptions.RefreshError: If the Compute Engine metadata
