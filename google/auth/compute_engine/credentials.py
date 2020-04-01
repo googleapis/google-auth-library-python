@@ -274,6 +274,10 @@ class IDTokenCredentials(credentials.Credentials, credentials.Signing):
             request (google.auth.transport.Request): The object used to make
                 HTTP requests.
 
+        Returns:
+            str: The ID token.
+            datetime.datetime: Expiry of the ID token.
+
         Raises:
             google.auth.exceptions.RefreshError: If the Compute Engine metadata
                 service can't be reached or if the instance has no credentials.
@@ -291,7 +295,7 @@ class IDTokenCredentials(credentials.Credentials, credentials.Signing):
             six.raise_from(new_exc, caught_exc)
 
         _, payload, _, _ = jwt._unverified_decode(id_token)
-        return id_token, payload["exp"]
+        return id_token, datetime.datetime.fromtimestamp(payload["exp"])
 
     def refresh(self, request):
         """Refreshes the ID token.
