@@ -293,7 +293,7 @@ class SslCredentials:
                 metadata = _mtls_helper._read_dca_metadata_file(
                     self._context_aware_metadata_path
                 )
-                cert, key = _mtls_helper.get_client_ssl_credentials(metadata)
+                cert, key, _ = _mtls_helper.get_client_ssl_credentials(metadata)
                 self._ssl_credentials = grpc.ssl_channel_credentials(
                     certificate_chain=cert, private_key=key
                 )

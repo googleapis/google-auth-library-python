@@ -30,9 +30,14 @@ _CERT_REGEX = re.compile(
 # "-----BEGIN PRIVATE KEY-----...",
 # "-----BEGIN EC PRIVATE KEY-----...",
 # "-----BEGIN RSA PRIVATE KEY-----..."
+# "-----BEGIN ENCRYPTED PRIVATE KEY-----"
 _KEY_REGEX = re.compile(
     b"-----BEGIN [A-Z ]*PRIVATE KEY-----.+-----END [A-Z ]*PRIVATE KEY-----\r?\n?",
     re.DOTALL,
+)
+
+_PASSPHRASE = re.compile(
+    b"-----BEGIN PASSPHRASE-----(.+)-----END PASSPHRASE-----", re.DOTALL
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -73,22 +78,26 @@ def _read_dca_metadata_file(metadata_path):
     return metadata
 
 
-def get_client_ssl_credentials(metadata_json):
-    """Returns the client side mTLS cert and key.
+def get_client_ssl_credentials(metadata_json, encrypted_key_supported=False):
+    """Returns the client side mTLS cert, key and passphrase.
 
     Args:
         metadata_json (Dict[str, str]): metadata JSON file which contains the cert
             provider command.
+        encrypted_key_supported(Optional[bool]): indicating whether encrypted
+            private key is supported. Default value is ``False``.
 
     Returns:
-        Tuple[bytes, bytes]: client certificate and key, both in PEM format.
+        Tuple[bytes, bytes, bytes]: client certificate (PEM format), key (PEM
+            format), and passphrase for encrypted key.
 
     Raises:
         OSError: If the cert provider command failed to run.
         RuntimeError: If the cert provider command has a runtime error.
         ValueError: If the metadata json file doesn't contain the cert provider
-            command or if the command doesn't produce both the client certificate
-            and client key.
+            command, or if the command doesn't produce valid client certificate,
+            key and passphrase, or if encrypted key is produced but it is not
+            supported.
     """
     # TODO: implement an in-memory cache of cert and key so we don't have to
     # run cert provider command every time.
@@ -115,7 +124,18 @@ def get_client_ssl_credentials(metadata_json):
     key_match = re.findall(_KEY_REGEX, stdout)
     if len(key_match) != 1:
         raise ValueError("Client SSL key is missing or invalid")
-    return cert_match[0], key_match[0]
+
+    # Handle encrypted private key and passphrase.
+    if not encrypted_key_supported and b"ENCRYPTED" in key_match[0]:
+        raise ValueError("Encrypted private key is not supported")
+    if encrypted_key_supported:
+        passphrase_match = re.findall(_PASSPHRASE, stdout)
+        if b"ENCRYPTED" in key_match[0] and len(passphrase_match) != 1:
+            raise ValueError("Passphrase is missing or invalid")
+        if len(passphrase_match) == 1:
+            return cert_match[0], key_match[0], passphrase_match[0].strip()
+
+    return cert_match[0], key_match[0], None
 
 
 def get_client_cert_and_key(client_cert_callback=None):
@@ -148,7 +168,7 @@ def get_client_cert_and_key(client_cert_callback=None):
     metadata_path = _check_dca_metadata_path(CONTEXT_AWARE_METADATA_PATH)
     if metadata_path:
         metadata = _read_dca_metadata_file(metadata_path)
-        cert, key = get_client_ssl_credentials(metadata)
+        cert, key, _ = get_client_ssl_credentials(metadata)
         return True, cert, key
 
     return False, None, None

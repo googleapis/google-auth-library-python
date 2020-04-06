@@ -129,7 +129,11 @@ class TestSecureAuthorizedChannel(object):
         read_dca_metadata_file.return_value = {
             "cert_provider_command": ["some command"]
         }
-        get_client_ssl_credentials.return_value = (PUBLIC_CERT_BYTES, PRIVATE_KEY_BYTES)
+        get_client_ssl_credentials.return_value = (
+            PUBLIC_CERT_BYTES,
+            PRIVATE_KEY_BYTES,
+            None,
+        )
 
         channel = google.auth.transport.grpc.secure_authorized_channel(
             credentials, request, target, options=mock.sentinel.options
@@ -333,6 +337,7 @@ class TestSslCredentials(object):
         mock_get_client_ssl_credentials.return_value = (
             PUBLIC_CERT_BYTES,
             PRIVATE_KEY_BYTES,
+            None,
         )
 
         ssl_credentials = google.auth.transport.grpc.SslCredentials()

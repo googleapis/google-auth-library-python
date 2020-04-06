@@ -24,8 +24,17 @@ CONTEXT_AWARE_METADATA = {"cert_provider_command": ["some command"]}
 
 CONTEXT_AWARE_METADATA_NO_CERT_PROVIDER_COMMAND = {}
 
+ENCRYPTED_KEY = b"""-----BEGIN ENCRYPTED PRIVATE KEY-----
+MIIBCgKCAQEA4ej0p7bQ7L/r4rVGUz9RN4VQWoej1Bg1mYWIDYslvKrk1gpj7wZg
+/fy3ZpsL7WqgsZS7Q+0VRK8gKfqkxg5OYQIDAQAB
+-----END ENCRYPTED PRIVATE KEY-----"""
 
-def check_cert_and_key(content, expected_cert, expected_key):
+PASSPHRASE = b"""-----BEGIN PASSPHRASE-----
+passphrase
+-----END PASSPHRASE-----"""
+
+
+def check_cert_and_key(content, expected_cert, expected_key, expected_passphrase=None):
     success = True
 
     cert_match = re.findall(_mtls_helper._CERT_REGEX, content)
@@ -33,6 +42,14 @@ def check_cert_and_key(content, expected_cert, expected_key):
 
     key_match = re.findall(_mtls_helper._KEY_REGEX, content)
     success = success and len(key_match) == 1 and key_match[0] == expected_key
+
+    if expected_passphrase:
+        passphrase_match = re.findall(_mtls_helper._PASSPHRASE, content)
+        success = (
+            success
+            and len(passphrase_match) == 1
+            and passphrase_match[0].strip() == expected_passphrase
+        )
 
     return success
 
@@ -91,6 +108,12 @@ class TestCertAndKeyRegex(object):
         check_cert_and_key(
             pytest.public_cert_bytes + EC_KEY, pytest.public_cert_bytes, EC_KEY
         )
+        check_cert_and_key(
+            pytest.public_cert_bytes + ENCRYPTED_KEY + PASSPHRASE,
+            pytest.public_cert_bytes,
+            ENCRYPTED_KEY,
+            b"passphrase",
+        )
 
 
 class TestCheckaMetadataPath(object):
@@ -137,9 +160,12 @@ class TestGetClientSslCredentials(object):
         mock_popen.return_value = self.create_mock_process(
             pytest.public_cert_bytes + pytest.private_key_bytes, b""
         )
-        cert, key = _mtls_helper.get_client_ssl_credentials(CONTEXT_AWARE_METADATA)
+        cert, key, passphrase = _mtls_helper.get_client_ssl_credentials(
+            CONTEXT_AWARE_METADATA
+        )
         assert cert == pytest.public_cert_bytes
         assert key == pytest.private_key_bytes
+        assert passphrase is None
 
     @mock.patch("subprocess.Popen", autospec=True)
     def test_success_with_cert_chain(self, mock_popen):
@@ -147,9 +173,42 @@ class TestGetClientSslCredentials(object):
         mock_popen.return_value = self.create_mock_process(
             PUBLIC_CERT_CHAIN_BYTES + pytest.private_key_bytes, b""
         )
-        cert, key = _mtls_helper.get_client_ssl_credentials(CONTEXT_AWARE_METADATA)
+        cert, key, passphrase = _mtls_helper.get_client_ssl_credentials(
+            CONTEXT_AWARE_METADATA
+        )
         assert cert == PUBLIC_CERT_CHAIN_BYTES
         assert key == pytest.private_key_bytes
+        assert passphrase is None
+
+    @mock.patch("subprocess.Popen", autospec=True)
+    def test_success_with_encryted_key_and_passphrase(self, mock_popen):
+        mock_popen.return_value = self.create_mock_process(
+            pytest.public_cert_bytes + ENCRYPTED_KEY + PASSPHRASE, b""
+        )
+        cert, key, passphrase = _mtls_helper.get_client_ssl_credentials(
+            CONTEXT_AWARE_METADATA, encrypted_key_supported=True
+        )
+        assert cert == pytest.public_cert_bytes
+        assert key == ENCRYPTED_KEY
+        assert passphrase == b"passphrase"
+
+    @mock.patch("subprocess.Popen", autospec=True)
+    def test_encryted_key_not_supported(self, mock_popen):
+        mock_popen.return_value = self.create_mock_process(
+            pytest.public_cert_bytes + ENCRYPTED_KEY + PASSPHRASE, b""
+        )
+        with pytest.raises(ValueError):
+            _mtls_helper.get_client_ssl_credentials(CONTEXT_AWARE_METADATA)
+
+    @mock.patch("subprocess.Popen", autospec=True)
+    def test_missing_passphrase(self, mock_popen):
+        mock_popen.return_value = self.create_mock_process(
+            pytest.public_cert_bytes + ENCRYPTED_KEY, b""
+        )
+        with pytest.raises(ValueError):
+            _mtls_helper.get_client_ssl_credentials(
+                CONTEXT_AWARE_METADATA, encrypted_key_supported=True
+            )
 
     def test_missing_cert_provider_command(self):
         with pytest.raises(ValueError):
@@ -221,6 +280,7 @@ class TestGetClientCertAndKey(object):
         mock_get_client_ssl_credentials.return_value = (
             pytest.public_cert_bytes,
             pytest.private_key_bytes,
+            None,
         )
 
         found_cert_key, cert, key = _mtls_helper.get_client_cert_and_key()
