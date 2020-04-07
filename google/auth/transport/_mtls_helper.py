@@ -117,25 +117,23 @@ def get_client_ssl_credentials(metadata_json, encrypted_key_supported=False):
             "Cert provider command returns non-zero status code %s" % process.returncode
         )
 
-    # Extract certificate (chain) and key.
+    # Extract certificate (chain), key and passphrase.
     cert_match = re.findall(_CERT_REGEX, stdout)
     if len(cert_match) != 1:
         raise ValueError("Client SSL certificate is missing or invalid")
     key_match = re.findall(_KEY_REGEX, stdout)
     if len(key_match) != 1:
         raise ValueError("Client SSL key is missing or invalid")
+    passphrase_match = re.findall(_PASSPHRASE, stdout)
 
     # Handle encrypted private key and passphrase.
     if not encrypted_key_supported and b"ENCRYPTED" in key_match[0]:
         raise ValueError("Encrypted private key is not supported")
-    if encrypted_key_supported:
-        passphrase_match = re.findall(_PASSPHRASE, stdout)
-        if b"ENCRYPTED" in key_match[0] and len(passphrase_match) != 1:
-            raise ValueError("Passphrase is missing or invalid")
-        if len(passphrase_match) == 1:
-            return cert_match[0], key_match[0], passphrase_match[0].strip()
+    if b"ENCRYPTED" in key_match[0] and len(passphrase_match) != 1:
+        raise ValueError("Passphrase is missing or invalid for encrypted key")
+    passphrase = (len(passphrase_match) == 1) and passphrase_match[0].strip() or None
 
-    return cert_match[0], key_match[0], None
+    return cert_match[0], key_match[0], passphrase
 
 
 def get_client_cert_and_key(client_cert_callback=None):
