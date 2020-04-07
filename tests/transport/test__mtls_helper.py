@@ -210,6 +210,16 @@ class TestGetClientSslCredentials(object):
                 CONTEXT_AWARE_METADATA, encrypted_key_supported=True
             )
 
+    @mock.patch("subprocess.Popen", autospec=True)
+    def test_unencrypted_key_with_passphrase(self, mock_popen):
+        mock_popen.return_value = self.create_mock_process(
+            pytest.public_cert_bytes + pytest.private_key_bytes + PASSPHRASE, b""
+        )
+        with pytest.raises(ValueError):
+            _mtls_helper.get_client_ssl_credentials(
+                CONTEXT_AWARE_METADATA, encrypted_key_supported=True
+            )
+
     def test_missing_cert_provider_command(self):
         with pytest.raises(ValueError):
             assert _mtls_helper.get_client_ssl_credentials(

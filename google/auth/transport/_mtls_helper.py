@@ -131,6 +131,8 @@ def get_client_ssl_credentials(metadata_json, encrypted_key_supported=False):
         raise ValueError("Encrypted private key is not supported")
     if b"ENCRYPTED" in key_match[0] and len(passphrase_match) != 1:
         raise ValueError("Passphrase is missing or invalid for encrypted key")
+    if b"ENCRYPTED" not in key_match[0] and len(passphrase_match) > 0:
+        raise ValueError("Passphrase is provided for unencrypted key")
     passphrase = (len(passphrase_match) == 1) and passphrase_match[0].strip() or None
 
     return cert_match[0], key_match[0], passphrase
