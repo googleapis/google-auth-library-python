@@ -14,7 +14,7 @@
 
 import sys
 
-import mock
+from unittest import mock
 import OpenSSL
 import pytest
 from six.moves import http_client

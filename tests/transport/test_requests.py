@@ -17,7 +17,7 @@ import functools
 import sys
 
 import freezegun
-import mock
+from unittest import mock
 import OpenSSL
 import pytest
 import requests
