@@ -4,6 +4,30 @@
 
 [1]: https://pypi.org/project/google-auth/#history
 
+## [1.14.0](https://www.github.com/googleapis/google-auth-library-python/compare/v1.13.1...v1.14.0) (2020-04-13)
+
+
+### Features
+
+* add default client cert source util ([#486](https://www.github.com/googleapis/google-auth-library-python/issues/486)) ([ed41b49](https://www.github.com/googleapis/google-auth-library-python/commit/ed41b49e9d7ba7402b27107b7aa47eed06ac6c55))
+
+### [1.13.1](https://www.github.com/googleapis/google-auth-library-python/compare/v1.13.0...v1.13.1) (2020-04-01)
+
+
+### Bug Fixes
+
+* invalid expiry type ([#481](https://www.github.com/googleapis/google-auth-library-python/issues/481)) ([7ae9a28](https://www.github.com/googleapis/google-auth-library-python/commit/7ae9a284dae16d274bfd4d876414f08efd6c3bff))
+
+## [1.13.0](https://www.github.com/googleapis/google-auth-library-python/compare/v1.12.0...v1.13.0) (2020-04-01)
+
+
+### Features
+
+* add access token credentials ([#476](https://www.github.com/googleapis/google-auth-library-python/issues/476)) ([772dac6](https://www.github.com/googleapis/google-auth-library-python/commit/772dac6a6512230d32cb0dfae65a1a6aa9015049))
+* add fetch_id_token to support id_token adc ([#469](https://www.github.com/googleapis/google-auth-library-python/issues/469)) ([506c565](https://www.github.com/googleapis/google-auth-library-python/commit/506c565a8c3c23a78fd0f17991bc6deb6f2528a9))
+* consolidate mTLS channel errors ([#480](https://www.github.com/googleapis/google-auth-library-python/issues/480)) ([e83d446](https://www.github.com/googleapis/google-auth-library-python/commit/e83d4462f5c50f8424d9e54be32c29390115a9ed))
+* Implement ES256 for JWT verification ([#340](https://www.github.com/googleapis/google-auth-library-python/issues/340)) ([e290a3d](https://www.github.com/googleapis/google-auth-library-python/commit/e290a3dbecc4767dd25ee14574951cdb6c2157cb))
+
 ## [1.12.0](https://www.github.com/googleapis/google-auth-library-python/compare/v1.11.3...v1.12.0) (2020-03-25)
 
 
