@@ -16,6 +16,7 @@ import os
 import re
 
 import mock
+from OpenSSL import crypto
 import pytest
 
 from google.auth.transport import _mtls_helper
@@ -23,6 +24,21 @@ from google.auth.transport import _mtls_helper
 CONTEXT_AWARE_METADATA = {"cert_provider_command": ["some command"]}
 
 CONTEXT_AWARE_METADATA_NO_CERT_PROVIDER_COMMAND = {}
+
+ENCRYPTED_EC_PRIVATE_KEY = b"""-----BEGIN ENCRYPTED PRIVATE KEY-----
+MIHkME8GCSqGSIb3DQEFDTBCMCkGCSqGSIb3DQEFDDAcBAgl2/yVgs1h3QICCAAw
+DAYIKoZIhvcNAgkFADAVBgkrBgEEAZdVAQIECJk2GRrvxOaJBIGQXIBnMU4wmciT
+uA6yD8q0FxuIzjG7E2S6tc5VRgSbhRB00eBO3jWmO2pBybeQW+zVioDcn50zp2ts
+wYErWC+LCm1Zg3r+EGnT1E1GgNoODbVQ3AEHlKh1CGCYhEovxtn3G+Fjh7xOBrNB
+saVVeDb4tHD4tMkiVVUBrUcTZPndP73CtgyGHYEphasYPzEz3+AU
+-----END ENCRYPTED PRIVATE KEY-----"""
+
+EC_PUBLIC_KEY = b"""-----BEGIN PUBLIC KEY-----
+MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEvCNi1NoDY1oMqPHIgXI8RBbTYGi/
+brEjbre1nSiQW11xRTJbVeETdsuP0EAu2tG3PcRhhwDfeJ8zXREgTBurNw==
+-----END PUBLIC KEY-----"""
+
+PASSPHRASE = b"password"
 
 
 def check_cert_and_key(content, expected_cert, expected_key):
@@ -227,3 +243,24 @@ class TestGetClientCertAndKey(object):
         assert found_cert_key
         assert cert == pytest.public_cert_bytes
         assert key == pytest.private_key_bytes
+
+
+class TestDecryptPrivateKey(object):
+    def test_success(self):
+        decrypted_key = _mtls_helper.decrypt_private_key(
+            ENCRYPTED_EC_PRIVATE_KEY, PASSPHRASE
+        )
+        private_key = crypto.load_privatekey(crypto.FILETYPE_PEM, decrypted_key)
+        public_key = crypto.load_publickey(crypto.FILETYPE_PEM, EC_PUBLIC_KEY)
+        x509 = crypto.X509()
+        x509.set_pubkey(public_key)
+
+        # Test the decrypted key works by signing and verification.
+        signature = crypto.sign(private_key, b"data", "sha256")
+        crypto.verify(x509, signature, b"data", "sha256")
+
+    def test_crypto_error(self):
+        with pytest.raises(crypto.Error):
+            _mtls_helper.decrypt_private_key(
+                ENCRYPTED_EC_PRIVATE_KEY, b"wrong_password"
+            )
