@@ -92,6 +92,7 @@ def token_factory(signer, es256_signer):
         now = _helpers.datetime_to_secs(_helpers.utcnow())
         payload = {
             "aud": "audience@example.com",
+            "iss": "https://accounts.google.com",
             "iat": now,
             "exp": now + 300,
             "user": "billy bob",
@@ -134,6 +135,16 @@ def test_decode_valid_with_audience(token_factory):
         token_factory(), certs=PUBLIC_CERT_BYTES, audience="audience@example.com"
     )
     assert payload["aud"] == "audience@example.com"
+    assert payload["user"] == "billy bob"
+    assert payload["metadata"]["meta"] == "data"
+
+
+def test_decode_valid_with_issuer(token_factory):
+    payload = jwt.decode(
+        token_factory(), certs=PUBLIC_CERT_BYTES,
+        issuer=["https://accounts.google.com", "accounts.google.com"]
+    )
+    assert payload["iss"] == "https://accounts.google.com"
     assert payload["user"] == "billy bob"
     assert payload["metadata"]["meta"] == "data"
 

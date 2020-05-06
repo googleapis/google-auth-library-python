@@ -70,7 +70,7 @@ def test_verify_token(_fetch_certs, decode):
         mock.sentinel.request, id_token._GOOGLE_OAUTH2_CERTS_URL
     )
     decode.assert_called_once_with(
-        mock.sentinel.token, certs=_fetch_certs.return_value, audience=None
+        mock.sentinel.token, certs=_fetch_certs.return_value, audience=None, issuer=None
     )
 
 
@@ -81,6 +81,7 @@ def test_verify_token_args(_fetch_certs, decode):
         mock.sentinel.token,
         mock.sentinel.request,
         audience=mock.sentinel.audience,
+        issuer=mock.sentinel.issuer,
         certs_url=mock.sentinel.certs_url,
     )
 
@@ -90,6 +91,7 @@ def test_verify_token_args(_fetch_certs, decode):
         mock.sentinel.token,
         certs=_fetch_certs.return_value,
         audience=mock.sentinel.audience,
+        issuer=mock.sentinel.issuer,
     )
 
 
@@ -104,6 +106,7 @@ def test_verify_oauth2_token(verify_token):
         mock.sentinel.token,
         mock.sentinel.request,
         audience=mock.sentinel.audience,
+        issuer=id_token._GOOGLE_ISSUERS,
         certs_url=id_token._GOOGLE_OAUTH2_CERTS_URL,
     )
 
