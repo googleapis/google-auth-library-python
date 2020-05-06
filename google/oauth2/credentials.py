@@ -268,9 +268,9 @@ class Credentials(credentials.ReadOnlyScoped, credentials.Credentials):
         """Utility function that creates a JSON representation of a Credentials
         object.
 
-        The returned JSON representation can be passed to
-        from_authorized_user_info() which constructs a Credentials object
-        from the mapping object (e.g. the returned JSON). 
+        The returned JSON string, when converted into a dictionary, can be passed
+        to from_authorized_user_info() which constructs a Credentials instance
+        from a mapping object (e.g. dict)
 
         Args:
             strip (Sequence[str]): Optional list of members to exclude from the
