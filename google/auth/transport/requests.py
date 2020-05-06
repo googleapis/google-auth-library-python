@@ -249,8 +249,8 @@ class AuthorizedSession(requests.Session):
     credentials' headers to the request and refreshing credentials as needed.
 
     This class also supports mutual TLS via :meth:`configure_mtls_channel`
-    method. If client_cert_callabck is provided, client certificate and private
-    key are loaded using the callback; if client_cert_callabck is None,
+    method. If client_cert_callback is provided, client certificate and private
+    key are loaded using the callback; if client_cert_callback is None,
     application default SSL credentials will be used. Exceptions are raised if
     there are problems with the certificate, private key, or the loading process,
     so it should be called within a try/except block.
@@ -344,34 +344,43 @@ class AuthorizedSession(requests.Session):
         """Configure the client certificate and key for SSL connection.
 
         If client certificate and key are successfully obtained (from the given
-        client_cert_callabck or from application default SSL credentials), a
+        client_cert_callback or from application default SSL credentials), a
         :class:`_MutualTlsAdapter` instance will be mounted to "https://" prefix.
 
         Args:
-            client_cert_callabck (Optional[Callable[[], (bytes, bytes)]]):
+            client_cert_callback (Optional[Callable[[], (bytes, bytes)]]):
                 The optional callback returns the client certificate and private
                 key bytes both in PEM format.
                 If the callback is None, application default SSL credentials
                 will be used.
 
         Raises:
-            ImportError: If certifi or pyOpenSSL is not installed.
-            OpenSSL.crypto.Error: If client cert or key is invalid.
-            OSError: If the cert provider command launch fails during the
-                application default SSL credentials loading process.
-            RuntimeError: If the cert provider command has a runtime error during
-                the application default SSL credentials loading process.
-            ValueError: If the context aware metadata file is malformed or the
-                cert provider command doesn't produce both client certicate and
-                key during the application default SSL credentials loading process.
+            google.auth.exceptions.MutualTLSChannelError: If mutual TLS channel
+                creation failed for any reason.
         """
-        self._is_mtls, cert, key = google.auth.transport._mtls_helper.get_client_cert_and_key(
-            client_cert_callback
-        )
+        try:
+            import OpenSSL
+        except ImportError as caught_exc:
+            new_exc = exceptions.MutualTLSChannelError(caught_exc)
+            six.raise_from(new_exc, caught_exc)
 
-        if self._is_mtls:
-            mtls_adapter = _MutualTlsAdapter(cert, key)
-            self.mount("https://", mtls_adapter)
+        try:
+            self._is_mtls, cert, key = google.auth.transport._mtls_helper.get_client_cert_and_key(
+                client_cert_callback
+            )
+
+            if self._is_mtls:
+                mtls_adapter = _MutualTlsAdapter(cert, key)
+                self.mount("https://", mtls_adapter)
+        except (
+            ImportError,
+            OpenSSL.crypto.Error,
+            OSError,
+            RuntimeError,
+            ValueError,
+        ) as caught_exc:
+            new_exc = exceptions.MutualTLSChannelError(caught_exc)
+            six.raise_from(new_exc, caught_exc)
 
     def request(
         self,

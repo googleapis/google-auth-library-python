@@ -28,5 +28,14 @@ class RefreshError(GoogleAuthError):
     failed."""
 
 
+class UserAccessTokenError(GoogleAuthError):
+    """Used to indicate ``gcloud auth print-access-token`` command failed."""
+
+
 class DefaultCredentialsError(GoogleAuthError):
     """Used to indicate that acquiring default credentials failed."""
+
+
+class MutualTLSChannelError(GoogleAuthError):
+    """Used to indicate that mutual TLS channel creation is failed, or mutual
+    TLS channel credentials is missing or invalid."""
