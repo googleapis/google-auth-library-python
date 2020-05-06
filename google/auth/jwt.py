@@ -205,7 +205,7 @@ def _verify_iat_and_exp(payload):
         raise ValueError("Token expired, {} < {}".format(latest, now))
 
 
-def decode(token, certs=None, verify=True, audience=None):
+def decode(token, certs=None, verify=True, audience=None, issuer=None):
     """Decode and verify a JWT.
 
     Args:
@@ -220,6 +220,9 @@ def decode(token, certs=None, verify=True, audience=None):
             Verification is done by default.
         audience (str): The audience claim, 'aud', that this JWT should
             contain. If None then the JWT's 'aud' parameter is not verified.
+        issuer (Union[str, list]): The issuer claim ('iss') or claims this
+            JWT can contain. If None then the JWT's 'iss' claim is not
+            verified.
 
     Returns:
         Mapping[str, str]: The deserialized JSON payload in the JWT.
@@ -281,6 +284,18 @@ def decode(token, certs=None, verify=True, audience=None):
         if audience != claim_audience:
             raise ValueError(
                 "Token has wrong audience {}, expected {}".format(
+                    claim_audience, audience
+                )
+            )
+
+    # Check issuer.
+    if issuer is not None:
+        claim_issuer = payload.get("iss")
+        if isinstance(issuer, str):
+            issuer = [issuer]
+        if claim_issuer not in issuer:
+            raise ValueError(
+                "Token has wrong issuer: {} (expected {})".format(
                     claim_audience, audience
                 )
             )

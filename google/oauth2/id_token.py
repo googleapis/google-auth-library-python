@@ -31,10 +31,7 @@ Example::
     request = requests.Request()
 
     id_info = id_token.verify_oauth2_token(
-        token, request, 'my-client-id.example.com')
-
-    if id_info['iss'] != 'https://accounts.google.com':
-        raise ValueError('Wrong issuer.')
+        token, request, 'your-client-id.apps.googleusercontent.com')
 
     userid = id_info['sub']
 
@@ -80,6 +77,12 @@ _GOOGLE_APIS_CERTS_URL = (
     "/securetoken@system.gserviceaccount.com"
 )
 
+# Valid 'iss' claims for Google-issued ID tokens.
+_GOOGLE_ISSUERS = [
+    'accounts.google.com',
+    'https://accounts.google.com',
+]
+
 
 def _fetch_certs(request, certs_url):
     """Fetches certificates.
@@ -106,7 +109,10 @@ def _fetch_certs(request, certs_url):
     return json.loads(response.data.decode("utf-8"))
 
 
-def verify_token(id_token, request, audience=None, certs_url=_GOOGLE_OAUTH2_CERTS_URL):
+def verify_token(
+    id_token, request, audience=None, issuer=None,
+    certs_url=_GOOGLE_OAUTH2_CERTS_URL
+):
     """Verifies an ID token and returns the decoded token.
 
     Args:
@@ -115,6 +121,8 @@ def verify_token(id_token, request, audience=None, certs_url=_GOOGLE_OAUTH2_CERT
             HTTP requests.
         audience (str): The audience that this token is intended for. If None
             then the audience is not verified.
+        issuer (Union[str, list]): The issuer or issuers this token can
+            originate from. If None, the issuer is not verified.
         certs_url (str): The URL that specifies the certificates to use to
             verify the token. This URL should return JSON in the format of
             ``{'key id': 'x509 certificate'}``.
@@ -124,7 +132,7 @@ def verify_token(id_token, request, audience=None, certs_url=_GOOGLE_OAUTH2_CERT
     """
     certs = _fetch_certs(request, certs_url)
 
-    return jwt.decode(id_token, certs=certs, audience=audience)
+    return jwt.decode(id_token, certs=certs, audience=audience, issuer=issuer)
 
 
 def verify_oauth2_token(id_token, request, audience=None):
@@ -142,7 +150,8 @@ def verify_oauth2_token(id_token, request, audience=None):
         Mapping[str, Any]: The decoded token.
     """
     return verify_token(
-        id_token, request, audience=audience, certs_url=_GOOGLE_OAUTH2_CERTS_URL
+        id_token, request, audience=audience, issuer=_GOOGLE_ISSUERS,
+        certs_url=_GOOGLE_OAUTH2_CERTS_URL
     )
 
 
