@@ -296,7 +296,7 @@ def decode(token, certs=None, verify=True, audience=None, issuer=None):
         if claim_issuer not in issuer:
             raise ValueError(
                 "Token has wrong issuer: {} (expected {})".format(
-                    claim_audience, audience
+                    claim_issuer, issuer
                 )
             )
 
