@@ -73,7 +73,7 @@ def test_default_client_encrypted_cert_source(
     # Test good callback.
     get_client_ssl_credentials.return_value = (True, b"cert", b"key", b"passphrase")
     callback = mtls.default_client_encrypted_cert_source("cert_path", "key_path")
-    with mock.patch("builtins.open", return_value=mock.MagicMock()):
+    with mock.patch("{}.open".format(__name__), return_value=mock.MagicMock()):
         assert callback() == ("cert_path", "key_path", b"passphrase")
 
     # Test bad callback which throws exception.
