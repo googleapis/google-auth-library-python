@@ -4,6 +4,32 @@
 
 [1]: https://pypi.org/project/google-auth/#history
 
+## [1.15.0](https://www.github.com/googleapis/google-auth-library-python/compare/v1.14.3...v1.15.0) (2020-05-15)
+
+
+### Features
+
+* encrypted mtls private key support ([#496](https://www.github.com/googleapis/google-auth-library-python/issues/496)) ([9dc9e9f](https://www.github.com/googleapis/google-auth-library-python/commit/9dc9e9f4ca65780b4d7f24e2c36021d2300b4006))
+
+
+### Bug Fixes
+
+* signBytes for impersonated credentials ([#506](https://www.github.com/googleapis/google-auth-library-python/issues/506)) ([ca8d98a](https://www.github.com/googleapis/google-auth-library-python/commit/ca8d98ab2e5277e53ab8df78beb1e75cdf5321e3)), closes [#338](https://www.github.com/googleapis/google-auth-library-python/issues/338)
+
+### [1.14.3](https://www.github.com/googleapis/google-auth-library-python/compare/v1.14.2...v1.14.3) (2020-05-11)
+
+
+### Bug Fixes
+
+* catch exceptions.RefreshError ([#508](https://www.github.com/googleapis/google-auth-library-python/issues/508)) ([3d672e9](https://www.github.com/googleapis/google-auth-library-python/commit/3d672e9cddd9e8c4946290ab9f90ca9009b8be69))
+
+### [1.14.2](https://www.github.com/googleapis/google-auth-library-python/compare/v1.14.1...v1.14.2) (2020-05-07)
+
+
+### Bug Fixes
+
+* support string type response.data ([#504](https://www.github.com/googleapis/google-auth-library-python/issues/504)) ([9b7228e](https://www.github.com/googleapis/google-auth-library-python/commit/9b7228ec849e311bcb4007ad3e23cf2f1e54a721))
+
 ### [1.14.1](https://www.github.com/googleapis/google-auth-library-python/compare/v1.14.0...v1.14.1) (2020-04-21)
 
 
