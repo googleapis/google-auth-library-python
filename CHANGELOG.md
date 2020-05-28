@@ -4,6 +4,13 @@
 
 [1]: https://pypi.org/project/google-auth/#history
 
+### [1.15.1](https://www.github.com/googleapis/google-auth-library-python/compare/v1.15.0...v1.15.1) (2020-05-28)
+
+
+### Bug Fixes
+
+* fix impersonated cred for gcloud ([#516](https://www.github.com/googleapis/google-auth-library-python/issues/516)) ([eb7be3f](https://www.github.com/googleapis/google-auth-library-python/commit/eb7be3fa98ace42b3e949a8af90bbb978ae7e455))
+
 ## [1.15.0](https://www.github.com/googleapis/google-auth-library-python/compare/v1.14.3...v1.15.0) (2020-05-15)
 
 
