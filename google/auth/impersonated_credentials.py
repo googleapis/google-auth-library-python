@@ -239,8 +239,9 @@ class Credentials(credentials.Credentials, credentials.Signing):
                 to use for refreshing credentials.
         """
 
-        # Refresh our source credentials.
-        self._source_credentials.refresh(request)
+        # Refresh our source credentials if it is not valid.
+        if not self._source_credentials.valid:
+            self._source_credentials.refresh(request)
 
         body = {
             "delegates": self._delegates,
@@ -347,7 +348,9 @@ class IDTokenCredentials(credentials.Credentials):
 
         headers = {"Content-Type": "application/json"}
 
-        authed_session = AuthorizedSession(self._target_credentials._source_credentials)
+        authed_session = AuthorizedSession(
+            self._target_credentials._source_credentials, auth_request=request
+        )
 
         response = authed_session.post(
             url=iam_sign_endpoint,
