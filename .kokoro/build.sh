@@ -1,4 +1,5 @@
 #!/bin/bash
+
 # Copyright 2018 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -24,10 +25,19 @@ export PYTHONUNBUFFERED=1
 env | grep KOKORO
 
 # Setup service account credentials.
+
+# add creds to gfile dir
 export GOOGLE_APPLICATION_CREDENTIALS=${KOKORO_GFILE_DIR}/service-account.json
 
 # Setup project id.
-export PROJECT_ID=$(cat "${KOKORO_GFILE_DIR}/project-id.json")
+export PROJECT_ID=$(cat "${KOKORO_GFILE_DIR}/project-id.txt")
+
+# Activate gcloud with service account credentials
+gcloud auth activate-service-account --key-file=$GOOGLE_APPLICATION_CREDENTIALS
+gcloud config set project $PROJECT_ID
+
+# Decrypt system test secrets
+./scripts/decrypt-secrets.sh
 
 # Remove old nox
 python3.6 -m pip uninstall --yes --quiet nox-automation
@@ -37,3 +47,4 @@ python3.6 -m pip install --upgrade --quiet nox
 python3.6 -m nox --version
 
 python3.6 -m nox
+python3.6 -m nox -f system_tests/noxfile.py

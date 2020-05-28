@@ -3,15 +3,15 @@
     {
       "git": {
         "name": ".",
-        "remote": "https://github.com/googleapis/google-auth-library-python.git",
-        "sha": "178e691c08a6e1d6aa883d63463108742106674e"
+        "remote": "git@github.com:googleapis/google-auth-library-python",
+        "sha": "aab4f2fdb2cfa598397026865ccb270a05c38cc4"
       }
     },
     {
       "git": {
         "name": "synthtool",
         "remote": "https://github.com/googleapis/synthtool.git",
-        "sha": "470789cee75ce93c41348ad6aa4c49363a80399b"
+        "sha": "71b8a272549c06b5768d00fa48d3ae990e871bec"
       }
     }
   ]
