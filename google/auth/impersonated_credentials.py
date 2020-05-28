@@ -226,10 +226,6 @@ class Credentials(credentials.Credentials, credentials.Signing):
     def refresh(self, request):
         self._update_token(request)
 
-    @property
-    def expired(self):
-        return _helpers.utcnow() >= self.expiry
-
     def _update_token(self, request):
         """Updates credentials with a new access_token representing
         the impersonated account.
