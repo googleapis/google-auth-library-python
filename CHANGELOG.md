@@ -4,6 +4,30 @@
 
 [1]: https://pypi.org/project/google-auth/#history
 
+## [1.16.0](https://www.github.com/googleapis/google-auth-library-python/compare/v1.15.0...v1.16.0) (2020-05-28)
+
+
+### Features
+
+* add helper func to for default encrypted cert ([#514](https://www.github.com/googleapis/google-auth-library-python/issues/514)) ([f282aa4](https://www.github.com/googleapis/google-auth-library-python/commit/f282aa4acc73d5b56aa7d4bb745d286c3cf1fc39))
+
+
+### Bug Fixes
+
+* fix impersonated cred for gcloud ([#516](https://www.github.com/googleapis/google-auth-library-python/issues/516)) ([eb7be3f](https://www.github.com/googleapis/google-auth-library-python/commit/eb7be3fa98ace42b3e949a8af90bbb978ae7e455))
+
+## [1.15.0](https://www.github.com/googleapis/google-auth-library-python/compare/v1.14.3...v1.15.0) (2020-05-15)
+
+
+### Features
+
+* encrypted mtls private key support ([#496](https://www.github.com/googleapis/google-auth-library-python/issues/496)) ([9dc9e9f](https://www.github.com/googleapis/google-auth-library-python/commit/9dc9e9f4ca65780b4d7f24e2c36021d2300b4006))
+
+
+### Bug Fixes
+
+* signBytes for impersonated credentials ([#506](https://www.github.com/googleapis/google-auth-library-python/issues/506)) ([ca8d98a](https://www.github.com/googleapis/google-auth-library-python/commit/ca8d98ab2e5277e53ab8df78beb1e75cdf5321e3)), closes [#338](https://www.github.com/googleapis/google-auth-library-python/issues/338)
+
 ### [1.14.3](https://www.github.com/googleapis/google-auth-library-python/compare/v1.14.2...v1.14.3) (2020-05-11)
 
 
