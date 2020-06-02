@@ -147,6 +147,11 @@ class TestCredentials(object):
         new_credentials = credentials.with_claims({"meep": "moop"})
         assert new_credentials._additional_claims == {"meep": "moop"}
 
+    def test_with_quota_project(self):
+        credentials = self.make_credentials()
+        new_credentials = credentials.with_quota_project("new-project-456")
+        assert new_credentials.quota_project_id == "new-project-456"
+
     def test__make_authorization_grant_assertion(self):
         credentials = self.make_credentials()
         token = credentials._make_authorization_grant_assertion()
