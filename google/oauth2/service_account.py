@@ -333,7 +333,6 @@ class Credentials(credentials.Signing, credentials.Scoped, credentials.Credentia
             additional_claims=self._additional_claims.copy(),
         )
 
-
     def _make_authorization_grant_assertion(self):
         """Create the OAuth 2.0 assertion.
 

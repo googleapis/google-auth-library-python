@@ -330,7 +330,7 @@ class TestCredentials(object):
             token_uri=self.TOKEN_URI,
             client_id=self.CLIENT_ID,
             client_secret=self.CLIENT_SECRET,
-            quota_project_id="quota-project-123"
+            quota_project_id="quota-project-123",
         )
 
         new_creds = creds.with_quota_project("new-project-456")
