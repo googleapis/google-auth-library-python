@@ -19,12 +19,14 @@ TEST_DEPENDENCIES = [
     "freezegun",
     "mock",
     "oauth2client",
+    "pyopenssl",
     "pytest",
     "pytest-cov",
     "pytest-localserver",
     "requests",
     "urllib3",
     "cryptography",
+    "responses",
     "grpcio",
 ]
 BLACK_VERSION = "black==19.3b0"

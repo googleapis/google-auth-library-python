@@ -4,6 +4,121 @@
 
 [1]: https://pypi.org/project/google-auth/#history
 
+## [1.16.0](https://www.github.com/googleapis/google-auth-library-python/compare/v1.15.0...v1.16.0) (2020-05-28)
+
+
+### Features
+
+* add helper func to for default encrypted cert ([#514](https://www.github.com/googleapis/google-auth-library-python/issues/514)) ([f282aa4](https://www.github.com/googleapis/google-auth-library-python/commit/f282aa4acc73d5b56aa7d4bb745d286c3cf1fc39))
+
+
+### Bug Fixes
+
+* fix impersonated cred for gcloud ([#516](https://www.github.com/googleapis/google-auth-library-python/issues/516)) ([eb7be3f](https://www.github.com/googleapis/google-auth-library-python/commit/eb7be3fa98ace42b3e949a8af90bbb978ae7e455))
+
+## [1.15.0](https://www.github.com/googleapis/google-auth-library-python/compare/v1.14.3...v1.15.0) (2020-05-15)
+
+
+### Features
+
+* encrypted mtls private key support ([#496](https://www.github.com/googleapis/google-auth-library-python/issues/496)) ([9dc9e9f](https://www.github.com/googleapis/google-auth-library-python/commit/9dc9e9f4ca65780b4d7f24e2c36021d2300b4006))
+
+
+### Bug Fixes
+
+* signBytes for impersonated credentials ([#506](https://www.github.com/googleapis/google-auth-library-python/issues/506)) ([ca8d98a](https://www.github.com/googleapis/google-auth-library-python/commit/ca8d98ab2e5277e53ab8df78beb1e75cdf5321e3)), closes [#338](https://www.github.com/googleapis/google-auth-library-python/issues/338)
+
+### [1.14.3](https://www.github.com/googleapis/google-auth-library-python/compare/v1.14.2...v1.14.3) (2020-05-11)
+
+
+### Bug Fixes
+
+* catch exceptions.RefreshError ([#508](https://www.github.com/googleapis/google-auth-library-python/issues/508)) ([3d672e9](https://www.github.com/googleapis/google-auth-library-python/commit/3d672e9cddd9e8c4946290ab9f90ca9009b8be69))
+
+### [1.14.2](https://www.github.com/googleapis/google-auth-library-python/compare/v1.14.1...v1.14.2) (2020-05-07)
+
+
+### Bug Fixes
+
+* support string type response.data ([#504](https://www.github.com/googleapis/google-auth-library-python/issues/504)) ([9b7228e](https://www.github.com/googleapis/google-auth-library-python/commit/9b7228ec849e311bcb4007ad3e23cf2f1e54a721))
+
+### [1.14.1](https://www.github.com/googleapis/google-auth-library-python/compare/v1.14.0...v1.14.1) (2020-04-21)
+
+
+### Bug Fixes
+
+* support es256 raw format signature ([#490](https://www.github.com/googleapis/google-auth-library-python/issues/490)) ([cf2c0a9](https://www.github.com/googleapis/google-auth-library-python/commit/cf2c0a90701ce42f47df71281ae9cdf212c28e0e))
+
+## [1.14.0](https://www.github.com/googleapis/google-auth-library-python/compare/v1.13.1...v1.14.0) (2020-04-13)
+
+
+### Features
+
+* add default client cert source util ([#486](https://www.github.com/googleapis/google-auth-library-python/issues/486)) ([ed41b49](https://www.github.com/googleapis/google-auth-library-python/commit/ed41b49e9d7ba7402b27107b7aa47eed06ac6c55))
+
+### [1.13.1](https://www.github.com/googleapis/google-auth-library-python/compare/v1.13.0...v1.13.1) (2020-04-01)
+
+
+### Bug Fixes
+
+* invalid expiry type ([#481](https://www.github.com/googleapis/google-auth-library-python/issues/481)) ([7ae9a28](https://www.github.com/googleapis/google-auth-library-python/commit/7ae9a284dae16d274bfd4d876414f08efd6c3bff))
+
+## [1.13.0](https://www.github.com/googleapis/google-auth-library-python/compare/v1.12.0...v1.13.0) (2020-04-01)
+
+
+### Features
+
+* add access token credentials ([#476](https://www.github.com/googleapis/google-auth-library-python/issues/476)) ([772dac6](https://www.github.com/googleapis/google-auth-library-python/commit/772dac6a6512230d32cb0dfae65a1a6aa9015049))
+* add fetch_id_token to support id_token adc ([#469](https://www.github.com/googleapis/google-auth-library-python/issues/469)) ([506c565](https://www.github.com/googleapis/google-auth-library-python/commit/506c565a8c3c23a78fd0f17991bc6deb6f2528a9))
+* consolidate mTLS channel errors ([#480](https://www.github.com/googleapis/google-auth-library-python/issues/480)) ([e83d446](https://www.github.com/googleapis/google-auth-library-python/commit/e83d4462f5c50f8424d9e54be32c29390115a9ed))
+* Implement ES256 for JWT verification ([#340](https://www.github.com/googleapis/google-auth-library-python/issues/340)) ([e290a3d](https://www.github.com/googleapis/google-auth-library-python/commit/e290a3dbecc4767dd25ee14574951cdb6c2157cb))
+
+## [1.12.0](https://www.github.com/googleapis/google-auth-library-python/compare/v1.11.3...v1.12.0) (2020-03-25)
+
+
+### Features
+
+* add mTLS ADC support for HTTP ([#457](https://www.github.com/googleapis/google-auth-library-python/issues/457)) ([bb9215a](https://www.github.com/googleapis/google-auth-library-python/commit/bb9215ad6dee6c1dc7f255a2e4ed7011b85bd6cf))
+* add SslCredentials class for mTLS ADC ([#448](https://www.github.com/googleapis/google-auth-library-python/issues/448)) ([dafb41f](https://www.github.com/googleapis/google-auth-library-python/commit/dafb41fae3f513ea9a4f93404f6148bee7dda202))
+* fetch id token from GCE metadata server ([#462](https://www.github.com/googleapis/google-auth-library-python/issues/462)) ([97e7700](https://www.github.com/googleapis/google-auth-library-python/commit/97e7700da031bfd80b63b1a3d2abc29c500936ef))
+
+
+### Bug Fixes
+
+* don't use threads for gRPC AuthMetadataPlugin ([#467](https://www.github.com/googleapis/google-auth-library-python/issues/467)) ([ee373f8](https://www.github.com/googleapis/google-auth-library-python/commit/ee373f88b512a38e791a1c085452c6c6da501eb6))
+* make ThreadPoolExecutor a class var ([#461](https://www.github.com/googleapis/google-auth-library-python/issues/461)) ([b526473](https://www.github.com/googleapis/google-auth-library-python/commit/b5264730603947295cc97ecff2f6aef84aa3d6e9))
+
+### [1.11.3](https://www.github.com/googleapis/google-auth-library-python/compare/v1.11.2...v1.11.3) (2020-03-13)
+
+
+### Bug Fixes
+
+* fix the scopes so test can pass for a local run ([#450](https://www.github.com/googleapis/google-auth-library-python/issues/450)) ([b2dd77f](https://www.github.com/googleapis/google-auth-library-python/commit/b2dd77fe4a538e1d165fc9d859c9a299f6832cda))
+* only add IAM scope to credentials that can change scopes ([#451](https://www.github.com/googleapis/google-auth-library-python/issues/451)) ([82e224b](https://www.github.com/googleapis/google-auth-library-python/commit/82e224b0854950a5607cd028edbcbcdc3e9e6505))
+
+### [1.11.2](https://www.github.com/googleapis/google-auth-library-python/compare/v1.11.1...v1.11.2) (2020-02-14)
+
+
+### Reverts
+
+* Revert "fix: update `_GOOGLE_OAUTH2_CERTS_URL` (#365)" (#444) ([901c259](https://www.github.com/googleapis/google-auth-library-python/commit/901c259b1764f5a305a542cbae14d926ba7a57db)), closes [#365](https://www.github.com/googleapis/google-auth-library-python/issues/365) [#444](https://www.github.com/googleapis/google-auth-library-python/issues/444)
+
+### [1.11.1](https://www.github.com/googleapis/google-auth-library-python/compare/v1.11.0...v1.11.1) (2020-02-13)
+
+
+### Bug Fixes
+
+* compute engine id token credentials "with_target_audience" method ([#438](https://www.github.com/googleapis/google-auth-library-python/issues/438)) ([bc0ec93](https://www.github.com/googleapis/google-auth-library-python/commit/bc0ec93dc66fdcaa6a82222386623fa44f24ddfe))
+* update `_GOOGLE_OAUTH2_CERTS_URL` ([#365](https://www.github.com/googleapis/google-auth-library-python/issues/365)) ([054db75](https://www.github.com/googleapis/google-auth-library-python/commit/054db75734756b0e82e7984ca07fa80025edc908))
+
+## [1.11.0](https://www.github.com/googleapis/google-auth-library-python/compare/v1.10.2...v1.11.0) (2020-01-23)
+
+
+### Features
+
+* add non-None default timeout to AuthorizedSession.request() ([#435](https://www.github.com/googleapis/google-auth-library-python/issues/435)) ([d274a3a](https://www.github.com/googleapis/google-auth-library-python/commit/d274a3a2b3f913bc2cab4ca51f9c7fdef94b8f31)), closes [#434](https://www.github.com/googleapis/google-auth-library-python/issues/434) [googleapis/google-cloud-python#10182](https://www.github.com/googleapis/google-cloud-python/issues/10182)
+* distinguish transport and execution time timeouts ([#424](https://www.github.com/googleapis/google-auth-library-python/issues/424)) ([52a733d](https://www.github.com/googleapis/google-auth-library-python/commit/52a733d604528fa86d05321bb74241a43aea4211)), closes [#423](https://github.com/googleapis/google-auth-library-python/issues/423)
+
 ### [1.10.2](https://www.github.com/googleapis/google-auth-library-python/compare/v1.10.1...v1.10.2) (2020-01-18)
 
 

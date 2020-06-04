@@ -26,6 +26,7 @@ from google.auth import exceptions
 from google.auth import impersonated_credentials
 from google.auth import transport
 from google.auth.impersonated_credentials import Credentials
+from google.oauth2 import credentials
 from google.oauth2 import service_account
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "", "data")
@@ -102,26 +103,46 @@ class TestImpersonatedCredentials(object):
     SOURCE_CREDENTIALS = service_account.Credentials(
         SIGNER, SERVICE_ACCOUNT_EMAIL, TOKEN_URI
     )
+    USER_SOURCE_CREDENTIALS = credentials.Credentials(token="ABCDE")
 
-    def make_credentials(self, lifetime=LIFETIME, target_principal=TARGET_PRINCIPAL):
+    def make_credentials(
+        self,
+        source_credentials=SOURCE_CREDENTIALS,
+        lifetime=LIFETIME,
+        target_principal=TARGET_PRINCIPAL,
+    ):
 
         return Credentials(
-            source_credentials=self.SOURCE_CREDENTIALS,
+            source_credentials=source_credentials,
             target_principal=target_principal,
             target_scopes=self.TARGET_SCOPES,
             delegates=self.DELEGATES,
             lifetime=lifetime,
         )
 
+    def test_make_from_user_credentials(self):
+        credentials = self.make_credentials(
+            source_credentials=self.USER_SOURCE_CREDENTIALS
+        )
+        assert not credentials.valid
+        assert credentials.expired
+
     def test_default_state(self):
         credentials = self.make_credentials()
         assert not credentials.valid
         assert credentials.expired
 
-    def make_request(self, data, status=http_client.OK, headers=None, side_effect=None):
+    def make_request(
+        self,
+        data,
+        status=http_client.OK,
+        headers=None,
+        side_effect=None,
+        use_data_bytes=True,
+    ):
         response = mock.create_autospec(transport.Response, instance=False)
         response.status = status
-        response.data = _helpers.to_bytes(data)
+        response.data = _helpers.to_bytes(data) if use_data_bytes else data
         response.headers = headers or {}
 
         request = mock.create_autospec(transport.Request, instance=False)
@@ -130,7 +151,8 @@ class TestImpersonatedCredentials(object):
 
         return request
 
-    def test_refresh_success(self, mock_donor_credentials):
+    @pytest.mark.parametrize("use_data_bytes", [True, False])
+    def test_refresh_success(self, use_data_bytes, mock_donor_credentials):
         credentials = self.make_credentials(lifetime=None)
         token = "token"
 
@@ -140,13 +162,53 @@ class TestImpersonatedCredentials(object):
         response_body = {"accessToken": token, "expireTime": expire_time}
 
         request = self.make_request(
-            data=json.dumps(response_body), status=http_client.OK
+            data=json.dumps(response_body),
+            status=http_client.OK,
+            use_data_bytes=use_data_bytes,
         )
 
         credentials.refresh(request)
 
         assert credentials.valid
         assert not credentials.expired
+
+    @pytest.mark.parametrize("time_skew", [100, -100])
+    def test_refresh_source_credentials(self, time_skew):
+        credentials = self.make_credentials(lifetime=None)
+
+        # Source credentials is refreshed only if it is expired within
+        # _helpers.CLOCK_SKEW from now. We add a time_skew to the expiry, so
+        # source credentials is refreshed only if time_skew <= 0.
+        credentials._source_credentials.expiry = (
+            _helpers.utcnow()
+            + _helpers.CLOCK_SKEW
+            + datetime.timedelta(seconds=time_skew)
+        )
+        credentials._source_credentials.token = "Token"
+
+        with mock.patch(
+            "google.oauth2.service_account.Credentials.refresh", autospec=True
+        ) as source_cred_refresh:
+            expire_time = (
+                _helpers.utcnow().replace(microsecond=0)
+                + datetime.timedelta(seconds=500)
+            ).isoformat("T") + "Z"
+            response_body = {"accessToken": "token", "expireTime": expire_time}
+            request = self.make_request(
+                data=json.dumps(response_body), status=http_client.OK
+            )
+
+            credentials.refresh(request)
+
+            assert credentials.valid
+            assert not credentials.expired
+
+            # Source credentials is refreshed only if it is expired within
+            # _helpers.CLOCK_SKEW
+            if time_skew > 0:
+                source_cred_refresh.assert_not_called()
+            else:
+                source_cred_refresh.assert_called_once()
 
     def test_refresh_failure_malformed_expire_time(self, mock_donor_credentials):
         credentials = self.make_credentials(lifetime=None)

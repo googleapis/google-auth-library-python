@@ -1,4 +1,4 @@
-# Copyright 2016 Google Inc.
+# Copyright 2016 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -28,5 +28,18 @@ class RefreshError(GoogleAuthError):
     failed."""
 
 
+class UserAccessTokenError(GoogleAuthError):
+    """Used to indicate ``gcloud auth print-access-token`` command failed."""
+
+
 class DefaultCredentialsError(GoogleAuthError):
     """Used to indicate that acquiring default credentials failed."""
+
+
+class MutualTLSChannelError(GoogleAuthError):
+    """Used to indicate that mutual TLS channel creation is failed, or mutual
+    TLS channel credentials is missing or invalid."""
+
+
+class ClientCertError(GoogleAuthError):
+    """Used to indicate that client certificate is missing or invalid."""

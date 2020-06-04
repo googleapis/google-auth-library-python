@@ -1,4 +1,4 @@
-# Copyright 2016 Google Inc.
+# Copyright 2016 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -42,10 +42,14 @@ def test_refresh(authorized_user_file, http_request, token_info):
 
     # Canonical list of scopes at https://cloud.google.com/sdk/gcloud/reference/auth/application-default/login
     # or do `gcloud auth application-defaut login --help`
-    assert set(info_scopes) == set(
+    canonical_scopes = set(
         [
             "https://www.googleapis.com/auth/userinfo.email",
             "https://www.googleapis.com/auth/cloud-platform",
             "openid",
         ]
     )
+    # When running the test locally, we always have an additional "accounts.reauth" scope.
+    canonical_scopes_with_reauth = canonical_scopes.copy()
+    canonical_scopes_with_reauth.add("https://www.googleapis.com/auth/accounts.reauth")
+    assert set(info_scopes) == canonical_scopes or set(info_scopes) == canonical_scopes_with_reauth

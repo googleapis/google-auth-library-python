@@ -1,4 +1,4 @@
-# Copyright 2016 Google Inc.
+# Copyright 2016 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -170,7 +170,8 @@ def configure_cloud_sdk(session, application_default_credentials, project=False)
 # Test sesssions
 
 TEST_DEPENDENCIES = ["pytest", "requests"]
-PYTHON_VERSIONS=['2.7', '3.7']
+PYTHON_VERSIONS = ["2.7", "3.7"]
+
 
 @nox.session(python=PYTHON_VERSIONS)
 def service_account(session):
@@ -187,12 +188,19 @@ def oauth2_credentials(session):
 
 
 @nox.session(python=PYTHON_VERSIONS)
+def impersonated_credentials(session):
+    session.install(*TEST_DEPENDENCIES)
+    session.install(LIBRARY_DIR)
+    session.run("pytest", "test_impersonated_credentials.py")
+
+
+@nox.session(python=PYTHON_VERSIONS)
 def default_explicit_service_account(session):
     session.env[EXPLICIT_CREDENTIALS_ENV] = SERVICE_ACCOUNT_FILE
     session.env[EXPECT_PROJECT_ENV] = "1"
     session.install(*TEST_DEPENDENCIES)
     session.install(LIBRARY_DIR)
-    session.run("pytest", "test_default.py")
+    session.run("pytest", "test_default.py", "test_id_token.py")
 
 
 @nox.session(python=PYTHON_VERSIONS)
@@ -297,3 +305,11 @@ def grpc(session):
     session.install(*TEST_DEPENDENCIES, "google-cloud-pubsub==1.0.0")
     session.env[EXPLICIT_CREDENTIALS_ENV] = SERVICE_ACCOUNT_FILE
     session.run("pytest", "test_grpc.py")
+
+
+@nox.session(python=PYTHON_VERSIONS)
+def mtls_http(session):
+    session.install(LIBRARY_DIR)
+    session.install(*TEST_DEPENDENCIES, "pyopenssl")
+    session.env[EXPLICIT_CREDENTIALS_ENV] = SERVICE_ACCOUNT_FILE
+    session.run("pytest", "test_mtls_http.py")
