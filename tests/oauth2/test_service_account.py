@@ -151,6 +151,9 @@ class TestCredentials(object):
         credentials = self.make_credentials()
         new_credentials = credentials.with_quota_project("new-project-456")
         assert new_credentials.quota_project_id == "new-project-456"
+        hdrs = {}
+        new_credentials.apply(hdrs, token="tok")
+        assert "x-goog-user-project" in hdrs
 
     def test__make_authorization_grant_assertion(self):
         credentials = self.make_credentials()
