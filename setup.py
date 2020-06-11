@@ -21,6 +21,7 @@ from setuptools import setup
 DEPENDENCIES = (
     "cachetools>=2.0.0,<5.0",
     "pyasn1-modules>=0.2.1",
+    # TODO: rsa >= 4.1.0 doesn't support Python 2. Remove pinning after dropping support for Python 2. 
     "rsa>=3.1.4,<4.1.0",
     "setuptools>=40.3.0",
     "six>=1.9.0",
