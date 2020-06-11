@@ -21,7 +21,7 @@ from setuptools import setup
 DEPENDENCIES = (
     "cachetools>=2.0.0,<5.0",
     "pyasn1-modules>=0.2.1",
-    "rsa>=3.1.4,<4.1",
+    "rsa>=3.1.4,<5.0",
     "setuptools>=40.3.0",
     "six>=1.9.0",
 )
@@ -30,7 +30,7 @@ DEPENDENCIES = (
 with io.open("README.rst", "r") as fh:
     long_description = fh.read()
 
-version = "1.16.0"
+version = "1.16.1"
 
 setup(
     name="google-auth",
