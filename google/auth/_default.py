@@ -113,7 +113,9 @@ def load_credentials_from_file(filename, scopes=None):
         from google.oauth2 import credentials
 
         try:
-            credentials = credentials.Credentials.from_authorized_user_info(info, scopes=scopes)
+            credentials = credentials.Credentials.from_authorized_user_info(
+                info, scopes=scopes
+            )
         except ValueError as caught_exc:
             msg = "Failed to load authorized user credentials from {}".format(filename)
             new_exc = exceptions.DefaultCredentialsError(msg, caught_exc)
@@ -126,7 +128,9 @@ def load_credentials_from_file(filename, scopes=None):
         from google.oauth2 import service_account
 
         try:
-            credentials = service_account.Credentials.from_service_account_info(info, scopes=scopes)
+            credentials = service_account.Credentials.from_service_account_info(
+                info, scopes=scopes
+            )
         except ValueError as caught_exc:
             msg = "Failed to load service account credentials from {}".format(filename)
             new_exc = exceptions.DefaultCredentialsError(msg, caught_exc)
