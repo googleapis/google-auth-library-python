@@ -75,12 +75,12 @@ def _make_iam_token_request(request, principal, headers, body):
             API call.
 
     Raises:
-        TransportError: Raised if there is an underlying HTTP connection
-        Error
-        DefaultCredentialsError: Raised if the impersonated credentials
-        are not available.  Common reasons are
-        `iamcredentials.googleapis.com` is not enabled or the
-        `Service Account Token Creator` is not assigned
+        google.auth.exceptions.TransportError: Raised if there is an underlying
+            HTTP connection error
+        google.auth.exceptions.RefreshError: Raised if the impersonated
+            credentials are not available.  Common reasons are
+            `iamcredentials.googleapis.com` is not enabled or the
+            `Service Account Token Creator` is not assigned
     """
     iam_endpoint = _IAM_ENDPOINT.format(principal)
 
@@ -88,13 +88,18 @@ def _make_iam_token_request(request, principal, headers, body):
 
     response = request(url=iam_endpoint, method="POST", headers=headers, body=body)
 
-    response_body = response.data.decode("utf-8")
+    # support both string and bytes type response.data
+    response_body = (
+        response.data.decode("utf-8")
+        if hasattr(response.data, "decode")
+        else response.data
+    )
 
     if response.status != http_client.OK:
         exceptions.RefreshError(_REFRESH_ERROR, response_body)
 
     try:
-        token_response = json.loads(response.data.decode("utf-8"))
+        token_response = json.loads(response_body)
         token = token_response["accessToken"]
         expiry = datetime.strptime(token_response["expireTime"], "%Y-%m-%dT%H:%M:%SZ")
 
@@ -221,10 +226,6 @@ class Credentials(credentials.Credentials, credentials.Signing):
     def refresh(self, request):
         self._update_token(request)
 
-    @property
-    def expired(self):
-        return _helpers.utcnow() >= self.expiry
-
     def _update_token(self, request):
         """Updates credentials with a new access_token representing
         the impersonated account.
@@ -234,8 +235,9 @@ class Credentials(credentials.Credentials, credentials.Signing):
                 to use for refreshing credentials.
         """
 
-        # Refresh our source credentials.
-        self._source_credentials.refresh(request)
+        # Refresh our source credentials if it is not valid.
+        if not self._source_credentials.valid:
+            self._source_credentials.refresh(request)
 
         body = {
             "delegates": self._delegates,
@@ -259,7 +261,10 @@ class Credentials(credentials.Credentials, credentials.Signing):
 
         iam_sign_endpoint = _IAM_SIGN_ENDPOINT.format(self._target_principal)
 
-        body = {"payload": base64.b64encode(message), "delegates": self._delegates}
+        body = {
+            "payload": base64.b64encode(message).decode("utf-8"),
+            "delegates": self._delegates,
+        }
 
         headers = {"Content-Type": "application/json"}
 
@@ -339,7 +344,9 @@ class IDTokenCredentials(credentials.Credentials):
 
         headers = {"Content-Type": "application/json"}
 
-        authed_session = AuthorizedSession(self._target_credentials._source_credentials)
+        authed_session = AuthorizedSession(
+            self._target_credentials._source_credentials, auth_request=request
+        )
 
         response = authed_session.post(
             url=iam_sign_endpoint,

@@ -55,12 +55,12 @@ class TestTimeoutGuard(object):
 
     def test_tracks_elapsed_time_w_numeric_timeout(self, frozen_time):
         with self.make_guard(timeout=10) as guard:
-            frozen_time.tick(delta=3.8)
+            frozen_time.tick(delta=datetime.timedelta(seconds=3.8))
         assert guard.remaining_timeout == 6.2
 
     def test_tracks_elapsed_time_w_tuple_timeout(self, frozen_time):
         with self.make_guard(timeout=(16, 19)) as guard:
-            frozen_time.tick(delta=3.8)
+            frozen_time.tick(delta=datetime.timedelta(seconds=3.8))
         assert guard.remaining_timeout == (12.2, 15.2)
 
     def test_noop_if_no_timeout(self, frozen_time):
@@ -72,13 +72,13 @@ class TestTimeoutGuard(object):
     def test_timeout_error_w_numeric_timeout(self, frozen_time):
         with pytest.raises(requests.exceptions.Timeout):
             with self.make_guard(timeout=10) as guard:
-                frozen_time.tick(delta=10.001)
+                frozen_time.tick(delta=datetime.timedelta(seconds=10.001))
         assert guard.remaining_timeout == pytest.approx(-0.001)
 
     def test_timeout_error_w_tuple_timeout(self, frozen_time):
         with pytest.raises(requests.exceptions.Timeout):
             with self.make_guard(timeout=(11, 10)) as guard:
-                frozen_time.tick(delta=10.001)
+                frozen_time.tick(delta=datetime.timedelta(seconds=10.001))
         assert guard.remaining_timeout == pytest.approx((0.999, -0.001))
 
     def test_custom_timeout_error_type(self, frozen_time):
@@ -87,7 +87,7 @@ class TestTimeoutGuard(object):
 
         with pytest.raises(FooError):
             with self.make_guard(timeout=1, timeout_error_type=FooError):
-                frozen_time.tick(2)
+                frozen_time.tick(delta=datetime.timedelta(seconds=2))
 
     def test_lets_suite_errors_bubble_up(self, frozen_time):
         with pytest.raises(IndexError):
@@ -222,7 +222,7 @@ class TestAuthorizedSession(object):
             authed_session.request("GET", self.TEST_URL)
 
         expected_timeout = google.auth.transport.requests._DEFAULT_TIMEOUT
-        assert patched_request.call_args.kwargs.get("timeout") == expected_timeout
+        assert patched_request.call_args[1]["timeout"] == expected_timeout
 
     def test_request_no_refresh(self):
         credentials = mock.Mock(wraps=CredentialsStub())
@@ -268,7 +268,9 @@ class TestAuthorizedSession(object):
         assert adapter.requests[1].headers["authorization"] == "token1"
 
     def test_request_max_allowed_time_timeout_error(self, frozen_time):
-        tick_one_second = functools.partial(frozen_time.tick, delta=1.0)
+        tick_one_second = functools.partial(
+            frozen_time.tick, delta=datetime.timedelta(seconds=1.0)
+        )
 
         credentials = mock.Mock(
             wraps=TimeTickCredentialsStub(time_tick=tick_one_second)
@@ -286,7 +288,9 @@ class TestAuthorizedSession(object):
             authed_session.request("GET", self.TEST_URL, max_allowed_time=0.9)
 
     def test_request_max_allowed_time_w_transport_timeout_no_error(self, frozen_time):
-        tick_one_second = functools.partial(frozen_time.tick, delta=1.0)
+        tick_one_second = functools.partial(
+            frozen_time.tick, delta=datetime.timedelta(seconds=1.0)
+        )
 
         credentials = mock.Mock(
             wraps=TimeTickCredentialsStub(time_tick=tick_one_second)
@@ -308,7 +312,9 @@ class TestAuthorizedSession(object):
         authed_session.request("GET", self.TEST_URL, timeout=0.5, max_allowed_time=3.1)
 
     def test_request_max_allowed_time_w_refresh_timeout_no_error(self, frozen_time):
-        tick_one_second = functools.partial(frozen_time.tick, delta=1.0)
+        tick_one_second = functools.partial(
+            frozen_time.tick, delta=datetime.timedelta(seconds=1.0)
+        )
 
         credentials = mock.Mock(
             wraps=TimeTickCredentialsStub(time_tick=tick_one_second)
@@ -333,7 +339,9 @@ class TestAuthorizedSession(object):
         authed_session.request("GET", self.TEST_URL, timeout=60, max_allowed_time=3.1)
 
     def test_request_timeout_w_refresh_timeout_timeout_error(self, frozen_time):
-        tick_one_second = functools.partial(frozen_time.tick, delta=1.0)
+        tick_one_second = functools.partial(
+            frozen_time.tick, delta=datetime.timedelta(seconds=1.0)
+        )
 
         credentials = mock.Mock(
             wraps=TimeTickCredentialsStub(time_tick=tick_one_second)
@@ -421,7 +429,7 @@ class TestAuthorizedSession(object):
         "google.auth.transport._mtls_helper.get_client_cert_and_key", autospec=True
     )
     def test_configure_mtls_channel_exceptions(self, mock_get_client_cert_and_key):
-        mock_get_client_cert_and_key.side_effect = ValueError()
+        mock_get_client_cert_and_key.side_effect = exceptions.ClientCertError()
 
         auth_session = google.auth.transport.requests.AuthorizedSession(
             credentials=mock.Mock()
