@@ -241,7 +241,7 @@ class AuthorizedSession(aiohttp.ClientSession):
         data=None,
         headers=None,
         max_allowed_time = None,
-        timeout=_DEFAULT_TIMEOUUT,
+        timeout=_DEFAULT_TIMEOUT,
         **kwargs
     ):
 
