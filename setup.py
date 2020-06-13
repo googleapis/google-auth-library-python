@@ -24,6 +24,7 @@ DEPENDENCIES = (
     "rsa>=3.1.4,<4.1",
     "setuptools>=40.3.0",
     "six>=1.9.0",
+    "aiohttp>=3.6.2,<4.0.0dev"
 )
 
 
