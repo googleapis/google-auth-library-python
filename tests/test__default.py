@@ -131,7 +131,7 @@ def test_load_credentials_from_file_service_account():
     assert project_id == SERVICE_ACCOUNT_FILE_DATA["project_id"]
 
 
-def test_load_credentials_from_file_service_account():
+def test_load_credentials_from_file_service_account_with_scopes():
     credentials, project_id = _default.load_credentials_from_file(
         SERVICE_ACCOUNT_FILE, scopes=["https://www.google.com/calendar/feeds"]
     )
