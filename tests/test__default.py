@@ -39,6 +39,8 @@ AUTHORIZED_USER_CLOUD_SDK_FILE = os.path.join(
 
 SERVICE_ACCOUNT_FILE = os.path.join(DATA_DIR, "service_account.json")
 
+CLIENT_SECRETS_FILE = os.path.join(DATA_DIR, "client_secrets.json")
+
 with open(SERVICE_ACCOUNT_FILE) as fh:
     SERVICE_ACCOUNT_FILE_DATA = json.load(fh)
 
@@ -80,6 +82,16 @@ def test_load_credentials_from_file_authorized_user():
     credentials, project_id = _default.load_credentials_from_file(AUTHORIZED_USER_FILE)
     assert isinstance(credentials, google.oauth2.credentials.Credentials)
     assert project_id is None
+
+
+def test_load_credentials_from_file_no_type(tmpdir):
+    # use the client_secrets.json, which is valid json but not a
+    # loadable credentials type
+    with pytest.raises(exceptions.DefaultCredentialsError) as excinfo:
+        _default.load_credentials_from_file(CLIENT_SECRETS_FILE)
+
+    assert excinfo.match(r"does not have a valid type")
+    assert excinfo.match(r"Type is None")
 
 
 def test_load_credentials_from_file_authorized_user_bad_format(tmpdir):
