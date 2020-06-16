@@ -77,7 +77,7 @@ def load_credentials_from_file(filename, scopes=None):
 
     Args:
         filename (str): The full path to the credentials file.
-        scopes (Sequence[str]): The list of scopes for the credentials. If
+        scopes (Optional[Sequence[str]]): The list of scopes for the credentials. If
             specified, the credentials will automatically be scoped if
             necessary.
 
@@ -108,41 +108,41 @@ def load_credentials_from_file(filename, scopes=None):
     # credentials file or an authorized user credentials file.
     credential_type = info.get("type")
 
-    if credential_type is not None:
-        if credential_type == _AUTHORIZED_USER_TYPE:
-            from google.oauth2 import credentials
-
-            try:
-                credentials = credentials.Credentials.from_authorized_user_info(
-                    info, scopes=scopes
-                )
-            except ValueError as caught_exc:
-                msg = "Failed to load authorized user credentials from {}".format(filename)
-                new_exc = exceptions.DefaultCredentialsError(msg, caught_exc)
-                six.raise_from(new_exc, caught_exc)
-            # Authorized user credentials do not contain the project ID.
-            _warn_about_problematic_credentials(credentials)
-            return credentials, None
-
-        elif credential_type == _SERVICE_ACCOUNT_TYPE:
-            from google.oauth2 import service_account
-
-            try:
-                credentials = service_account.Credentials.from_service_account_info(
-                    info, scopes=scopes
-                )
-            except ValueError as caught_exc:
-                msg = "Failed to load service account credentials from {}".format(filename)
-                new_exc = exceptions.DefaultCredentialsError(msg, caught_exc)
-                six.raise_from(new_exc, caught_exc)
-            return credentials, info.get("project_id")
-
-    raise exceptions.DefaultCredentialsError(
+    if credential_type is None or credential_type not in _VALID_TYPES:
+        raise exceptions.DefaultCredentialsError(
         "The file {file} does not have a valid type. "
         "Type is {type}, expected one of {valid_types}.".format(
             file=filename, type=credential_type, valid_types=_VALID_TYPES
         )
     )
+
+    if credential_type == _AUTHORIZED_USER_TYPE:
+        from google.oauth2 import credentials
+
+        try:
+            credentials = credentials.Credentials.from_authorized_user_info(
+                info, scopes=scopes
+            )
+        except ValueError as caught_exc:
+            msg = "Failed to load authorized user credentials from {}".format(filename)
+            new_exc = exceptions.DefaultCredentialsError(msg, caught_exc)
+            six.raise_from(new_exc, caught_exc)
+        # Authorized user credentials do not contain the project ID.
+        _warn_about_problematic_credentials(credentials)
+        return credentials, None
+
+    elif credential_type == _SERVICE_ACCOUNT_TYPE:
+        from google.oauth2 import service_account
+
+        try:
+            credentials = service_account.Credentials.from_service_account_info(
+                info, scopes=scopes
+            )
+        except ValueError as caught_exc:
+            msg = "Failed to load service account credentials from {}".format(filename)
+            new_exc = exceptions.DefaultCredentialsError(msg, caught_exc)
+            six.raise_from(new_exc, caught_exc)
+        return credentials, info.get("project_id")
 
 
 def _get_gcloud_sdk_credentials():
