@@ -50,7 +50,7 @@ https://cloud.google.com/docs/authentication/getting-started
 _CLOUD_SDK_CREDENTIALS_WARNING = """\
 Your application has authenticated using end user credentials from Google \
 Cloud SDK without a quota project. You might receive a "quota exceeded" \
-or "API not enabled" error. We recommend rerun \
+or "API not enabled" error. We recommend you rerun \
 `gcloud auth application-default login` and make sure a quota project is \
 added. Or you can use service accounts instead. For more information \
 about service accounts, see https://cloud.google.com/docs/authentication/"""
