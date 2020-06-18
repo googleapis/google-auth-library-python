@@ -118,7 +118,7 @@ def test_load_credentials_from_file_authorized_user_cloud_sdk():
     assert project_id is None
 
     # No warning if the json file has quota project id.
-    credentials, project_id = _default._load_credentials_from_file(
+    credentials, project_id = _default.load_credentials_from_file(
         AUTHORIZED_USER_CLOUD_SDK_WITH_QUOTA_PROJECT_ID_FILE
     )
     assert isinstance(credentials, google.oauth2.credentials.Credentials)
