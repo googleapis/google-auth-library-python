@@ -103,7 +103,7 @@ class Credentials(object):
             _helpers.from_bytes(token or self.token)
         )
 
-    def before_request(self, request, method, url, headers):
+    async def before_request(self, request, method, url, headers):
         """Performs credential-specific before request logic.
 
         Refreshes the credentials if necessary, then calls :meth:`apply` to
@@ -121,7 +121,7 @@ class Credentials(object):
         # (Subclasses may use these arguments to ascertain information about
         # the http request.)
         if not self.valid:
-            self.refresh(request)
+            await self.refresh(request)
         self.apply(headers)
 
 

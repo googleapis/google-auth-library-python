@@ -21,8 +21,11 @@ import functools
 import logging
 import numbers
 import time
+import six
 
 import google.auth
+from aiohttp import web
+
 
 from google.oauth2 import service_account
 from google.oauth2 import _client
@@ -30,40 +33,13 @@ from google.auth import exceptions
 from google.auth import transport
 import google.auth.transport._mtls_helper
 
+
 import aiohttp
 
 _OAUTH_SCOPES = [
     'https://www.googleapis.com/auth/appengine.apis',
     'https://www.googleapis.com/auth/userinfo.email',
 ]
-
-
-#from aiohttp_requests import requests
-#import requests
-
-
-'''
-try:
-    import requests
-except ImportError as caught_exc:  # pragma: NO COVER
-    import six
-
-    six.raise_from(
-        ImportError(
-            "The requests library is not installed, please install the "
-            "requests package to use the requests transport."
-        ),
-        caught_exc,
-    )
-
-
-import requests.adapters  # pylint: disable=ungrouped-imports
-import requests.exceptions  # pylint: disable=ungrouped-imports
-from requests.packages.urllib3.util.ssl_ import (
-    create_urllib3_context,
-)  # pylint: disable=ungrouped-imports
-import six  # pylint: disable=ungrouped-imports
-'''
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -78,19 +54,63 @@ class _Response(transport.Response):
     """
 
     def __init__(self, response):
-        self._response = response
+        self.response = response
 
     @property
     def status(self):
-        return self._response.status_code
+        return self.response.status
 
     @property
     def headers(self):
-        return self._response.headers
+        return self.response.headers
 
     @property
     def data(self):
-        return self._response.content
+        return self.response.content
+
+class TimeoutGuard(object):
+    """A context manager raising an error if the suite execution took too long.
+
+    Args:
+        timeout ([Union[None, float, Tuple[float, float]]]):
+            The maximum number of seconds a suite can run without the context
+            manager raising a timeout exception on exit. If passed as a tuple,
+            the smaller of the values is taken as a timeout. If ``None``, a
+            timeout error is never raised.
+        timeout_error_type (Optional[Exception]):
+            The type of the error to raise on timeout. Defaults to
+            :class:`requests.exceptions.Timeout`.
+    """
+
+    def __init__(self, timeout, timeout_error_type= asyncio.TimeoutError):
+        self._timeout = timeout
+        self.remaining_timeout = timeout
+        self._timeout_error_type = timeout_error_type
+
+    def __enter__(self):
+        self._start = time.time()
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        if exc_value:
+            return  # let the error bubble up automatically
+
+        if self._timeout is None:
+            return  # nothing to do, the timeout was not specified
+
+        elapsed = time.time() - self._start
+        deadline_hit = False
+
+        if isinstance(self._timeout, numbers.Number):
+            self.remaining_timeout = self._timeout - elapsed
+            deadline_hit = self.remaining_timeout <= 0
+        else:
+            self.remaining_timeout = tuple(x - elapsed for x in self._timeout)
+            deadline_hit = min(self.remaining_timeout) <= 0
+
+        if deadline_hit:
+            raise self._timeout_error_type()
+
 
 class Request(transport.Request):
     """Requests request adapter.
@@ -151,14 +171,19 @@ class Request(transport.Request):
         Raises:
             google.auth.exceptions.TransportError: If any exception occurred.
         """
-        _LOGGER.debug("Making request: %s %s", method, url)
-        async with self.session.request(method, url, data=body, headers=headers, timeout=timeout, **kwargs) as response:
-            return await _Response(response)
+        try:
+            _LOGGER.debug("Making request: %s %s", method, url)
+            response = await self.session.request(method, url, data=body, headers=headers, timeout=timeout, **kwargs) 
+            return _Response(response)
         
-        '''except requests.exceptions.RequestException as caught_exc:
+        except aiohttp.ClientError as caught_exc:
             new_exc = exceptions.TransportError(caught_exc)
             six.raise_from(new_exc, caught_exc)
-        '''
+        
+        except asyncio.TimeoutError as caught_exc1:
+            new_exc1 = exceptions.TransportError(caught_exc1)
+            six.raise_from(new_exc1, caught_exc1)
+        
 
 
 class AuthorizedSession(aiohttp.ClientSession):
@@ -261,33 +286,38 @@ class AuthorizedSession(aiohttp.ClientSession):
         request_headers = headers.copy() if headers is not None else {}
 
         # Do not apply the timeout unconditionally in order to not override the
-            # _auth_request's default timeout.
+        # _auth_request's default timeout.
+        
         auth_request = (
             self._auth_request
             if timeout is None
             else functools.partial(self._auth_request, timeout=timeout)
         )
 
-        #remaining_time = max_allowed_time
+        remaining_time = max_allowed_time
 
         #NOTE: Add the Timeout Guard context manager after finishing this implementation
 
-        async with self._refresh_lock:
-            await self._loop.run_in_executor(None, self.credentials.before_request, auth_request,
-            method, url, request_headers)
+        with TimeoutGuard(remaining_time) as guard:
+            async with self._refresh_lock:
+                await self._loop.run_in_executor(None, self.credentials.before_request, auth_request,
+                method, url, request_headers)
 
-        #remaining_time = guard.remaining_timeout
+        remaining_time = guard.remaining_timeout
 
-        response = await super(AuthorizedSession, self).request(
-            method,
-            url,
-            data=data,
-            headers=request_headers,
-            timeout=timeout,
-            **kwargs
-        )
+        with TimeoutGuard(remaining_time) as guard:
+            response = await super(AuthorizedSession, self).request(
+                method,
+                url,
+                data=data,
+                headers=request_headers,
+                timeout=timeout,
+                **kwargs
+            )
 
-        #remaining_time = guard.remaining_timeout
+        #print(response.status)
+
+        remaining_time = guard.remaining_timeout
 
         if (
             response.status in self._refresh_status_codes
@@ -308,10 +338,12 @@ class AuthorizedSession(aiohttp.ClientSession):
                 else functools.partial(self._auth_request, timeout=timeout)
             )
 
-            async with self._refresh_lock:
-                await self._loop.run_in_executor(None, self.credentials.refresh, auth_request)
 
-            #remaining_time = guard.remaining_time
+            with TimeoutGuard(remaining_time) as guard:
+                async with self._refresh_lock:
+                    await self._loop.run_in_executor(None, self.credentials.refresh, auth_request)
+
+            remaining_time = guard.remaining_time
         
             return await self.request(
                 method,
@@ -335,8 +367,12 @@ async def main():
     #breakpoint()
  
     credentials, project_id = google.auth.default()
+    
+    async with AuthorizedSession(credentials) as session:
+        response = await session.request('GET',"https://www.google.com") 
 
-    response = await AuthorizedSession(credentials).request('GET',"https://www.google.com")
+    print(response.status)
+    
     print(response.text)
     print(response.content)
 

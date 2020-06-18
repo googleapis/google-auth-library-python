@@ -15,10 +15,13 @@
 import datetime
 import functools
 import sys
+import asyncio
+import aiohttp
+import asynctest
 
 import freezegun
 import mock
-#import OpenSSL
+import OpenSSL
 import pytest
 import requests
 import requests.adapters
@@ -27,7 +30,7 @@ from six.moves import http_client
 from google.auth import exceptions
 import google.auth.credentials
 import google.auth.transport._mtls_helper
-import google.auth.transport.aiohttp_req
+from google.auth.transport import aiohttp_req
 from tests.transport import compliance
 
 
@@ -36,15 +39,19 @@ def frozen_time():
     with freezegun.freeze_time("1970-01-01 00:00:00", tick=False) as frozen:
         yield frozen
 
-
 class TestRequestResponse(compliance.RequestResponseTests):
-    def make_request(self):
-        return google.auth.transport.aiohttp_req.Request()
 
-    def test_timeout(self):
-        http = mock.create_autospec(requests.Session, instance=True)
+    @pytest.mark.asyncio
+    def make_request(self):
+        return aiohttp_req.Request()
+
+    @pytest.mark.asyncio
+    async def test_timeout(self):
+        http = asynctest.mock.create_autospec(aiohttp.ClientSession, instance=True)
+        #breakpoint()
         request = google.auth.transport.aiohttp_req.Request(http)
-        request(url="http://example.com", method="GET", timeout=5)
+        
+        await request(url="http://example.com", method="GET", timeout=5)
 
         assert http.request.call_args[1]["timeout"] == 5
 

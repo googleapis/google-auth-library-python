@@ -78,7 +78,7 @@ def _parse_expiry(response_data):
         return None
 
 
-def _token_endpoint_request(request, token_uri, body):
+async def _token_endpoint_request(request, token_uri, body):
     """Makes a request to the OAuth 2.0 authorization server's token endpoint.
 
     Args:
@@ -102,7 +102,7 @@ def _token_endpoint_request(request, token_uri, body):
     # retry to fetch token for maximum of two times if any internal failure
     # occurs.
     while True:
-        response = request(method="POST", url=token_uri, headers=headers, body=body)
+        response = await request(method="POST", url=token_uri, headers=headers, body=body)
         response_body = (
             response.data.decode("utf-8")
             if hasattr(response.data, "decode")
@@ -204,7 +204,7 @@ def id_token_jwt_grant(request, token_uri, assertion):
     return id_token, expiry, response_data
 
 
-def refresh_grant(
+async def refresh_grant(
     request, token_uri, refresh_token, client_id, client_secret, scopes=None
 ):
     """Implements the OAuth 2.0 refresh token grant.
@@ -245,7 +245,7 @@ def refresh_grant(
     if scopes:
         body["scope"] = " ".join(scopes)
 
-    response_data = _token_endpoint_request(request, token_uri, body)
+    response_data = await _token_endpoint_request(request, token_uri, body)
 
     try:
         access_token = response_data["access_token"]
