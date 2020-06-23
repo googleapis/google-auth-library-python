@@ -14,38 +14,42 @@
 
 """Transport adapter for Async HTTP (aiohttp)."""
 
-from __future__ import absolute_import 
+from __future__ import absolute_import
 
 import asyncio
 import functools
 import logging
 import numbers
 import time
+
+
+
+import requests
+import aiohttp
+import requests.adapters
+from requests.packages.urllib3.util.ssl_ import create_urllib3_context
 import six
 
+
+# from google.oauth2 import service_account
+# from google.oauth2 import _client
+
 import google.auth
-from aiohttp import web
-
-
-from google.oauth2 import service_account
-from google.oauth2 import _client
 from google.auth import exceptions
 from google.auth import transport
 import google.auth.transport._mtls_helper
 
 
-import aiohttp
-
 _OAUTH_SCOPES = [
-    'https://www.googleapis.com/auth/appengine.apis',
-    'https://www.googleapis.com/auth/userinfo.email',
+    "https://www.googleapis.com/auth/appengine.apis",
+    "https://www.googleapis.com/auth/userinfo.email",
 ]
 
 _LOGGER = logging.getLogger(__name__)
 
 _DEFAULT_TIMEOUT = 120  # in seconds
 
-
+'''
 class _Response(transport.Response):
     """Requests transport response adapter.
 
@@ -67,6 +71,7 @@ class _Response(transport.Response):
     @property
     def data(self):
         return self.response.content
+'''
 
 class TimeoutGuard(object):
     """A context manager raising an error if the suite execution took too long.
@@ -82,7 +87,7 @@ class TimeoutGuard(object):
             :class:`requests.exceptions.Timeout`.
     """
 
-    def __init__(self, timeout, timeout_error_type= asyncio.TimeoutError):
+    def __init__(self, timeout, timeout_error_type=asyncio.TimeoutError):
         self._timeout = timeout
         self.remaining_timeout = timeout
         self._timeout_error_type = timeout_error_type
@@ -111,7 +116,7 @@ class TimeoutGuard(object):
         if deadline_hit:
             raise self._timeout_error_type()
 
-
+'''
 class Request(transport.Request):
     """Requests request adapter.
 
@@ -139,7 +144,6 @@ class Request(transport.Request):
     def __init__(self, session=None):
         if not session:
             session = aiohttp.ClientSession()
-
         self.session = session
 
     async def __call__(
@@ -173,17 +177,64 @@ class Request(transport.Request):
         """
         try:
             _LOGGER.debug("Making request: %s %s", method, url)
-            response = await self.session.request(method, url, data=body, headers=headers, timeout=timeout, **kwargs) 
+            response = await self.session.request(
+                method, url, data=body, headers=headers, timeout=timeout, **kwargs
+            )
             return _Response(response)
-        
+
         except aiohttp.ClientError as caught_exc:
             new_exc = exceptions.TransportError(caught_exc)
             six.raise_from(new_exc, caught_exc)
-        
+
         except asyncio.TimeoutError as caught_exc1:
             new_exc1 = exceptions.TransportError(caught_exc1)
             six.raise_from(new_exc1, caught_exc1)
-        
+
+'''
+class _MutualTlsAdapter(requests.adapters.HTTPAdapter):
+    """
+    A TransportAdapter that enables mutual TLS.
+
+    Args:
+        cert (bytes): client certificate in PEM format
+        key (bytes): client private key in PEM format
+
+    Raises:
+        ImportError: if certifi or pyOpenSSL is not installed
+        OpenSSL.crypto.Error: if client cert or key is invalid
+    """
+
+    def __init__(self, cert, key):
+        import certifi
+        from OpenSSL import crypto
+        import urllib3.contrib.pyopenssl
+
+        urllib3.contrib.pyopenssl.inject_into_urllib3()
+
+        pkey = crypto.load_privatekey(crypto.FILETYPE_PEM, key)
+        x509 = crypto.load_certificate(crypto.FILETYPE_PEM, cert)
+
+        ctx_poolmanager = create_urllib3_context()
+        ctx_poolmanager.load_verify_locations(cafile=certifi.where())
+        ctx_poolmanager._ctx.use_certificate(x509)
+        ctx_poolmanager._ctx.use_privatekey(pkey)
+        self._ctx_poolmanager = ctx_poolmanager
+
+        ctx_proxymanager = create_urllib3_context()
+        ctx_proxymanager.load_verify_locations(cafile=certifi.where())
+        ctx_proxymanager._ctx.use_certificate(x509)
+        ctx_proxymanager._ctx.use_privatekey(pkey)
+        self._ctx_proxymanager = ctx_proxymanager
+
+        super(_MutualTlsAdapter, self).__init__()
+
+    def init_poolmanager(self, *args, **kwargs):
+        kwargs["ssl_context"] = self._ctx_poolmanager
+        super(_MutualTlsAdapter, self).init_poolmanager(*args, **kwargs)
+
+    def proxy_manager_for(self, *args, **kwargs):
+        kwargs["ssl_context"] = self._ctx_proxymanager
+        return super(_MutualTlsAdapter, self).proxy_manager_for(*args, **kwargs)
 
 
 class AuthorizedSession(aiohttp.ClientSession):
@@ -196,10 +247,10 @@ class AuthorizedSession(aiohttp.ClientSession):
     def __init__(
         self,
         credentials,
-        refresh_status_codes = transport.DEFAULT_REFRESH_STATUS_CODES,
-        max_refresh_attempts = transport.DEFAULT_MAX_REFRESH_ATTEMPTS,
-        refresh_timeout = None,
-        auth_request = None
+        refresh_status_codes=transport.DEFAULT_REFRESH_STATUS_CODES,
+        max_refresh_attempts=transport.DEFAULT_MAX_REFRESH_ATTEMPTS,
+        refresh_timeout=None,
+        auth_request=None,
     ):
         super(AuthorizedSession, self).__init__()
         self.credentials = credentials
@@ -207,9 +258,9 @@ class AuthorizedSession(aiohttp.ClientSession):
         self._max_refresh_attempts = max_refresh_attempts
         self._refresh_timeout = refresh_timeout
         self._is_mtls = False
-        self._auth_request = None
+        self._auth_request = auth_request
         self._loop = asyncio.get_event_loop()
-        self._refresh_lock = asyncio.Lock() 
+        self._refresh_lock = asyncio.Lock()
 
         if auth_request is None:
             auth_request_session = aiohttp.ClientSession()
@@ -217,9 +268,9 @@ class AuthorizedSession(aiohttp.ClientSession):
             # Using an adapter to make HTTP requests robust to network errors.
             # This adapter retrys HTTP requests when network errors occur
             # and the requests seems safely retryable.
-            
-            #retry_adapter = requests.adapters.HTTPAdapter(max_retries=3)
-            #auth_request_session.mount("https://", retry_adapter)
+
+            # retry_adapter = requests.adapters.HTTPAdapter(max_retries=3)
+            # auth_request_session.mount("https://", retry_adapter)
 
             # Do not pass `self` as the session here, as it can lead to
             # infinite recursion.
@@ -227,7 +278,7 @@ class AuthorizedSession(aiohttp.ClientSession):
 
             # Request instance used by internal methods (for example,
             # credentials.refresh).
-            
+
             self._auth_request = auth_request
 
     def configure_mtls_channel(self, client_cert_callback=None):
@@ -273,7 +324,7 @@ class AuthorizedSession(aiohttp.ClientSession):
         url,
         data=None,
         headers=None,
-        max_allowed_time = None,
+        max_allowed_time=None,
         timeout=_DEFAULT_TIMEOUT,
         **kwargs
     ):
@@ -287,7 +338,7 @@ class AuthorizedSession(aiohttp.ClientSession):
 
         # Do not apply the timeout unconditionally in order to not override the
         # _auth_request's default timeout.
-        
+
         auth_request = (
             self._auth_request
             if timeout is None
@@ -296,12 +347,18 @@ class AuthorizedSession(aiohttp.ClientSession):
 
         remaining_time = max_allowed_time
 
-        #NOTE: Add the Timeout Guard context manager after finishing this implementation
+        # NOTE: Add the Timeout Guard context manager after finishing this implementation
 
         with TimeoutGuard(remaining_time) as guard:
             async with self._refresh_lock:
-                await self._loop.run_in_executor(None, self.credentials.before_request, auth_request,
-                method, url, request_headers)
+                await self._loop.run_in_executor(
+                    None,
+                    self.credentials.before_request,
+                    auth_request,
+                    method,
+                    url,
+                    request_headers,
+                )
 
         remaining_time = guard.remaining_timeout
 
@@ -315,13 +372,14 @@ class AuthorizedSession(aiohttp.ClientSession):
                 **kwargs
             )
 
-        #print(response.status)
+        # print(response.status)
 
         remaining_time = guard.remaining_timeout
 
         if (
             response.status in self._refresh_status_codes
-            and _credential_refresh_attempt < self._max_refresh_attempts):
+            and _credential_refresh_attempt < self._max_refresh_attempts
+        ):
 
             _LOGGER.info(
                 "Refreshing credentials due to a %s response. Attempt %s/%s.",
@@ -329,7 +387,7 @@ class AuthorizedSession(aiohttp.ClientSession):
                 _credential_refresh_attempt + 1,
                 self._max_refresh_attempts,
             )
-        
+
             # Do not apply the timeout unconditionally in order to not override the
             # _auth_request's default timeout.
             auth_request = (
@@ -338,13 +396,14 @@ class AuthorizedSession(aiohttp.ClientSession):
                 else functools.partial(self._auth_request, timeout=timeout)
             )
 
-
             with TimeoutGuard(remaining_time) as guard:
                 async with self._refresh_lock:
-                    await self._loop.run_in_executor(None, self.credentials.refresh, auth_request)
+                    await self._loop.run_in_executor(
+                        None, self.credentials.refresh, auth_request
+                    )
 
             remaining_time = guard.remaining_time
-        
+
             return await self.request(
                 method,
                 url,
@@ -353,7 +412,8 @@ class AuthorizedSession(aiohttp.ClientSession):
                 max_allowed_time=remaining_time,
                 timeout=timeout,
                 _credential_refresh_attempt=_credential_refresh_attempt + 1,
-                **kwargs)
+                **kwargs
+            )
 
         return response
 
@@ -364,17 +424,17 @@ class AuthorizedSession(aiohttp.ClientSession):
 
 
 async def main():
-    #breakpoint()
- 
+    # breakpoint()
+
     credentials, project_id = google.auth.default()
-    
+
     async with AuthorizedSession(credentials) as session:
-        response = await session.request('GET',"https://www.google.com") 
+        response = await session.request("GET", "https://www.google.com")
 
     print(response.status)
-    
     print(response.text)
     print(response.content)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     asyncio.get_event_loop().run_until_complete(main())

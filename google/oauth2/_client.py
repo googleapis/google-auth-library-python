@@ -102,7 +102,9 @@ async def _token_endpoint_request(request, token_uri, body):
     # retry to fetch token for maximum of two times if any internal failure
     # occurs.
     while True:
-        response = await request(method="POST", url=token_uri, headers=headers, body=body)
+        response = await request(
+            method="POST", url=token_uri, headers=headers, body=body
+        )
         response_body = (
             response.data.decode("utf-8")
             if hasattr(response.data, "decode")
