@@ -75,12 +75,12 @@ def _make_iam_token_request(request, principal, headers, body):
             API call.
 
     Raises:
-        TransportError: Raised if there is an underlying HTTP connection
-        Error
-        DefaultCredentialsError: Raised if the impersonated credentials
-        are not available.  Common reasons are
-        `iamcredentials.googleapis.com` is not enabled or the
-        `Service Account Token Creator` is not assigned
+        google.auth.exceptions.TransportError: Raised if there is an underlying
+            HTTP connection error
+        google.auth.exceptions.RefreshError: Raised if the impersonated
+            credentials are not available.  Common reasons are
+            `iamcredentials.googleapis.com` is not enabled or the
+            `Service Account Token Creator` is not assigned
     """
     iam_endpoint = _IAM_ENDPOINT.format(principal)
 
@@ -226,10 +226,6 @@ class Credentials(credentials.Credentials, credentials.Signing):
     def refresh(self, request):
         self._update_token(request)
 
-    @property
-    def expired(self):
-        return _helpers.utcnow() >= self.expiry
-
     def _update_token(self, request):
         """Updates credentials with a new access_token representing
         the impersonated account.
@@ -239,8 +235,9 @@ class Credentials(credentials.Credentials, credentials.Signing):
                 to use for refreshing credentials.
         """
 
-        # Refresh our source credentials.
-        self._source_credentials.refresh(request)
+        # Refresh our source credentials if it is not valid.
+        if not self._source_credentials.valid:
+            self._source_credentials.refresh(request)
 
         body = {
             "delegates": self._delegates,
@@ -347,7 +344,9 @@ class IDTokenCredentials(credentials.Credentials):
 
         headers = {"Content-Type": "application/json"}
 
-        authed_session = AuthorizedSession(self._target_credentials._source_credentials)
+        authed_session = AuthorizedSession(
+            self._target_credentials._source_credentials, auth_request=request
+        )
 
         response = authed_session.post(
             url=iam_sign_endpoint,
