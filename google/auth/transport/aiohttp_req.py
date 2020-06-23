@@ -22,12 +22,10 @@ import logging
 import numbers
 import time
 
-
-
-import requests
+#import requests
 import aiohttp
-import requests.adapters
-from requests.packages.urllib3.util.ssl_ import create_urllib3_context
+#import requests.adapters
+#from requests.packages.urllib3.util.ssl_ import create_urllib3_context
 import six
 
 
@@ -116,7 +114,7 @@ class TimeoutGuard(object):
         if deadline_hit:
             raise self._timeout_error_type()
 
-'''
+
 class Request(transport.Request):
     """Requests request adapter.
 
@@ -190,7 +188,7 @@ class Request(transport.Request):
             new_exc1 = exceptions.TransportError(caught_exc1)
             six.raise_from(new_exc1, caught_exc1)
 
-'''
+
 class _MutualTlsAdapter(requests.adapters.HTTPAdapter):
     """
     A TransportAdapter that enables mutual TLS.
