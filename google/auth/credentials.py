@@ -133,7 +133,7 @@ class Credentials(object):
             self.refresh(request)
         self.apply(headers)
 
-    @abc.abstractmethod
+
     def with_quota_project(self, quota_project_id):
         """Returns a copy of these credentials with a modified quota project
 
