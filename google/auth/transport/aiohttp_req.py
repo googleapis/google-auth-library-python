@@ -371,8 +371,6 @@ class AuthorizedSession(aiohttp.ClientSession):
                 **kwargs
             )
 
-        # print(response.status)
-
         remaining_time = guard.remaining_timeout
 
         if (
