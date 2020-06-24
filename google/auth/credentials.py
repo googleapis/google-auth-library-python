@@ -139,7 +139,7 @@ class Credentials(object):
 
         Args:
             quota_project_id (str): The project to use for quota and
-            billing purposes
+                billing purposes
 
         Returns:
             google.oauth2.credentials.Credentials: A new credentials instance.

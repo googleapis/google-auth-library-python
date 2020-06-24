@@ -359,7 +359,8 @@ class Credentials(google.auth.credentials.Signing, google.auth.credentials.Crede
                 the JWT payload.
             token_lifetime (int): The amount of time in seconds for
                 which the token is valid. Defaults to 1 hour.
-            quota_project_id (Optional[str]): The project ID used for quota and billing.
+            quota_project_id (Optional[str]): The project ID used for quota
+                and billing.
         """
         super(Credentials, self).__init__()
         self._signer = signer

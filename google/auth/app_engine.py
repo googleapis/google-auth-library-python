@@ -93,9 +93,8 @@ class Credentials(credentials.Scoped, credentials.Signing, credentials.Credentia
                 :func:`google.appengine.api.app_identity.get_access_token`.
                 If not specified, the default application service account
                 ID will be used.
-            quota_project_id (Optional[str]): The project ID used for quota and billing.
-                This project may be different from the project used to
-                create the credentials.
+            quota_project_id (Optional[str]): The project ID used for quota
+                and billing.
 
         Raises:
             EnvironmentError: If the App Engine APIs are unavailable.

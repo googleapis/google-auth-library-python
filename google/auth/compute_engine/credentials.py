@@ -60,9 +60,8 @@ class Credentials(credentials.ReadOnlyScoped, credentials.Credentials):
             service_account_email (str): The service account email to use, or
                 'default'. A Compute Engine instance may have multiple service
                 accounts.
-            quota_project_id (Optional[str]): The project ID used for quota and billing.
-                This project may be different from the project used to
-                create the credentials.
+            quota_project_id (Optional[str]): The project ID used for quota and
+                billing.
         """
         super(Credentials, self).__init__()
         self._service_account_email = service_account_email
@@ -121,7 +120,6 @@ class Credentials(credentials.ReadOnlyScoped, credentials.Credentials):
 
     @_helpers.copy_docstring(credentials.Credentials)
     def with_quota_project(self, quota_project_id):
-
         return self.__class__(
             service_account=self._service_account_email,
             quota_project_id=quota_project_id,
@@ -178,9 +176,8 @@ class IDTokenCredentials(credentials.Credentials, credentials.Signing):
                 is False. If set to True, ``token_uri``, ``additional_claims``,
                 ``service_account_email``, ``signer`` argument should not be set;
                 otherwise ValueError will be raised.
-            quota_project_id (Optional[str]): The project ID used for quota and billing.
-                This project may be different from the project used to
-                create the credentials.
+            quota_project_id (Optional[str]): The project ID used for quota and
+                billing.
 
         Raises:
             ValueError:

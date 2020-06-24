@@ -339,12 +339,16 @@ class IDTokenCredentials(credentials.Credentials):
 
     def from_credentials(self, target_credentials, target_audience=None):
         return self.__class__(
-            target_credentials=self._target_credentials, target_audience=target_audience
+            target_credentials=self._target_credentials,
+            target_audience=target_audience,
+            quota_project_id=self._quota_project_id,
         )
 
     def with_target_audience(self, target_audience):
         return self.__class__(
-            target_credentials=self._target_credentials, target_audience=target_audience
+            target_credentials=self._target_credentials,
+            target_audience=target_audience,
+            quota_project_id=self._quota_project_id,
         )
 
     def with_include_email(self, include_email):
@@ -352,6 +356,7 @@ class IDTokenCredentials(credentials.Credentials):
             target_credentials=self._target_credentials,
             target_audience=self._target_audience,
             include_email=include_email,
+            quota_project_id=self._quota_project_id,
         )
 
     @_helpers.copy_docstring(credentials.Credentials)

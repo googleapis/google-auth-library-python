@@ -326,6 +326,8 @@ class UserAccessTokenCredentials(credentials.Credentials):
 
         Args:
             account (str): Account to get the access token for.
+            quota_project_id (Optional[str]): The project ID used for quota
+                and billing.
 
         Returns:
             google.oauth2.credentials.UserAccessTokenCredentials: The created
