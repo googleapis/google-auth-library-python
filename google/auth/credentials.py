@@ -182,7 +182,7 @@ class AnonymousCredentials(Credentials):
 
     def before_request(self, request, method, url, headers):
         """Anonymous credentials do nothing to the request."""
-    
+
     def with_quota_project(self, quota_project_id):
         raise ValueError("Anonymous credentials don't support quota project.")
 

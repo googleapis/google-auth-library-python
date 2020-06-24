@@ -141,14 +141,16 @@ class Credentials(credentials.Scoped, credentials.Signing, credentials.Credentia
     @_helpers.copy_docstring(credentials.Scoped)
     def with_scopes(self, scopes):
         return self.__class__(
-            scopes=scopes, service_account_id=self._service_account_id,
-            quota_project_id=self.quota_project_id
+            scopes=scopes,
+            service_account_id=self._service_account_id,
+            quota_project_id=self.quota_project_id,
         )
-    
+
     @_helpers.copy_docstring(credentials.Credentials)
-    def with_quota_project(self, quota_project_id,):
+    def with_quota_project(self, quota_project_id):
         return self.__class__(
-            scopes=scopes, service_account_id=self._service_account_id,
+            scopes=scopes,
+            service_account_id=self._service_account_id,
             quota_project_id=quota_project_id,
         )
 

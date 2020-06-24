@@ -721,14 +721,14 @@ class OnDemandCredentials(
 
     @_helpers.copy_docstring(google.auth.credentials.Credentials)
     def with_quota_project(self, quota_project_id):
-        
+
         return self.__class__(
             self._signer,
             issuer=self._issuer,
             subject=self._subject,
             additional_claims=self._additional_claims,
             max_cache_size=self._cache_maxsize,
-            quota_project_id=self._quota_project_id
+            quota_project_id=self._quota_project_id,
         )
 
     @property

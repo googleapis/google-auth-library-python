@@ -304,12 +304,19 @@ class Credentials(credentials.Credentials, credentials.Signing):
             quota_project_id=quota_project_id,
         )
 
+
 class IDTokenCredentials(credentials.Credentials):
     """Open ID Connect ID Token-based service account credentials.
 
     """
 
-    def __init__(self, target_credentials, target_audience=None, include_email=False, quota_project_id=None):
+    def __init__(
+        self,
+        target_credentials,
+        target_audience=None,
+        include_email=False,
+        quota_project_id=None,
+    ):
         """
         Args:
             target_credentials (google.auth.Credentials): The target

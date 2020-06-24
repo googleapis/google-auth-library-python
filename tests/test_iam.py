@@ -49,7 +49,7 @@ def make_credentials():
 
         def refresh(self, request):
             pass
-        
+
         def with_quota_project(self, quota_project_id):
             pass
 

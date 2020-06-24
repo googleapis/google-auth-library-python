@@ -335,10 +335,7 @@ class UserAccessTokenCredentials(credentials.Credentials):
 
     @_helpers.copy_docstring(credentials.Credentials)
     def with_quota_project(self, quota_project_id):
-        return self.__class__(
-            account=self._account,
-            quota_project_id=quota_project_id,
-        )
+        return self.__class__(account=self._account, quota_project_id=quota_project_id)
 
     def refresh(self, request):
         """Refreshes the access token.

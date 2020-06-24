@@ -130,7 +130,8 @@ def load_credentials_from_file(filename, scopes=None, quota_project_id=None):
 
         try:
             credentials = service_account.Credentials.from_service_account_info(
-                info, scopes=scopes).with_quota_project(quota_project_id)
+                info, scopes=scopes
+            ).with_quota_project(quota_project_id)
         except ValueError as caught_exc:
             msg = "Failed to load service account credentials from {}".format(filename)
             new_exc = exceptions.DefaultCredentialsError(msg, caught_exc)
