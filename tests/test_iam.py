@@ -51,7 +51,7 @@ def make_credentials():
             pass
 
         def with_quota_project(self, quota_project_id):
-            pass
+            raise NotImplementedError()
 
     return CredentialsImpl()
 

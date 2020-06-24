@@ -596,7 +596,7 @@ class OnDemandCredentials(
                 cache. Tokens are cached using :class:`cachetools.LRUCache`.
             quota_project_id (Optional[str]): The project ID used for quota
                 and billing.
-            
+
         """
         super(OnDemandCredentials, self).__init__()
         self._signer = signer
@@ -718,6 +718,7 @@ class OnDemandCredentials(
             subject=subject if subject is not None else self._subject,
             additional_claims=new_additional_claims,
             max_cache_size=self._cache.maxsize,
+            quota_project_id=self._quota_project_id,
         )
 
     @_helpers.copy_docstring(google.auth.credentials.Credentials)
@@ -728,8 +729,8 @@ class OnDemandCredentials(
             issuer=self._issuer,
             subject=self._subject,
             additional_claims=self._additional_claims,
-            max_cache_size=self._cache_maxsize,
-            quota_project_id=self._quota_project_id,
+            max_cache_size=self._cache.maxsize,
+            quota_project_id=quota_project_id,
         )
 
     @property

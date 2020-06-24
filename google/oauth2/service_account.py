@@ -535,7 +535,7 @@ class IDTokenCredentials(credentials.Signing, credentials.Credentials):
 
     @_helpers.copy_docstring(credentials.Credentials)
     def with_quota_project(self, quota_project_id):
-        return self.__class_(
+        return self.__class__(
             self._signer,
             service_account_email=self._service_account_email,
             token_uri=self._token_uri,

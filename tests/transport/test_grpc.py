@@ -53,7 +53,7 @@ class CredentialsStub(credentials.Credentials):
         self.token += "1"
 
     def with_quota_project(self, quota_project_id):
-        pass
+        raise NotImplementedError()
 
 
 class TestAuthMetadataPlugin(object):

@@ -314,6 +314,9 @@ class UserAccessTokenCredentials(credentials.Credentials):
     Args:
         account (Optional[str]): Account to get the access token for. If not
             specified, the current active account will be used.
+        quota_project_id (Optional[str]): The project ID used for quota
+            and billing.
+
     """
 
     def __init__(self, account=None, quota_project_id=None):
@@ -326,8 +329,6 @@ class UserAccessTokenCredentials(credentials.Credentials):
 
         Args:
             account (str): Account to get the access token for.
-            quota_project_id (Optional[str]): The project ID used for quota
-                and billing.
 
         Returns:
             google.oauth2.credentials.UserAccessTokenCredentials: The created

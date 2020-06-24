@@ -121,7 +121,7 @@ class Credentials(credentials.ReadOnlyScoped, credentials.Credentials):
     @_helpers.copy_docstring(credentials.Credentials)
     def with_quota_project(self, quota_project_id):
         return self.__class__(
-            service_account=self._service_account_email,
+            service_account_email=self._service_account_email,
             quota_project_id=quota_project_id,
         )
 
@@ -240,7 +240,7 @@ class IDTokenCredentials(credentials.Credentials, credentials.Signing):
                 None,
                 target_audience=target_audience,
                 use_metadata_identity_endpoint=True,
-                quota_project_id=self.quota_project_id,
+                quota_project_id=self._quota_project_id,
             )
         else:
             return self.__class__(
@@ -251,7 +251,7 @@ class IDTokenCredentials(credentials.Credentials, credentials.Signing):
                 additional_claims=self._additional_claims.copy(),
                 signer=self.signer,
                 use_metadata_identity_endpoint=False,
-                quota_project_id=self.quota_project_id,
+                quota_project_id=self._quota_project_id,
             )
 
     @_helpers.copy_docstring(credentials.Credentials)
@@ -262,7 +262,7 @@ class IDTokenCredentials(credentials.Credentials, credentials.Signing):
         if self._use_metadata_identity_endpoint:
             return self.__class__(
                 None,
-                target_audience=self.target_audience,
+                target_audience=self._target_audience,
                 use_metadata_identity_endpoint=True,
                 quota_project_id=quota_project_id,
             )
@@ -271,7 +271,7 @@ class IDTokenCredentials(credentials.Credentials, credentials.Signing):
                 None,
                 service_account_email=self._service_account_email,
                 token_uri=self._token_uri,
-                target_audience=self.target_audience,
+                target_audience=self._target_audience,
                 additional_claims=self._additional_claims.copy(),
                 signer=self.signer,
                 use_metadata_identity_endpoint=False,
