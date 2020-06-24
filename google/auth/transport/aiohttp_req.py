@@ -22,10 +22,11 @@ import logging
 import numbers
 import time
 
-#import requests
+# import requests
 import aiohttp
-#import requests.adapters
-#from requests.packages.urllib3.util.ssl_ import create_urllib3_context
+
+# import requests.adapters
+# from requests.packages.urllib3.util.ssl_ import create_urllib3_context
 import six
 
 
@@ -47,7 +48,7 @@ _LOGGER = logging.getLogger(__name__)
 
 _DEFAULT_TIMEOUT = 120  # in seconds
 
-'''
+
 class _Response(transport.Response):
     """Requests transport response adapter.
 
@@ -69,7 +70,7 @@ class _Response(transport.Response):
     @property
     def data(self):
         return self.response.content
-'''
+
 
 class TimeoutGuard(object):
     """A context manager raising an error if the suite execution took too long.
@@ -189,6 +190,7 @@ class Request(transport.Request):
             six.raise_from(new_exc1, caught_exc1)
 
 
+'''
 class _MutualTlsAdapter(requests.adapters.HTTPAdapter):
     """
     A TransportAdapter that enables mutual TLS.
@@ -233,6 +235,7 @@ class _MutualTlsAdapter(requests.adapters.HTTPAdapter):
     def proxy_manager_for(self, *args, **kwargs):
         kwargs["ssl_context"] = self._ctx_proxymanager
         return super(_MutualTlsAdapter, self).proxy_manager_for(*args, **kwargs)
+'''
 
 
 class AuthorizedSession(aiohttp.ClientSession):
@@ -345,13 +348,11 @@ class AuthorizedSession(aiohttp.ClientSession):
 
         remaining_time = max_allowed_time
 
-        # NOTE: Add the Timeout Guard context manager after finishing this implementation
-
         with TimeoutGuard(remaining_time) as guard:
             async with self._refresh_lock:
                 await self._loop.run_in_executor(
                     None,
-                    self.credentials.before_request,
+                    self.credentials.async_before_request,
                     auth_request,
                     method,
                     url,
@@ -429,9 +430,11 @@ async def main():
     async with AuthorizedSession(credentials) as session:
         response = await session.request("GET", "https://www.google.com")
 
-    print(response.status)
-    print(response.text)
-    print(response.content)
+        print(response.status)
+        print(response.text)
+        print(response.content)
+
+        await session.close()
 
 
 if __name__ == "__main__":

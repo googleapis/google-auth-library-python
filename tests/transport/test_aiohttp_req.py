@@ -27,7 +27,7 @@ from six.moves import http_client
 import google.auth.credentials
 from google.auth.transport import aiohttp_req
 import google.auth.transport._mtls_helper
-from tests.transport import compliance
+from tests.transport import async_compliance
 
 
 @pytest.fixture
@@ -36,7 +36,7 @@ def frozen_time():
         yield frozen
 
 
-class TestRequestResponse(compliance.RequestResponseTests):
+class TestRequestResponse(async_compliance.RequestResponseTests):
     @pytest.mark.asyncio
     def make_request(self):
         return aiohttp_req.Request()

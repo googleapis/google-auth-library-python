@@ -62,9 +62,9 @@ class RequestResponseTests(object):
         server.stop()
 
     @pytest.mark.asyncio
-    def test_request_basic(self, server):
+    async def test_request_basic(self, server):
         request = self.make_request()
-        response = request(url=server.url + "/basic", method="GET")
+        response = await request(url=server.url + "/basic", method="GET")
         assert response.status == http_client.OK
         assert response.headers["x-test-header"] == "value"
 
@@ -74,9 +74,9 @@ class RequestResponseTests(object):
         # assert response.data == b"Basic Content"
 
     @pytest.mark.asyncio
-    def test_request_with_timeout_success(self, server):
+    async def test_request_with_timeout_success(self, server):
         request = self.make_request()
-        response = request(url=server.url + "/basic", method="GET", timeout=2)
+        response = await request(url=server.url + "/basic", method="GET", timeout=2)
 
         assert response.status == http_client.OK
         assert response.headers["x-test-header"] == "value"
@@ -85,16 +85,16 @@ class RequestResponseTests(object):
         # assert response.data == b"Basic Content"
 
     @pytest.mark.asyncio
-    def test_request_with_timeout_failure(self, server):
+    async def test_request_with_timeout_failure(self, server):
         request = self.make_request()
         # breakpoint()
         with pytest.raises(exceptions.TransportError):
-            request(url=server.url + "/wait", method="GET", timeout=1)
+            await request(url=server.url + "/wait", method="GET", timeout=1)
 
     @pytest.mark.asyncio
-    def test_request_headers(self, server):
+    async def test_request_headers(self, server):
         request = self.make_request()
-        response = request(
+        response = await request(
             url=server.url + "/basic",
             method="GET",
             headers={"x-test-header": "hello world"},
@@ -107,9 +107,9 @@ class RequestResponseTests(object):
         # assert response.data == b"Basic Content"
 
     @pytest.mark.asyncio
-    def test_request_error(self, server):
+    async def test_request_error(self, server):
         request = self.make_request()
-        response = request(url=server.url + "/server_error", method="GET")
+        response = await request(url=server.url + "/server_error", method="GET")
 
         assert response.status == http_client.INTERNAL_SERVER_ERROR
 
@@ -117,8 +117,8 @@ class RequestResponseTests(object):
         # assert response.data == b"Error"
 
     @pytest.mark.asyncio
-    def test_connection_error(self):
+    async def test_connection_error(self):
         request = self.make_request()
         # breakpoint()
         with pytest.raises(exceptions.TransportError):
-            request(url="http://{}".format(NXDOMAIN), method="GET")
+            await request(url="http://{}".format(NXDOMAIN), method="GET")

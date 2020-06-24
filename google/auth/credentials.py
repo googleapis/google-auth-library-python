@@ -103,7 +103,28 @@ class Credentials(object):
             _helpers.from_bytes(token or self.token)
         )
 
-    async def before_request(self, request, method, url, headers):
+    def before_request(self, request, method, url, headers):
+        """Performs credential-specific before request logic.
+
+        Refreshes the credentials if necessary, then calls :meth:`apply` to
+        apply the token to the authentication header.
+
+        Args:
+            request (google.auth.transport.Request): The object used to make
+                HTTP requests.
+            method (str): The request's HTTP method or the RPC method being
+                invoked.
+            url (str): The request's URI or the RPC service's URI.
+            headers (Mapping): The request's headers.
+        """
+        # pylint: disable=unused-argument
+        # (Subclasses may use these arguments to ascertain information about
+        # the http request.)
+        if not self.valid:
+            self.refresh(request)
+        self.apply(headers)
+
+    async def async_before_request(self, request, method, url, headers):
         """Performs credential-specific before request logic.
 
         Refreshes the credentials if necessary, then calls :meth:`apply` to

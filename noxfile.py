@@ -28,6 +28,7 @@ TEST_DEPENDENCIES = [
     "cryptography",
     "responses",
     "grpcio",
+    "pytest-asyncio",
 ]
 BLACK_VERSION = "black==19.3b0"
 BLACK_PATHS = ["google", "tests", "noxfile.py", "setup.py", "docs/conf.py"]

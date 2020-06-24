@@ -161,7 +161,7 @@ class Credentials(credentials.ReadOnlyScoped, credentials.Credentials):
         return False
 
     @_helpers.copy_docstring(credentials.Credentials)
-    async def refresh(self, request):
+    def refresh(self, request):
         if (
             self._refresh_token is None
             or self._token_uri is None
@@ -174,7 +174,7 @@ class Credentials(credentials.ReadOnlyScoped, credentials.Credentials):
                 "token_uri, client_id, and client_secret."
             )
 
-        access_token, refresh_token, expiry, grant_response = await _client.refresh_grant(
+        access_token, refresh_token, expiry, grant_response = _client.refresh_grant(
             request,
             self._token_uri,
             self._refresh_token,
