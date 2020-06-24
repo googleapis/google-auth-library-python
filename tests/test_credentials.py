@@ -23,6 +23,9 @@ from google.auth import credentials
 class CredentialsImpl(credentials.Credentials):
     def refresh(self, request):
         self.token = request
+    
+    def with_quota_project(self, quota_project_id):
+        self._quota_project_id = quota_project_id
 
 
 def test_credentials_constructor():

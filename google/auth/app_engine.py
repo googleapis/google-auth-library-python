@@ -84,7 +84,7 @@ class Credentials(credentials.Scoped, credentials.Signing, credentials.Credentia
     tokens.
     """
 
-    def __init__(self, scopes=None, service_account_id=None):
+    def __init__(self, scopes=None, service_account_id=None, quota_project_id=None):
         """
         Args:
             scopes (Sequence[str]): Scopes to request from the App Identity
@@ -93,6 +93,9 @@ class Credentials(credentials.Scoped, credentials.Signing, credentials.Credentia
                 :func:`google.appengine.api.app_identity.get_access_token`.
                 If not specified, the default application service account
                 ID will be used.
+            quota_project_id (Optional[str]): The project ID used for quota and billing.
+                This project may be different from the project used to
+                create the credentials.
 
         Raises:
             EnvironmentError: If the App Engine APIs are unavailable.
@@ -107,6 +110,7 @@ class Credentials(credentials.Scoped, credentials.Signing, credentials.Credentia
         self._scopes = scopes
         self._service_account_id = service_account_id
         self._signer = Signer()
+        self._quota_project_id = quota_project_id
 
     @_helpers.copy_docstring(credentials.Credentials)
     def refresh(self, request):
@@ -137,7 +141,15 @@ class Credentials(credentials.Scoped, credentials.Signing, credentials.Credentia
     @_helpers.copy_docstring(credentials.Scoped)
     def with_scopes(self, scopes):
         return self.__class__(
-            scopes=scopes, service_account_id=self._service_account_id
+            scopes=scopes, service_account_id=self._service_account_id,
+            quota_project_id=self.quota_project_id
+        )
+    
+    @_helpers.copy_docstring(credentials.Credentials)
+    def with_quota_project(self, quota_project_id,):
+        return self.__class__(
+            scopes=scopes, service_account_id=self._service_account_id,
+            quota_project_id=quota_project_id,
         )
 
     @_helpers.copy_docstring(credentials.Signing)

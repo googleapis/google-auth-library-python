@@ -108,6 +108,9 @@ class CredentialsStub(google.auth.credentials.Credentials):
 
     def refresh(self, request):
         self.token += "1"
+    
+    def with_quota_project(self, quota_project_id):
+        pass
 
 
 class TimeTickCredentialsStub(CredentialsStub):
