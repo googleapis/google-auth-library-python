@@ -258,6 +258,7 @@ def refresh_grant(
 
     return access_token, refresh_token, expiry, response_data
 
+
 '''
 async version of refresh token grant implemmented above:
 

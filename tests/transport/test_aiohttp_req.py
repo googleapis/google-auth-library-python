@@ -21,7 +21,8 @@ from aioresponses import aioresponses
 import freezegun
 import mock
 import pytest
-from six.moves import http_client
+
+# from six.moves import http_client
 
 # from google.auth import exceptions
 import google.auth.credentials
@@ -67,7 +68,8 @@ class CredentialsStub(google.auth.credentials.Credentials):
     def refresh(self, request):
         self.token += "1"
 
-'''
+
+"""
 def make_response(status=http_client.OK, data=None):
     TEST_URL = "http://example.com/"
     method = "GET"
@@ -75,7 +77,8 @@ def make_response(status=http_client.OK, data=None):
     response.status_code = status
     response._content = data
     return response
-'''
+"""
+
 
 class TestAuthorizedSession(object):
     TEST_URL = "http://example.com/"

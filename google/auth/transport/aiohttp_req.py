@@ -24,9 +24,6 @@ import time
 
 # import requests
 import aiohttp
-
-# import requests.adapters
-# from requests.packages.urllib3.util.ssl_ import create_urllib3_context
 import six
 
 
@@ -296,7 +293,6 @@ class AuthorizedSession(aiohttp.ClientSession):
         Raises:
             google.auth.exceptions.MutualTLSChannelError: If mutual TLS channel
                 creation failed for any reason.
-        """
         try:
             import OpenSSL
         except ImportError as caught_exc:
@@ -318,6 +314,7 @@ class AuthorizedSession(aiohttp.ClientSession):
         ) as caught_exc:
             new_exc = exceptions.MutualTLSChannelError(caught_exc)
             six.raise_from(new_exc, caught_exc)
+        """
 
     async def request(
         self,
