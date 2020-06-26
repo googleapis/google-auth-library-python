@@ -1,4 +1,4 @@
-# Copyright 2016 Google LLC
+# Copyright 2020 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -121,17 +121,17 @@ class Request(transport.Request):
     to construct or use this class directly.
 
     This class can be useful if you want to manually refresh a
-    :class:`~google.auth.credentials.Credentials` instance::
+    :class:`~google.auth.credentials_async.Credentials` instance::
 
         import google.auth.transport.requests
-        import requests
+        import aiohttp_req
 
-        request = google.auth.transport.requests.Request()
+        request = google.auth.transport.aiohttp_req.Request()
 
         credentials.refresh(request)
 
     Args:
-        session (requests.Session): An instance :class:`requests.Session` used
+        session (aiohttp.ClientSession): An instance :class: aiohttp.ClientSession used
             to make HTTP requests. If not specified, a session will be created.
 
     .. automethod:: __call__
@@ -356,8 +356,6 @@ class AuthorizedSession(aiohttp.ClientSession):
                     request_headers,
                 )
 
-        remaining_time = guard.remaining_timeout
-
         with TimeoutGuard(remaining_time) as guard:
             response = await super(AuthorizedSession, self).request(
                 method,
@@ -420,7 +418,7 @@ class AuthorizedSession(aiohttp.ClientSession):
 async def main():
     # breakpoint()
 
-    credentials, project_id = google.auth.default()
+    credentials, project_id = google.auth.default_async()
 
     async with AuthorizedSession(credentials) as session:
         response = await session.request("GET", "https://www.google.com")

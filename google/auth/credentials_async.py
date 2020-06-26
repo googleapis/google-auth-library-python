@@ -124,6 +124,27 @@ class Credentials(object):
             self.refresh(request)
         self.apply(headers)
 
+    async def async_before_request(self, request, method, url, headers):
+        """Performs credential-specific before request logic.
+
+        Refreshes the credentials if necessary, then calls :meth:`apply` to
+        apply the token to the authentication header.
+
+        Args:
+            request (google.auth.transport.Request): The object used to make
+                HTTP requests.
+            method (str): The request's HTTP method or the RPC method being
+                invoked.
+            url (str): The request's URI or the RPC service's URI.
+            headers (Mapping): The request's headers.
+        """
+        # pylint: disable=unused-argument
+        # (Subclasses may use these arguments to ascertain information about
+        # the http request.)
+        if not self.valid:
+            await self.refresh(request)
+        self.apply(headers)
+
 
 class AnonymousCredentials(Credentials):
     """Credentials that do not provide any authentication information.
@@ -278,7 +299,7 @@ def with_scopes_if_required(credentials, scopes):
     as-is.
 
     Args:
-        credentials (google.auth.credentials.Credentials): The credentials to
+        credentials (google.auth.crededntials.Credentials): The credentials to
             scope if necessary.
         scopes (Sequence[str]): The list of scopes to use.
 
