@@ -257,11 +257,12 @@ class AuthorizedSession(aiohttp.ClientSession):
         self._refresh_timeout = refresh_timeout
         self._is_mtls = False
         self._auth_request = auth_request
+        self._auth_request_session = None
         self._loop = asyncio.get_event_loop()
         self._refresh_lock = asyncio.Lock()
 
         if auth_request is None:
-            auth_request_session = aiohttp.ClientSession()
+            self._auth_request_session = aiohttp.ClientSession()
 
             # Using an adapter to make HTTP requests robust to network errors.
             # This adapter retrys HTTP requests when network errors occur
@@ -272,7 +273,10 @@ class AuthorizedSession(aiohttp.ClientSession):
 
             # Do not pass `self` as the session here, as it can lead to
             # infinite recursion.
-            auth_request = Request(auth_request_session)
+
+            # We pass it in here to be able to close the request session
+
+            auth_request = Request(self._auth_request_session)
 
             # Request instance used by internal methods (for example,
             # credentials.refresh).
@@ -406,6 +410,8 @@ class AuthorizedSession(aiohttp.ClientSession):
                 _credential_refresh_attempt=_credential_refresh_attempt + 1,
                 **kwargs
             )
+
+        await self._auth_request_session.close()
 
         return response
 

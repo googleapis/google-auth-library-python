@@ -63,6 +63,8 @@ class TestAuthorizedSession(object):
 
         assert authed_session.credentials == mock.sentinel.credentials
 
+        # await authed_session.close()
+
     def test_constructor_with_auth_request(self):
         http = mock.create_autospec(aiohttp.ClientSession)
         auth_request = google.auth.transport.aiohttp_req.Request(http)
@@ -74,30 +76,34 @@ class TestAuthorizedSession(object):
 
         assert authed_session._auth_request == auth_request
 
+        # await authed_session.close()
+
     @pytest.mark.asyncio
     async def test_request(self):
         with aioresponses() as mocked:
             credentials, project_id = google.auth.default_async()
             # breakpoint()
             mocked.get(self.TEST_URL, status=200, body="test")
-            resp = await aiohttp_req.AuthorizedSession(credentials).request(
-                "GET", "http://example.com/"
-            )
+            session = aiohttp_req.AuthorizedSession(credentials)
+            resp = await session.request("GET", "http://example.com/")
 
             assert resp.status == 200
             assert "test" == await resp.text()
+
+            await session.close()
 
     @pytest.mark.asyncio
     async def test_ctx(self):
         with aioresponses() as mocked:
             credentials, project_id = google.auth.default_async()
             mocked.get("http://test.example.com", payload=dict(foo="bar"))
-            resp = await aiohttp_req.AuthorizedSession(credentials).request(
-                "GET", "http://test.example.com"
-            )
+            session = aiohttp_req.AuthorizedSession(credentials)
+            resp = await session.request("GET", "http://test.example.com")
             data = await resp.json()
 
             assert dict(foo="bar") == data
+
+            await session.close()
 
     @pytest.mark.asyncio
     async def test_http_headers(self):
@@ -109,11 +115,12 @@ class TestAuthorizedSession(object):
                 headers=dict(connection="keep-alive"),
             )
 
-            resp = await aiohttp_req.AuthorizedSession(credentials).request(
-                "POST", "http://example.com"
-            )
+            session = aiohttp_req.AuthorizedSession(credentials)
+            resp = await session.request("POST", "http://example.com")
 
             assert resp.headers["Connection"] == "keep-alive"
+
+            await session.close()
 
     @pytest.mark.asyncio
     async def test_regexp_example(self):
@@ -122,12 +129,14 @@ class TestAuthorizedSession(object):
             mocked.get("http://example.com", status=500)
             mocked.get("http://example.com", status=200)
 
-            resp1 = await aiohttp_req.AuthorizedSession(credentials).request(
-                "GET", "http://example.com"
-            )
-            resp2 = await aiohttp_req.AuthorizedSession(credentials).request(
-                "GET", "http://example.com"
-            )
+            session1 = aiohttp_req.AuthorizedSession(credentials)
+
+            resp1 = await session1.request("GET", "http://example.com")
+            session2 = aiohttp_req.AuthorizedSession(credentials)
+            resp2 = await session2.request("GET", "http://example.com")
 
             assert resp1.status == 500
             assert resp2.status == 200
+
+            await session1.close()
+            await session2.close()
