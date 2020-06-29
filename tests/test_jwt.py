@@ -150,6 +150,17 @@ def test_decode_valid_with_issuer(token_factory):
     assert payload["metadata"]["meta"] == "data"
 
 
+def test_decode_valid_with_wrong_issuer(token_factory):
+    token = token_factory(claims={"issuer": "accounts.alphabet.com"})
+    with pytest.raises(ValueError) as excinfo:
+        jwt.decode(
+            token,
+            certs=PUBLIC_CERT_BYTES,
+            issuer=["https://accounts.google.com", "accounts.google.com"],
+        )
+    assert excinfo.match(r"Token has wrong issuer")
+
+
 def test_decode_valid_unverified(token_factory):
     payload = jwt.decode(token_factory(), certs=OTHER_CERT_BYTES, verify=False)
     assert payload["aud"] == "audience@example.com"
