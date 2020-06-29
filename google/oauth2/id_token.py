@@ -80,10 +80,7 @@ _GOOGLE_APIS_CERTS_URL = (
     "/securetoken@system.gserviceaccount.com"
 )
 
-_GOOGLE_ISSUERS = [
-    "accounts.google.com",
-    "https://accounts.google.com",
-]
+_GOOGLE_ISSUERS = ["accounts.google.com", "https://accounts.google.com"]
 
 
 def _fetch_certs(request, certs_url):
