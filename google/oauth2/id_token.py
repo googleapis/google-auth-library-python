@@ -78,10 +78,7 @@ _GOOGLE_APIS_CERTS_URL = (
 )
 
 # Valid 'iss' claims for Google-issued ID tokens.
-_GOOGLE_ISSUERS = [
-    'accounts.google.com',
-    'https://accounts.google.com',
-]
+_GOOGLE_ISSUERS = ["accounts.google.com", "https://accounts.google.com"]
 
 
 def _fetch_certs(request, certs_url):
@@ -110,8 +107,7 @@ def _fetch_certs(request, certs_url):
 
 
 def verify_token(
-    id_token, request, audience=None, issuer=None,
-    certs_url=_GOOGLE_OAUTH2_CERTS_URL
+    id_token, request, audience=None, issuer=None, certs_url=_GOOGLE_OAUTH2_CERTS_URL
 ):
     """Verifies an ID token and returns the decoded token.
 
@@ -150,8 +146,11 @@ def verify_oauth2_token(id_token, request, audience=None):
         Mapping[str, Any]: The decoded token.
     """
     return verify_token(
-        id_token, request, audience=audience, issuer=_GOOGLE_ISSUERS,
-        certs_url=_GOOGLE_OAUTH2_CERTS_URL
+        id_token,
+        request,
+        audience=audience,
+        issuer=_GOOGLE_ISSUERS,
+        certs_url=_GOOGLE_OAUTH2_CERTS_URL,
     )
 
 

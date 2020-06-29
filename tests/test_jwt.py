@@ -141,8 +141,9 @@ def test_decode_valid_with_audience(token_factory):
 
 def test_decode_valid_with_issuer(token_factory):
     payload = jwt.decode(
-        token_factory(), certs=PUBLIC_CERT_BYTES,
-        issuer=["https://accounts.google.com", "accounts.google.com"]
+        token_factory(),
+        certs=PUBLIC_CERT_BYTES,
+        issuer=["https://accounts.google.com", "accounts.google.com"],
     )
     assert payload["iss"] == "https://accounts.google.com"
     assert payload["user"] == "billy bob"
