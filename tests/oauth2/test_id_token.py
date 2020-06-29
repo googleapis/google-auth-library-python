@@ -114,7 +114,7 @@ def test_verify_oauth2_token_invalid_iss(verify_token):
     verify_token.return_value = {"iss": "invalid_issuer"}
 
     with pytest.raises(exceptions.GoogleAuthError):
-        result = id_token.verify_oauth2_token(
+        id_token.verify_oauth2_token(
             mock.sentinel.token, mock.sentinel.request, audience=mock.sentinel.audience
         )
 
