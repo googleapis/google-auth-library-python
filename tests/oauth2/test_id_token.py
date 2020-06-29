@@ -108,6 +108,7 @@ def test_verify_oauth2_token(verify_token):
         certs_url=id_token._GOOGLE_OAUTH2_CERTS_URL,
     )
 
+
 @mock.patch("google.oauth2.id_token.verify_token", autospec=True)
 def test_verify_oauth2_token_invalid_iss(verify_token):
     verify_token.return_value = {"iss": "invalid_issuer"}
@@ -116,6 +117,7 @@ def test_verify_oauth2_token_invalid_iss(verify_token):
         result = id_token.verify_oauth2_token(
             mock.sentinel.token, mock.sentinel.request, audience=mock.sentinel.audience
         )
+
 
 @mock.patch("google.oauth2.id_token.verify_token", autospec=True)
 def test_verify_firebase_token(verify_token):
