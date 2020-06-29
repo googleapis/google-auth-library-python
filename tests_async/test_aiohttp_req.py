@@ -81,7 +81,7 @@ class TestAuthorizedSession(object):
     @pytest.mark.asyncio
     async def test_request(self):
         with aioresponses() as mocked:
-            credentials, project_id = google.auth.default_async()
+            credentials = mock.Mock(wraps=CredentialsStub())
             # breakpoint()
             mocked.get(self.TEST_URL, status=200, body="test")
             session = aiohttp_req.AuthorizedSession(credentials)
@@ -95,7 +95,7 @@ class TestAuthorizedSession(object):
     @pytest.mark.asyncio
     async def test_ctx(self):
         with aioresponses() as mocked:
-            credentials, project_id = google.auth.default_async()
+            credentials = mock.Mock(wraps=CredentialsStub())
             mocked.get("http://test.example.com", payload=dict(foo="bar"))
             session = aiohttp_req.AuthorizedSession(credentials)
             resp = await session.request("GET", "http://test.example.com")
@@ -108,7 +108,7 @@ class TestAuthorizedSession(object):
     @pytest.mark.asyncio
     async def test_http_headers(self):
         with aioresponses() as mocked:
-            credentials, project_id = google.auth.default_async()
+            credentials = mock.Mock(wraps=CredentialsStub())
             mocked.post(
                 "http://example.com",
                 payload=dict(),
@@ -125,7 +125,7 @@ class TestAuthorizedSession(object):
     @pytest.mark.asyncio
     async def test_regexp_example(self):
         with aioresponses() as mocked:
-            credentials, project_id = google.auth.default_async()
+            credentials = mock.Mock(wraps=CredentialsStub())
             mocked.get("http://example.com", status=500)
             mocked.get("http://example.com", status=200)
 
