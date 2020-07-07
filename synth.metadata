@@ -3,8 +3,8 @@
     {
       "git": {
         "name": ".",
-        "remote": "git@github.com:googleapis/google-auth-library-python",
-        "sha": "aab4f2fdb2cfa598397026865ccb270a05c38cc4"
+        "remote": "https://github.com/googleapis/google-auth-library-python.git",
+        "sha": "218a159f646c81021c890b92f9cff003aed949a8"
       }
     },
     {
