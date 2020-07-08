@@ -105,7 +105,7 @@ def unit(session):
 
 
 @nox.session(python="2.7")
-def unit2(session):
+def uni-2-7(session):
     session.install(*TEST_DEPENDENCIES2)
     session.install(".")
     session.run(

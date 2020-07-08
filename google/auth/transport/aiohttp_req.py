@@ -22,13 +22,8 @@ import logging
 import numbers
 import time
 
-# import requests
 import aiohttp
 import six
-
-
-# from google.oauth2 import service_account
-# from google.oauth2 import _client
 
 import google.auth
 from google.auth import exceptions
@@ -420,21 +415,3 @@ class AuthorizedSession(aiohttp.ClientSession):
         """Indicates if the created SSL channel is mutual TLS."""
         return self._is_mtls
 
-
-async def main():
-    # breakpoint()
-
-    credentials, project_id = google.auth.default_async()
-
-    async with AuthorizedSession(credentials) as session:
-        response = await session.request("GET", "https://www.google.com")
-
-        print(response.status)
-        print(response.text)
-        print(response.content)
-
-        await session.close()
-
-
-if __name__ == "__main__":
-    asyncio.get_event_loop().run_until_complete(main())

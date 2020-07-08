@@ -20,7 +20,7 @@ import mock
 import pytest
 from tests_async import async_compliance
 
-import google.auth.credentials_async
+import google.auth.credentials
 from google.auth.transport import aiohttp_req
 import google.auth.transport._mtls_helper
 
@@ -37,7 +37,7 @@ class TestRequestResponse(async_compliance.RequestResponseTests):
         return aiohttp_req.Request()
 
 
-class CredentialsStub(google.auth.credentials_async.Credentials):
+class CredentialsStub(google.auth.credentials.Credentials):
     def __init__(self, token="token"):
         super(CredentialsStub, self).__init__()
         self.token = token
@@ -69,7 +69,6 @@ class TestAuthorizedSession(object):
         http = mock.create_autospec(aiohttp.ClientSession)
         auth_request = google.auth.transport.aiohttp_req.Request(http)
 
-        # breakpoint()
         authed_session = google.auth.transport.aiohttp_req.AuthorizedSession(
             mock.sentinel.credentials, auth_request=auth_request
         )
@@ -82,7 +81,7 @@ class TestAuthorizedSession(object):
     async def test_request(self):
         with aioresponses() as mocked:
             credentials = mock.Mock(wraps=CredentialsStub())
-            # breakpoint()
+
             mocked.get(self.TEST_URL, status=200, body="test")
             session = aiohttp_req.AuthorizedSession(credentials)
             resp = await session.request("GET", "http://example.com/")

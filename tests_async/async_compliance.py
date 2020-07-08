@@ -68,8 +68,6 @@ class RequestResponseTests(object):
         assert response.status == http_client.OK
         assert response.headers["x-test-header"] == "value"
 
-        # breakpoint()
-
         # We comment this out as StreamReader type is returned by default with aiohttp.
         # assert response.data == b"Basic Content"
 
@@ -87,7 +85,7 @@ class RequestResponseTests(object):
     @pytest.mark.asyncio
     async def test_request_with_timeout_failure(self, server):
         request = self.make_request()
-        # breakpoint()
+   
         with pytest.raises(exceptions.TransportError):
             await request(url=server.url + "/wait", method="GET", timeout=1)
 
@@ -119,6 +117,6 @@ class RequestResponseTests(object):
     @pytest.mark.asyncio
     async def test_connection_error(self):
         request = self.make_request()
-        # breakpoint()
+
         with pytest.raises(exceptions.TransportError):
             await request(url="http://{}".format(NXDOMAIN), method="GET")

@@ -27,7 +27,7 @@ DEPENDENCIES = (
     "setuptools>=40.3.0",
     "six>=1.9.0",
     "aiohttp>=3.6.2; python_version>='3.5'",
-    "aioresponses>=0.6.4; python_version>='3.5'",
+    "aioresponses>=0.6.4; python_version>='3.6'",
 )
 
 
