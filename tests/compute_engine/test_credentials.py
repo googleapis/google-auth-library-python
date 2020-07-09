@@ -463,7 +463,7 @@ class TestIDTokenCredentials(object):
         responses.add(
             responses.GET,
             "http://metadata.google.internal/computeMetadata/v1/instance/"
-            "serviceAccounts/service-account@example.com:signBlob?alt=json",
+            "service-accounts/service-account@example.com/token",
             status=200,
             content_type="application/json",
             json={
@@ -477,8 +477,8 @@ class TestIDTokenCredentials(object):
         signature = base64.b64encode(b"some-signature").decode("utf-8")
         responses.add(
             responses.POST,
-            "https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/"
-            "service-account@example.com:signBlob?alt=json",
+            "https://iamcredentials.googleapis.com/v1/projects/-/"
+            "serviceAccounts/service-account@example.com:signBlob?alt=json",
             status=200,
             content_type="application/json",
             json={"keyId": "some-key-id", "signedBlob": signature},
