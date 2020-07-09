@@ -13,14 +13,19 @@
 # limitations under the License.
 
 
+import asyncio
+import datetime
+
+
 import aiohttp
 from aioresponses import aioresponses
+import async_compliance
 import freezegun
 import mock
 import pytest
-from tests_async import async_compliance
 
-import google.auth.credentials
+
+import google.auth.credentials_async
 from google.auth.transport import aiohttp_req
 import google.auth.transport._mtls_helper
 
@@ -36,8 +41,13 @@ class TestRequestResponse(async_compliance.RequestResponseTests):
     def make_request(self):
         return aiohttp_req.Request()
 
+    def test_timeout(self):
+        http = mock.create_autospec(aiohttp.ClientSession, instance=True)
+        request = google.auth.transport.aiohttp_req.Request(http)
+        request(url="http://example.com", method="GET", timeout=5)
 
-class CredentialsStub(google.auth.credentials.Credentials):
+
+class CredentialsStub(google.auth.credentials_async.Credentials):
     def __init__(self, token="token"):
         super(CredentialsStub, self).__init__()
         self.token = token
@@ -45,11 +55,59 @@ class CredentialsStub(google.auth.credentials.Credentials):
     def apply(self, headers, token=None):
         headers["authorization"] = self.token
 
+    """
     def before_request(self, request, method, url, headers):
         self.apply(headers)
+    """
 
     def refresh(self, request):
         self.token += "1"
+
+
+class TestTimeoutGuard(object):
+    def make_guard(self, *args, **kwargs):
+        return google.auth.transport.aiohttp_req.TimeoutGuard(*args, **kwargs)
+
+    def test_tracks_elapsed_time_w_numeric_timeout(self, frozen_time):
+        with self.make_guard(timeout=10) as guard:
+            frozen_time.tick(delta=datetime.timedelta(seconds=3.8))
+        assert guard.remaining_timeout == 6.2
+
+    def test_tracks_elapsed_time_w_tuple_timeout(self, frozen_time):
+        with self.make_guard(timeout=(16, 19)) as guard:
+            frozen_time.tick(delta=datetime.timedelta(seconds=3.8))
+        assert guard.remaining_timeout == (12.2, 15.2)
+
+    def test_noop_if_no_timeout(self, frozen_time):
+        with self.make_guard(timeout=None) as guard:
+            frozen_time.tick(delta=datetime.timedelta(days=3650))
+        # NOTE: no timeout error raised, despite years have passed
+        assert guard.remaining_timeout is None
+
+    def test_timeout_error_w_numeric_timeout(self, frozen_time):
+        with pytest.raises(asyncio.TimeoutError):
+            with self.make_guard(timeout=10) as guard:
+                frozen_time.tick(delta=datetime.timedelta(seconds=10.001))
+        assert guard.remaining_timeout == pytest.approx(-0.001)
+
+    def test_timeout_error_w_tuple_timeout(self, frozen_time):
+        with pytest.raises(asyncio.TimeoutError):
+            with self.make_guard(timeout=(11, 10)) as guard:
+                frozen_time.tick(delta=datetime.timedelta(seconds=10.001))
+        assert guard.remaining_timeout == pytest.approx((0.999, -0.001))
+
+    def test_custom_timeout_error_type(self, frozen_time):
+        class FooError(Exception):
+            pass
+
+        with pytest.raises(FooError):
+            with self.make_guard(timeout=1, timeout_error_type=FooError):
+                frozen_time.tick(delta=datetime.timedelta(seconds=2))
+
+    def test_lets_suite_errors_bubble_up(self, frozen_time):
+        with pytest.raises(IndexError):
+            with self.make_guard(timeout=1):
+                [1, 2, 3][3]
 
 
 class TestAuthorizedSession(object):
@@ -60,10 +118,7 @@ class TestAuthorizedSession(object):
         authed_session = google.auth.transport.aiohttp_req.AuthorizedSession(
             mock.sentinel.credentials
         )
-
         assert authed_session.credentials == mock.sentinel.credentials
-
-        # await authed_session.close()
 
     def test_constructor_with_auth_request(self):
         http = mock.create_autospec(aiohttp.ClientSession)
@@ -139,3 +194,33 @@ class TestAuthorizedSession(object):
 
             await session1.close()
             await session2.close()
+
+    @pytest.mark.asyncio
+    async def test_request_no_refresh(self):
+        credentials = mock.Mock(wraps=CredentialsStub())
+        with aioresponses() as mocked:
+            mocked.get("http://example.com", status=200)
+            authed_session = google.auth.transport.aiohttp_req.AuthorizedSession(
+                credentials
+            )
+            response = await authed_session.request("GET", "http://example.com")
+            assert response.status == 200
+            assert credentials.async_before_request.called
+            assert not credentials.refresh.called
+
+            await authed_session.close()
+
+    @pytest.mark.asyncio
+    async def test_request_refresh(self):
+        credentials = mock.Mock(wraps=CredentialsStub())
+        with aioresponses() as mocked:
+            mocked.get("http://example.com", status=401)
+            mocked.get("http://example.com", status=200)
+            authed_session = google.auth.transport.aiohttp_req.AuthorizedSession(
+                credentials
+            )
+            response = await authed_session.request("GET", "http://example.com")
+            assert credentials.refresh.called
+            assert response.status == 200
+
+            await authed_session.close()

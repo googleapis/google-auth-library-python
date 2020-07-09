@@ -19,6 +19,7 @@ import pytest
 from pytest_localserver.http import WSGIServer
 from six.moves import http_client
 
+
 from google.auth import exceptions
 
 # .invalid will never resolve, see https://tools.ietf.org/html/rfc2606
@@ -68,8 +69,10 @@ class RequestResponseTests(object):
         assert response.status == http_client.OK
         assert response.headers["x-test-header"] == "value"
 
-        # We comment this out as StreamReader type is returned by default with aiohttp.
-        # assert response.data == b"Basic Content"
+        # Use 13 as this is the length of the data written into the stream.
+
+        data = await response.data.read(13)
+        assert data == b"Basic Content"
 
     @pytest.mark.asyncio
     async def test_request_with_timeout_success(self, server):
@@ -79,13 +82,13 @@ class RequestResponseTests(object):
         assert response.status == http_client.OK
         assert response.headers["x-test-header"] == "value"
 
-        # We comment this out as StreamReader type is returned by default with aiohttp.
-        # assert response.data == b"Basic Content"
+        data = await response.data.read(13)
+        assert data == b"Basic Content"
 
     @pytest.mark.asyncio
     async def test_request_with_timeout_failure(self, server):
         request = self.make_request()
-   
+
         with pytest.raises(exceptions.TransportError):
             await request(url=server.url + "/wait", method="GET", timeout=1)
 
@@ -101,8 +104,8 @@ class RequestResponseTests(object):
         assert response.status == http_client.OK
         assert response.headers["x-test-header"] == "hello world"
 
-        # We comment this out as StreamReader type is returned by default with aiohttp.
-        # assert response.data == b"Basic Content"
+        data = await response.data.read(13)
+        assert data == b"Basic Content"
 
     @pytest.mark.asyncio
     async def test_request_error(self, server):
@@ -111,8 +114,8 @@ class RequestResponseTests(object):
 
         assert response.status == http_client.INTERNAL_SERVER_ERROR
 
-        # We comment this out as StreamReader type is returned by default with aiohttp.
-        # assert response.data == b"Error"
+        data = await response.data.read(5)
+        assert data == b"Error"
 
     @pytest.mark.asyncio
     async def test_connection_error(self):

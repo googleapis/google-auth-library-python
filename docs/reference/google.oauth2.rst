@@ -13,6 +13,5 @@ Submodules
    :maxdepth: 4
 
    google.oauth2.credentials
-   google.oauth2.credentials_async
    google.oauth2.id_token
    google.oauth2.service_account

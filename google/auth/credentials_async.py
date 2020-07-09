@@ -19,7 +19,7 @@ import abc
 
 import six
 
-from google.auth import _helpers
+# from google.auth import _helpers
 
 
 @six.add_metaclass(abc.ABCMeta)
@@ -50,6 +50,7 @@ class Credentials(object):
         """Optional[datetime]: When the token expires and is no longer valid.
         If this is None, the token is assumed to never expire."""
 
+    '''
     @property
     def expired(self):
         """Checks if the credentials are expired.
@@ -65,7 +66,6 @@ class Credentials(object):
         # expiration early so that we avoid the 401-refresh-retry loop.
         skewed_expiry = self.expiry - _helpers.CLOCK_SKEW
         return _helpers.utcnow() >= skewed_expiry
-
     @property
     def valid(self):
         """Checks the validity of the credentials.
@@ -74,6 +74,7 @@ class Credentials(object):
         is not :attr:`expired`.
         """
         return self.token is not None and not self.expired
+    '''
 
     @abc.abstractmethod
     def refresh(self, request):
@@ -91,6 +92,7 @@ class Credentials(object):
         # (pylint doesn't recognize that this is abstract)
         raise NotImplementedError("Refresh must be implemented")
 
+    '''
     def apply(self, headers, token=None):
         """Apply the token to the authentication header.
 
@@ -102,8 +104,9 @@ class Credentials(object):
         headers["authorization"] = "Bearer {}".format(
             _helpers.from_bytes(token or self.token)
         )
+    '''
 
-    def before_request(self, request, method, url, headers):
+    async def async_before_request(self, request, method, url, headers):
         """Performs credential-specific before request logic.
 
         Refreshes the credentials if necessary, then calls :meth:`apply` to
@@ -121,11 +124,12 @@ class Credentials(object):
         # (Subclasses may use these arguments to ascertain information about
         # the http request.)
 
-        if not self.valid:
-            self.refresh(request)
         self.apply(headers)
 
 
+# We comment out the following as it is not called in our aiohttp file, but is used in other credential requirements.
+# May require future usage depending on use case, but not tested in sync requests module.
+'''
 class AnonymousCredentials(Credentials):
     """Credentials that do not provide any authentication information.
 
@@ -161,7 +165,6 @@ class AnonymousCredentials(Credentials):
 
     def before_request(self, request, method, url, headers):
         """Anonymous credentials do nothing to the request."""
-
 
 @six.add_metaclass(abc.ABCMeta)
 class ReadOnlyScoped(object):
@@ -292,6 +295,7 @@ def with_scopes_if_required(credentials, scopes):
         return credentials.with_scopes(scopes)
     else:
         return credentials
+'''
 
 
 @six.add_metaclass(abc.ABCMeta)

@@ -25,10 +25,11 @@ import time
 import aiohttp
 import six
 
-import google.auth
+# import google.auth
 from google.auth import exceptions
 from google.auth import transport
-import google.auth.transport._mtls_helper
+
+# import google.auth.transport._mtls_helper
 
 
 _OAUTH_SCOPES = [
@@ -42,7 +43,8 @@ _DEFAULT_TIMEOUT = 120  # in seconds
 
 
 class _Response(transport.Response):
-    """Requests transport response adapter.
+    """
+    Requests transport response adapter.
 
     Args:
         response (requests.Response): The raw Requests response.
@@ -345,15 +347,9 @@ class AuthorizedSession(aiohttp.ClientSession):
         remaining_time = max_allowed_time
 
         with TimeoutGuard(remaining_time) as guard:
-            async with self._refresh_lock:
-                await self._loop.run_in_executor(
-                    None,
-                    self.credentials.async_before_request,
-                    auth_request,
-                    method,
-                    url,
-                    request_headers,
-                )
+            await self.credentials.async_before_request(
+                auth_request, method, url, request_headers
+            )
 
         with TimeoutGuard(remaining_time) as guard:
             response = await super(AuthorizedSession, self).request(
@@ -393,7 +389,7 @@ class AuthorizedSession(aiohttp.ClientSession):
                         None, self.credentials.refresh, auth_request
                     )
 
-            remaining_time = guard.remaining_time
+            remaining_time = guard.remaining_timeout
 
             return await self.request(
                 method,
@@ -410,8 +406,9 @@ class AuthorizedSession(aiohttp.ClientSession):
 
         return response
 
+    """
     @property
     def is_mtls(self):
-        """Indicates if the created SSL channel is mutual TLS."""
+        Indicates if the created SSL channel is mutual TLS.
         return self._is_mtls
-
+    """
