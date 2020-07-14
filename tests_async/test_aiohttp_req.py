@@ -24,8 +24,6 @@ import freezegun
 import mock
 import pytest
 
-
-import google.auth.credentials_async
 from google.auth.transport import aiohttp_req
 import google.auth.transport._mtls_helper
 
@@ -47,7 +45,7 @@ class TestRequestResponse(async_compliance.RequestResponseTests):
         request(url="http://example.com", method="GET", timeout=5)
 
 
-class CredentialsStub(google.auth.credentials_async.Credentials):
+class CredentialsStub(google.auth.credentials.Credentials):
     def __init__(self, token="token"):
         super(CredentialsStub, self).__init__()
         self.token = token
@@ -205,7 +203,7 @@ class TestAuthorizedSession(object):
             )
             response = await authed_session.request("GET", "http://example.com")
             assert response.status == 200
-            assert credentials.async_before_request.called
+            assert credentials.before_request.called
             assert not credentials.refresh.called
 
             await authed_session.close()

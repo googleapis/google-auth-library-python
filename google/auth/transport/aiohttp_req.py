@@ -25,12 +25,8 @@ import time
 import aiohttp
 import six
 
-# import google.auth
 from google.auth import exceptions
 from google.auth import transport
-
-# import google.auth.transport._mtls_helper
-
 
 _OAUTH_SCOPES = [
     "https://www.googleapis.com/auth/appengine.apis",
@@ -39,7 +35,9 @@ _OAUTH_SCOPES = [
 
 _LOGGER = logging.getLogger(__name__)
 
-_DEFAULT_TIMEOUT = 120  # in seconds
+# Timeout can be re-defined depending on async requirement. Currently made 60s more than
+# sync timeout.
+_DEFAULT_TIMEOUT = 180  # in seconds
 
 
 class _Response(transport.Response):
@@ -184,54 +182,6 @@ class Request(transport.Request):
             six.raise_from(new_exc1, caught_exc1)
 
 
-'''
-class _MutualTlsAdapter(requests.adapters.HTTPAdapter):
-    """
-    A TransportAdapter that enables mutual TLS.
-
-    Args:
-        cert (bytes): client certificate in PEM format
-        key (bytes): client private key in PEM format
-
-    Raises:
-        ImportError: if certifi or pyOpenSSL is not installed
-        OpenSSL.crypto.Error: if client cert or key is invalid
-    """
-
-    def __init__(self, cert, key):
-        import certifi
-        from OpenSSL import crypto
-        import urllib3.contrib.pyopenssl
-
-        urllib3.contrib.pyopenssl.inject_into_urllib3()
-
-        pkey = crypto.load_privatekey(crypto.FILETYPE_PEM, key)
-        x509 = crypto.load_certificate(crypto.FILETYPE_PEM, cert)
-
-        ctx_poolmanager = create_urllib3_context()
-        ctx_poolmanager.load_verify_locations(cafile=certifi.where())
-        ctx_poolmanager._ctx.use_certificate(x509)
-        ctx_poolmanager._ctx.use_privatekey(pkey)
-        self._ctx_poolmanager = ctx_poolmanager
-
-        ctx_proxymanager = create_urllib3_context()
-        ctx_proxymanager.load_verify_locations(cafile=certifi.where())
-        ctx_proxymanager._ctx.use_certificate(x509)
-        ctx_proxymanager._ctx.use_privatekey(pkey)
-        self._ctx_proxymanager = ctx_proxymanager
-
-        super(_MutualTlsAdapter, self).__init__()
-
-    def init_poolmanager(self, *args, **kwargs):
-        kwargs["ssl_context"] = self._ctx_poolmanager
-        super(_MutualTlsAdapter, self).init_poolmanager(*args, **kwargs)
-
-    def proxy_manager_for(self, *args, **kwargs):
-        kwargs["ssl_context"] = self._ctx_proxymanager
-        return super(_MutualTlsAdapter, self).proxy_manager_for(*args, **kwargs)
-'''
-
-
 class AuthorizedSession(aiohttp.ClientSession):
     """
 
@@ -260,24 +210,7 @@ class AuthorizedSession(aiohttp.ClientSession):
 
         if auth_request is None:
             self._auth_request_session = aiohttp.ClientSession()
-
-            # Using an adapter to make HTTP requests robust to network errors.
-            # This adapter retrys HTTP requests when network errors occur
-            # and the requests seems safely retryable.
-
-            # retry_adapter = requests.adapters.HTTPAdapter(max_retries=3)
-            # auth_request_session.mount("https://", retry_adapter)
-
-            # Do not pass `self` as the session here, as it can lead to
-            # infinite recursion.
-
-            # We pass it in here to be able to close the request session
-
             auth_request = Request(self._auth_request_session)
-
-            # Request instance used by internal methods (for example,
-            # credentials.refresh).
-
             self._auth_request = auth_request
 
     def configure_mtls_channel(self, client_cert_callback=None):
@@ -337,7 +270,6 @@ class AuthorizedSession(aiohttp.ClientSession):
 
         # Do not apply the timeout unconditionally in order to not override the
         # _auth_request's default timeout.
-
         auth_request = (
             self._auth_request
             if timeout is None
@@ -347,9 +279,7 @@ class AuthorizedSession(aiohttp.ClientSession):
         remaining_time = max_allowed_time
 
         with TimeoutGuard(remaining_time) as guard:
-            await self.credentials.async_before_request(
-                auth_request, method, url, request_headers
-            )
+            self.credentials.before_request(auth_request, method, url, request_headers)
 
         with TimeoutGuard(remaining_time) as guard:
             response = await super(AuthorizedSession, self).request(
@@ -405,10 +335,3 @@ class AuthorizedSession(aiohttp.ClientSession):
         await self._auth_request_session.close()
 
         return response
-
-    """
-    @property
-    def is_mtls(self):
-        Indicates if the created SSL channel is mutual TLS.
-        return self._is_mtls
-    """

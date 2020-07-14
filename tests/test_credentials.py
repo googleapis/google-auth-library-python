@@ -57,34 +57,6 @@ def test_expired_and_valid():
     assert credentials.expired
 
 
-"""
-@pytest.mark.asyncio
-async def test_async_before_request():
-    credentials = CredentialsImpl()
-    request = "token"
-    headers = {}
-
-    # First call should call refresh, setting the token.
-    await credentials.async_before_request(
-        request, "http://example.com", "GET", headers
-    )
-    assert credentials.valid
-    assert credentials.token == "token"
-    assert headers["authorization"] == "Bearer token"
-
-    request = "token2"
-    headers = {}
-
-    # Second call shouldn't call refresh.
-    await credentials.async_before_request(
-        request, "http://example.com", "GET", headers
-    )
-    assert credentials.valid
-    assert credentials.token == "token"
-    assert headers["authorization"] == "Bearer token"
-"""
-
-
 def test_before_request():
     credentials = CredentialsImpl()
     request = "token"

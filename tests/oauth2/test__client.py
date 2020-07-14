@@ -90,7 +90,7 @@ def test__token_endpoint_request():
     result = _client._token_endpoint_request(
         request, "http://example.com", {"test": "params"}
     )
-    # breakpoint()
+
     # Check request call
     request.assert_called_with(
         method="POST",
@@ -218,8 +218,6 @@ def test_refresh_grant(unused_utcnow):
             "extra": "data",
         }
     )
-
-    # breakpoint()
 
     token, refresh_token, expiry, extra_data = _client.refresh_grant(
         request, "http://example.com", "refresh_token", "client_id", "client_secret"

@@ -403,7 +403,7 @@ class TestCredentials(object):
         self.credentials.before_request(
             None, "GET", "http://example.com?a=1#3", headers
         )
-        # breakpoint()
+
         header_value = headers["authorization"]
         _, token = header_value.split(" ")
 

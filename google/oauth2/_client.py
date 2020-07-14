@@ -257,38 +257,3 @@ def refresh_grant(
     expiry = _parse_expiry(response_data)
 
     return access_token, refresh_token, expiry, response_data
-
-
-'''
-TODO(anibadde)
-Required when testng refreshing credentials
-async version of refresh token grant implemmented above:
-
-async def async_refresh_grant(
-    request, token_uri, refresh_token, client_id, client_secret, scopes=None
-):
-    """
-    async version of function above
-    """
-    body = {
-        "grant_type": _REFRESH_GRANT_TYPE,
-        "client_id": client_id,
-        "client_secret": client_secret,
-        "refresh_token": refresh_token,
-    }
-    if scopes:
-        body["scope"] = " ".join(scopes)
-
-    response_data = await _token_endpoint_request(request, token_uri, body)
-
-    try:
-        access_token = response_data["access_token"]
-    except KeyError as caught_exc:
-        new_exc = exceptions.RefreshError("No access token in response.", response_data)
-        six.raise_from(new_exc, caught_exc)
-
-    refresh_token = response_data.get("refresh_token", refresh_token)
-    expiry = _parse_expiry(response_data)
-
-    return access_token, refresh_token, expiry, response_data
-'''

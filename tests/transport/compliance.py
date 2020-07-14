@@ -61,7 +61,6 @@ class RequestResponseTests(object):
         yield server
         server.stop()
 
-    @pytest.mark.asyncio
     def test_request_basic(self, server):
         request = self.make_request()
         response = request(url=server.url + "/basic", method="GET")
@@ -69,7 +68,6 @@ class RequestResponseTests(object):
         assert response.headers["x-test-header"] == "value"
         assert response.data == b"Basic Content"
 
-    @pytest.mark.asyncio
     def test_request_with_timeout_success(self, server):
         request = self.make_request()
         response = request(url=server.url + "/basic", method="GET", timeout=2)
@@ -78,14 +76,12 @@ class RequestResponseTests(object):
         assert response.headers["x-test-header"] == "value"
         assert response.data == b"Basic Content"
 
-    @pytest.mark.asyncio
     def test_request_with_timeout_failure(self, server):
         request = self.make_request()
 
         with pytest.raises(exceptions.TransportError):
             request(url=server.url + "/wait", method="GET", timeout=1)
 
-    @pytest.mark.asyncio
     def test_request_headers(self, server):
         request = self.make_request()
         response = request(
@@ -98,7 +94,6 @@ class RequestResponseTests(object):
         assert response.headers["x-test-header"] == "hello world"
         assert response.data == b"Basic Content"
 
-    @pytest.mark.asyncio
     def test_request_error(self, server):
         request = self.make_request()
         response = request(url=server.url + "/server_error", method="GET")
@@ -106,7 +101,6 @@ class RequestResponseTests(object):
         assert response.status == http_client.INTERNAL_SERVER_ERROR
         assert response.data == b"Error"
 
-    @pytest.mark.asyncio
     def test_connection_error(self):
         request = self.make_request()
 
