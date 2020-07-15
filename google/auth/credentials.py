@@ -143,7 +143,7 @@ class Credentials(object):
         Returns:
             google.oauth2.credentials.Credentials: A new credentials instance.
         """
-        raise NotImplementedError("This class does not support quota project.")
+        raise ValueError("This credential does not support quota project.")
 
 
 class AnonymousCredentials(Credentials):
