@@ -64,6 +64,7 @@ class RequestResponseTests(object):
     def test_request_basic(self, server):
         request = self.make_request()
         response = request(url=server.url + "/basic", method="GET")
+
         assert response.status == http_client.OK
         assert response.headers["x-test-header"] == "value"
         assert response.data == b"Basic Content"
@@ -103,6 +104,5 @@ class RequestResponseTests(object):
 
     def test_connection_error(self):
         request = self.make_request()
-
         with pytest.raises(exceptions.TransportError):
             request(url="http://{}".format(NXDOMAIN), method="GET")

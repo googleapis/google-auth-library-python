@@ -19,14 +19,16 @@ from __future__ import absolute_import
 import asyncio
 import functools
 import logging
-import numbers
-import time
+
 
 import aiohttp
 import six
 
+
 from google.auth import exceptions
 from google.auth import transport
+from google.auth.transport import requests
+
 
 _OAUTH_SCOPES = [
     "https://www.googleapis.com/auth/appengine.apis",
@@ -64,62 +66,18 @@ class _Response(transport.Response):
         return self.response.content
 
 
-class TimeoutGuard(object):
-    """A context manager raising an error if the suite execution took too long.
-
-    Args:
-        timeout ([Union[None, float, Tuple[float, float]]]):
-            The maximum number of seconds a suite can run without the context
-            manager raising a timeout exception on exit. If passed as a tuple,
-            the smaller of the values is taken as a timeout. If ``None``, a
-            timeout error is never raised.
-        timeout_error_type (Optional[Exception]):
-            The type of the error to raise on timeout. Defaults to
-            :class:`requests.exceptions.Timeout`.
-    """
-
-    def __init__(self, timeout, timeout_error_type=asyncio.TimeoutError):
-        self._timeout = timeout
-        self.remaining_timeout = timeout
-        self._timeout_error_type = timeout_error_type
-
-    def __enter__(self):
-        self._start = time.time()
-        return self
-
-    def __exit__(self, exc_type, exc_value, traceback):
-        if exc_value:
-            return  # let the error bubble up automatically
-
-        if self._timeout is None:
-            return  # nothing to do, the timeout was not specified
-
-        elapsed = time.time() - self._start
-        deadline_hit = False
-
-        if isinstance(self._timeout, numbers.Number):
-            self.remaining_timeout = self._timeout - elapsed
-            deadline_hit = self.remaining_timeout <= 0
-        else:
-            self.remaining_timeout = tuple(x - elapsed for x in self._timeout)
-            deadline_hit = min(self.remaining_timeout) <= 0
-
-        if deadline_hit:
-            raise self._timeout_error_type()
-
-
 class Request(transport.Request):
     """Requests request adapter.
 
-    This class is used internally for making requests using various transports
+    This class is used internally for making requests using asyncio transports
     in a consistent way. If you use :class:`AuthorizedSession` you do not need
     to construct or use this class directly.
 
     This class can be useful if you want to manually refresh a
-    :class:`~google.auth.credentials_async.Credentials` instance::
+    :class:`~google.auth.credentials.Credentials` instance::
 
-        import google.auth.transport.requests
-        import aiohttp_req
+        import google.auth.transport.aiohttp_req
+        import aiohttp
 
         request = google.auth.transport.aiohttp_req.Request()
 
@@ -146,7 +104,8 @@ class Request(transport.Request):
         timeout=_DEFAULT_TIMEOUT,
         **kwargs
     ):
-        """Make an HTTP request using aiohttp.
+        """
+        Make an HTTP request using aiohttp.
 
         Args:
             url (str): The URI to be requested.
@@ -177,16 +136,15 @@ class Request(transport.Request):
             new_exc = exceptions.TransportError(caught_exc)
             six.raise_from(new_exc, caught_exc)
 
-        except asyncio.TimeoutError as caught_exc1:
-            new_exc1 = exceptions.TransportError(caught_exc1)
-            six.raise_from(new_exc1, caught_exc1)
+        except asyncio.TimeoutError as caught_exc:
+            new_exc = exceptions.TransportError(caught_exc)
+            six.raise_from(new_exc, caught_exc)
 
 
 class AuthorizedSession(aiohttp.ClientSession):
-    """
-
-    documentation
-
+    """This is an async implementation of the Authorized Session class. We utilize an
+    aiohttp transport instance, and the interface mirrors the google.auth.transport.requests
+    Authorized Session class, except for the change in the transport used in the async use case.
     """
 
     def __init__(
@@ -215,18 +173,22 @@ class AuthorizedSession(aiohttp.ClientSession):
 
     def configure_mtls_channel(self, client_cert_callback=None):
         """Configure the client certificate and key for SSL connection.
+
         If client certificate and key are successfully obtained (from the given
         client_cert_callback or from application default SSL credentials), a
         :class:`_MutualTlsAdapter` instance will be mounted to "https://" prefix.
+
         Args:
             client_cert_callback (Optional[Callable[[], (bytes, bytes)]]):
                 The optional callback returns the client certificate and private
                 key bytes both in PEM format.
                 If the callback is None, application default SSL credentials
                 will be used.
+
         Raises:
             google.auth.exceptions.MutualTLSChannelError: If mutual TLS channel
                 creation failed for any reason.
+
         try:
             import OpenSSL
         except ImportError as caught_exc:
@@ -278,10 +240,10 @@ class AuthorizedSession(aiohttp.ClientSession):
 
         remaining_time = max_allowed_time
 
-        with TimeoutGuard(remaining_time) as guard:
+        with requests.TimeoutGuard(remaining_time, asyncio.TimeoutError) as guard:
             self.credentials.before_request(auth_request, method, url, request_headers)
 
-        with TimeoutGuard(remaining_time) as guard:
+        with requests.TimeoutGuard(remaining_time, asyncio.TimeoutError) as guard:
             response = await super(AuthorizedSession, self).request(
                 method,
                 url,
@@ -313,7 +275,7 @@ class AuthorizedSession(aiohttp.ClientSession):
                 else functools.partial(self._auth_request, timeout=timeout)
             )
 
-            with TimeoutGuard(remaining_time) as guard:
+            with requests.TimeoutGuard(remaining_time, asyncio.TimeoutError) as guard:
                 async with self._refresh_lock:
                     await self._loop.run_in_executor(
                         None, self.credentials.refresh, auth_request

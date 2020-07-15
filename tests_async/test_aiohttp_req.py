@@ -12,26 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
-import asyncio
-import datetime
-
-
 import aiohttp
 from aioresponses import aioresponses
 import async_compliance
-import freezegun
 import mock
 import pytest
 
+import google.auth.credentials
 from google.auth.transport import aiohttp_req
 import google.auth.transport._mtls_helper
-
-
-@pytest.fixture
-def frozen_time():
-    with freezegun.freeze_time("1970-01-01 00:00:00", tick=False) as frozen:
-        yield frozen
 
 
 class TestRequestResponse(async_compliance.RequestResponseTests):
@@ -62,52 +51,6 @@ class CredentialsStub(google.auth.credentials.Credentials):
         self.token += "1"
 
 
-class TestTimeoutGuard(object):
-    def make_guard(self, *args, **kwargs):
-        return google.auth.transport.aiohttp_req.TimeoutGuard(*args, **kwargs)
-
-    def test_tracks_elapsed_time_w_numeric_timeout(self, frozen_time):
-        with self.make_guard(timeout=10) as guard:
-            frozen_time.tick(delta=datetime.timedelta(seconds=3.8))
-        assert guard.remaining_timeout == 6.2
-
-    def test_tracks_elapsed_time_w_tuple_timeout(self, frozen_time):
-        with self.make_guard(timeout=(16, 19)) as guard:
-            frozen_time.tick(delta=datetime.timedelta(seconds=3.8))
-        assert guard.remaining_timeout == (12.2, 15.2)
-
-    def test_noop_if_no_timeout(self, frozen_time):
-        with self.make_guard(timeout=None) as guard:
-            frozen_time.tick(delta=datetime.timedelta(days=3650))
-        # NOTE: no timeout error raised, despite years have passed
-        assert guard.remaining_timeout is None
-
-    def test_timeout_error_w_numeric_timeout(self, frozen_time):
-        with pytest.raises(asyncio.TimeoutError):
-            with self.make_guard(timeout=10) as guard:
-                frozen_time.tick(delta=datetime.timedelta(seconds=10.001))
-        assert guard.remaining_timeout == pytest.approx(-0.001)
-
-    def test_timeout_error_w_tuple_timeout(self, frozen_time):
-        with pytest.raises(asyncio.TimeoutError):
-            with self.make_guard(timeout=(11, 10)) as guard:
-                frozen_time.tick(delta=datetime.timedelta(seconds=10.001))
-        assert guard.remaining_timeout == pytest.approx((0.999, -0.001))
-
-    def test_custom_timeout_error_type(self, frozen_time):
-        class FooError(Exception):
-            pass
-
-        with pytest.raises(FooError):
-            with self.make_guard(timeout=1, timeout_error_type=FooError):
-                frozen_time.tick(delta=datetime.timedelta(seconds=2))
-
-    def test_lets_suite_errors_bubble_up(self, frozen_time):
-        with pytest.raises(IndexError):
-            with self.make_guard(timeout=1):
-                [1, 2, 3][3]
-
-
 class TestAuthorizedSession(object):
     TEST_URL = "http://example.com/"
     method = "GET"
@@ -127,8 +70,6 @@ class TestAuthorizedSession(object):
         )
 
         assert authed_session._auth_request == auth_request
-
-        # await authed_session.close()
 
     @pytest.mark.asyncio
     async def test_request(self):
