@@ -321,12 +321,10 @@ def default(scopes=None, request=None, quota_project_id=None):
     for checker in checkers:
         credentials, project_id = checker()
         if credentials is not None:
-            credentials = with_scopes_if_required(
-                credentials, scopes
-            )
+            credentials = with_scopes_if_required(credentials, scopes)
             if quota_project_id:
                 credentials = credentials.with_quota_project(quota_project_id)
-                
+
             effective_project_id = explicit_project_id or project_id
             if not effective_project_id:
                 _LOGGER.warning(
