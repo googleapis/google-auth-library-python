@@ -29,6 +29,7 @@ TEST_DEPENDENCIES = [
     "responses",
     "grpcio",
     "pytest-asyncio",
+    "aioresponses",
 ]
 
 TEST_DEPENDENCIES2 = [

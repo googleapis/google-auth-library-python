@@ -145,6 +145,37 @@ class AuthorizedSession(aiohttp.ClientSession):
     """This is an async implementation of the Authorized Session class. We utilize an
     aiohttp transport instance, and the interface mirrors the google.auth.transport.requests
     Authorized Session class, except for the change in the transport used in the async use case.
+
+    A Requests Session class with credentials.
+
+    This class is used to perform requests to API endpoints that require
+    authorization::
+
+        import google.auth.transport.aiohttp_req
+
+        async with aiohttp_req.AuthorizedSession(credentials) as authed_session:
+            response = await authed_session.request(
+                'GET', 'https://www.googleapis.com/storage/v1/b')
+
+    The underlying :meth:`request` implementation handles adding the
+    credentials' headers to the request and refreshing credentials as needed.
+
+    Args:
+        credentials (google.auth.credentials.Credentials): The credentials to
+            add to the request.
+        refresh_status_codes (Sequence[int]): Which HTTP status codes indicate
+            that credentials should be refreshed and the request should be
+            retried.
+        max_refresh_attempts (int): The maximum number of times to attempt to
+            refresh the credentials and retry the request.
+        refresh_timeout (Optional[int]): The timeout value in seconds for
+            credential refresh HTTP requests.
+        auth_request (google.auth.transport.aiohttp_req.Request):
+            (Optional) An instance of
+            :class:`~google.auth.transport.aiohttp_req.Request` used when
+            refreshing credentials. If not passed,
+            an instance of :class:`~google.auth.transport.aiohttp_req.Request`
+            is created.
     """
 
     def __init__(
