@@ -7,9 +7,9 @@
 ### [1.19.2](https://www.github.com/googleapis/google-auth-library-python/compare/v1.19.1...v1.19.2) (2020-07-17)
 
 
-### Documentation
-
-* add 3.8 support to contributing ([#564](https://www.github.com/googleapis/google-auth-library-python/issues/564)) ([c4cc33b](https://www.github.com/googleapis/google-auth-library-python/commit/c4cc33b5f4127a010ad3bd35daa49d2a167b5833))
+### Bug fixes
+ 
+* Revert "fix: migrate signBlob to iamcredentials.googleapis.com"  ([#563](https://www.github.com/googleapis/google-auth-library-python/issues/563)) ([a48b5b](https://www.github.com/googleapis/google-auth-library-python/commit/a48b5b9135b30ff06f1fe18dd9dbe92ffcf3a272))
 
 ### [1.19.1](https://www.github.com/googleapis/google-auth-library-python/compare/v1.19.0...v1.19.1) (2020-07-15)
 
