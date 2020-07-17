@@ -484,7 +484,6 @@ class TestIDTokenCredentials(object):
             json={"keyId": "some-key-id", "signature": signature},
         )
 
-
         id_token = "{}.{}.{}".format(
             base64.b64encode(b'{"some":"some"}').decode("utf-8"),
             base64.b64encode(b'{"exp": 3210}').decode("utf-8"),
