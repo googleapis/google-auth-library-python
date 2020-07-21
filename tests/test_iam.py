@@ -1,4 +1,4 @@
-# Copyright 2017 Google Inc.
+# Copyright 2017 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -49,6 +49,9 @@ def make_credentials():
 
         def refresh(self, request):
             pass
+
+        def with_quota_project(self, quota_project_id):
+            raise NotImplementedError()
 
     return CredentialsImpl()
 

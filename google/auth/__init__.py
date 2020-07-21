@@ -1,4 +1,4 @@
-# Copyright 2016 Google Inc.
+# Copyright 2016 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,10 +16,10 @@
 
 import logging
 
-from google.auth._default import default
+from google.auth._default import default, load_credentials_from_file
 
 
-__all__ = ["default"]
+__all__ = ["default", "load_credentials_from_file"]
 
 
 # Set default logging handler to avoid "No handler found" warnings.

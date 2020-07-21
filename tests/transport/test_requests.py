@@ -1,4 +1,4 @@
-# Copyright 2016 Google Inc.
+# Copyright 2016 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,15 +14,19 @@
 
 import datetime
 import functools
+import sys
 
 import freezegun
 import mock
+import OpenSSL
 import pytest
 import requests
 import requests.adapters
 from six.moves import http_client
 
+from google.auth import exceptions
 import google.auth.credentials
+import google.auth.transport._mtls_helper
 import google.auth.transport.requests
 from tests.transport import compliance
 
@@ -51,12 +55,12 @@ class TestTimeoutGuard(object):
 
     def test_tracks_elapsed_time_w_numeric_timeout(self, frozen_time):
         with self.make_guard(timeout=10) as guard:
-            frozen_time.tick(delta=3.8)
+            frozen_time.tick(delta=datetime.timedelta(seconds=3.8))
         assert guard.remaining_timeout == 6.2
 
     def test_tracks_elapsed_time_w_tuple_timeout(self, frozen_time):
         with self.make_guard(timeout=(16, 19)) as guard:
-            frozen_time.tick(delta=3.8)
+            frozen_time.tick(delta=datetime.timedelta(seconds=3.8))
         assert guard.remaining_timeout == (12.2, 15.2)
 
     def test_noop_if_no_timeout(self, frozen_time):
@@ -68,13 +72,13 @@ class TestTimeoutGuard(object):
     def test_timeout_error_w_numeric_timeout(self, frozen_time):
         with pytest.raises(requests.exceptions.Timeout):
             with self.make_guard(timeout=10) as guard:
-                frozen_time.tick(delta=10.001)
+                frozen_time.tick(delta=datetime.timedelta(seconds=10.001))
         assert guard.remaining_timeout == pytest.approx(-0.001)
 
     def test_timeout_error_w_tuple_timeout(self, frozen_time):
         with pytest.raises(requests.exceptions.Timeout):
             with self.make_guard(timeout=(11, 10)) as guard:
-                frozen_time.tick(delta=10.001)
+                frozen_time.tick(delta=datetime.timedelta(seconds=10.001))
         assert guard.remaining_timeout == pytest.approx((0.999, -0.001))
 
     def test_custom_timeout_error_type(self, frozen_time):
@@ -83,7 +87,7 @@ class TestTimeoutGuard(object):
 
         with pytest.raises(FooError):
             with self.make_guard(timeout=1, timeout_error_type=FooError):
-                frozen_time.tick(2)
+                frozen_time.tick(delta=datetime.timedelta(seconds=2))
 
     def test_lets_suite_errors_bubble_up(self, frozen_time):
         with pytest.raises(IndexError):
@@ -104,6 +108,9 @@ class CredentialsStub(google.auth.credentials.Credentials):
 
     def refresh(self, request):
         self.token += "1"
+
+    def with_quota_project(self, quota_project_id):
+        raise NotImplementedError()
 
 
 class TimeTickCredentialsStub(CredentialsStub):
@@ -150,6 +157,34 @@ class TimeTickAdapterStub(AdapterStub):
         return super(TimeTickAdapterStub, self).send(request, **kwargs)
 
 
+class TestMutualTlsAdapter(object):
+    @mock.patch.object(requests.adapters.HTTPAdapter, "init_poolmanager")
+    @mock.patch.object(requests.adapters.HTTPAdapter, "proxy_manager_for")
+    def test_success(self, mock_proxy_manager_for, mock_init_poolmanager):
+        adapter = google.auth.transport.requests._MutualTlsAdapter(
+            pytest.public_cert_bytes, pytest.private_key_bytes
+        )
+
+        adapter.init_poolmanager()
+        mock_init_poolmanager.assert_called_with(ssl_context=adapter._ctx_poolmanager)
+
+        adapter.proxy_manager_for()
+        mock_proxy_manager_for.assert_called_with(ssl_context=adapter._ctx_proxymanager)
+
+    def test_invalid_cert_or_key(self):
+        with pytest.raises(OpenSSL.crypto.Error):
+            google.auth.transport.requests._MutualTlsAdapter(
+                b"invalid cert", b"invalid key"
+            )
+
+    @mock.patch.dict("sys.modules", {"OpenSSL.crypto": None})
+    def test_import_error(self):
+        with pytest.raises(ImportError):
+            google.auth.transport.requests._MutualTlsAdapter(
+                pytest.public_cert_bytes, pytest.private_key_bytes
+            )
+
+
 def make_response(status=http_client.OK, data=None):
     response = requests.Response()
     response.status_code = status
@@ -157,7 +192,7 @@ def make_response(status=http_client.OK, data=None):
     return response
 
 
-class TestAuthorizedHttp(object):
+class TestAuthorizedSession(object):
     TEST_URL = "http://example.com/"
 
     def test_constructor(self):
@@ -190,7 +225,7 @@ class TestAuthorizedHttp(object):
             authed_session.request("GET", self.TEST_URL)
 
         expected_timeout = google.auth.transport.requests._DEFAULT_TIMEOUT
-        assert patched_request.call_args.kwargs.get("timeout") == expected_timeout
+        assert patched_request.call_args[1]["timeout"] == expected_timeout
 
     def test_request_no_refresh(self):
         credentials = mock.Mock(wraps=CredentialsStub())
@@ -236,7 +271,9 @@ class TestAuthorizedHttp(object):
         assert adapter.requests[1].headers["authorization"] == "token1"
 
     def test_request_max_allowed_time_timeout_error(self, frozen_time):
-        tick_one_second = functools.partial(frozen_time.tick, delta=1.0)
+        tick_one_second = functools.partial(
+            frozen_time.tick, delta=datetime.timedelta(seconds=1.0)
+        )
 
         credentials = mock.Mock(
             wraps=TimeTickCredentialsStub(time_tick=tick_one_second)
@@ -254,7 +291,9 @@ class TestAuthorizedHttp(object):
             authed_session.request("GET", self.TEST_URL, max_allowed_time=0.9)
 
     def test_request_max_allowed_time_w_transport_timeout_no_error(self, frozen_time):
-        tick_one_second = functools.partial(frozen_time.tick, delta=1.0)
+        tick_one_second = functools.partial(
+            frozen_time.tick, delta=datetime.timedelta(seconds=1.0)
+        )
 
         credentials = mock.Mock(
             wraps=TimeTickCredentialsStub(time_tick=tick_one_second)
@@ -276,7 +315,9 @@ class TestAuthorizedHttp(object):
         authed_session.request("GET", self.TEST_URL, timeout=0.5, max_allowed_time=3.1)
 
     def test_request_max_allowed_time_w_refresh_timeout_no_error(self, frozen_time):
-        tick_one_second = functools.partial(frozen_time.tick, delta=1.0)
+        tick_one_second = functools.partial(
+            frozen_time.tick, delta=datetime.timedelta(seconds=1.0)
+        )
 
         credentials = mock.Mock(
             wraps=TimeTickCredentialsStub(time_tick=tick_one_second)
@@ -301,7 +342,9 @@ class TestAuthorizedHttp(object):
         authed_session.request("GET", self.TEST_URL, timeout=60, max_allowed_time=3.1)
 
     def test_request_timeout_w_refresh_timeout_timeout_error(self, frozen_time):
-        tick_one_second = functools.partial(frozen_time.tick, delta=1.0)
+        tick_one_second = functools.partial(
+            frozen_time.tick, delta=datetime.timedelta(seconds=1.0)
+        )
 
         credentials = mock.Mock(
             wraps=TimeTickCredentialsStub(time_tick=tick_one_second)
@@ -326,3 +369,79 @@ class TestAuthorizedHttp(object):
             authed_session.request(
                 "GET", self.TEST_URL, timeout=60, max_allowed_time=2.9
             )
+
+    def test_configure_mtls_channel_with_callback(self):
+        mock_callback = mock.Mock()
+        mock_callback.return_value = (
+            pytest.public_cert_bytes,
+            pytest.private_key_bytes,
+        )
+
+        auth_session = google.auth.transport.requests.AuthorizedSession(
+            credentials=mock.Mock()
+        )
+        auth_session.configure_mtls_channel(mock_callback)
+
+        assert auth_session.is_mtls
+        assert isinstance(
+            auth_session.adapters["https://"],
+            google.auth.transport.requests._MutualTlsAdapter,
+        )
+
+    @mock.patch(
+        "google.auth.transport._mtls_helper.get_client_cert_and_key", autospec=True
+    )
+    def test_configure_mtls_channel_with_metadata(self, mock_get_client_cert_and_key):
+        mock_get_client_cert_and_key.return_value = (
+            True,
+            pytest.public_cert_bytes,
+            pytest.private_key_bytes,
+        )
+
+        auth_session = google.auth.transport.requests.AuthorizedSession(
+            credentials=mock.Mock()
+        )
+        auth_session.configure_mtls_channel()
+
+        assert auth_session.is_mtls
+        assert isinstance(
+            auth_session.adapters["https://"],
+            google.auth.transport.requests._MutualTlsAdapter,
+        )
+
+    @mock.patch.object(google.auth.transport.requests._MutualTlsAdapter, "__init__")
+    @mock.patch(
+        "google.auth.transport._mtls_helper.get_client_cert_and_key", autospec=True
+    )
+    def test_configure_mtls_channel_non_mtls(
+        self, mock_get_client_cert_and_key, mock_adapter_ctor
+    ):
+        mock_get_client_cert_and_key.return_value = (False, None, None)
+
+        auth_session = google.auth.transport.requests.AuthorizedSession(
+            credentials=mock.Mock()
+        )
+        auth_session.configure_mtls_channel()
+
+        assert not auth_session.is_mtls
+
+        # Assert _MutualTlsAdapter constructor is not called.
+        mock_adapter_ctor.assert_not_called()
+
+    @mock.patch(
+        "google.auth.transport._mtls_helper.get_client_cert_and_key", autospec=True
+    )
+    def test_configure_mtls_channel_exceptions(self, mock_get_client_cert_and_key):
+        mock_get_client_cert_and_key.side_effect = exceptions.ClientCertError()
+
+        auth_session = google.auth.transport.requests.AuthorizedSession(
+            credentials=mock.Mock()
+        )
+        with pytest.raises(exceptions.MutualTLSChannelError):
+            auth_session.configure_mtls_channel()
+
+        mock_get_client_cert_and_key.return_value = (False, None, None)
+        with mock.patch.dict("sys.modules"):
+            sys.modules["OpenSSL"] = None
+            with pytest.raises(exceptions.MutualTLSChannelError):
+                auth_session.configure_mtls_channel()
