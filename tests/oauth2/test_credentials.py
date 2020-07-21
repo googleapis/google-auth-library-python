@@ -309,6 +309,7 @@ class TestCredentials(object):
         headers = {}
         creds.apply(headers)
         assert headers["x-goog-user-project"] == "quota-project-123"
+        assert "token" in headers["authorization"]
 
     def test_apply_with_no_quota_project_id(self):
         creds = credentials.Credentials(
@@ -322,6 +323,7 @@ class TestCredentials(object):
         headers = {}
         creds.apply(headers)
         assert "x-goog-user-project" not in headers
+        assert "token" in headers["authorization"]
 
     def test_with_quota_project(self):
         creds = credentials.Credentials(
@@ -453,6 +455,13 @@ class TestUserAccessTokenCredentials(object):
         cred = credentials.UserAccessTokenCredentials()
         cred.refresh(None)
         assert cred.token == "access_token"
+
+    def test_with_quota_project(self):
+        cred = credentials.UserAccessTokenCredentials()
+        quota_project_cred = cred.with_quota_project("project-foo")
+
+        assert quota_project_cred._quota_project_id == "project-foo"
+        assert quota_project_cred._account == cred._account
 
     @mock.patch(
         "google.oauth2.credentials.UserAccessTokenCredentials.apply", autospec=True

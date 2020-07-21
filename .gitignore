@@ -13,6 +13,8 @@ docs/_build
 .tox/
 .cache/
 .pytest_cache/
+cert_path
+key_path
 
 # Django test database
 db.sqlite3
@@ -39,6 +41,3 @@ pylintrc.test
 pytype_output/
 
 .python-version
-.DS_Store
-cert_path
-key_path
