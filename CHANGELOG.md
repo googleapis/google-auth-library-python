@@ -4,6 +4,71 @@
 
 [1]: https://pypi.org/project/google-auth/#history
 
+### [1.19.2](https://www.github.com/googleapis/google-auth-library-python/compare/v1.19.1...v1.19.2) (2020-07-17)
+
+
+### Bug fixes
+ 
+* Revert "fix: migrate signBlob to iamcredentials.googleapis.com"  ([#563](https://www.github.com/googleapis/google-auth-library-python/issues/563)) ([a48b5b](https://www.github.com/googleapis/google-auth-library-python/commit/a48b5b9135b30ff06f1fe18dd9dbe92ffcf3a272))
+
+### [1.19.1](https://www.github.com/googleapis/google-auth-library-python/compare/v1.19.0...v1.19.1) (2020-07-15)
+
+
+### Bug Fixes
+
+* don't add empty quota project  ([#560](https://www.github.com/googleapis/google-auth-library-python/issues/560)) ([ab2be5d](https://www.github.com/googleapis/google-auth-library-python/commit/ab2be5de829e830979514683582c11f98fa943c7))
+
+## [1.19.0](https://www.github.com/googleapis/google-auth-library-python/compare/v1.18.0...v1.19.0) (2020-07-09)
+
+
+### Features
+
+* add quota project to base credentials class ([#546](https://www.github.com/googleapis/google-auth-library-python/issues/546)) ([3dda7b2](https://www.github.com/googleapis/google-auth-library-python/commit/3dda7b2ab88aba7941b8b5281b4acbc7db74169b))
+* check 'iss' in `verify_oauth2_token` ([#500](https://www.github.com/googleapis/google-auth-library-python/issues/500)) ([c05b8b5](https://www.github.com/googleapis/google-auth-library-python/commit/c05b8b52e3bbc096cf32e2d4bb5bd45986d3cd04))
+
+
+### Bug Fixes
+
+* migrate signBlob to iamcredentials.googleapis.com ([#553](https://www.github.com/googleapis/google-auth-library-python/issues/553)) ([038ae1b](https://www.github.com/googleapis/google-auth-library-python/commit/038ae1b78dc83e44ad39ef7ba15c607f62232087))
+
+
+### Documentation
+
+* remove 3.4 from supported versions list ([#549](https://www.github.com/googleapis/google-auth-library-python/issues/549)) ([8c84d0f](https://www.github.com/googleapis/google-auth-library-python/commit/8c84d0fb36d9eba6b319964ca0a22501efca805b))
+
+## [1.18.0](https://www.github.com/googleapis/google-auth-library-python/compare/v1.17.2...v1.18.0) (2020-06-18)
+
+
+### Features
+
+* make ``load_credentials_from_file`` a public method ([#530](https://www.github.com/googleapis/google-auth-library-python/issues/530)) ([15d5fa9](https://www.github.com/googleapis/google-auth-library-python/commit/15d5fa946177581b52a5a9eb3ca285c088f5c45d))
+
+
+### Bug Fixes
+
+* no warning if quota_project_id is given ([#537](https://www.github.com/googleapis/google-auth-library-python/issues/537)) ([f30b45a](https://www.github.com/googleapis/google-auth-library-python/commit/f30b45a9b2f824c494724548732c5ce838218c30))
+
+### [1.17.2](https://www.github.com/googleapis/google-auth-library-python/compare/v1.17.1...v1.17.2) (2020-06-12)
+
+
+### Bug Fixes
+
+* **dependencies:** Further restrict RSA versions ([#532](https://www.github.com/googleapis/google-auth-library-python/issues/532)) ([46677a0](https://www.github.com/googleapis/google-auth-library-python/commit/46677a0cb3bde6622be10061bc61daaff7a0aaca)), closes [#528](https://www.github.com/googleapis/google-auth-library-python/issues/528)
+
+### [1.17.1](https://www.github.com/googleapis/google-auth-library-python/compare/v1.17.0...v1.17.1) (2020-06-11)
+
+
+### Bug Fixes
+
+* narrow acceptable RSA versions to maintain Python 2 compatability ([#528](https://www.github.com/googleapis/google-auth-library-python/issues/528)) ([9434868](https://www.github.com/googleapis/google-auth-library-python/commit/9434868a6789464549af1d4562f62d8a899b6809))
+
+## [1.17.0](https://www.github.com/googleapis/google-auth-library-python/compare/v1.16.1...v1.17.0) (2020-06-10)
+
+
+### Features
+
+* add quota_project_id to service accounts; add with_quota_project methods ([#519](https://www.github.com/googleapis/google-auth-library-python/issues/519)) ([b12488c](https://www.github.com/googleapis/google-auth-library-python/commit/b12488cf552888299425c8009ea075511627cf08))
+
 ### [1.16.1](https://www.github.com/googleapis/google-auth-library-python/compare/v1.16.0...v1.16.1) (2020-06-04)
 
 
