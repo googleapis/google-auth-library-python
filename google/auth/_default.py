@@ -163,8 +163,10 @@ def _get_explicit_environ_credentials():
     """Gets credentials from the GOOGLE_APPLICATION_CREDENTIALS environment
     variable."""
     explicit_file = os.environ.get(environment_vars.CREDENTIALS)
-    
-    _LOGGER.debug("Checking %s for explicit credentials as part of auth process...", explicit_file)
+
+    _LOGGER.debug(
+        "Checking %s for explicit credentials as part of auth process...", explicit_file
+    )
 
     if explicit_file is not None:
         credentials, project_id = _load_credentials_from_file(
@@ -193,7 +195,9 @@ def _get_gae_credentials():
         project_id = app_engine.get_project_id()
         return credentials, project_id
     except EnvironmentError:
-        _LOGGER.debug("No App Engine library was found so cannot authentication via App Engine Identity Credentials.")
+        _LOGGER.debug(
+            "No App Engine library was found so cannot authentication via App Engine Identity Credentials."
+        )
         return None, None
 
 
@@ -225,7 +229,9 @@ def _get_gce_credentials(request=None):
 
         return compute_engine.Credentials(), project_id
     else:
-        _LOGGER.warning("Authentication failed using Compute Engine authentication due to unavailable metadata server.")
+        _LOGGER.warning(
+            "Authentication failed using Compute Engine authentication due to unavailable metadata server."
+        )
         return None, None
 
 
