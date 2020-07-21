@@ -110,12 +110,14 @@ class RequestResponseTests(object):
     @pytest.mark.asyncio
     async def test_request_error(self, server):
         request = self.make_request()
-        response = await request(url=server.url + "/server_error", method="GET")
 
-        assert response.status == http_client.INTERNAL_SERVER_ERROR
+        with pytest.raises(exceptions.TransportError) as exc_info:
+            response = await request(url=server.url + "/server_error", method="GET")
 
-        data = await response.data.read(5)
-        assert data == b"Error"
+            assert response.status == http_client.INTERNAL_SERVER_ERROR
+
+            data = await response.data.read(5)
+            assert data == b"Error"
 
     @pytest.mark.asyncio
     async def test_connection_error(self):

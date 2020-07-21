@@ -16,26 +16,29 @@ import pytest
 
 from google.auth import _helpers
 from google.auth import exceptions
-from google.oauth2 import service_account
+from google.auth import iam
+from google.oauth2 import service_account_async
+
 
 @pytest.fixture
 def credentials(service_account_file):
-    yield service_account.Credentials.from_service_account_file(service_account_file)
+    yield service_account_async.Credentials.from_service_account_file(service_account_file)
 
 
-def test_refresh_no_scopes(http_request, credentials):
-    with pytest.raises(ValueError):
-        credentials.refresh(http_request)
-    assert False 
+@pytest.mark.asyncio
+async def test_refresh_no_scopes(http_request, credentials):
+    with pytest.raises(exceptions.RefreshError):
+        await credentials.refresh(http_request)
 
-def test_refresh_success(http_request, credentials, token_info):
+@pytest.mark.asyncio
+async def test_refresh_success(http_request, credentials, token_info):
     credentials = credentials.with_scopes(["email", "profile"])
-
-    credentials.refresh(http_request)
+    #breakpoint()
+    await credentials.refresh(http_request)
 
     assert credentials.token
 
-    info = token_info(credentials.token)
+    info = await token_info(credentials.token)
 
     assert info["email"] == credentials.service_account_email
     info_scopes = _helpers.string_to_scopes(info["scope"])

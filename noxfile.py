@@ -100,7 +100,7 @@ def unit(session):
         "--cov=google.auth",
         "--cov=google.oauth2",
         "--cov=tests",
-        "tests",
+        #"tests",
         "tests_async",
     )
 
