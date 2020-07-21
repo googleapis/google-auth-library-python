@@ -172,6 +172,44 @@ class TestImpersonatedCredentials(object):
         assert credentials.valid
         assert not credentials.expired
 
+    @pytest.mark.parametrize("time_skew", [100, -100])
+    def test_refresh_source_credentials(self, time_skew):
+        credentials = self.make_credentials(lifetime=None)
+
+        # Source credentials is refreshed only if it is expired within
+        # _helpers.CLOCK_SKEW from now. We add a time_skew to the expiry, so
+        # source credentials is refreshed only if time_skew <= 0.
+        credentials._source_credentials.expiry = (
+            _helpers.utcnow()
+            + _helpers.CLOCK_SKEW
+            + datetime.timedelta(seconds=time_skew)
+        )
+        credentials._source_credentials.token = "Token"
+
+        with mock.patch(
+            "google.oauth2.service_account.Credentials.refresh", autospec=True
+        ) as source_cred_refresh:
+            expire_time = (
+                _helpers.utcnow().replace(microsecond=0)
+                + datetime.timedelta(seconds=500)
+            ).isoformat("T") + "Z"
+            response_body = {"accessToken": "token", "expireTime": expire_time}
+            request = self.make_request(
+                data=json.dumps(response_body), status=http_client.OK
+            )
+
+            credentials.refresh(request)
+
+            assert credentials.valid
+            assert not credentials.expired
+
+            # Source credentials is refreshed only if it is expired within
+            # _helpers.CLOCK_SKEW
+            if time_skew > 0:
+                source_cred_refresh.assert_not_called()
+            else:
+                source_cred_refresh.assert_called_once()
+
     def test_refresh_failure_malformed_expire_time(self, mock_donor_credentials):
         credentials = self.make_credentials(lifetime=None)
         token = "token"
@@ -272,6 +310,12 @@ class TestImpersonatedCredentials(object):
 
         signature = credentials.sign_bytes(b"signed bytes")
         assert signature == b"signature"
+
+    def test_with_quota_project(self):
+        credentials = self.make_credentials()
+
+        quota_project_creds = credentials.with_quota_project("project-foo")
+        assert quota_project_creds._quota_project_id == "project-foo"
 
     def test_id_token_success(
         self, mock_donor_credentials, mock_authorizedsession_idtoken
@@ -397,3 +441,32 @@ class TestImpersonatedCredentials(object):
         id_creds.refresh(request)
 
         assert id_creds.token == ID_TOKEN_DATA
+
+    def test_id_token_with_quota_project(
+        self, mock_donor_credentials, mock_authorizedsession_idtoken
+    ):
+        credentials = self.make_credentials(lifetime=None)
+        token = "token"
+        target_audience = "https://foo.bar"
+
+        expire_time = (
+            _helpers.utcnow().replace(microsecond=0) + datetime.timedelta(seconds=500)
+        ).isoformat("T") + "Z"
+        response_body = {"accessToken": token, "expireTime": expire_time}
+
+        request = self.make_request(
+            data=json.dumps(response_body), status=http_client.OK
+        )
+
+        credentials.refresh(request)
+
+        assert credentials.valid
+        assert not credentials.expired
+
+        id_creds = impersonated_credentials.IDTokenCredentials(
+            credentials, target_audience=target_audience
+        )
+        id_creds = id_creds.with_quota_project("project-foo")
+        id_creds.refresh(request)
+
+        assert id_creds.quota_project_id == "project-foo"
