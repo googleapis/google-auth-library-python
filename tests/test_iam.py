@@ -87,7 +87,7 @@ class TestSigner(object):
 
         assert returned_signature == signature
         kwargs = request.call_args.kwargs
-        assert kwargs.get("headers").get("Content-Type") == "application/json"
+        assert kwargs["headers"]["Content-Type"] == "application/json"
 
     def test_sign_bytes_failure(self):
         request = make_request(http_client.UNAUTHORIZED)
