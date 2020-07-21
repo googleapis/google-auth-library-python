@@ -4,6 +4,38 @@
 
 [1]: https://pypi.org/project/google-auth/#history
 
+### [1.19.2](https://www.github.com/googleapis/google-auth-library-python/compare/v1.19.1...v1.19.2) (2020-07-17)
+
+
+### Bug fixes
+ 
+* Revert "fix: migrate signBlob to iamcredentials.googleapis.com"  ([#563](https://www.github.com/googleapis/google-auth-library-python/issues/563)) ([a48b5b](https://www.github.com/googleapis/google-auth-library-python/commit/a48b5b9135b30ff06f1fe18dd9dbe92ffcf3a272))
+
+### [1.19.1](https://www.github.com/googleapis/google-auth-library-python/compare/v1.19.0...v1.19.1) (2020-07-15)
+
+
+### Bug Fixes
+
+* don't add empty quota project  ([#560](https://www.github.com/googleapis/google-auth-library-python/issues/560)) ([ab2be5d](https://www.github.com/googleapis/google-auth-library-python/commit/ab2be5de829e830979514683582c11f98fa943c7))
+
+## [1.19.0](https://www.github.com/googleapis/google-auth-library-python/compare/v1.18.0...v1.19.0) (2020-07-09)
+
+
+### Features
+
+* add quota project to base credentials class ([#546](https://www.github.com/googleapis/google-auth-library-python/issues/546)) ([3dda7b2](https://www.github.com/googleapis/google-auth-library-python/commit/3dda7b2ab88aba7941b8b5281b4acbc7db74169b))
+* check 'iss' in `verify_oauth2_token` ([#500](https://www.github.com/googleapis/google-auth-library-python/issues/500)) ([c05b8b5](https://www.github.com/googleapis/google-auth-library-python/commit/c05b8b52e3bbc096cf32e2d4bb5bd45986d3cd04))
+
+
+### Bug Fixes
+
+* migrate signBlob to iamcredentials.googleapis.com ([#553](https://www.github.com/googleapis/google-auth-library-python/issues/553)) ([038ae1b](https://www.github.com/googleapis/google-auth-library-python/commit/038ae1b78dc83e44ad39ef7ba15c607f62232087))
+
+
+### Documentation
+
+* remove 3.4 from supported versions list ([#549](https://www.github.com/googleapis/google-auth-library-python/issues/549)) ([8c84d0f](https://www.github.com/googleapis/google-auth-library-python/commit/8c84d0fb36d9eba6b319964ca0a22501efca805b))
+
 ## [1.18.0](https://www.github.com/googleapis/google-auth-library-python/compare/v1.17.2...v1.18.0) (2020-06-18)
 
 
