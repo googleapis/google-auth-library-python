@@ -21,7 +21,9 @@ from setuptools import setup
 DEPENDENCIES = (
     "cachetools>=2.0.0,<5.0",
     "pyasn1-modules>=0.2.1",
-    "rsa>=3.1.4,<4.1",
+    # rsa >= 4.1 no longer supports python 2 https://github.com/sybrenstuvel/python-rsa/issues/152
+    'rsa<4.1; python_version < "3"',
+    'rsa>=3.1.4,<5; python_version >= "3"',
     "setuptools>=40.3.0",
     "six>=1.9.0",
 )
@@ -30,7 +32,7 @@ DEPENDENCIES = (
 with io.open("README.rst", "r") as fh:
     long_description = fh.read()
 
-version = "1.12.0"
+version = "1.19.2"
 
 setup(
     name="google-auth",
@@ -50,7 +52,6 @@ setup(
         "Programming Language :: Python :: 2",
         "Programming Language :: Python :: 2.7",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.4",
         "Programming Language :: Python :: 3.5",
         "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",

@@ -323,6 +323,22 @@ class TestCredentials(object):
         creds.apply(headers)
         assert "x-goog-user-project" not in headers
 
+    def test_with_quota_project(self):
+        creds = credentials.Credentials(
+            token="token",
+            refresh_token=self.REFRESH_TOKEN,
+            token_uri=self.TOKEN_URI,
+            client_id=self.CLIENT_ID,
+            client_secret=self.CLIENT_SECRET,
+            quota_project_id="quota-project-123",
+        )
+
+        new_creds = creds.with_quota_project("new-project-456")
+        assert new_creds.quota_project_id == "new-project-456"
+        headers = {}
+        creds.apply(headers)
+        assert "x-goog-user-project" in headers
+
     def test_from_authorized_user_info(self):
         info = AUTH_USER_INFO.copy()
 
@@ -421,3 +437,38 @@ class TestCredentials(object):
         ) as f:
             credentials = pickle.load(f)
             assert credentials.quota_project_id is None
+
+
+class TestUserAccessTokenCredentials(object):
+    def test_instance(self):
+        cred = credentials.UserAccessTokenCredentials()
+        assert cred._account is None
+
+        cred = cred.with_account("account")
+        assert cred._account == "account"
+
+    @mock.patch("google.auth._cloud_sdk.get_auth_access_token", autospec=True)
+    def test_refresh(self, get_auth_access_token):
+        get_auth_access_token.return_value = "access_token"
+        cred = credentials.UserAccessTokenCredentials()
+        cred.refresh(None)
+        assert cred.token == "access_token"
+
+    def test_with_quota_project(self):
+        cred = credentials.UserAccessTokenCredentials()
+        quota_project_cred = cred.with_quota_project("project-foo")
+
+        assert quota_project_cred._quota_project_id == "project-foo"
+        assert quota_project_cred._account == cred._account
+
+    @mock.patch(
+        "google.oauth2.credentials.UserAccessTokenCredentials.apply", autospec=True
+    )
+    @mock.patch(
+        "google.oauth2.credentials.UserAccessTokenCredentials.refresh", autospec=True
+    )
+    def test_before_request(self, refresh, apply):
+        cred = credentials.UserAccessTokenCredentials()
+        cred.before_request(mock.Mock(), "GET", "https://example.com", {})
+        refresh.assert_called()
+        apply.assert_called()
