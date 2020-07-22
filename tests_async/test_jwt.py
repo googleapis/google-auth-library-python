@@ -429,7 +429,9 @@ class TestCredentials(object):
     @pytest.mark.asyncio
     async def test_before_request_refreshes(self):
         assert not self.credentials.valid
-        await self.credentials.before_request(None, "GET", "http://example.com?a=1#3", {})
+        await self.credentials.before_request(
+            None, "GET", "http://example.com?a=1#3", {}
+        )
         assert self.credentials.valid
 
 

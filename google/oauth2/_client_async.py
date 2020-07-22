@@ -26,8 +26,6 @@ For more information about the token endpoint, see
 import datetime
 import json
 
-import asyncio
-
 import six
 from six.moves import http_client
 from six.moves import urllib
@@ -104,24 +102,27 @@ async def _token_endpoint_request(request, token_uri, body):
     # retry to fetch token for maximum of two times if any internal failure
     # occurs.
     while True:
-        try:
-            response = await request(method="POST", url=token_uri, headers=headers, body=body)
 
-        '''
-        The function goes into error in the request call
-        '''
+        response = await request(
+            method="POST", url=token_uri, headers=headers, body=body
+        )
+
+        """
         except exceptions.TransportError as caught_exc:
             new_exc = exceptions.RefreshError(caught_exc)
             six.raise_from(new_exc, caught_exc)
+        """
 
-        #breakpoint()
+        response_body1 = await response.data.read()
+
+        # breakpoint()
         response_body = (
-            response.data.decode("utf-8")
-            if hasattr(response.data, "decode")
-            else response.data
+            response_body1.decode("utf-8")
+            if hasattr(response_body1, "decode")
+            else response_body1
         )
-        #CHANGE TO READ TO END OF STREAM
-        response_body = await response.data.read()
+        # CHANGE TO READ TO END OF STREAM
+
         response_data = json.loads(response_body)
 
         if response.status == http_client.OK:
@@ -177,7 +178,7 @@ async def jwt_grant(request, token_uri, assertion):
     return access_token, expiry, response_data
 
 
-def id_token_jwt_grant(request, token_uri, assertion):
+async def id_token_jwt_grant(request, token_uri, assertion):
     """Implements the JWT Profile for OAuth 2.0 Authorization Grants, but
     requests an OpenID Connect ID Token instead of an access token.
 
@@ -204,7 +205,7 @@ def id_token_jwt_grant(request, token_uri, assertion):
     """
     body = {"assertion": assertion, "grant_type": _JWT_GRANT_TYPE}
 
-    response_data = _token_endpoint_request(request, token_uri, body)
+    response_data = await _token_endpoint_request(request, token_uri, body)
 
     try:
         id_token = response_data["id_token"]
@@ -218,7 +219,7 @@ def id_token_jwt_grant(request, token_uri, assertion):
     return id_token, expiry, response_data
 
 
-def refresh_grant(
+async def refresh_grant(
     request, token_uri, refresh_token, client_id, client_secret, scopes=None
 ):
     """Implements the OAuth 2.0 refresh token grant.
@@ -259,7 +260,7 @@ def refresh_grant(
     if scopes:
         body["scope"] = " ".join(scopes)
 
-    response_data = _token_endpoint_request(request, token_uri, body)
+    response_data = await _token_endpoint_request(request, token_uri, body)
 
     try:
         access_token = response_data["access_token"]

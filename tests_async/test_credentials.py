@@ -15,7 +15,8 @@
 import datetime
 
 import pytest
-import asyncio
+
+# import asyncio
 
 from google.auth import _helpers
 from google.auth import credentials_async as credentials
@@ -60,6 +61,7 @@ def test_expired_and_valid():
     assert not credentials.valid
     assert credentials.expired
 
+
 @pytest.mark.asyncio
 async def test_before_request():
     credentials = CredentialsImpl()
@@ -77,10 +79,10 @@ async def test_before_request():
 
     # Second call shouldn't call refresh.
     credentials.before_request(request, "http://example.com", "GET", headers)
-    #breakpoint()
+    # breakpoint()
     assert credentials.valid
     assert credentials.token == "token"
-    #assert headers["authorization"] == "Bearer token"
+    # assert headers["authorization"] == "Bearer token"
 
 
 def test_anonymous_credentials_ctor():

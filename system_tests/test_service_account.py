@@ -24,9 +24,9 @@ def credentials(service_account_file):
 
 
 def test_refresh_no_scopes(http_request, credentials):
-    with pytest.raises(ValueError):
+    with pytest.raises(exceptions.RefreshError):
         credentials.refresh(http_request)
-    assert False 
+
 
 def test_refresh_success(http_request, credentials, token_info):
     credentials = credentials.with_scopes(["email", "profile"])

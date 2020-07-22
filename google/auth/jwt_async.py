@@ -54,12 +54,12 @@ import six
 from six.moves import urllib
 
 import google.auth
-
 from google.auth import _helpers
 from google.auth import _service_account_info
 from google.auth import crypt
 from google.auth import exceptions
-from google.auth import credentials_async as credentials
+
+# from google.auth import credentials_async as credentials
 
 try:
     from google.auth.crypt import es256
@@ -290,7 +290,9 @@ def decode(token, certs=None, verify=True, audience=None):
     return payload
 
 
-class Credentials(google.auth.credentials_async.Signing, google.auth.credentials_async.Credentials):
+class Credentials(
+    google.auth.credentials_async.Signing, google.auth.credentials_async.Credentials
+):
     """Credentials that use a JWT as the bearer token.
 
     These credentials require an "audience" claim. This claim identifies the

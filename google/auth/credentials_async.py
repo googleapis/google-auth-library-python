@@ -16,11 +16,12 @@
 """Interfaces for credentials."""
 
 import abc
+import inspect
 
 import six
 
+
 from google.auth import _helpers
-import inspect
 
 
 @six.add_metaclass(abc.ABCMeta)

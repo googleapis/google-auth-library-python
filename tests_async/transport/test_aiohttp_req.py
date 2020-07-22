@@ -14,11 +14,11 @@
 
 import aiohttp
 from aioresponses import aioresponses
-from tests_async.transport import async_compliance
 import mock
 import pytest
+from tests_async.transport import async_compliance
 
-import google.auth.credentials_async as credentials
+import google.auth.credentials_async
 from google.auth.transport import aiohttp_req
 import google.auth.transport._mtls_helper
 
