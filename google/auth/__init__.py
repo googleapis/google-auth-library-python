@@ -17,6 +17,7 @@
 import logging
 
 from google.auth._default import default, load_credentials_from_file
+from google.auth._default_async import default_async, load_credentials_from_file
 
 
 __all__ = ["default", "load_credentials_from_file", "default_async"]

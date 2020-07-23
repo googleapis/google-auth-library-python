@@ -106,7 +106,6 @@ class TestCredentials(object):
         assert excinfo.match(r"http error")
 
     @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
-    @pytest.mark.asyncio
     def test_before_request_refreshes(self, get):
         get.side_effect = [
             {

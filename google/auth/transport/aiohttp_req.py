@@ -138,7 +138,6 @@ class Request(transport.Request):
             )
             return _Response(response)
 
-        # TODO(anirudhbaddepu) check correct error
         except aiohttp.ClientError as caught_exc:
             new_exc = exceptions.TransportError(caught_exc)
             six.raise_from(new_exc, caught_exc)
@@ -204,11 +203,6 @@ class AuthorizedSession(aiohttp.ClientSession):
         self._loop = asyncio.get_event_loop()
         self._refresh_lock = asyncio.Lock()
 
-        if auth_request is None:
-            self._auth_request_session = aiohttp.ClientSession()
-            auth_request = Request(self._auth_request_session)
-            self._auth_request = auth_request
-
     def configure_mtls_channel(self, client_cert_callback=None):
         """Configure the client certificate and key for SSL connection.
 
@@ -261,6 +255,11 @@ class AuthorizedSession(aiohttp.ClientSession):
         **kwargs
     ):
 
+        if self._auth_request is None:
+            self._auth_request_session = aiohttp.ClientSession()
+            auth_request = Request(self._auth_request_session)
+            self._auth_request = auth_request
+
         # Use a kwarg for this instead of an attribute to maintain
         # thread-safety.
         _credential_refresh_attempt = kwargs.pop("_credential_refresh_attempt", 0)
@@ -284,8 +283,7 @@ class AuthorizedSession(aiohttp.ClientSession):
             )
 
         with requests.TimeoutGuard(remaining_time, asyncio.TimeoutError) as guard:
-            temp_session = super(AuthorizedSession, self)
-            response = await temp_session.request(
+            response = await super(AuthorizedSession, self).request(
                 method,
                 url,
                 data=data,

@@ -58,6 +58,7 @@ from google.auth import _helpers
 from google.auth import _service_account_info
 from google.auth import crypt
 from google.auth import exceptions
+from google.auth import jwt
 
 # from google.auth import credentials_async as credentials
 
@@ -289,9 +290,8 @@ def decode(token, certs=None, verify=True, audience=None):
 
     return payload
 
-
 class Credentials(
-    google.auth.credentials_async.Signing, google.auth.credentials_async.Credentials
+    jwt.Credentials, google.auth.credentials_async.Signing, google.auth.credentials_async.Credentials
 ):
     """Credentials that use a JWT as the bearer token.
 
@@ -306,21 +306,21 @@ class Credentials(
     JSON file::
 
         audience = 'https://pubsub.googleapis.com/google.pubsub.v1.Publisher'
-        credentials = jwt.Credentials.from_service_account_file(
+        credentials = jwt_async.Credentials.from_service_account_file(
             'service-account.json',
             audience=audience)
 
     If you already have the service account file loaded and parsed::
 
         service_account_info = json.load(open('service_account.json'))
-        credentials = jwt.Credentials.from_service_account_info(
+        credentials = jwt_async.Credentials.from_service_account_info(
             service_account_info,
             audience=audience)
 
     Both helper methods pass on arguments to the constructor, so you can
     specify the JWT claims::
 
-        credentials = jwt.Credentials.from_service_account_file(
+        credentials = jwt_async.Credentials.from_service_account_file(
             'service-account.json',
             audience=audience,
             additional_claims={'meta': 'data'})
@@ -328,7 +328,7 @@ class Credentials(
     You can also construct the credentials directly if you have a
     :class:`~google.auth.crypt.Signer` instance::
 
-        credentials = jwt.Credentials(
+        credentials = jwt_async.Credentials(
             signer,
             issuer='your-issuer',
             subject='your-subject',
@@ -342,223 +342,8 @@ class Credentials(
         new_credentials = credentials.with_claims(audience=new_audience)
     """
 
-    def __init__(
-        self,
-        signer,
-        issuer,
-        subject,
-        audience,
-        additional_claims=None,
-        token_lifetime=_DEFAULT_TOKEN_LIFETIME_SECS,
-        quota_project_id=None,
-    ):
-        """
-        Args:
-            signer (google.auth.crypt.Signer): The signer used to sign JWTs.
-            issuer (str): The `iss` claim.
-            subject (str): The `sub` claim.
-            audience (str): the `aud` claim. The intended audience for the
-                credentials.
-            additional_claims (Mapping[str, str]): Any additional claims for
-                the JWT payload.
-            token_lifetime (int): The amount of time in seconds for
-                which the token is valid. Defaults to 1 hour.
-            quota_project_id (Optional[str]): The project ID used for quota
-                and billing.
-        """
-        super(Credentials, self).__init__()
-        self._signer = signer
-        self._issuer = issuer
-        self._subject = subject
-        self._audience = audience
-        self._token_lifetime = token_lifetime
-        self._quota_project_id = quota_project_id
-
-        if additional_claims is None:
-            additional_claims = {}
-
-        self._additional_claims = additional_claims
-
-    @classmethod
-    def _from_signer_and_info(cls, signer, info, **kwargs):
-        """Creates a Credentials instance from a signer and service account
-        info.
-
-        Args:
-            signer (google.auth.crypt.Signer): The signer used to sign JWTs.
-            info (Mapping[str, str]): The service account info.
-            kwargs: Additional arguments to pass to the constructor.
-
-        Returns:
-            google.auth.jwt.Credentials: The constructed credentials.
-
-        Raises:
-            ValueError: If the info is not in the expected format.
-        """
-        kwargs.setdefault("subject", info["client_email"])
-        kwargs.setdefault("issuer", info["client_email"])
-        return cls(signer, **kwargs)
-
-    @classmethod
-    def from_service_account_info(cls, info, **kwargs):
-        """Creates an Credentials instance from a dictionary.
-
-        Args:
-            info (Mapping[str, str]): The service account info in Google
-                format.
-            kwargs: Additional arguments to pass to the constructor.
-
-        Returns:
-            google.auth.jwt.Credentials: The constructed credentials.
-
-        Raises:
-            ValueError: If the info is not in the expected format.
-        """
-        signer = _service_account_info.from_dict(info, require=["client_email"])
-        return cls._from_signer_and_info(signer, info, **kwargs)
-
-    @classmethod
-    def from_service_account_file(cls, filename, **kwargs):
-        """Creates a Credentials instance from a service account .json file
-        in Google format.
-
-        Args:
-            filename (str): The path to the service account .json file.
-            kwargs: Additional arguments to pass to the constructor.
-
-        Returns:
-            google.auth.jwt.Credentials: The constructed credentials.
-        """
-        info, signer = _service_account_info.from_filename(
-            filename, require=["client_email"]
-        )
-        return cls._from_signer_and_info(signer, info, **kwargs)
-
-    @classmethod
-    def from_signing_credentials(cls, credentials, audience, **kwargs):
-        """Creates a new :class:`google.auth.jwt.Credentials` instance from an
-        existing :class:`google.auth.credentials.Signing` instance.
-
-        The new instance will use the same signer as the existing instance and
-        will use the existing instance's signer email as the issuer and
-        subject by default.
-
-        Example::
-
-            svc_creds = service_account.Credentials.from_service_account_file(
-                'service_account.json')
-            audience = (
-                'https://pubsub.googleapis.com/google.pubsub.v1.Publisher')
-            jwt_creds = jwt.Credentials.from_signing_credentials(
-                svc_creds, audience=audience)
-
-        Args:
-            credentials (google.auth.credentials.Signing): The credentials to
-                use to construct the new credentials.
-            audience (str): the `aud` claim. The intended audience for the
-                credentials.
-            kwargs: Additional arguments to pass to the constructor.
-
-        Returns:
-            google.auth.jwt.Credentials: A new Credentials instance.
-        """
-        kwargs.setdefault("issuer", credentials.signer_email)
-        kwargs.setdefault("subject", credentials.signer_email)
-        return cls(credentials.signer, audience=audience, **kwargs)
-
-    def with_claims(
-        self, issuer=None, subject=None, audience=None, additional_claims=None
-    ):
-        """Returns a copy of these credentials with modified claims.
-
-        Args:
-            issuer (str): The `iss` claim. If unspecified the current issuer
-                claim will be used.
-            subject (str): The `sub` claim. If unspecified the current subject
-                claim will be used.
-            audience (str): the `aud` claim. If unspecified the current
-                audience claim will be used.
-            additional_claims (Mapping[str, str]): Any additional claims for
-                the JWT payload. This will be merged with the current
-                additional claims.
-
-        Returns:
-            google.auth.jwt.Credentials: A new credentials instance.
-        """
-        new_additional_claims = copy.deepcopy(self._additional_claims)
-        new_additional_claims.update(additional_claims or {})
-
-        return self.__class__(
-            self._signer,
-            issuer=issuer if issuer is not None else self._issuer,
-            subject=subject if subject is not None else self._subject,
-            audience=audience if audience is not None else self._audience,
-            additional_claims=new_additional_claims,
-            quota_project_id=self._quota_project_id,
-        )
-
-    @_helpers.copy_docstring(google.auth.credentials_async.Credentials)
-    def with_quota_project(self, quota_project_id):
-        return self.__class__(
-            self._signer,
-            issuer=self._issuer,
-            subject=self._subject,
-            audience=self._audience,
-            additional_claims=self._additional_claims,
-            quota_project_id=quota_project_id,
-        )
-
-    def _make_jwt(self):
-        """Make a signed JWT.
-
-        Returns:
-            Tuple[bytes, datetime]: The encoded JWT and the expiration.
-        """
-        now = _helpers.utcnow()
-        lifetime = datetime.timedelta(seconds=self._token_lifetime)
-        expiry = now + lifetime
-
-        payload = {
-            "iss": self._issuer,
-            "sub": self._subject,
-            "iat": _helpers.datetime_to_secs(now),
-            "exp": _helpers.datetime_to_secs(expiry),
-            "aud": self._audience,
-        }
-
-        payload.update(self._additional_claims)
-
-        jwt = encode(self._signer, payload)
-
-        return jwt, expiry
-
-    def refresh(self, request):
-        """Refreshes the access token.
-
-        Args:
-            request (Any): Unused.
-        """
-        # pylint: disable=unused-argument
-        # (pylint doesn't correctly recognize overridden methods.)
-        self.token, self.expiry = self._make_jwt()
-
-    @_helpers.copy_docstring(google.auth.credentials_async.Signing)
-    def sign_bytes(self, message):
-        return self._signer.sign(message)
-
-    @property
-    @_helpers.copy_docstring(google.auth.credentials_async.Signing)
-    def signer_email(self):
-        return self._issuer
-
-    @property
-    @_helpers.copy_docstring(google.auth.credentials_async.Signing)
-    def signer(self):
-        return self._signer
-
-
 class OnDemandCredentials(
-    google.auth.credentials_async.Signing, google.auth.credentials_async.Credentials
+    jwt.OnDemandCredentials, google.auth.credentials_async.Signing, google.auth.credentials_async.Credentials
 ):
     """On-demand JWT credentials.
 
@@ -576,271 +361,3 @@ class OnDemandCredentials(
 
     .. _grpc: http://www.grpc.io/
     """
-
-    def __init__(
-        self,
-        signer,
-        issuer,
-        subject,
-        additional_claims=None,
-        token_lifetime=_DEFAULT_TOKEN_LIFETIME_SECS,
-        max_cache_size=_DEFAULT_MAX_CACHE_SIZE,
-        quota_project_id=None,
-    ):
-        """
-        Args:
-            signer (google.auth.crypt.Signer): The signer used to sign JWTs.
-            issuer (str): The `iss` claim.
-            subject (str): The `sub` claim.
-            additional_claims (Mapping[str, str]): Any additional claims for
-                the JWT payload.
-            token_lifetime (int): The amount of time in seconds for
-                which the token is valid. Defaults to 1 hour.
-            max_cache_size (int): The maximum number of JWT tokens to keep in
-                cache. Tokens are cached using :class:`cachetools.LRUCache`.
-            quota_project_id (Optional[str]): The project ID used for quota
-                and billing.
-
-        """
-        super(OnDemandCredentials, self).__init__()
-        self._signer = signer
-        self._issuer = issuer
-        self._subject = subject
-        self._token_lifetime = token_lifetime
-        self._quota_project_id = quota_project_id
-
-        if additional_claims is None:
-            additional_claims = {}
-
-        self._additional_claims = additional_claims
-        self._cache = cachetools.LRUCache(maxsize=max_cache_size)
-
-    @classmethod
-    def _from_signer_and_info(cls, signer, info, **kwargs):
-        """Creates an OnDemandCredentials instance from a signer and service
-        account info.
-
-        Args:
-            signer (google.auth.crypt.Signer): The signer used to sign JWTs.
-            info (Mapping[str, str]): The service account info.
-            kwargs: Additional arguments to pass to the constructor.
-
-        Returns:
-            google.auth.jwt.OnDemandCredentials: The constructed credentials.
-
-        Raises:
-            ValueError: If the info is not in the expected format.
-        """
-        kwargs.setdefault("subject", info["client_email"])
-        kwargs.setdefault("issuer", info["client_email"])
-        return cls(signer, **kwargs)
-
-    @classmethod
-    def from_service_account_info(cls, info, **kwargs):
-        """Creates an OnDemandCredentials instance from a dictionary.
-
-        Args:
-            info (Mapping[str, str]): The service account info in Google
-                format.
-            kwargs: Additional arguments to pass to the constructor.
-
-        Returns:
-            google.auth.jwt.OnDemandCredentials: The constructed credentials.
-
-        Raises:
-            ValueError: If the info is not in the expected format.
-        """
-        signer = _service_account_info.from_dict(info, require=["client_email"])
-        return cls._from_signer_and_info(signer, info, **kwargs)
-
-    @classmethod
-    def from_service_account_file(cls, filename, **kwargs):
-        """Creates an OnDemandCredentials instance from a service account .json
-        file in Google format.
-
-        Args:
-            filename (str): The path to the service account .json file.
-            kwargs: Additional arguments to pass to the constructor.
-
-        Returns:
-            google.auth.jwt.OnDemandCredentials: The constructed credentials.
-        """
-        info, signer = _service_account_info.from_filename(
-            filename, require=["client_email"]
-        )
-        return cls._from_signer_and_info(signer, info, **kwargs)
-
-    @classmethod
-    def from_signing_credentials(cls, credentials, **kwargs):
-        """Creates a new :class:`google.auth.jwt.OnDemandCredentials` instance
-        from an existing :class:`google.auth.credentials.Signing` instance.
-
-        The new instance will use the same signer as the existing instance and
-        will use the existing instance's signer email as the issuer and
-        subject by default.
-
-        Example::
-
-            svc_creds = service_account.Credentials.from_service_account_file(
-                'service_account.json')
-            jwt_creds = jwt.OnDemandCredentials.from_signing_credentials(
-                svc_creds)
-
-        Args:
-            credentials (google.auth.credentials.Signing): The credentials to
-                use to construct the new credentials.
-            kwargs: Additional arguments to pass to the constructor.
-
-        Returns:
-            google.auth.jwt.Credentials: A new Credentials instance.
-        """
-        kwargs.setdefault("issuer", credentials.signer_email)
-        kwargs.setdefault("subject", credentials.signer_email)
-        return cls(credentials.signer, **kwargs)
-
-    def with_claims(self, issuer=None, subject=None, additional_claims=None):
-        """Returns a copy of these credentials with modified claims.
-
-        Args:
-            issuer (str): The `iss` claim. If unspecified the current issuer
-                claim will be used.
-            subject (str): The `sub` claim. If unspecified the current subject
-                claim will be used.
-            additional_claims (Mapping[str, str]): Any additional claims for
-                the JWT payload. This will be merged with the current
-                additional claims.
-
-        Returns:
-            google.auth.jwt.OnDemandCredentials: A new credentials instance.
-        """
-        new_additional_claims = copy.deepcopy(self._additional_claims)
-        new_additional_claims.update(additional_claims or {})
-
-        return self.__class__(
-            self._signer,
-            issuer=issuer if issuer is not None else self._issuer,
-            subject=subject if subject is not None else self._subject,
-            additional_claims=new_additional_claims,
-            max_cache_size=self._cache.maxsize,
-            quota_project_id=self._quota_project_id,
-        )
-
-    @_helpers.copy_docstring(google.auth.credentials_async.Credentials)
-    def with_quota_project(self, quota_project_id):
-
-        return self.__class__(
-            self._signer,
-            issuer=self._issuer,
-            subject=self._subject,
-            additional_claims=self._additional_claims,
-            max_cache_size=self._cache.maxsize,
-            quota_project_id=quota_project_id,
-        )
-
-    @property
-    def valid(self):
-        """Checks the validity of the credentials.
-
-        These credentials are always valid because it generates tokens on
-        demand.
-        """
-        return True
-
-    def _make_jwt_for_audience(self, audience):
-        """Make a new JWT for the given audience.
-
-        Args:
-            audience (str): The intended audience.
-
-        Returns:
-            Tuple[bytes, datetime]: The encoded JWT and the expiration.
-        """
-        now = _helpers.utcnow()
-        lifetime = datetime.timedelta(seconds=self._token_lifetime)
-        expiry = now + lifetime
-
-        payload = {
-            "iss": self._issuer,
-            "sub": self._subject,
-            "iat": _helpers.datetime_to_secs(now),
-            "exp": _helpers.datetime_to_secs(expiry),
-            "aud": audience,
-        }
-
-        payload.update(self._additional_claims)
-
-        jwt = encode(self._signer, payload)
-
-        return jwt, expiry
-
-    def _get_jwt_for_audience(self, audience):
-        """Get a JWT For a given audience.
-
-        If there is already an existing, non-expired token in the cache for
-        the audience, that token is used. Otherwise, a new token will be
-        created.
-
-        Args:
-            audience (str): The intended audience.
-
-        Returns:
-            bytes: The encoded JWT.
-        """
-        token, expiry = self._cache.get(audience, (None, None))
-
-        if token is None or expiry < _helpers.utcnow():
-            token, expiry = self._make_jwt_for_audience(audience)
-            self._cache[audience] = token, expiry
-
-        return token
-
-    def refresh(self, request):
-        """Raises an exception, these credentials can not be directly
-        refreshed.
-
-        Args:
-            request (Any): Unused.
-
-        Raises:
-            google.auth.RefreshError
-        """
-        # pylint: disable=unused-argument
-        # (pylint doesn't correctly recognize overridden methods.)
-        raise exceptions.RefreshError(
-            "OnDemandCredentials can not be directly refreshed."
-        )
-
-    def before_request(self, request, method, url, headers):
-        """Performs credential-specific before request logic.
-
-        Args:
-            request (Any): Unused. JWT credentials do not need to make an
-                HTTP request to refresh.
-            method (str): The request's HTTP method.
-            url (str): The request's URI. This is used as the audience claim
-                when generating the JWT.
-            headers (Mapping): The request's headers.
-        """
-        # pylint: disable=unused-argument
-        # (pylint doesn't correctly recognize overridden methods.)
-        parts = urllib.parse.urlsplit(url)
-        # Strip query string and fragment
-        audience = urllib.parse.urlunsplit(
-            (parts.scheme, parts.netloc, parts.path, "", "")
-        )
-        token = self._get_jwt_for_audience(audience)
-        self.apply(headers, token=token)
-
-    @_helpers.copy_docstring(google.auth.credentials_async.Signing)
-    def sign_bytes(self, message):
-        return self._signer.sign(message)
-
-    @property
-    @_helpers.copy_docstring(google.auth.credentials_async.Signing)
-    def signer_email(self):
-        return self._issuer
-
-    @property
-    @_helpers.copy_docstring(google.auth.credentials_async.Signing)
-    def signer(self):
-        return self._signer

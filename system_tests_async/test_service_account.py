@@ -27,13 +27,16 @@ def credentials(service_account_file):
 
 @pytest.mark.asyncio
 async def test_refresh_no_scopes(http_request, credentials):
+    """
+    We expect the http request to refresh credentials
+    without scopes provided to throw an error.
+    """
     with pytest.raises(exceptions.RefreshError):
         await credentials.refresh(http_request)
 
 @pytest.mark.asyncio
 async def test_refresh_success(http_request, credentials, token_info):
     credentials = credentials.with_scopes(["email", "profile"])
-    #breakpoint()
     await credentials.refresh(http_request)
 
     assert credentials.token
