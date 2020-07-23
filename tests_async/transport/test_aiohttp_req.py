@@ -24,9 +24,13 @@ import google.auth.transport._mtls_helper
 
 
 class TestRequestResponse(async_compliance.RequestResponseTests):
-    @pytest.mark.asyncio
+
     def make_request(self):
         return aiohttp_req.Request()
+
+    def make_with_parameter_request(self):
+        http = mock.create_autospec(aiohttp.ClientSession, instance=True)
+        return aiohttp_req.Request(http) 
 
     def test_timeout(self):
         http = mock.create_autospec(aiohttp.ClientSession, instance=True)
