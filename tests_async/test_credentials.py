@@ -69,7 +69,6 @@ async def test_before_request():
     headers = {}
 
     # First call should call refresh, setting the token.
-    #breakpoint()
     await credentials.before_request(request, "http://example.com", "GET", headers)
     assert credentials.valid
     assert credentials.token == "token"
@@ -80,15 +79,15 @@ async def test_before_request():
 
     # Second call shouldn't call refresh.
     credentials.before_request(request, "http://example.com", "GET", headers)
-    # breakpoint()
+
     assert credentials.valid
     assert credentials.token == "token"
-    # assert headers["authorization"] == "Bearer token"
+
 
 
 def test_anonymous_credentials_ctor():
     anon = credentials.AnonymousCredentials()
-    #breakpoint()
+   
     assert anon.token is None
     assert anon.expiry is None
     assert not anon.expired
@@ -97,7 +96,7 @@ def test_anonymous_credentials_ctor():
 
 def test_anonymous_credentials_refresh():
     anon = credentials.AnonymousCredentials()
-    #breakpoint()
+    
     request = object()
     with pytest.raises(ValueError):
         anon.refresh(request)

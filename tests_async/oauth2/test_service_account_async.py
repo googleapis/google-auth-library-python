@@ -191,8 +191,6 @@ class TestCredentials(object):
         )
         request = mock.create_autospec(transport.Request, instance=True)
 
-        # breakpoint()
-
         # Refresh credentials
         await credentials.refresh(request)
 
@@ -319,7 +317,7 @@ class TestIDTokenCredentials(object):
             _helpers.utcnow() + datetime.timedelta(seconds=500),
             {},
         )
-        # request = mock.create_autospec(transport.Request, instance=True)
+
         request = mock.AsyncMock(spec=["transport.Request"])
 
         # Refresh credentials

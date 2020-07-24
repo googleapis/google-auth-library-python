@@ -60,8 +60,6 @@ from google.auth import crypt
 from google.auth import exceptions
 from google.auth import jwt
 
-# from google.auth import credentials_async as credentials
-
 try:
     from google.auth.crypt import es256
 except ImportError:  # pragma: NO COVER
@@ -290,8 +288,11 @@ def decode(token, certs=None, verify=True, audience=None):
 
     return payload
 
+
 class Credentials(
-    jwt.Credentials, google.auth.credentials_async.Signing, google.auth.credentials_async.Credentials
+    jwt.Credentials,
+    google.auth.credentials_async.Signing,
+    google.auth.credentials_async.Credentials,
 ):
     """Credentials that use a JWT as the bearer token.
 
@@ -342,8 +343,11 @@ class Credentials(
         new_credentials = credentials.with_claims(audience=new_audience)
     """
 
+
 class OnDemandCredentials(
-    jwt.OnDemandCredentials, google.auth.credentials_async.Signing, google.auth.credentials_async.Credentials
+    jwt.OnDemandCredentials,
+    google.auth.credentials_async.Signing,
+    google.auth.credentials_async.Credentials,
 ):
     """On-demand JWT credentials.
 

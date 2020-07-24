@@ -24,13 +24,12 @@ import google.auth.transport._mtls_helper
 
 
 class TestRequestResponse(async_compliance.RequestResponseTests):
-
     def make_request(self):
         return aiohttp_req.Request()
 
     def make_with_parameter_request(self):
         http = mock.create_autospec(aiohttp.ClientSession, instance=True)
-        return aiohttp_req.Request(http) 
+        return aiohttp_req.Request(http)
 
     def test_timeout(self):
         http = mock.create_autospec(aiohttp.ClientSession, instance=True)
@@ -45,11 +44,6 @@ class CredentialsStub(google.auth.credentials_async.Credentials):
 
     def apply(self, headers, token=None):
         headers["authorization"] = self.token
-
-    """
-    def before_request(self, request, method, url, headers):
-        self.apply(headers)
-    """
 
     def refresh(self, request):
         self.token += "1"

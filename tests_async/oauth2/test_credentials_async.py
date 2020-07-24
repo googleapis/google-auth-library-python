@@ -25,8 +25,8 @@ from google.auth import _helpers
 from google.auth import exceptions
 from google.auth import transport
 from google.oauth2 import credentials_async as credentials
-#from tests.oauth2 import test_credentials as syncTests
 
+# from tests.oauth2 import test_credentials as syncTests
 
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
@@ -37,7 +37,7 @@ with open(AUTH_USER_JSON_FILE, "r") as fh:
     AUTH_USER_INFO = json.load(fh)
 
 
-class TestCredentials():
+class TestCredentials:
 
     TOKEN_URI = "https://example.com/oauth2/token"
     REFRESH_TOKEN = "refresh_token"
@@ -54,7 +54,6 @@ class TestCredentials():
             client_secret=cls.CLIENT_SECRET,
         )
 
-    
     def test_default_state(self):
         credentials = self.make_credentials()
         assert not credentials.valid
@@ -67,7 +66,6 @@ class TestCredentials():
         assert credentials.token_uri == self.TOKEN_URI
         assert credentials.client_id == self.CLIENT_ID
         assert credentials.client_secret == self.CLIENT_SECRET
-    
 
     @mock.patch("google.oauth2._client_async.refresh_grant", autospec=True)
     @mock.patch(
@@ -90,7 +88,7 @@ class TestCredentials():
             grant_response,
         )
 
-        request = mock.AsyncMock(spec = ["transport.Request"])
+        request = mock.AsyncMock(spec=["transport.Request"])
         credentials = self.make_credentials()
 
         # Refresh credentials
@@ -117,7 +115,7 @@ class TestCredentials():
 
     @pytest.mark.asyncio
     async def test_refresh_no_refresh_token(self):
-        request = mock.AsyncMock(spec = ["transport.Request"])
+        request = mock.AsyncMock(spec=["transport.Request"])
         credentials_ = credentials.Credentials(token=None, refresh_token=None)
 
         with pytest.raises(exceptions.RefreshError, match="necessary fields"):
@@ -149,7 +147,7 @@ class TestCredentials():
             grant_response,
         )
 
-        request = mock.AsyncMock(spec = ["transport.Request"])
+        request = mock.AsyncMock(spec=["transport.Request"])
         creds = credentials.Credentials(
             token=None,
             refresh_token=self.REFRESH_TOKEN,
@@ -209,7 +207,7 @@ class TestCredentials():
             grant_response,
         )
 
-        request = mock.AsyncMock(spec = ["transport.Request"])
+        request = mock.AsyncMock(spec=["transport.Request"])
         creds = credentials.Credentials(
             token=None,
             refresh_token=self.REFRESH_TOKEN,
@@ -270,7 +268,7 @@ class TestCredentials():
             grant_response,
         )
 
-        request = mock.AsyncMock(spec = ["transport.Request"])
+        request = mock.AsyncMock(spec=["transport.Request"])
         creds = credentials.Credentials(
             token=None,
             refresh_token=self.REFRESH_TOKEN,
@@ -472,10 +470,12 @@ class TestUserAccessTokenCredentials(object):
         assert quota_project_cred._account == cred._account
 
     @mock.patch(
-        "google.oauth2.credentials_async.UserAccessTokenCredentials.apply", autospec=True
+        "google.oauth2.credentials_async.UserAccessTokenCredentials.apply",
+        autospec=True,
     )
     @mock.patch(
-        "google.oauth2.credentials_async.UserAccessTokenCredentials.refresh", autospec=True
+        "google.oauth2.credentials_async.UserAccessTokenCredentials.refresh",
+        autospec=True,
     )
     def test_before_request(self, refresh, apply):
         cred = credentials.UserAccessTokenCredentials()

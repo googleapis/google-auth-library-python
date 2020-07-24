@@ -73,9 +73,9 @@ class RequestResponseTests(object):
 
         data = await response.data.read(13)
         assert data == b"Basic Content"
-    
+
     @pytest.mark.asyncio
-    async def test_request_basic_with_http(self,server):
+    async def test_request_basic_with_http(self, server):
         request = self.make_with_parameter_request()
         response = await request(url=server.url + "/basic", method="GET")
         assert response.status == http_client.OK

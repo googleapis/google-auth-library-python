@@ -27,7 +27,9 @@ from google.auth import credentials
 
 @six.add_metaclass(abc.ABCMeta)
 class Credentials(credentials.Credentials):
-    """Base class for all credentials.
+    """Async inherited credentials class from google.auth.credentials. 
+    The added functionality is the before_request call which requires 
+    async/await syntax.
 
     All credentials have a :attr:`token` that is used for authentication and
     may also optionally set an :attr:`expiry` to indicate when the token will
@@ -75,42 +77,10 @@ class AnonymousCredentials(credentials.AnonymousCredentials, Credentials):
     """Credentials that do not provide any authentication information.
 
     These are useful in the case of services that support anonymous access or
-    local service emulators that do not use credentials.
+    local service emulators that do not use credentials. This class inherits
+    from the sync anonymous credentials file, but is kept if async credentials
+    is initialized and we would like anonymous credentials. 
     """
-
-    '''
-    @property
-    def expired(self):
-        """Returns `False`, anonymous credentials never expire."""
-        return False
-
-    @property
-    def valid(self):
-        """Returns `True`, anonymous credentials are always valid."""
-        return True
-
-    def refresh(self, request):
-        """Raises :class:`ValueError``, anonymous credentials cannot be
-        refreshed."""
-        raise ValueError("Anonymous credentials cannot be refreshed.")
-
-    def apply(self, headers, token=None):
-        """Anonymous credentials do nothing to the request.
-
-        The optional ``token`` argument is not supported.
-
-        Raises:
-            ValueError: If a token was specified.
-        """
-        if token is not None:
-            raise ValueError("Anonymous credentials don't support tokens.")
-
-    def before_request(self, request, method, url, headers):
-        """Anonymous credentials do nothing to the request."""
-
-    def with_quota_project(self, quota_project_id):
-        raise ValueError("Anonymous credentials don't support quota project.")
-    '''
 
 @six.add_metaclass(abc.ABCMeta)
 class ReadOnlyScoped(credentials.ReadOnlyScoped):
@@ -126,7 +96,7 @@ class ReadOnlyScoped(credentials.ReadOnlyScoped):
 
         if credentials.requires_scopes:
             # Scoping is required.
-            credentials = credentials.with_scopes(scopes=['one', 'two'])
+            credentials = credentials_async.with_scopes(scopes=['one', 'two'])
 
     Credentials that require scopes must either be constructed with scopes::
 
@@ -134,13 +104,14 @@ class ReadOnlyScoped(credentials.ReadOnlyScoped):
 
     Or must copy an existing instance using :meth:`with_scopes`::
 
-        scoped_credentials = credentials.with_scopes(scopes=['one', 'two'])
+        scoped_credentials = credentials_async.with_scopes(scopes=['one', 'two'])
 
     Some credentials have scopes but do not allow or require scopes to be set,
     these credentials can be used as-is.
 
     .. _RFC6749 Section 3.3: https://tools.ietf.org/html/rfc6749#section-3.3
     """
+
 
 class Scoped(credentials.Scoped):
     """Interface for credentials whose scopes can be replaced while copying.
@@ -155,7 +126,7 @@ class Scoped(credentials.Scoped):
 
         if credentials.requires_scopes:
             # Scoping is required.
-            credentials = credentials.create_scoped(['one', 'two'])
+            credentials = credentials_async.create_scoped(['one', 'two'])
 
     Credentials that require scopes must either be constructed with scopes::
 
@@ -170,6 +141,7 @@ class Scoped(credentials.Scoped):
 
     .. _RFC6749 Section 3.3: https://tools.ietf.org/html/rfc6749#section-3.3
     """
+
 
 def with_scopes_if_required(credentials, scopes):
     """Creates a copy of the credentials with scopes if scoping is required.
@@ -187,7 +159,7 @@ def with_scopes_if_required(credentials, scopes):
         scopes (Sequence[str]): The list of scopes to use.
 
     Returns:
-        google.auth.credentials.Credentials: Either a new set of scoped
+        google.auth.credentials_async.Credentials: Either a new set of scoped
             credentials, or the passed in credentials instance if no scoping
             was required.
     """
