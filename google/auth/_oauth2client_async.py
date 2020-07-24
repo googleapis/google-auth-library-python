@@ -1,4 +1,4 @@
-# Copyright 2016 Google LLC
+# Copyright 2020 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -48,7 +48,7 @@ _CONVERT_ERROR_TMPL = "Unable to convert {} to a google-auth credentials class."
 
 
 def _convert_oauth2_credentials(credentials):
-    """Converts to :class:`google.oauth2.credentials.Credentials`.
+    """Converts to :class:`google.oauth2.credentials_async.Credentials`.
 
     Args:
         credentials (Union[oauth2client.client.OAuth2Credentials,
@@ -56,7 +56,7 @@ def _convert_oauth2_credentials(credentials):
             convert.
 
     Returns:
-        google.oauth2.credentials.Credentials: The converted credentials.
+        google.oauth2.credentials_async.Credentials: The converted credentials.
     """
     new_credentials = google.oauth2.credentials.Credentials(
         token=credentials.access_token,
@@ -73,16 +73,16 @@ def _convert_oauth2_credentials(credentials):
 
 
 def _convert_service_account_credentials(credentials):
-    """Converts to :class:`google.oauth2.service_account.Credentials`.
+    """Converts to :class:`google.oauth2.service_account_async.Credentials`.
 
     Args:
         credentials (Union[
-            oauth2client.service_account.ServiceAccountCredentials,
-            oauth2client.service_account._JWTAccessCredentials]): The
+            oauth2client.service_account_async.ServiceAccountCredentials,
+            oauth2client.service_account_async._JWTAccessCredentials]): The
             credentials to convert.
 
     Returns:
-        google.oauth2.service_account.Credentials: The converted credentials.
+        google.oauth2.service_account_async.Credentials: The converted credentials.
     """
     info = credentials.serialization_data.copy()
     info["token_uri"] = credentials.token_uri
@@ -99,7 +99,7 @@ def _convert_gce_app_assertion_credentials(credentials):
             credentials to convert.
 
     Returns:
-        google.oauth2.service_account.Credentials: The converted credentials.
+        google.oauth2.service_account_async.Credentials: The converted credentials.
     """
     return google.auth.compute_engine.Credentials(
         service_account_email=credentials.service_account_email
@@ -114,7 +114,7 @@ def _convert_appengine_app_assertion_credentials(credentials):
             The credentials to convert.
 
     Returns:
-        google.oauth2.service_account.Credentials: The converted credentials.
+        google.oauth2.service_account_async.Credentials: The converted credentials.
     """
     # pylint: disable=invalid-name
     return google.auth.app_engine.Credentials(
@@ -142,21 +142,21 @@ def convert(credentials):
 
     This class converts:
 
-    - :class:`oauth2client.client.OAuth2Credentials` to
-      :class:`google.oauth2.credentials.Credentials`.
-    - :class:`oauth2client.client.GoogleCredentials` to
-      :class:`google.oauth2.credentials.Credentials`.
-    - :class:`oauth2client.service_account.ServiceAccountCredentials` to
-      :class:`google.oauth2.service_account.Credentials`.
-    - :class:`oauth2client.service_account._JWTAccessCredentials` to
-      :class:`google.oauth2.service_account.Credentials`.
+    - :class:`oauth2client.client_async.OAuth2Credentials` to
+      :class:`google.oauth2.credentials_async.Credentials`.
+    - :class:`oauth2client.client_async.GoogleCredentials` to
+      :class:`google.oauth2.credentials_async.Credentials`.
+    - :class:`oauth2client.service_account_async.ServiceAccountCredentials` to
+      :class:`google.oauth2.service_account_async.Credentials`.
+    - :class:`oauth2client.service_account_async._JWTAccessCredentials` to
+      :class:`google.oauth2.service_account_async.Credentials`.
     - :class:`oauth2client.contrib.gce.AppAssertionCredentials` to
       :class:`google.auth.compute_engine.Credentials`.
     - :class:`oauth2client.contrib.appengine.AppAssertionCredentials` to
       :class:`google.auth.app_engine.Credentials`.
 
     Returns:
-        google.auth.credentials.Credentials: The converted credentials.
+        google.auth.credentials_async.Credentials: The converted credentials.
 
     Raises:
         ValueError: If the credentials could not be converted.

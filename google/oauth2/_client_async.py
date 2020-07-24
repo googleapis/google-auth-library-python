@@ -115,7 +115,6 @@ async def _token_endpoint_request(request, token_uri, body):
 
         response_body1 = await response.data.read()
 
-        # breakpoint()
         response_body = (
             response_body1.decode("utf-8")
             if hasattr(response_body1, "decode")
