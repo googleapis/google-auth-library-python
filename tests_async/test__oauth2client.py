@@ -26,7 +26,7 @@ from six.moves import reload_module
 from google.auth import _oauth2client_async as _oauth2client
 
 
-DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
+DATA_DIR = os.path.join(os.path.abspath(os.path.join(__file__, "../..")), "tests/data")
 SERVICE_ACCOUNT_JSON_FILE = os.path.join(DATA_DIR, "service_account.json")
 
 

@@ -25,7 +25,9 @@ from google.auth import _helpers
 from google.auth import exceptions
 from google.oauth2 import credentials_async as credentials
 
-DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
+DATA_DIR = os.path.join(
+    os.path.abspath(os.path.join(__file__, "../../..")), "tests/data"
+)
 
 AUTH_USER_JSON_FILE = os.path.join(DATA_DIR, "authorized_user.json")
 

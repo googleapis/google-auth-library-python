@@ -16,8 +16,6 @@ import datetime
 
 import pytest
 
-# import asyncio
-
 from google.auth import _helpers
 from google.auth import credentials_async as credentials
 

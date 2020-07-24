@@ -21,7 +21,9 @@ import pytest
 
 def pytest_configure():
     """Load public certificate and private key."""
-    pytest.data_dir = os.path.join(os.path.dirname(__file__), "data")
+    pytest.data_dir = os.path.join(
+        os.path.abspath(os.path.join(__file__, "../..")), "tests/data"
+    )
 
     with open(os.path.join(pytest.data_dir, "privatekey.pem"), "rb") as fh:
         pytest.private_key_bytes = fh.read()

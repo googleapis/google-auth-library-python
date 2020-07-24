@@ -26,7 +26,7 @@ from google.auth import exceptions
 from google.auth import jwt_async as jwt
 
 
-DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
+DATA_DIR = os.path.join(os.path.abspath(os.path.join(__file__, "../..")), "tests/data")
 
 with open(os.path.join(DATA_DIR, "privatekey.pem"), "rb") as fh:
     PRIVATE_KEY_BYTES = fh.read()

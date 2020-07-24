@@ -29,7 +29,9 @@ from google.auth import jwt_async as jwt
 from google.oauth2 import _client_async as _client
 
 
-DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
+DATA_DIR = os.path.join(
+    os.path.abspath(os.path.join(__file__, "../../..")), "tests/data"
+)
 
 with open(os.path.join(DATA_DIR, "privatekey.pem"), "rb") as fh:
     PRIVATE_KEY_BYTES = fh.read()
