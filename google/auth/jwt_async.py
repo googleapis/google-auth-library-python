@@ -45,19 +45,14 @@ try:
 # Python 2.7 compatibility
 except ImportError:  # pragma: NO COVER
     from collections import Mapping
-import copy
-import datetime
+
 import json
 
-import cachetools
 import six
-from six.moves import urllib
 
 import google.auth
 from google.auth import _helpers
-from google.auth import _service_account_info
 from google.auth import crypt
-from google.auth import exceptions
 from google.auth import jwt
 
 try:

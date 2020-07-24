@@ -15,20 +15,15 @@
 """Service Accounts: JSON Web Token (JWT) Profile for OAuth 2.0
 
 NOTE: This file adds asynchronous refresh methods to both credentials
-classes, and therefore async/await syntax is required when calling this 
+classes, and therefore async/await syntax is required when calling this
 method when using service account credentials with asynchronous functionality.
 Otherwise, all other methods are inherited from the regular service account
 credentials file google.oauth2.service_account
 
 """
 
-import copy
-import datetime
-
 from google.auth import _helpers
-from google.auth import _service_account_info
 from google.auth import credentials_async
-from google.auth import jwt
 from google.oauth2 import _client_async
 from google.oauth2 import service_account
 

@@ -31,12 +31,6 @@ Authorization Code grant flow.
 .. _rfc6749 section 4.1: https://tools.ietf.org/html/rfc6749#section-4.1
 """
 
-import io
-import json
-
-import six
-
-from google.auth import _cloud_sdk
 from google.auth import _helpers
 from google.auth import credentials_async as credentials
 from google.auth import exceptions
@@ -96,6 +90,7 @@ class Credentials(oauth2_credentials.Credentials):
                         ", ".join(scopes_requested_but_not_granted)
                     )
                 )
+
 
 class UserAccessTokenCredentials(oauth2_credentials.UserAccessTokenCredentials):
     """Access token credentials for user account.

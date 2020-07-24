@@ -23,11 +23,7 @@ import pytest
 
 from google.auth import _helpers
 from google.auth import exceptions
-from google.auth import transport
 from google.oauth2 import credentials_async as credentials
-
-# from tests.oauth2 import test_credentials as syncTests
-
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
 

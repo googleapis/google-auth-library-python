@@ -20,17 +20,14 @@ import inspect
 
 import six
 
-
-from google.auth import _helpers
 from google.auth import credentials
 
 
 @six.add_metaclass(abc.ABCMeta)
 class Credentials(credentials.Credentials):
-    """Async inherited credentials class from google.auth.credentials. 
-    The added functionality is the before_request call which requires 
+    """Async inherited credentials class from google.auth.credentials.
+    The added functionality is the before_request call which requires
     async/await syntax.
-
     All credentials have a :attr:`token` that is used for authentication and
     may also optionally set an :attr:`expiry` to indicate when the token will
     no longer be valid.
@@ -79,8 +76,9 @@ class AnonymousCredentials(credentials.AnonymousCredentials, Credentials):
     These are useful in the case of services that support anonymous access or
     local service emulators that do not use credentials. This class inherits
     from the sync anonymous credentials file, but is kept if async credentials
-    is initialized and we would like anonymous credentials. 
+    is initialized and we would like anonymous credentials.
     """
+
 
 @six.add_metaclass(abc.ABCMeta)
 class ReadOnlyScoped(credentials.ReadOnlyScoped):

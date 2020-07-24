@@ -84,10 +84,9 @@ async def test_before_request():
     assert credentials.token == "token"
 
 
-
 def test_anonymous_credentials_ctor():
     anon = credentials.AnonymousCredentials()
-   
+
     assert anon.token is None
     assert anon.expiry is None
     assert not anon.expired
@@ -96,7 +95,7 @@ def test_anonymous_credentials_ctor():
 
 def test_anonymous_credentials_refresh():
     anon = credentials.AnonymousCredentials()
-    
+
     request = object()
     with pytest.raises(ValueError):
         anon.refresh(request)
