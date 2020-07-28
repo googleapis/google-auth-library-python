@@ -16,6 +16,7 @@
 """Interfaces for credentials."""
 
 import abc
+import inspect
 
 import six
 
@@ -62,7 +63,10 @@ class Credentials(credentials.Credentials):
         # the http request.)
 
         if not self.valid:
-            self.refresh(request)
+            if inspect.iscoroutinefunction(self.refresh):
+                await self.refresh(request)
+            else:
+                self.refresh(request)
         self.apply(headers)
 
 
