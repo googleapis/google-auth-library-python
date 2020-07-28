@@ -91,11 +91,7 @@ class Request(transport.Request):
     """
 
     def __init__(self, session=None):
-        """
-        self.session = None
-        if not session:
-            session = aiohttp.ClientSession()
-        """
+
         self.session = None
 
     async def __call__(
