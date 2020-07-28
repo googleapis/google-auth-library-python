@@ -16,7 +16,10 @@
 """Interfaces for credentials."""
 
 import abc
+<<<<<<< HEAD
 import inspect
+=======
+>>>>>>> async
 
 import six
 
@@ -63,10 +66,14 @@ class Credentials(credentials.Credentials):
         # the http request.)
 
         if not self.valid:
+<<<<<<< HEAD
             if inspect.iscoroutinefunction(self.refresh):
                 await self.refresh(request)
             else:
                 self.refresh(request)
+=======
+            self.refresh(request)
+>>>>>>> async
         self.apply(headers)
 
 
