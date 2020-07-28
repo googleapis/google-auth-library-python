@@ -63,10 +63,7 @@ class Credentials(credentials.Credentials):
         # the http request.)
 
         if not self.valid:
-            if inspect.iscoroutinefunction(self.refresh):
-                await self.refresh(request)
-            else:
-                self.refresh(request)
+            self.refresh(request)
         self.apply(headers)
 
 
