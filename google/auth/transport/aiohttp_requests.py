@@ -51,19 +51,19 @@ class _Response(transport.Response):
     """
 
     def __init__(self, response):
-        self.response = response
+        self._response = response
 
     @property
     def status(self):
-        return self.response.status
+        return self._response.status
 
     @property
     def headers(self):
-        return self.response.headers
+        return self._response.headers
 
     @property
     def data(self):
-        return self.response.content
+        return self._response.content
 
 
 class Request(transport.Request):
@@ -91,11 +91,7 @@ class Request(transport.Request):
     """
 
     def __init__(self, session=None):
-        """
-        self.session = None
-        if not session:
-            session = aiohttp.ClientSession()
-        """
+
         self.session = None
 
     async def __call__(
@@ -214,56 +210,49 @@ class AuthorizedSession(aiohttp.ClientSession):
         **kwargs
     ):
 
-        if self._auth_request is None:
-            self._auth_request_session = aiohttp.ClientSession()
+        """Implementation of Authorized Session aiohttp request.
+
+        Args:
+            method: The http request method used (e.g. GET, PUT, DELETE)
+
+            url: The url at which the http request is sent.
+
+            data, headers: These fields parallel the associated data and headers
+            fields of a regular http request. Using the aiohttp client session to
+            send the http request allows us to use this parallel corresponding structure
+            in our Authorized Session class.
+
+            timeout (Optional[Union[float, Tuple[float, float]]]):
+                The amount of time in seconds to wait for the server response
+                with each individual request.
+
+                Can also be passed as a tuple (connect_timeout, read_timeout).
+                See :meth:`requests.Session.request` documentation for details.
+
+            max_allowed_time (Optional[float]):
+                If the method runs longer than this, a ``Timeout`` exception is
+                automatically raised. Unlike the ``timeout` parameter, this
+                value applies to the total method execution time, even if
+                multiple requests are made under the hood.
+
+                Mind that it is not guaranteed that the timeout error is raised
+                at ``max_allowed_time`. It might take longer, for example, if
+                an underlying request takes a lot of time, but the request
+                itself does not timeout, e.g. if a large file is being
+                transmitted. The timout error will be raised after such
+                request completes.
+        """
+
+        async with aiohttp.ClientSession() as self._auth_request_session:
             auth_request = Request(self._auth_request_session)
             self._auth_request = auth_request
 
-        # Use a kwarg for this instead of an attribute to maintain
-        # thread-safety.
-        _credential_refresh_attempt = kwargs.pop("_credential_refresh_attempt", 0)
-        # Make a copy of the headers. They will be modified by the credentials
-        # and we want to pass the original headers if we recurse.
-        request_headers = headers.copy() if headers is not None else {}
-
-        # Do not apply the timeout unconditionally in order to not override the
-        # _auth_request's default timeout.
-        auth_request = (
-            self._auth_request
-            if timeout is None
-            else functools.partial(self._auth_request, timeout=timeout)
-        )
-
-        remaining_time = max_allowed_time
-
-        with requests.TimeoutGuard(remaining_time, asyncio.TimeoutError) as guard:
-            await self.credentials.before_request(
-                auth_request, method, url, request_headers
-            )
-
-        with requests.TimeoutGuard(remaining_time, asyncio.TimeoutError) as guard:
-            response = await super(AuthorizedSession, self).request(
-                method,
-                url,
-                data=data,
-                headers=request_headers,
-                timeout=timeout,
-                **kwargs
-            )
-
-        remaining_time = guard.remaining_timeout
-
-        if (
-            response.status in self._refresh_status_codes
-            and _credential_refresh_attempt < self._max_refresh_attempts
-        ):
-
-            _LOGGER.info(
-                "Refreshing credentials due to a %s response. Attempt %s/%s.",
-                response.status,
-                _credential_refresh_attempt + 1,
-                self._max_refresh_attempts,
-            )
+            # Use a kwarg for this instead of an attribute to maintain
+            # thread-safety.
+            _credential_refresh_attempt = kwargs.pop("_credential_refresh_attempt", 0)
+            # Make a copy of the headers. They will be modified by the credentials
+            # and we want to pass the original headers if we recurse.
+            request_headers = headers.copy() if headers is not None else {}
 
             # Do not apply the timeout unconditionally in order to not override the
             # _auth_request's default timeout.
@@ -273,25 +262,64 @@ class AuthorizedSession(aiohttp.ClientSession):
                 else functools.partial(self._auth_request, timeout=timeout)
             )
 
+            remaining_time = max_allowed_time
+
             with requests.TimeoutGuard(remaining_time, asyncio.TimeoutError) as guard:
-                async with self._refresh_lock:
-                    await self._loop.run_in_executor(
-                        None, self.credentials.refresh, auth_request
-                    )
+                await self.credentials.before_request(
+                    auth_request, method, url, request_headers
+                )
+
+            with requests.TimeoutGuard(remaining_time, asyncio.TimeoutError) as guard:
+                response = await super(AuthorizedSession, self).request(
+                    method,
+                    url,
+                    data=data,
+                    headers=request_headers,
+                    timeout=timeout,
+                    **kwargs
+                )
 
             remaining_time = guard.remaining_timeout
 
-            return await self.request(
-                method,
-                url,
-                data=data,
-                headers=headers,
-                max_allowed_time=remaining_time,
-                timeout=timeout,
-                _credential_refresh_attempt=_credential_refresh_attempt + 1,
-                **kwargs
-            )
+            if (
+                response.status in self._refresh_status_codes
+                and _credential_refresh_attempt < self._max_refresh_attempts
+            ):
 
-        await self._auth_request_session.close()
+                _LOGGER.info(
+                    "Refreshing credentials due to a %s response. Attempt %s/%s.",
+                    response.status,
+                    _credential_refresh_attempt + 1,
+                    self._max_refresh_attempts,
+                )
+
+                # Do not apply the timeout unconditionally in order to not override the
+                # _auth_request's default timeout.
+                auth_request = (
+                    self._auth_request
+                    if timeout is None
+                    else functools.partial(self._auth_request, timeout=timeout)
+                )
+
+                with requests.TimeoutGuard(
+                    remaining_time, asyncio.TimeoutError
+                ) as guard:
+                    async with self._refresh_lock:
+                        await self._loop.run_in_executor(
+                            None, self.credentials.refresh, auth_request
+                        )
+
+                remaining_time = guard.remaining_timeout
+
+                return await self.request(
+                    method,
+                    url,
+                    data=data,
+                    headers=headers,
+                    max_allowed_time=remaining_time,
+                    timeout=timeout,
+                    _credential_refresh_attempt=_credential_refresh_attempt + 1,
+                    **kwargs
+                )
 
         return response
