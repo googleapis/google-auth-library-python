@@ -28,9 +28,9 @@ TEST_DEPENDENCIES = [
     "cryptography",
     "responses",
     "grpcio",
-    "pytest-asyncio",
-    "aioresponses",
 ]
+
+ASYNC_DEPENDENCIES = ["pytest-asyncio", "aioresponses"]
 
 BLACK_VERSION = "black==19.3b0"
 BLACK_PATHS = [
@@ -77,7 +77,7 @@ def blacken(session):
 
 @nox.session(python=["3.6", "3.7", "3.8"])
 def unit(session):
-    session.install(*TEST_DEPENDENCIES)
+    session.install(*(TEST_DEPENDENCIES + ASYNC_DEPENDENCIES))
     session.install(".")
     session.run(
         "pytest",
@@ -91,7 +91,7 @@ def unit(session):
 
 @nox.session(python=["2.7", "3.5"])
 def unit_prev_versions(session):
-    session.install(*TEST_DEPENDENCIES[:-2])
+    session.install(*TEST_DEPENDENCIES)
     session.install(".")
     session.run(
         "pytest", "--cov=google.auth", "--cov=google.oauth2", "--cov=tests", "tests"
