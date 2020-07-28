@@ -32,22 +32,6 @@ TEST_DEPENDENCIES = [
     "aioresponses",
 ]
 
-TEST_DEPENDENCIES2 = [
-    "flask",
-    "freezegun",
-    "mock",
-    "oauth2client",
-    "pyopenssl",
-    "pytest",
-    "pytest-cov",
-    "pytest-localserver",
-    "requests",
-    "urllib3",
-    "cryptography",
-    "responses",
-    "grpcio",
-]
-
 BLACK_VERSION = "black==19.3b0"
 BLACK_PATHS = [
     "google",
@@ -107,7 +91,7 @@ def unit(session):
 
 @nox.session(python=["2.7", "3.5"])
 def unit_prev_versions(session):
-    session.install(*TEST_DEPENDENCIES2)
+    session.install(*TEST_DEPENDENCIES[:-2])
     session.install(".")
     session.run(
         "pytest", "--cov=google.auth", "--cov=google.oauth2", "--cov=tests", "tests"
