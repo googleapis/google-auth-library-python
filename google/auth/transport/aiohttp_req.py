@@ -214,6 +214,38 @@ class AuthorizedSession(aiohttp.ClientSession):
         **kwargs
     ):
 
+        """Implementation of Authorized Session aiohttp request.
+
+        Args:
+            method: The http request method used (e.g. GET, PUT, DELETE)
+
+            url: The url at which the http request is sent.
+
+            data, headers: These fields parallel the associated data and headers
+            fields of a regular http request. Using the aiohttp client session to
+            send the http request allows us to use this parallel corresponding structure
+            in our Authorized Session class.
+
+            timeout (Optional[Union[float, Tuple[float, float]]]):
+                The amount of time in seconds to wait for the server response
+                with each individual request.
+
+                Can also be passed as a tuple (connect_timeout, read_timeout).
+                See :meth:`requests.Session.request` documentation for details.
+
+            max_allowed_time (Optional[float]):
+                If the method runs longer than this, a ``Timeout`` exception is
+                automatically raised. Unlike the ``timeout` parameter, this
+                value applies to the total method execution time, even if
+                multiple requests are made under the hood.
+
+                Mind that it is not guaranteed that the timeout error is raised
+                at ``max_allowed_time`. It might take longer, for example, if
+                an underlying request takes a lot of time, but the request
+                itself does not timeout, e.g. if a large file is being
+                transmitted. The timout error will be raised after such
+                request completes.
+        """
 
         if self._auth_request is None:
             self._auth_request_session = aiohttp.ClientSession()
@@ -293,6 +325,6 @@ class AuthorizedSession(aiohttp.ClientSession):
                 **kwargs
             )
 
-        #await self._auth_request_session.close()
+        await self._auth_request_session.close()
 
         return response
