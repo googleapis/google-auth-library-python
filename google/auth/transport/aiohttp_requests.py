@@ -18,24 +18,13 @@ from __future__ import absolute_import
 
 import asyncio
 import functools
-import logging
-
 
 import aiohttp
 import six
 
-
 from google.auth import exceptions
 from google.auth import transport
 from google.auth.transport import requests
-
-
-_OAUTH_SCOPES = [
-    "https://www.googleapis.com/auth/appengine.apis",
-    "https://www.googleapis.com/auth/userinfo.email",
-]
-
-_LOGGER = logging.getLogger(__name__)
 
 # Timeout can be re-defined depending on async requirement. Currently made 60s more than
 # sync timeout.
@@ -77,7 +66,6 @@ class Request(transport.Request):
     :class:`~google.auth.credentials.Credentials` instance::
 
         import google.auth.transport.aiohttp_requests
-        import aiohttp
 
         request = google.auth.transport.aiohttp_requests.Request()
 
@@ -107,7 +95,7 @@ class Request(transport.Request):
         Make an HTTP request using aiohttp.
 
         Args:
-            url (str): The URI to be requested.
+            url (str): The URL to be requested.
             method (str): The HTTP method to use for the request. Defaults
                 to 'GET'.
             body (bytes): The payload / body in HTTP request.
@@ -128,7 +116,7 @@ class Request(transport.Request):
         try:
             if self.session is None:  # pragma: NO COVER
                 self.session = aiohttp.ClientSession()  # pragma: NO COVER
-            _LOGGER.debug("Making request: %s %s", method, url)
+            requests._LOGGER.debug("Making request: %s %s", method, url)
             response = await self.session.request(
                 method, url, data=body, headers=headers, timeout=timeout, **kwargs
             )
@@ -286,7 +274,7 @@ class AuthorizedSession(aiohttp.ClientSession):
                 and _credential_refresh_attempt < self._max_refresh_attempts
             ):
 
-                _LOGGER.info(
+                requests._LOGGER.info(
                     "Refreshing credentials due to a %s response. Attempt %s/%s.",
                     response.status,
                     _credential_refresh_attempt + 1,
