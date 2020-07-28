@@ -51,19 +51,19 @@ class _Response(transport.Response):
     """
 
     def __init__(self, response):
-        self.response = response
+        self._response = response
 
     @property
     def status(self):
-        return self.response.status
+        return self._response.status
 
     @property
     def headers(self):
-        return self.response.headers
+        return self._response.headers
 
     @property
     def data(self):
-        return self.response.content
+        return self._response.content
 
 
 class Request(transport.Request):
@@ -214,6 +214,7 @@ class AuthorizedSession(aiohttp.ClientSession):
         **kwargs
     ):
 
+
         if self._auth_request is None:
             self._auth_request_session = aiohttp.ClientSession()
             auth_request = Request(self._auth_request_session)
@@ -292,6 +293,6 @@ class AuthorizedSession(aiohttp.ClientSession):
                 **kwargs
             )
 
-        await self._auth_request_session.close()
+        #await self._auth_request_session.close()
 
         return response
