@@ -18,24 +18,13 @@ from __future__ import absolute_import
 
 import asyncio
 import functools
-import logging
-
 
 import aiohttp
 import six
 
-
 from google.auth import exceptions
 from google.auth import transport
 from google.auth.transport import requests
-
-
-_OAUTH_SCOPES = [
-    "https://www.googleapis.com/auth/appengine.apis",
-    "https://www.googleapis.com/auth/userinfo.email",
-]
-
-_LOGGER = logging.getLogger(__name__)
 
 # Timeout can be re-defined depending on async requirement. Currently made 60s more than
 # sync timeout.
@@ -76,10 +65,9 @@ class Request(transport.Request):
     This class can be useful if you want to manually refresh a
     :class:`~google.auth.credentials.Credentials` instance::
 
-        import google.auth.transport.aiohttp_req
-        import aiohttp
+        import google.auth.transport.aiohttp_requests
 
-        request = google.auth.transport.aiohttp_req.Request()
+        request = google.auth.transport.aiohttp_requests.Request()
 
         credentials.refresh(request)
 
@@ -107,7 +95,7 @@ class Request(transport.Request):
         Make an HTTP request using aiohttp.
 
         Args:
-            url (str): The URI to be requested.
+            url (str): The URL to be requested.
             method (str): The HTTP method to use for the request. Defaults
                 to 'GET'.
             body (bytes): The payload / body in HTTP request.
@@ -128,7 +116,7 @@ class Request(transport.Request):
         try:
             if self.session is None:  # pragma: NO COVER
                 self.session = aiohttp.ClientSession()  # pragma: NO COVER
-            _LOGGER.debug("Making request: %s %s", method, url)
+            requests._LOGGER.debug("Making request: %s %s", method, url)
             response = await self.session.request(
                 method, url, data=body, headers=headers, timeout=timeout, **kwargs
             )
@@ -153,9 +141,9 @@ class AuthorizedSession(aiohttp.ClientSession):
     This class is used to perform requests to API endpoints that require
     authorization::
 
-        import google.auth.transport.aiohttp_req
+        import google.auth.transport.aiohttp_requests
 
-        async with aiohttp_req.AuthorizedSession(credentials) as authed_session:
+        async with aiohttp_requests.AuthorizedSession(credentials) as authed_session:
             response = await authed_session.request(
                 'GET', 'https://www.googleapis.com/storage/v1/b')
 
@@ -172,11 +160,11 @@ class AuthorizedSession(aiohttp.ClientSession):
             refresh the credentials and retry the request.
         refresh_timeout (Optional[int]): The timeout value in seconds for
             credential refresh HTTP requests.
-        auth_request (google.auth.transport.aiohttp_req.Request):
+        auth_request (google.auth.transport.aiohttp_requests.Request):
             (Optional) An instance of
-            :class:`~google.auth.transport.aiohttp_req.Request` used when
+            :class:`~google.auth.transport.aiohttp_requests.Request` used when
             refreshing credentials. If not passed,
-            an instance of :class:`~google.auth.transport.aiohttp_req.Request`
+            an instance of :class:`~google.auth.transport.aiohttp_requests.Request`
             is created.
     """
 
@@ -286,7 +274,7 @@ class AuthorizedSession(aiohttp.ClientSession):
                 and _credential_refresh_attempt < self._max_refresh_attempts
             ):
 
-                _LOGGER.info(
+                requests._LOGGER.info(
                     "Refreshing credentials due to a %s response. Attempt %s/%s.",
                     response.status,
                     _credential_refresh_attempt + 1,
