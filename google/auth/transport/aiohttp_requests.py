@@ -76,10 +76,10 @@ class Request(transport.Request):
     This class can be useful if you want to manually refresh a
     :class:`~google.auth.credentials.Credentials` instance::
 
-        import google.auth.transport.aiohttp_req
+        import google.auth.transport.aiohttp_requests
         import aiohttp
 
-        request = google.auth.transport.aiohttp_req.Request()
+        request = google.auth.transport.aiohttp_requests.Request()
 
         credentials.refresh(request)
 
@@ -153,9 +153,9 @@ class AuthorizedSession(aiohttp.ClientSession):
     This class is used to perform requests to API endpoints that require
     authorization::
 
-        import google.auth.transport.aiohttp_req
+        import google.auth.transport.aiohttp_requests
 
-        async with aiohttp_req.AuthorizedSession(credentials) as authed_session:
+        async with aiohttp_requests.AuthorizedSession(credentials) as authed_session:
             response = await authed_session.request(
                 'GET', 'https://www.googleapis.com/storage/v1/b')
 
@@ -172,11 +172,11 @@ class AuthorizedSession(aiohttp.ClientSession):
             refresh the credentials and retry the request.
         refresh_timeout (Optional[int]): The timeout value in seconds for
             credential refresh HTTP requests.
-        auth_request (google.auth.transport.aiohttp_req.Request):
+        auth_request (google.auth.transport.aiohttp_requests.Request):
             (Optional) An instance of
-            :class:`~google.auth.transport.aiohttp_req.Request` used when
+            :class:`~google.auth.transport.aiohttp_requests.Request` used when
             refreshing credentials. If not passed,
-            an instance of :class:`~google.auth.transport.aiohttp_req.Request`
+            an instance of :class:`~google.auth.transport.aiohttp_requests.Request`
             is created.
     """
 
