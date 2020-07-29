@@ -24,10 +24,9 @@ import warnings
 
 import six
 
-from google.auth import _default as default
+from google.auth import _default
 from google.auth import environment_vars
 from google.auth import exceptions
-import google.auth.transport._http_client
 
 
 def _warn_about_problematic_credentials(credentials):
@@ -40,7 +39,7 @@ def _warn_about_problematic_credentials(credentials):
     from google.auth import _cloud_sdk
 
     if credentials.client_id == _cloud_sdk.CLOUD_SDK_CLIENT_ID:
-        warnings.warn(default._CLOUD_SDK_CREDENTIALS_WARNING)
+        warnings.warn(_default._CLOUD_SDK_CREDENTIALS_WARNING)
 
 
 def load_credentials_from_file(filename, scopes=None, quota_project_id=None):
@@ -84,7 +83,7 @@ def load_credentials_from_file(filename, scopes=None, quota_project_id=None):
     # credentials file or an authorized user credentials file.
     credential_type = info.get("type")
 
-    if credential_type == default._AUTHORIZED_USER_TYPE:
+    if credential_type == _default._AUTHORIZED_USER_TYPE:
         from google.oauth2 import credentials_async as credentials
 
         try:
@@ -99,7 +98,7 @@ def load_credentials_from_file(filename, scopes=None, quota_project_id=None):
             _warn_about_problematic_credentials(credentials)
         return credentials, None
 
-    elif credential_type == default._SERVICE_ACCOUNT_TYPE:
+    elif credential_type == _default._SERVICE_ACCOUNT_TYPE:
         from google.oauth2 import service_account_async as service_account
 
         try:
@@ -116,7 +115,7 @@ def load_credentials_from_file(filename, scopes=None, quota_project_id=None):
         raise exceptions.DefaultCredentialsError(
             "The file {file} does not have a valid type. "
             "Type is {type}, expected one of {valid_types}.".format(
-                file=filename, type=credential_type, valid_types=default._VALID_TYPES
+                file=filename, type=credential_type, valid_types=_default._VALID_TYPES
             )
         )
 
@@ -159,17 +158,8 @@ def _get_gae_credentials():
     """Gets Google App Engine App Identity credentials and project ID."""
     # While this library is normally bundled with app_engine, there are
     # some cases where it's not available, so we tolerate ImportError.
-    try:
-        import google.auth.app_engine as app_engine
-    except ImportError:
-        return None, None
 
-    try:
-        credentials = app_engine.Credentials()
-        project_id = app_engine.get_project_id()
-        return credentials, project_id
-    except EnvironmentError:
-        return None, None
+    return _default._get_gae_credentials()
 
 
 def _get_gce_credentials(request=None):
@@ -181,25 +171,8 @@ def _get_gce_credentials(request=None):
 
     # While this library is normally bundled with compute_engine, there are
     # some cases where it's not available, so we tolerate ImportError.
-    try:
-        from google.auth import compute_engine
-        from google.auth.compute_engine import _metadata
-    except ImportError:
-        return None, None
 
-    if request is None:
-        request = google.auth.transport._http_client.Request()
-
-    if _metadata.ping(request=request):
-        # Get the project ID.
-        try:
-            project_id = _metadata.get_project_id(request=request)
-        except exceptions.TransportError:
-            project_id = None
-
-        return compute_engine.Credentials(), project_id
-    else:
-        return None, None
+    return _default._get_gce_credentials(request)
 
 
 def default_async(scopes=None, request=None, quota_project_id=None):
@@ -296,7 +269,7 @@ def default_async(scopes=None, request=None, quota_project_id=None):
             ).with_quota_project(quota_project_id)
             effective_project_id = explicit_project_id or project_id
             if not effective_project_id:
-                default._LOGGER.warning(
+                _default._LOGGER.warning(
                     "No project ID could be determined. Consider running "
                     "`gcloud config set project` or setting the %s "
                     "environment variable",
@@ -304,4 +277,4 @@ def default_async(scopes=None, request=None, quota_project_id=None):
                 )
             return credentials, effective_project_id
 
-    raise exceptions.DefaultCredentialsError(default._HELP_MESSAGE)
+    raise exceptions.DefaultCredentialsError(_default._HELP_MESSAGE)
