@@ -26,28 +26,7 @@ from google.auth import environment_vars
 from google.auth import exceptions
 from google.oauth2 import service_account_async as service_account
 import google.oauth2.credentials
-
-
-DATA_DIR = os.path.join(os.path.abspath(os.path.join(__file__, "../..")), "tests/data")
-AUTHORIZED_USER_FILE = os.path.join(DATA_DIR, "authorized_user.json")
-
-with open(AUTHORIZED_USER_FILE) as fh:
-    AUTHORIZED_USER_FILE_DATA = json.load(fh)
-
-AUTHORIZED_USER_CLOUD_SDK_FILE = os.path.join(
-    DATA_DIR, "authorized_user_cloud_sdk.json"
-)
-
-AUTHORIZED_USER_CLOUD_SDK_WITH_QUOTA_PROJECT_ID_FILE = os.path.join(
-    DATA_DIR, "authorized_user_cloud_sdk_with_quota_project_id.json"
-)
-
-SERVICE_ACCOUNT_FILE = os.path.join(DATA_DIR, "service_account.json")
-
-CLIENT_SECRETS_FILE = os.path.join(DATA_DIR, "client_secrets.json")
-
-with open(SERVICE_ACCOUNT_FILE) as fh:
-    SERVICE_ACCOUNT_FILE_DATA = json.load(fh)
+from tests import test__default as test_default
 
 MOCK_CREDENTIALS = mock.Mock(spec=credentials.Credentials)
 MOCK_CREDENTIALS.with_quota_project.return_value = MOCK_CREDENTIALS
@@ -87,7 +66,9 @@ def test_load_credentials_from_file_invalid_type(tmpdir):
 
 
 def test_load_credentials_from_file_authorized_user():
-    credentials, project_id = _default.load_credentials_from_file(AUTHORIZED_USER_FILE)
+    credentials, project_id = _default.load_credentials_from_file(
+        test_default.AUTHORIZED_USER_FILE
+    )
     assert isinstance(credentials, google.oauth2.credentials_async.Credentials)
     assert project_id is None
 
@@ -96,7 +77,7 @@ def test_load_credentials_from_file_no_type(tmpdir):
     # use the client_secrets.json, which is valid json but not a
     # loadable credentials type
     with pytest.raises(exceptions.DefaultCredentialsError) as excinfo:
-        _default.load_credentials_from_file(CLIENT_SECRETS_FILE)
+        _default.load_credentials_from_file(test_default.CLIENT_SECRETS_FILE)
 
     assert excinfo.match(r"does not have a valid type")
     assert excinfo.match(r"Type is None")
@@ -116,14 +97,14 @@ def test_load_credentials_from_file_authorized_user_bad_format(tmpdir):
 def test_load_credentials_from_file_authorized_user_cloud_sdk():
     with pytest.warns(UserWarning, match="Cloud SDK"):
         credentials, project_id = _default.load_credentials_from_file(
-            AUTHORIZED_USER_CLOUD_SDK_FILE
+            test_default.AUTHORIZED_USER_CLOUD_SDK_FILE
         )
     assert isinstance(credentials, google.oauth2.credentials_async.Credentials)
     assert project_id is None
 
     # No warning if the json file has quota project id.
     credentials, project_id = _default.load_credentials_from_file(
-        AUTHORIZED_USER_CLOUD_SDK_WITH_QUOTA_PROJECT_ID_FILE
+        test_default.AUTHORIZED_USER_CLOUD_SDK_WITH_QUOTA_PROJECT_ID_FILE
     )
     assert isinstance(credentials, google.oauth2.credentials_async.Credentials)
     assert project_id is None
@@ -132,7 +113,7 @@ def test_load_credentials_from_file_authorized_user_cloud_sdk():
 def test_load_credentials_from_file_authorized_user_cloud_sdk_with_scopes():
     with pytest.warns(UserWarning, match="Cloud SDK"):
         credentials, project_id = _default.load_credentials_from_file(
-            AUTHORIZED_USER_CLOUD_SDK_FILE,
+            test_default.AUTHORIZED_USER_CLOUD_SDK_FILE,
             scopes=["https://www.google.com/calendar/feeds"],
         )
     assert isinstance(credentials, google.oauth2.credentials_async.Credentials)
@@ -142,7 +123,7 @@ def test_load_credentials_from_file_authorized_user_cloud_sdk_with_scopes():
 
 def test_load_credentials_from_file_authorized_user_cloud_sdk_with_quota_project():
     credentials, project_id = _default.load_credentials_from_file(
-        AUTHORIZED_USER_CLOUD_SDK_FILE, quota_project_id="project-foo"
+        test_default.AUTHORIZED_USER_CLOUD_SDK_FILE, quota_project_id="project-foo"
     )
 
     assert isinstance(credentials, google.oauth2.credentials_async.Credentials)
@@ -151,17 +132,20 @@ def test_load_credentials_from_file_authorized_user_cloud_sdk_with_quota_project
 
 
 def test_load_credentials_from_file_service_account():
-    credentials, project_id = _default.load_credentials_from_file(SERVICE_ACCOUNT_FILE)
+    credentials, project_id = _default.load_credentials_from_file(
+        test_default.SERVICE_ACCOUNT_FILE
+    )
     assert isinstance(credentials, service_account.Credentials)
-    assert project_id == SERVICE_ACCOUNT_FILE_DATA["project_id"]
+    assert project_id == test_default.SERVICE_ACCOUNT_FILE_DATA["project_id"]
 
 
 def test_load_credentials_from_file_service_account_with_scopes():
     credentials, project_id = _default.load_credentials_from_file(
-        SERVICE_ACCOUNT_FILE, scopes=["https://www.google.com/calendar/feeds"]
+        test_default.SERVICE_ACCOUNT_FILE,
+        scopes=["https://www.google.com/calendar/feeds"],
     )
     assert isinstance(credentials, service_account.Credentials)
-    assert project_id == SERVICE_ACCOUNT_FILE_DATA["project_id"]
+    assert project_id == test_default.SERVICE_ACCOUNT_FILE_DATA["project_id"]
     assert credentials.scopes == ["https://www.google.com/calendar/feeds"]
 
 
@@ -208,13 +192,13 @@ def test__get_explicit_environ_credentials_no_project_id(load, monkeypatch):
     "google.auth._cloud_sdk.get_application_default_credentials_path", autospec=True
 )
 def test__get_gcloud_sdk_credentials(get_adc_path, load):
-    get_adc_path.return_value = SERVICE_ACCOUNT_FILE
+    get_adc_path.return_value = test_default.SERVICE_ACCOUNT_FILE
 
     credentials, project_id = _default._get_gcloud_sdk_credentials()
 
     assert credentials is MOCK_CREDENTIALS
     assert project_id is mock.sentinel.project_id
-    load.assert_called_with(SERVICE_ACCOUNT_FILE)
+    load.assert_called_with(test_default.SERVICE_ACCOUNT_FILE)
 
 
 @mock.patch(

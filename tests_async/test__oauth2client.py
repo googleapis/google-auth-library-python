@@ -13,7 +13,6 @@
 # limitations under the License.
 
 import datetime
-import os
 import sys
 
 import mock
@@ -24,10 +23,7 @@ import pytest
 from six.moves import reload_module
 
 from google.auth import _oauth2client_async as _oauth2client
-
-
-DATA_DIR = os.path.join(os.path.abspath(os.path.join(__file__, "../..")), "tests/data")
-SERVICE_ACCOUNT_JSON_FILE = os.path.join(DATA_DIR, "service_account.json")
+from tests import test__oauth2client as test_oauth2client
 
 
 def test__convert_oauth2_credentials():
@@ -54,7 +50,9 @@ def test__convert_oauth2_credentials():
 
 def test__convert_service_account_credentials():
     old_class = oauth2client.service_account.ServiceAccountCredentials
-    old_credentials = old_class.from_json_keyfile_name(SERVICE_ACCOUNT_JSON_FILE)
+    old_credentials = old_class.from_json_keyfile_name(
+        test_oauth2client.SERVICE_ACCOUNT_JSON_FILE
+    )
 
     new_credentials = _oauth2client._convert_service_account_credentials(
         old_credentials
@@ -69,7 +67,9 @@ def test__convert_service_account_credentials():
 
 def test__convert_service_account_credentials_with_jwt():
     old_class = oauth2client.service_account._JWTAccessCredentials
-    old_credentials = old_class.from_json_keyfile_name(SERVICE_ACCOUNT_JSON_FILE)
+    old_credentials = old_class.from_json_keyfile_name(
+        test_oauth2client.SERVICE_ACCOUNT_JSON_FILE
+    )
 
     new_credentials = _oauth2client._convert_service_account_credentials(
         old_credentials

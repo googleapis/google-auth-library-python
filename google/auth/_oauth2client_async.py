@@ -24,12 +24,15 @@ from __future__ import absolute_import
 import six
 
 from google.auth import _helpers
+from google.auth import _oauth2client
 import google.auth.app_engine
 import google.auth.compute_engine
 import google.oauth2.credentials
 import google.oauth2.service_account_async
 
+
 try:
+    import oauth2client
     import oauth2client.client
     import oauth2client.contrib.gce
     import oauth2client.service_account
@@ -42,9 +45,6 @@ try:
     _HAS_APPENGINE = True
 except ImportError:
     _HAS_APPENGINE = False
-
-
-_CONVERT_ERROR_TMPL = "Unable to convert {} to a google-auth credentials class."
 
 
 def _convert_oauth2_credentials(credentials):
@@ -167,5 +167,7 @@ def convert(credentials):
     try:
         return _CLASS_CONVERSION_MAP[credentials_class](credentials)
     except KeyError as caught_exc:
-        new_exc = ValueError(_CONVERT_ERROR_TMPL.format(credentials_class))
+        new_exc = ValueError(
+            _oauth2client._CONVERT_ERROR_TMPL.format(credentials_class)
+        )
         six.raise_from(new_exc, caught_exc)

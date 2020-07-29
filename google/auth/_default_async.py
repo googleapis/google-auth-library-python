@@ -1,4 +1,4 @@
-# Copyright 2015 Google Inc.
+# Copyright 2020 Google Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,41 +19,15 @@ Implements application default credentials and project ID detection.
 
 import io
 import json
-import logging
 import os
 import warnings
 
 import six
 
+from google.auth import _default as default
 from google.auth import environment_vars
 from google.auth import exceptions
 import google.auth.transport._http_client
-
-_LOGGER = logging.getLogger(__name__)
-
-# Valid types accepted for file-based credentials.
-_AUTHORIZED_USER_TYPE = "authorized_user"
-_SERVICE_ACCOUNT_TYPE = "service_account"
-_VALID_TYPES = (_AUTHORIZED_USER_TYPE, _SERVICE_ACCOUNT_TYPE)
-
-# Help message when no credentials can be found.
-_HELP_MESSAGE = """\
-Could not automatically determine credentials. Please set {env} or \
-explicitly create credentials and re-run the application. For more \
-information, please see \
-https://cloud.google.com/docs/authentication/getting-started
-""".format(
-    env=environment_vars.CREDENTIALS
-).strip()
-
-# Warning when using Cloud SDK user credentials
-_CLOUD_SDK_CREDENTIALS_WARNING = """\
-Your application has authenticated using end user credentials from Google \
-Cloud SDK without a quota project. You might receive a "quota exceeded" \
-or "API not enabled" error. We recommend you rerun \
-`gcloud auth application-default login` and make sure a quota project is \
-added. Or you can use service accounts instead. For more information \
-about service accounts, see https://cloud.google.com/docs/authentication/"""
 
 
 def _warn_about_problematic_credentials(credentials):
@@ -66,7 +40,7 @@ def _warn_about_problematic_credentials(credentials):
     from google.auth import _cloud_sdk
 
     if credentials.client_id == _cloud_sdk.CLOUD_SDK_CLIENT_ID:
-        warnings.warn(_CLOUD_SDK_CREDENTIALS_WARNING)
+        warnings.warn(default._CLOUD_SDK_CREDENTIALS_WARNING)
 
 
 def load_credentials_from_file(filename, scopes=None, quota_project_id=None):
@@ -110,7 +84,7 @@ def load_credentials_from_file(filename, scopes=None, quota_project_id=None):
     # credentials file or an authorized user credentials file.
     credential_type = info.get("type")
 
-    if credential_type == _AUTHORIZED_USER_TYPE:
+    if credential_type == default._AUTHORIZED_USER_TYPE:
         from google.oauth2 import credentials_async as credentials
 
         try:
@@ -125,7 +99,7 @@ def load_credentials_from_file(filename, scopes=None, quota_project_id=None):
             _warn_about_problematic_credentials(credentials)
         return credentials, None
 
-    elif credential_type == _SERVICE_ACCOUNT_TYPE:
+    elif credential_type == default._SERVICE_ACCOUNT_TYPE:
         from google.oauth2 import service_account_async as service_account
 
         try:
@@ -142,7 +116,7 @@ def load_credentials_from_file(filename, scopes=None, quota_project_id=None):
         raise exceptions.DefaultCredentialsError(
             "The file {file} does not have a valid type. "
             "Type is {type}, expected one of {valid_types}.".format(
-                file=filename, type=credential_type, valid_types=_VALID_TYPES
+                file=filename, type=credential_type, valid_types=default._VALID_TYPES
             )
         )
 
@@ -322,7 +296,7 @@ def default_async(scopes=None, request=None, quota_project_id=None):
             ).with_quota_project(quota_project_id)
             effective_project_id = explicit_project_id or project_id
             if not effective_project_id:
-                _LOGGER.warning(
+                default._LOGGER.warning(
                     "No project ID could be determined. Consider running "
                     "`gcloud config set project` or setting the %s "
                     "environment variable",
@@ -330,4 +304,4 @@ def default_async(scopes=None, request=None, quota_project_id=None):
                 )
             return credentials, effective_project_id
 
-    raise exceptions.DefaultCredentialsError(_HELP_MESSAGE)
+    raise exceptions.DefaultCredentialsError(default._HELP_MESSAGE)

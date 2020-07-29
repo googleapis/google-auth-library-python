@@ -1,4 +1,4 @@
-# Copyright 2016 Google LLC
+# Copyright 2020 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,7 +14,6 @@
 
 import datetime
 import json
-import os
 
 import mock
 import pytest
@@ -23,29 +22,11 @@ from six.moves import http_client
 from six.moves import urllib
 
 from google.auth import _helpers
-from google.auth import crypt
 from google.auth import exceptions
 from google.auth import jwt_async as jwt
+from google.oauth2 import _client as sync_client
 from google.oauth2 import _client_async as _client
-
-
-DATA_DIR = os.path.join(
-    os.path.abspath(os.path.join(__file__, "../../..")), "tests/data"
-)
-
-with open(os.path.join(DATA_DIR, "privatekey.pem"), "rb") as fh:
-    PRIVATE_KEY_BYTES = fh.read()
-
-SIGNER = crypt.RSASigner.from_string(PRIVATE_KEY_BYTES, "1")
-
-SCOPES_AS_LIST = [
-    "https://www.googleapis.com/auth/pubsub",
-    "https://www.googleapis.com/auth/logging.write",
-]
-SCOPES_AS_STRING = (
-    "https://www.googleapis.com/auth/pubsub"
-    " https://www.googleapis.com/auth/logging.write"
-)
+from tests.oauth2 import test__client as test_client
 
 
 def test__handle_error_response():
@@ -158,7 +139,8 @@ async def test_jwt_grant(utcnow):
 
     # Check request call
     verify_request_params(
-        request, {"grant_type": _client._JWT_GRANT_TYPE, "assertion": "assertion_value"}
+        request,
+        {"grant_type": sync_client._JWT_GRANT_TYPE, "assertion": "assertion_value"},
     )
 
     # Check result
@@ -185,7 +167,7 @@ async def test_jwt_grant_no_access_token():
 async def test_id_token_jwt_grant():
     now = _helpers.utcnow()
     id_token_expiry = _helpers.datetime_to_secs(now)
-    id_token = jwt.encode(SIGNER, {"exp": id_token_expiry}).decode("utf-8")
+    id_token = jwt.encode(test_client.SIGNER, {"exp": id_token_expiry}).decode("utf-8")
     request = make_request({"id_token": id_token, "extra": "data"})
 
     token, expiry, extra_data = await _client.id_token_jwt_grant(
@@ -194,7 +176,8 @@ async def test_id_token_jwt_grant():
 
     # Check request call
     verify_request_params(
-        request, {"grant_type": _client._JWT_GRANT_TYPE, "assertion": "assertion_value"}
+        request,
+        {"grant_type": sync_client._JWT_GRANT_TYPE, "assertion": "assertion_value"},
     )
 
     # Check result
@@ -241,7 +224,7 @@ async def test_refresh_grant(unused_utcnow):
     verify_request_params(
         request,
         {
-            "grant_type": _client._REFRESH_GRANT_TYPE,
+            "grant_type": sync_client._REFRESH_GRANT_TYPE,
             "refresh_token": "refresh_token",
             "client_id": "client_id",
             "client_secret": "client_secret",
@@ -264,7 +247,7 @@ async def test_refresh_grant_with_scopes(unused_utcnow):
             "refresh_token": "new_refresh_token",
             "expires_in": 500,
             "extra": "data",
-            "scope": SCOPES_AS_STRING,
+            "scope": test_client.SCOPES_AS_STRING,
         }
     )
 
@@ -274,18 +257,18 @@ async def test_refresh_grant_with_scopes(unused_utcnow):
         "refresh_token",
         "client_id",
         "client_secret",
-        SCOPES_AS_LIST,
+        test_client.SCOPES_AS_LIST,
     )
 
     # Check request call.
     verify_request_params(
         request,
         {
-            "grant_type": _client._REFRESH_GRANT_TYPE,
+            "grant_type": sync_client._REFRESH_GRANT_TYPE,
             "refresh_token": "refresh_token",
             "client_id": "client_id",
             "client_secret": "client_secret",
-            "scope": SCOPES_AS_STRING,
+            "scope": test_client.SCOPES_AS_STRING,
         },
     )
 

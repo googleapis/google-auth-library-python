@@ -1,4 +1,4 @@
-# Copyright 2016 Google LLC
+# Copyright 2020 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,8 +13,6 @@
 # limitations under the License.
 
 import datetime
-import json
-import os
 
 import mock
 import pytest
@@ -24,27 +22,7 @@ from google.auth import crypt
 from google.auth import jwt
 from google.auth import transport
 from google.oauth2 import service_account_async as service_account
-
-
-DATA_DIR = os.path.join(
-    os.path.abspath(os.path.join(__file__, "../../..")), "tests/data"
-)
-
-with open(os.path.join(DATA_DIR, "privatekey.pem"), "rb") as fh:
-    PRIVATE_KEY_BYTES = fh.read()
-
-with open(os.path.join(DATA_DIR, "public_cert.pem"), "rb") as fh:
-    PUBLIC_CERT_BYTES = fh.read()
-
-with open(os.path.join(DATA_DIR, "other_cert.pem"), "rb") as fh:
-    OTHER_CERT_BYTES = fh.read()
-
-SERVICE_ACCOUNT_JSON_FILE = os.path.join(DATA_DIR, "service_account.json")
-
-with open(SERVICE_ACCOUNT_JSON_FILE, "r") as fh:
-    SERVICE_ACCOUNT_INFO = json.load(fh)
-
-SIGNER = crypt.RSASigner.from_string(PRIVATE_KEY_BYTES, "1")
+from tests.oauth2 import test_service_account
 
 
 class TestCredentials(object):
@@ -54,20 +32,29 @@ class TestCredentials(object):
     @classmethod
     def make_credentials(cls):
         return service_account.Credentials(
-            SIGNER, cls.SERVICE_ACCOUNT_EMAIL, cls.TOKEN_URI
+            test_service_account.SIGNER, cls.SERVICE_ACCOUNT_EMAIL, cls.TOKEN_URI
         )
 
     def test_from_service_account_info(self):
         credentials = service_account.Credentials.from_service_account_info(
-            SERVICE_ACCOUNT_INFO
+            test_service_account.SERVICE_ACCOUNT_INFO
         )
 
-        assert credentials._signer.key_id == SERVICE_ACCOUNT_INFO["private_key_id"]
-        assert credentials.service_account_email == SERVICE_ACCOUNT_INFO["client_email"]
-        assert credentials._token_uri == SERVICE_ACCOUNT_INFO["token_uri"]
+        assert (
+            credentials._signer.key_id
+            == test_service_account.SERVICE_ACCOUNT_INFO["private_key_id"]
+        )
+        assert (
+            credentials.service_account_email
+            == test_service_account.SERVICE_ACCOUNT_INFO["client_email"]
+        )
+        assert (
+            credentials._token_uri
+            == test_service_account.SERVICE_ACCOUNT_INFO["token_uri"]
+        )
 
     def test_from_service_account_info_args(self):
-        info = SERVICE_ACCOUNT_INFO.copy()
+        info = test_service_account.SERVICE_ACCOUNT_INFO.copy()
         scopes = ["email", "profile"]
         subject = "subject"
         additional_claims = {"meta": "data"}
@@ -85,10 +72,10 @@ class TestCredentials(object):
         assert credentials._additional_claims == additional_claims
 
     def test_from_service_account_file(self):
-        info = SERVICE_ACCOUNT_INFO.copy()
+        info = test_service_account.SERVICE_ACCOUNT_INFO.copy()
 
         credentials = service_account.Credentials.from_service_account_file(
-            SERVICE_ACCOUNT_JSON_FILE
+            test_service_account.SERVICE_ACCOUNT_JSON_FILE
         )
 
         assert credentials.service_account_email == info["client_email"]
@@ -97,13 +84,13 @@ class TestCredentials(object):
         assert credentials._token_uri == info["token_uri"]
 
     def test_from_service_account_file_args(self):
-        info = SERVICE_ACCOUNT_INFO.copy()
+        info = test_service_account.SERVICE_ACCOUNT_INFO.copy()
         scopes = ["email", "profile"]
         subject = "subject"
         additional_claims = {"meta": "data"}
 
         credentials = service_account.Credentials.from_service_account_file(
-            SERVICE_ACCOUNT_JSON_FILE,
+            test_service_account.SERVICE_ACCOUNT_JSON_FILE,
             subject=subject,
             scopes=scopes,
             additional_claims=additional_claims,
@@ -129,7 +116,9 @@ class TestCredentials(object):
         credentials = self.make_credentials()
         to_sign = b"123"
         signature = credentials.sign_bytes(to_sign)
-        assert crypt.verify_signature(to_sign, signature, PUBLIC_CERT_BYTES)
+        assert crypt.verify_signature(
+            to_sign, signature, test_service_account.PUBLIC_CERT_BYTES
+        )
 
     def test_signer(self):
         credentials = self.make_credentials()
@@ -161,7 +150,7 @@ class TestCredentials(object):
     def test__make_authorization_grant_assertion(self):
         credentials = self.make_credentials()
         token = credentials._make_authorization_grant_assertion()
-        payload = jwt.decode(token, PUBLIC_CERT_BYTES)
+        payload = jwt.decode(token, test_service_account.PUBLIC_CERT_BYTES)
         assert payload["iss"] == self.SERVICE_ACCOUNT_EMAIL
         assert payload["aud"] == self.TOKEN_URI
 
@@ -170,7 +159,7 @@ class TestCredentials(object):
         scopes = ["email", "profile"]
         credentials = credentials.with_scopes(scopes)
         token = credentials._make_authorization_grant_assertion()
-        payload = jwt.decode(token, PUBLIC_CERT_BYTES)
+        payload = jwt.decode(token, test_service_account.PUBLIC_CERT_BYTES)
         assert payload["scope"] == "email profile"
 
     def test__make_authorization_grant_assertion_subject(self):
@@ -178,7 +167,7 @@ class TestCredentials(object):
         subject = "user@example.com"
         credentials = credentials.with_subject(subject)
         token = credentials._make_authorization_grant_assertion()
-        payload = jwt.decode(token, PUBLIC_CERT_BYTES)
+        payload = jwt.decode(token, test_service_account.PUBLIC_CERT_BYTES)
         assert payload["sub"] == subject
 
     @mock.patch("google.oauth2._client_async.jwt_grant", autospec=True)
@@ -202,7 +191,7 @@ class TestCredentials(object):
         called_request, token_uri, assertion = jwt_grant.call_args[0]
         assert called_request == request
         assert token_uri == credentials._token_uri
-        assert jwt.decode(assertion, PUBLIC_CERT_BYTES)
+        assert jwt.decode(assertion, test_service_account.PUBLIC_CERT_BYTES)
         # No further assertion done on the token, as there are separate tests
         # for checking the authorization grant assertion.
 
@@ -246,24 +235,38 @@ class TestIDTokenCredentials(object):
     @classmethod
     def make_credentials(cls):
         return service_account.IDTokenCredentials(
-            SIGNER, cls.SERVICE_ACCOUNT_EMAIL, cls.TOKEN_URI, cls.TARGET_AUDIENCE
+            test_service_account.SIGNER,
+            cls.SERVICE_ACCOUNT_EMAIL,
+            cls.TOKEN_URI,
+            cls.TARGET_AUDIENCE,
         )
 
     def test_from_service_account_info(self):
         credentials = service_account.IDTokenCredentials.from_service_account_info(
-            SERVICE_ACCOUNT_INFO, target_audience=self.TARGET_AUDIENCE
+            test_service_account.SERVICE_ACCOUNT_INFO,
+            target_audience=self.TARGET_AUDIENCE,
         )
 
-        assert credentials._signer.key_id == SERVICE_ACCOUNT_INFO["private_key_id"]
-        assert credentials.service_account_email == SERVICE_ACCOUNT_INFO["client_email"]
-        assert credentials._token_uri == SERVICE_ACCOUNT_INFO["token_uri"]
+        assert (
+            credentials._signer.key_id
+            == test_service_account.SERVICE_ACCOUNT_INFO["private_key_id"]
+        )
+        assert (
+            credentials.service_account_email
+            == test_service_account.SERVICE_ACCOUNT_INFO["client_email"]
+        )
+        assert (
+            credentials._token_uri
+            == test_service_account.SERVICE_ACCOUNT_INFO["token_uri"]
+        )
         assert credentials._target_audience == self.TARGET_AUDIENCE
 
     def test_from_service_account_file(self):
-        info = SERVICE_ACCOUNT_INFO.copy()
+        info = test_service_account.SERVICE_ACCOUNT_INFO.copy()
 
         credentials = service_account.IDTokenCredentials.from_service_account_file(
-            SERVICE_ACCOUNT_JSON_FILE, target_audience=self.TARGET_AUDIENCE
+            test_service_account.SERVICE_ACCOUNT_JSON_FILE,
+            target_audience=self.TARGET_AUDIENCE,
         )
 
         assert credentials.service_account_email == info["client_email"]
@@ -281,7 +284,9 @@ class TestIDTokenCredentials(object):
         credentials = self.make_credentials()
         to_sign = b"123"
         signature = credentials.sign_bytes(to_sign)
-        assert crypt.verify_signature(to_sign, signature, PUBLIC_CERT_BYTES)
+        assert crypt.verify_signature(
+            to_sign, signature, test_service_account.PUBLIC_CERT_BYTES
+        )
 
     def test_signer(self):
         credentials = self.make_credentials()
@@ -304,7 +309,7 @@ class TestIDTokenCredentials(object):
     def test__make_authorization_grant_assertion(self):
         credentials = self.make_credentials()
         token = credentials._make_authorization_grant_assertion()
-        payload = jwt.decode(token, PUBLIC_CERT_BYTES)
+        payload = jwt.decode(token, test_service_account.PUBLIC_CERT_BYTES)
         assert payload["iss"] == self.SERVICE_ACCOUNT_EMAIL
         assert payload["aud"] == self.TOKEN_URI
         assert payload["target_audience"] == self.TARGET_AUDIENCE
@@ -331,7 +336,7 @@ class TestIDTokenCredentials(object):
         called_request, token_uri, assertion = id_token_jwt_grant.call_args[0]
         assert called_request == request
         assert token_uri == credentials._token_uri
-        assert jwt.decode(assertion, PUBLIC_CERT_BYTES)
+        assert jwt.decode(assertion, test_service_account.PUBLIC_CERT_BYTES)
         # No further assertion done on the token, as there are separate tests
         # for checking the authorization grant assertion.
 

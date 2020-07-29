@@ -38,10 +38,6 @@ from google.oauth2 import _client_async as _client
 from google.oauth2 import credentials as oauth2_credentials
 
 
-# The Google OAuth 2.0 token endpoint. Used for authorized user credentials.
-_GOOGLE_OAUTH2_TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token"
-
-
 class Credentials(oauth2_credentials.Credentials):
     """Credentials using OAuth 2.0 access and refresh tokens.
 

@@ -27,8 +27,6 @@ from google.auth import credentials_async
 from google.oauth2 import _client_async
 from google.oauth2 import service_account
 
-_DEFAULT_TOKEN_LIFETIME_SECS = 3600  # 1 hour in seconds
-
 
 class Credentials(
     service_account.Credentials, credentials_async.Scoped, credentials_async.Credentials

@@ -22,19 +22,19 @@ See `rfc7519`_ for more details on JWTs.
 To encode a JWT use :func:`encode`::
 
     from google.auth import crypt
-    from google.auth import jwt
+    from google.auth import jwt_async
 
     signer = crypt.Signer(private_key)
     payload = {'some': 'payload'}
-    encoded = jwt.encode(signer, payload)
+    encoded = jwt_async.encode(signer, payload)
 
 To decode a JWT and verify claims use :func:`decode`::
 
-    claims = jwt.decode(encoded, certs=public_certs)
+    claims = jwt_async.decode(encoded, certs=public_certs)
 
 You can also skip verification::
 
-    claims = jwt.decode(encoded, verify=False)
+    claims = jwt_async.decode(encoded, verify=False)
 
 .. _rfc7519: https://tools.ietf.org/html/rfc7519
 
@@ -59,14 +59,6 @@ try:
     from google.auth.crypt import es256
 except ImportError:  # pragma: NO COVER
     es256 = None
-
-_DEFAULT_TOKEN_LIFETIME_SECS = 3600  # 1 hour in seconds
-_DEFAULT_MAX_CACHE_SIZE = 10
-_ALGORITHM_TO_VERIFIER_CLASS = {"RS256": crypt.RSAVerifier}
-_CRYPTOGRAPHY_BASED_ALGORITHMS = frozenset(["ES256"])
-
-if es256 is not None:  # pragma: NO COVER
-    _ALGORITHM_TO_VERIFIER_CLASS["ES256"] = es256.ES256Verifier
 
 
 def encode(signer, payload, header=None, key_id=None):
@@ -234,9 +226,9 @@ def decode(token, certs=None, verify=True, audience=None):
     key_id = header.get("kid")
 
     try:
-        verifier_cls = _ALGORITHM_TO_VERIFIER_CLASS[key_alg]
+        verifier_cls = jwt._ALGORITHM_TO_VERIFIER_CLASS[key_alg]
     except KeyError as exc:
-        if key_alg in _CRYPTOGRAPHY_BASED_ALGORITHMS:
+        if key_alg in jwt._CRYPTOGRAPHY_BASED_ALGORITHMS:
             six.raise_from(
                 ValueError(
                     "The key algorithm {} requires the cryptography package "

@@ -1,4 +1,4 @@
-# Copyright 2016 Google LLC
+# Copyright 2020 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -33,10 +33,7 @@ from six.moves import urllib
 from google.auth import _helpers
 from google.auth import exceptions
 from google.auth import jwt
-
-_URLENCODED_CONTENT_TYPE = "application/x-www-form-urlencoded"
-_JWT_GRANT_TYPE = "urn:ietf:params:oauth:grant-type:jwt-bearer"
-_REFRESH_GRANT_TYPE = "refresh_token"
+from google.oauth2 import _client as client
 
 
 def _handle_error_response(response_body):
@@ -96,7 +93,7 @@ async def _token_endpoint_request(request, token_uri, body):
             an error.
     """
     body = urllib.parse.urlencode(body).encode("utf-8")
-    headers = {"content-type": _URLENCODED_CONTENT_TYPE}
+    headers = {"content-type": client._URLENCODED_CONTENT_TYPE}
 
     retry = 0
     # retry to fetch token for maximum of two times if any internal failure
@@ -162,7 +159,7 @@ async def jwt_grant(request, token_uri, assertion):
 
     .. _rfc7523 section 4: https://tools.ietf.org/html/rfc7523#section-4
     """
-    body = {"assertion": assertion, "grant_type": _JWT_GRANT_TYPE}
+    body = {"assertion": assertion, "grant_type": client._JWT_GRANT_TYPE}
 
     response_data = await _token_endpoint_request(request, token_uri, body)
 
@@ -202,7 +199,7 @@ async def id_token_jwt_grant(request, token_uri, assertion):
         google.auth.exceptions.RefreshError: If the token endpoint returned
             an error.
     """
-    body = {"assertion": assertion, "grant_type": _JWT_GRANT_TYPE}
+    body = {"assertion": assertion, "grant_type": client._JWT_GRANT_TYPE}
 
     response_data = await _token_endpoint_request(request, token_uri, body)
 
@@ -251,7 +248,7 @@ async def refresh_grant(
     .. _rfc6748 section 6: https://tools.ietf.org/html/rfc6749#section-6
     """
     body = {
-        "grant_type": _REFRESH_GRANT_TYPE,
+        "grant_type": client._REFRESH_GRANT_TYPE,
         "client_id": client_id,
         "client_secret": client_secret,
         "refresh_token": refresh_token,
