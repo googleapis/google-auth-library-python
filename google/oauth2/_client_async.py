@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""OAuth 2.0 client.
+"""OAuth 2.0 async client.
 
 This is a client for interacting with an OAuth 2.0 authorization server's
 token endpoint.
