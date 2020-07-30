@@ -61,38 +61,6 @@ def encode(signer, payload, header=None, key_id=None):
     return jwt.encode(signer, payload, header, key_id)
 
 
-def _unverified_decode(token):
-    """Decodes a token and does no verification.
-
-    Args:
-        token (Union[str, bytes]): The encoded JWT.
-
-    Returns:
-        Tuple[str, str, str, str]: header, payload, signed_section, and
-            signature.
-
-    Raises:
-        ValueError: if there are an incorrect amount of segments in the token.
-    """
-    return jwt._unverified_decode(token)
-
-
-def decode_header(token):
-    """Return the decoded header of a token.
-
-    No verification is done. This is useful to extract the key id from
-    the header in order to acquire the appropriate certificate to verify
-    the token.
-
-    Args:
-        token (Union[str, bytes]): the encoded JWT.
-
-    Returns:
-        Mapping: The decoded JWT header.
-    """
-    return jwt.decode_header(token)
-
-
 def decode(token, certs=None, verify=True, audience=None):
     """Decode and verify a JWT.
 

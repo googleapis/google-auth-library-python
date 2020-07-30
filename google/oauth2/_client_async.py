@@ -104,12 +104,6 @@ async def _token_endpoint_request(request, token_uri, body):
             method="POST", url=token_uri, headers=headers, body=body
         )
 
-        """
-        except exceptions.TransportError as caught_exc:
-            new_exc = exceptions.RefreshError(caught_exc)
-            six.raise_from(new_exc, caught_exc)
-        """
-
         response_body1 = await response.data.read()
 
         response_body = (
@@ -117,7 +111,6 @@ async def _token_endpoint_request(request, token_uri, body):
             if hasattr(response_body1, "decode")
             else response_body1
         )
-        # CHANGE TO READ TO END OF STREAM
 
         response_data = json.loads(response_body)
 

@@ -20,7 +20,6 @@ Implements application default credentials and project ID detection.
 import io
 import json
 import os
-import warnings
 
 import six
 
@@ -36,10 +35,7 @@ def _warn_about_problematic_credentials(credentials):
     are problematic because they may not have APIs enabled and have limited
     quota. If this is the case, warn about it.
     """
-    from google.auth import _cloud_sdk
-
-    if credentials.client_id == _cloud_sdk.CLOUD_SDK_CLIENT_ID:
-        warnings.warn(_default._CLOUD_SDK_CREDENTIALS_WARNING)
+    return _default._warn_about_problematic_credentials(credentials)
 
 
 def load_credentials_from_file(filename, scopes=None, quota_project_id=None):
