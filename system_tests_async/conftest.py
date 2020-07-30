@@ -23,7 +23,7 @@ import requests
 import urllib3
 
 import aiohttp
-import google.auth.transport.aiohttp_req
+import google.auth.transport.aiohttp_requests
 
 
 HERE = os.path.dirname(__file__)
@@ -69,7 +69,7 @@ async def http_request(request):
     elif request.param == "requests":
         yield google.auth.transport.requests.Request(REQUESTS_SESSION)
     elif request.param == "aiohttp":
-        yield google.auth.transport.aiohttp_req.Request(ASYNC_REQUESTS_SESSION)
+        yield google.auth.transport.aiohttp_requests.Request(ASYNC_REQUESTS_SESSION)
 
 @pytest.fixture
 async def token_info(http_request):
@@ -96,14 +96,14 @@ async def token_info(http_request):
 
 
 @pytest.fixture
-def verify_refresh(http_request):
+async def verify_refresh(http_request):
     """Returns a function that verifies that credentials can be refreshed."""
 
-    def _verify_refresh(credentials):
+    async def _verify_refresh(credentials):
         if credentials.requires_scopes:
             credentials = credentials.with_scopes(["email", "profile"])
 
-        credentials.refresh(http_request)
+        await credentials.refresh(http_request)
 
         assert credentials.token
         assert credentials.valid
