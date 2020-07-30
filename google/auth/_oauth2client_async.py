@@ -23,13 +23,14 @@ from __future__ import absolute_import
 
 import six
 
-from google.auth import _helpers
+from google.auth import _oauth2client
 import google.auth.app_engine
 import google.auth.compute_engine
-import google.oauth2.credentials
 import google.oauth2.service_account_async
 
+
 try:
+    import oauth2client
     import oauth2client.client
     import oauth2client.contrib.gce
     import oauth2client.service_account
@@ -44,9 +45,6 @@ except ImportError:
     _HAS_APPENGINE = False
 
 
-_CONVERT_ERROR_TMPL = "Unable to convert {} to a google-auth credentials class."
-
-
 def _convert_oauth2_credentials(credentials):
     """Converts to :class:`google.oauth2.credentials_async.Credentials`.
 
@@ -58,7 +56,7 @@ def _convert_oauth2_credentials(credentials):
     Returns:
         google.oauth2.credentials_async.Credentials: The converted credentials.
     """
-    new_credentials = google.oauth2.credentials.Credentials(
+    new_credentials = google.oauth2.credentials_async.Credentials(
         token=credentials.access_token,
         refresh_token=credentials.refresh_token,
         token_uri=credentials.token_uri,
@@ -101,9 +99,7 @@ def _convert_gce_app_assertion_credentials(credentials):
     Returns:
         google.oauth2.service_account_async.Credentials: The converted credentials.
     """
-    return google.auth.compute_engine.Credentials(
-        service_account_email=credentials.service_account_email
-    )
+    return _oauth2client._convert_gce_app_assertion_credentials(credentials)
 
 
 def _convert_appengine_app_assertion_credentials(credentials):
@@ -117,10 +113,7 @@ def _convert_appengine_app_assertion_credentials(credentials):
         google.oauth2.service_account_async.Credentials: The converted credentials.
     """
     # pylint: disable=invalid-name
-    return google.auth.app_engine.Credentials(
-        scopes=_helpers.string_to_scopes(credentials.scope),
-        service_account_id=credentials.service_account_id,
-    )
+    return _oauth2client._convert_appengine_app_assertion_credentials(credentials)
 
 
 _CLASS_CONVERSION_MAP = {
@@ -142,13 +135,13 @@ def convert(credentials):
 
     This class converts:
 
-    - :class:`oauth2client.client_async.OAuth2Credentials` to
+    - :class:`oauth2client.client.OAuth2Credentials` to
       :class:`google.oauth2.credentials_async.Credentials`.
-    - :class:`oauth2client.client_async.GoogleCredentials` to
+    - :class:`oauth2client.client.GoogleCredentials` to
       :class:`google.oauth2.credentials_async.Credentials`.
-    - :class:`oauth2client.service_account_async.ServiceAccountCredentials` to
+    - :class:`oauth2client.service_account.ServiceAccountCredentials` to
       :class:`google.oauth2.service_account_async.Credentials`.
-    - :class:`oauth2client.service_account_async._JWTAccessCredentials` to
+    - :class:`oauth2client.service_account._JWTAccessCredentials` to
       :class:`google.oauth2.service_account_async.Credentials`.
     - :class:`oauth2client.contrib.gce.AppAssertionCredentials` to
       :class:`google.auth.compute_engine.Credentials`.
@@ -162,10 +155,17 @@ def convert(credentials):
         ValueError: If the credentials could not be converted.
     """
 
+    """
+    Not able to inherit from the sync _oauth2client file (calling _oauth2client.convert),
+    and therefore reproduced here.
+    """
+
     credentials_class = type(credentials)
 
     try:
         return _CLASS_CONVERSION_MAP[credentials_class](credentials)
     except KeyError as caught_exc:
-        new_exc = ValueError(_CONVERT_ERROR_TMPL.format(credentials_class))
+        new_exc = ValueError(
+            _oauth2client._CONVERT_ERROR_TMPL.format(credentials_class)
+        )
         six.raise_from(new_exc, caught_exc)

@@ -19,11 +19,8 @@ import pytest
 from pytest_localserver.http import WSGIServer
 from six.moves import http_client
 
-
 from google.auth import exceptions
-
-# .invalid will never resolve, see https://tools.ietf.org/html/rfc2606
-NXDOMAIN = "test.invalid"
+from tests.transport import compliance
 
 
 class RequestResponseTests(object):
@@ -133,4 +130,4 @@ class RequestResponseTests(object):
         request = self.make_request()
 
         with pytest.raises(exceptions.TransportError):
-            await request(url="http://{}".format(NXDOMAIN), method="GET")
+            await request(url="http://{}".format(compliance.NXDOMAIN), method="GET")

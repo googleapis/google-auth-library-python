@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""OAuth 2.0 Credentials.
+"""OAuth 2.0 Async Credentials.
 
 This module provides credentials based on OAuth 2.0 access and refresh tokens.
 These credentials usually access resources on behalf of a user (resource
@@ -36,10 +36,6 @@ from google.auth import credentials_async as credentials
 from google.auth import exceptions
 from google.oauth2 import _client_async as _client
 from google.oauth2 import credentials as oauth2_credentials
-
-
-# The Google OAuth 2.0 token endpoint. Used for authorized user credentials.
-_GOOGLE_OAUTH2_TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token"
 
 
 class Credentials(oauth2_credentials.Credentials):
