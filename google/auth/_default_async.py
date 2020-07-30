@@ -28,16 +28,6 @@ from google.auth import environment_vars
 from google.auth import exceptions
 
 
-def _warn_about_problematic_credentials(credentials):
-    """Determines if the credentials are problematic.
-
-    Credentials from the Cloud SDK that are associated with Cloud SDK's project
-    are problematic because they may not have APIs enabled and have limited
-    quota. If this is the case, warn about it.
-    """
-    return _default._warn_about_problematic_credentials(credentials)
-
-
 def load_credentials_from_file(filename, scopes=None, quota_project_id=None):
     """Loads Google credentials from a file.
 
@@ -91,7 +81,7 @@ def load_credentials_from_file(filename, scopes=None, quota_project_id=None):
             new_exc = exceptions.DefaultCredentialsError(msg, caught_exc)
             six.raise_from(new_exc, caught_exc)
         if not credentials.quota_project_id:
-            _warn_about_problematic_credentials(credentials)
+            _default._warn_about_problematic_credentials(credentials)
         return credentials, None
 
     elif credential_type == _default._SERVICE_ACCOUNT_TYPE:
