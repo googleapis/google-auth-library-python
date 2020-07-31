@@ -202,7 +202,7 @@ async def fetch_id_token(request, audience):
         id_token = await google.oauth2.id_token_async.fetch_id_token(request, target_audience)
 
     Args:
-        request (google.auth.transport.Request): A callable used to make
+        request (google.auth.transport.aiohttp_requests.Request): A callable used to make
             HTTP requests.
         audience (str): The audience that this ID token is intended for.
 

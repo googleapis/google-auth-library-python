@@ -1,4 +1,4 @@
-# Copyright 2020 Google LLC
+# Copyright 2016 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,22 +22,15 @@ import pytest
 import requests
 import urllib3
 
-import aiohttp
-import google.auth.transport.aiohttp_requests
-
 
 HERE = os.path.dirname(__file__)
-DATA_DIR = os.path.join(HERE, "data")
+DATA_DIR = os.path.join(HERE, "../data")
 IMPERSONATED_SERVICE_ACCOUNT_FILE = os.path.join(
     DATA_DIR, "impersonated_service_account.json"
 )
 SERVICE_ACCOUNT_FILE = os.path.join(DATA_DIR, "service_account.json")
-AUTHORIZED_USER_FILE = os.path.join(DATA_DIR, "authorized_user.json")
 URLLIB3_HTTP = urllib3.PoolManager(retries=False)
 REQUESTS_SESSION = requests.Session()
-
-ASYNC_REQUESTS_SESSION = aiohttp.ClientSession()
-
 REQUESTS_SESSION.verify = False
 TOKEN_INFO_URL = "https://www.googleapis.com/oauth2/v3/tokeninfo"
 
@@ -59,16 +52,21 @@ def authorized_user_file():
     """The full path to a valid authorized user file."""
     yield AUTHORIZED_USER_FILE
 
-@pytest.fixture(params=["aiohttp"])
-async def http_request(request):
+
+@pytest.fixture(params=["urllib3", "requests"])
+def http_request(request):
     """A transport.request object."""
-    yield google.auth.transport.aiohttp_requests.Request(ASYNC_REQUESTS_SESSION)
+    if request.param == "urllib3":
+        yield google.auth.transport.urllib3.Request(URLLIB3_HTTP)
+    elif request.param == "requests":
+        yield google.auth.transport.requests.Request(REQUESTS_SESSION)
+
 
 @pytest.fixture
-async def token_info(http_request):
+def token_info(http_request):
     """Returns a function that obtains OAuth2 token info."""
 
-    async def _token_info(access_token=None, id_token=None):
+    def _token_info(access_token=None, id_token=None):
         query_params = {}
 
         if access_token is not None:
@@ -80,23 +78,22 @@ async def token_info(http_request):
 
         url = _helpers.update_query(TOKEN_INFO_URL, query_params)
 
-        response = await http_request(url=url, method="GET")
-        data = await response.data.read()
+        response = http_request(url=url, method="GET")
 
-        return json.loads(data.decode("utf-8"))
+        return json.loads(response.data.decode("utf-8"))
 
     yield _token_info
 
 
 @pytest.fixture
-async def verify_refresh(http_request):
+def verify_refresh(http_request):
     """Returns a function that verifies that credentials can be refreshed."""
 
-    async def _verify_refresh(credentials):
+    def _verify_refresh(credentials):
         if credentials.requires_scopes:
             credentials = credentials.with_scopes(["email", "profile"])
 
-        await credentials.refresh(http_request)
+        credentials.refresh(http_request)
 
         assert credentials.token
         assert credentials.valid

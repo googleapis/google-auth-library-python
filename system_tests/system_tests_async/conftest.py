@@ -1,4 +1,4 @@
-# Copyright 2016 Google LLC
+# Copyright 2020 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,52 +22,43 @@ import pytest
 import requests
 import urllib3
 
+import aiohttp
+import google.auth.transport.aiohttp_requests
+from system_tests import conftest as sync_conftest
 
-HERE = os.path.dirname(__file__)
-DATA_DIR = os.path.join(HERE, "data")
-IMPERSONATED_SERVICE_ACCOUNT_FILE = os.path.join(
-    DATA_DIR, "impersonated_service_account.json"
-)
-SERVICE_ACCOUNT_FILE = os.path.join(DATA_DIR, "service_account.json")
-AUTHORIZED_USER_FILE = os.path.join(DATA_DIR, "authorized_user.json")
-URLLIB3_HTTP = urllib3.PoolManager(retries=False)
-REQUESTS_SESSION = requests.Session()
-REQUESTS_SESSION.verify = False
+ASYNC_REQUESTS_SESSION = aiohttp.ClientSession()
+
+ASYNC_REQUESTS_SESSION.verify = False
 TOKEN_INFO_URL = "https://www.googleapis.com/oauth2/v3/tokeninfo"
 
 
 @pytest.fixture
 def service_account_file():
     """The full path to a valid service account key file."""
-    yield SERVICE_ACCOUNT_FILE
+    yield sync_conftest.SERVICE_ACCOUNT_FILE
 
 
 @pytest.fixture
 def impersonated_service_account_file():
     """The full path to a valid service account key file."""
-    yield IMPERSONATED_SERVICE_ACCOUNT_FILE
+    yield sync_conftest.IMPERSONATED_SERVICE_ACCOUNT_FILE
 
 
 @pytest.fixture
 def authorized_user_file():
     """The full path to a valid authorized user file."""
-    yield AUTHORIZED_USER_FILE
+    yield sync_conftest.AUTHORIZED_USER_FILE
 
-
-@pytest.fixture(params=["urllib3", "requests"])
-def http_request(request):
+@pytest.fixture(params=["aiohttp"])
+async def http_request(request):
     """A transport.request object."""
-    if request.param == "urllib3":
-        yield google.auth.transport.urllib3.Request(URLLIB3_HTTP)
-    elif request.param == "requests":
-        yield google.auth.transport.requests.Request(REQUESTS_SESSION)
-
+    yield google.auth.transport.aiohttp_requests.Request(ASYNC_REQUESTS_SESSION)
 
 @pytest.fixture
-def token_info(http_request):
+async def token_info(http_request):
     """Returns a function that obtains OAuth2 token info."""
 
-    def _token_info(access_token=None, id_token=None):
+    async def _token_info(access_token=None, id_token=None):
         query_params = {}
 
         if access_token is not None:
@@ -77,24 +68,25 @@ def token_info(http_request):
         else:
             raise ValueError("No token specified.")
 
-        url = _helpers.update_query(TOKEN_INFO_URL, query_params)
+        url = _helpers.update_query(sync_conftest.TOKEN_INFO_URL, query_params)
 
-        response = http_request(url=url, method="GET")
+        response = await http_request(url=url, method="GET")
+        data = await response.data.read()
 
-        return json.loads(response.data.decode("utf-8"))
+        return json.loads(data.decode("utf-8"))
 
     yield _token_info
 
 
 @pytest.fixture
-def verify_refresh(http_request):
+async def verify_refresh(http_request):
     """Returns a function that verifies that credentials can be refreshed."""
 
-    def _verify_refresh(credentials):
+    async def _verify_refresh(credentials):
         if credentials.requires_scopes:
             credentials = credentials.with_scopes(["email", "profile"])
 
-        credentials.refresh(http_request)
+        await credentials.refresh(http_request)
 
         assert credentials.token
         assert credentials.valid
@@ -104,7 +96,7 @@ def verify_refresh(http_request):
 
 def verify_environment():
     """Checks to make sure that requisite data files are available."""
-    if not os.path.isdir(DATA_DIR):
+    if not os.path.isdir(sync_conftest.DATA_DIR):
         raise EnvironmentError(
             "In order to run system tests, test data must exist in "
             "system_tests/data. See CONTRIBUTING.rst for details."
