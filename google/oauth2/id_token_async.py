@@ -28,7 +28,7 @@ Example::
     from google.oauth2 import id_token_async
     from google.auth.transport import aiohttp_requests
 
-    request = requests.Request()
+    request = aiohttp_requests.Request()
 
     id_info = await id_token_async.verify_oauth2_token(
         token, request, 'my-client-id.example.com')
@@ -79,7 +79,7 @@ async def _fetch_certs(request, certs_url):
 
     Args:
         request (google.auth.transport.Request): The object used to make
-            HTTP requests.
+            HTTP requests. This must be an aiohttp request.
         certs_url (str): The certificate endpoint URL.
 
     Returns:
@@ -106,7 +106,7 @@ async def verify_token(
     Args:
         id_token (Union[str, bytes]): The encoded token.
         request (google.auth.transport.Request): The object used to make
-            HTTP requests.
+            HTTP requests. This must be an aiohttp request.
         audience (str): The audience that this token is intended for. If None
             then the audience is not verified.
         certs_url (str): The URL that specifies the certificates to use to
@@ -127,7 +127,7 @@ async def verify_oauth2_token(id_token, request, audience=None):
     Args:
         id_token (Union[str, bytes]): The encoded token.
         request (google.auth.transport.Request): The object used to make
-            HTTP requests.
+            HTTP requests. This must be an aiohttp request.
         audience (str): The audience that this token is intended for. This is
             typically your application's OAuth 2.0 client ID. If None then the
             audience is not verified.
@@ -161,7 +161,7 @@ async def verify_firebase_token(id_token, request, audience=None):
     Args:
         id_token (Union[str, bytes]): The encoded token.
         request (google.auth.transport.Request): The object used to make
-            HTTP requests.
+            HTTP requests. This must be an aiohttp request.
         audience (str): The audience that this token is intended for. This is
             typically your Firebase application ID. If None then the audience
             is not verified.
@@ -196,7 +196,7 @@ async def fetch_id_token(request, audience):
         import google.oauth2.id_token_async
         import google.auth.transport.aiohttp_requests
 
-        request = google.auth.transport.requests.Request()
+        request = google.auth.transport.aiohttp_requests.Request()
         target_audience = "https://pubsub.googleapis.com"
 
         id_token = await google.oauth2.id_token_async.fetch_id_token(request, target_audience)
