@@ -269,7 +269,7 @@ def app_engine(session):
     application_url = GAE_APP_URL_TMPL.format(GAE_TEST_APP_SERVICE, project_id)
 
     # Vendor in the test application's dependencies
-    session.chdir(os.path.join(HERE, "app_engine_test_app"))
+    session.chdir(os.path.join(HERE, "../app_engine_test_app"))
     session.install(*TEST_DEPENDENCIES_SYNC)
     session.install(LIBRARY_DIR)
     session.run(
