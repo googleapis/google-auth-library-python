@@ -25,12 +25,12 @@ A general purpose ID Token verifier is available as :func:`verify_token`.
 
 Example::
 
-    from google.oauth2 import id_token
-    from google.auth.transport import requests
+    from google.oauth2 import id_token_async
+    from google.auth.transport import aiohttp_requests
 
     request = requests.Request()
 
-    id_info = id_token.verify_oauth2_token(
+    id_info = await id_token_async.verify_oauth2_token(
         token, request, 'my-client-id.example.com')
 
     if id_info['iss'] != 'https://accounts.google.com':
@@ -67,20 +67,8 @@ from six.moves import http_client
 from google.auth import environment_vars
 from google.auth import exceptions
 from google.auth import jwt
-
-
-# The URL that provides public certificates for verifying ID tokens issued
-# by Google's OAuth 2.0 authorization server.
-_GOOGLE_OAUTH2_CERTS_URL = "https://www.googleapis.com/oauth2/v1/certs"
-
-# The URL that provides public certificates for verifying ID tokens issued
-# by Firebase and the Google APIs infrastructure
-_GOOGLE_APIS_CERTS_URL = (
-    "https://www.googleapis.com/robot/v1/metadata/x509"
-    "/securetoken@system.gserviceaccount.com"
-)
-
-_GOOGLE_ISSUERS = ["accounts.google.com", "https://accounts.google.com"]
+from google.auth.transport import requests
+from google.oauth2 import id_token as sync_id_token
 
 
 async def _fetch_certs(request, certs_url):
@@ -104,13 +92,15 @@ async def _fetch_certs(request, certs_url):
         raise exceptions.TransportError(
             "Could not fetch certificates at {}".format(certs_url)
         )
-    
+
     data = await response.data.read()
 
     return json.loads(json.dumps(data))
 
 
-async def verify_token(id_token, request, audience=None, certs_url=_GOOGLE_OAUTH2_CERTS_URL):
+async def verify_token(
+    id_token, request, audience=None, certs_url=sync_id_token._GOOGLE_OAUTH2_CERTS_URL
+):
     """Verifies an ID token and returns the decoded token.
 
     Args:
@@ -149,13 +139,16 @@ async def verify_oauth2_token(id_token, request, audience=None):
         exceptions.GoogleAuthError: If the issuer is invalid.
     """
     idinfo = await verify_token(
-        id_token, request, audience=audience, certs_url=_GOOGLE_OAUTH2_CERTS_URL
+        id_token,
+        request,
+        audience=audience,
+        certs_url=sync_id_token._GOOGLE_OAUTH2_CERTS_URL,
     )
 
-    if idinfo["iss"] not in _GOOGLE_ISSUERS:
+    if idinfo["iss"] not in sync_id_token._GOOGLE_ISSUERS:
         raise exceptions.GoogleAuthError(
             "Wrong issuer. 'iss' should be one of the following: {}".format(
-                _GOOGLE_ISSUERS
+                sync_id_token._GOOGLE_ISSUERS
             )
         )
 
@@ -177,7 +170,10 @@ async def verify_firebase_token(id_token, request, audience=None):
         Mapping[str, Any]: The decoded token.
     """
     return await verify_token(
-        id_token, request, audience=audience, certs_url=_GOOGLE_APIS_CERTS_URL
+        id_token,
+        request,
+        audience=audience,
+        certs_url=sync_id_token._GOOGLE_APIS_CERTS_URL,
     )
 
 
@@ -197,13 +193,13 @@ async def fetch_id_token(request, audience):
 
     Example::
 
-        import google.oauth2.id_token
-        import google.auth.transport.requests
+        import google.oauth2.id_token_async
+        import google.auth.transport.aiohttp_requests
 
         request = google.auth.transport.requests.Request()
         target_audience = "https://pubsub.googleapis.com"
 
-        id_token = google.oauth2.id_token.fetch_id_token(request, target_audience)
+        id_token = await google.oauth2.id_token_async.fetch_id_token(request, target_audience)
 
     Args:
         request (google.auth.transport.Request): A callable used to make
@@ -223,11 +219,14 @@ async def fetch_id_token(request, audience):
     try:
         from google.auth import compute_engine
 
+        request_new = requests.Request()
         credentials = compute_engine.IDTokenCredentials(
-            request, audience, use_metadata_identity_endpoint=True
+            request_new, audience, use_metadata_identity_endpoint=True
         )
-        credentials.refresh(request)
+        credentials.refresh(request_new)
+
         return credentials.token
+
     except (ImportError, exceptions.TransportError, exceptions.RefreshError):
         pass
 
@@ -264,5 +263,5 @@ async def fetch_id_token(request, audience):
         )
         six.raise_from(new_exc, caught_exc)
 
-    credentials.refresh(request)
+    await credentials.refresh(request)
     return credentials.token

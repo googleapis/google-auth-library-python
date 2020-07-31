@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import json
 import os
 
 import mock
@@ -20,10 +19,10 @@ import pytest
 
 from google.auth import environment_vars
 from google.auth import exceptions
-from google.auth import transport
 import google.auth.compute_engine._metadata
+from google.oauth2 import id_token as sync_id_token
 from google.oauth2 import id_token_async as id_token
-from tests.oauth2 import test_id_token 
+from tests.oauth2 import test_id_token
 
 
 def make_request(status, data=None):
@@ -38,15 +37,17 @@ def make_request(status, data=None):
     request.return_value = response
     return request
 
+
 @pytest.mark.asyncio
 async def test__fetch_certs_success():
-    certs = {'1': 'cert'}
+    certs = {"1": "cert"}
     request = make_request(200, certs)
 
     returned_certs = await id_token._fetch_certs(request, mock.sentinel.cert_url)
 
     request.assert_called_once_with(mock.sentinel.cert_url, method="GET")
     assert returned_certs == certs
+
 
 @pytest.mark.asyncio
 async def test__fetch_certs_failure():
@@ -66,7 +67,7 @@ async def test_verify_token(_fetch_certs, decode):
 
     assert result == decode.return_value
     _fetch_certs.assert_called_once_with(
-        mock.sentinel.request, id_token._GOOGLE_OAUTH2_CERTS_URL
+        mock.sentinel.request, sync_id_token._GOOGLE_OAUTH2_CERTS_URL
     )
     decode.assert_called_once_with(
         mock.sentinel.token, certs=_fetch_certs.return_value, audience=None
@@ -106,7 +107,7 @@ async def test_verify_oauth2_token(verify_token):
         mock.sentinel.token,
         mock.sentinel.request,
         audience=mock.sentinel.audience,
-        certs_url=id_token._GOOGLE_OAUTH2_CERTS_URL,
+        certs_url=sync_id_token._GOOGLE_OAUTH2_CERTS_URL,
     )
 
 
@@ -133,8 +134,9 @@ async def test_verify_firebase_token(verify_token):
         mock.sentinel.token,
         mock.sentinel.request,
         audience=mock.sentinel.audience,
-        certs_url=id_token._GOOGLE_APIS_CERTS_URL,
+        certs_url=sync_id_token._GOOGLE_APIS_CERTS_URL,
     )
+
 
 @pytest.mark.asyncio
 async def test_fetch_id_token_from_metadata_server():
@@ -161,7 +163,7 @@ async def test_fetch_id_token_from_metadata_server():
 async def test_fetch_id_token_from_explicit_cred_json_file(mock_init, monkeypatch):
     monkeypatch.setenv(environment_vars.CREDENTIALS, test_id_token.SERVICE_ACCOUNT_FILE)
 
-    def mock_refresh(self, request):
+    async def mock_refresh(self, request):
         self.token = "id_token"
 
     with mock.patch.object(
@@ -193,7 +195,9 @@ async def test_fetch_id_token_no_cred_json_file(mock_init, monkeypatch):
 )
 @pytest.mark.asyncio
 async def test_fetch_id_token_invalid_cred_file(mock_init, monkeypatch):
-    not_json_file = os.path.join(os.path.dirname(__file__), "../data/public_cert.pem")
+    not_json_file = os.path.join(
+        os.path.dirname(__file__), "../../tests/data/public_cert.pem"
+    )
     monkeypatch.setenv(environment_vars.CREDENTIALS, not_json_file)
 
     with pytest.raises(exceptions.DefaultCredentialsError):
