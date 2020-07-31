@@ -233,6 +233,73 @@ def default_cloud_sdk_authorized_user_configured_project(session):
     session.install(LIBRARY_DIR)
     session.run("pytest", "system_tests_sync/test_default.py")
 
+@nox.session(python=PYTHON_VERSIONS_SYNC)
+def compute_engine(session):
+    session.install(*TEST_DEPENDENCIES_SYNC)
+    # unset Application Default Credentials so
+    # credentials are detected from environment
+    del session.virtualenv.env["GOOGLE_APPLICATION_CREDENTIALS"]
+    session.install(LIBRARY_DIR)
+    session.run("pytest", "system_tests_sync/test_compute_engine.py")
+
+
+@nox.session(python=["2.7"])
+def app_engine(session):
+    if SKIP_GAE_TEST_ENV in os.environ:
+        session.log("Skipping App Engine tests.")
+        return
+
+    # Unlike the default tests above, the App Engine system test require a
+    # 'real' gcloud sdk installation that is configured to deploy to an
+    # app engine project.
+    # Grab the project ID from the cloud sdk.
+    project_id = (
+        subprocess.check_output(
+            ["gcloud", "config", "list", "project", "--format", "value(core.project)"]
+        )
+        .decode("utf-8")
+        .strip()
+    )
+
+    if not project_id:
+        session.error(
+            "The Cloud SDK must be installed and configured to deploy to App " "Engine."
+        )
+
+    application_url = GAE_APP_URL_TMPL.format(GAE_TEST_APP_SERVICE, project_id)
+
+    # Vendor in the test application's dependencies
+    session.chdir(os.path.join(HERE, "app_engine_test_app"))
+    session.install(*TEST_DEPENDENCIES_SYNC)
+    session.install(LIBRARY_DIR)
+    session.run(
+        "pip", "install", "--target", "lib", "-r", "requirements.txt", silent=True
+    )
+
+    # Deploy the application.
+    session.run("gcloud", "app", "deploy", "-q", "app.yaml")
+
+    # Run the tests
+    session.env["TEST_APP_URL"] = application_url
+    session.chdir(HERE)
+    session.run("pytest", "system_tests_sync/test_app_engine.py")
+
+
+@nox.session(python=PYTHON_VERSIONS_SYNC)
+def grpc(session):
+    session.install(LIBRARY_DIR)
+    session.install(*TEST_DEPENDENCIES_SYNC, "google-cloud-pubsub==1.0.0")
+    session.env[EXPLICIT_CREDENTIALS_ENV] = SERVICE_ACCOUNT_FILE
+    session.run("pytest", "system_tests_sync/test_grpc.py")
+
+
+@nox.session(python=PYTHON_VERSIONS_SYNC)
+def mtls_http(session):
+    session.install(LIBRARY_DIR)
+    session.install(*TEST_DEPENDENCIES_SYNC, "pyopenssl")
+    session.env[EXPLICIT_CREDENTIALS_ENV] = SERVICE_ACCOUNT_FILE
+    session.run("pytest", "system_tests_sync/test_mtls_http.py")
+
 #ASYNC SYSTEM TESTS
 
 @nox.session(python=PYTHON_VERSIONS_ASYNC)
