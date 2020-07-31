@@ -214,7 +214,7 @@ async def fetch_id_token(request, audience):
             If metadata server doesn't exist and no valid service account
             credentials are found.
     """
-    # 1. First try to fetch ID token from metada server if it exists. The code
+    # 1. First try to fetch ID token from metadata server if it exists. The code
     # works for GAE and Cloud Run metadata server as well.
     try:
         from google.auth import compute_engine
