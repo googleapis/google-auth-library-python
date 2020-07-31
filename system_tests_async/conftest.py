@@ -1,4 +1,4 @@
-# Copyright 2016 Google LLC
+# Copyright 2020 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -59,17 +59,10 @@ def authorized_user_file():
     """The full path to a valid authorized user file."""
     yield AUTHORIZED_USER_FILE
 
-
-#@pytest.fixture(params=["urllib3", "requests", "aiohttp"])
 @pytest.fixture(params=["aiohttp"])
 async def http_request(request):
     """A transport.request object."""
-    if request.param == "urllib3":
-        yield google.auth.transport.urllib3.Request(URLLIB3_HTTP)
-    elif request.param == "requests":
-        yield google.auth.transport.requests.Request(REQUESTS_SESSION)
-    elif request.param == "aiohttp":
-        yield google.auth.transport.aiohttp_requests.Request(ASYNC_REQUESTS_SESSION)
+    yield google.auth.transport.aiohttp_requests.Request(ASYNC_REQUESTS_SESSION)
 
 @pytest.fixture
 async def token_info(http_request):
