@@ -106,11 +106,30 @@ async def _token_endpoint_request(request, token_uri, body):
 
         response_body1 = await response.data.read()
 
+        temp = response.headers['Content-Encoding']
+
+        '''
+        #TODO() fix the decompression
+        if response.headers['Content-Encoding'] != 'gzip':
+            import gzip
+            response_body1 = gzip.decompress(response_body1)
+
+            response_body = (
+                response_body1.decode("utf-8")
+                if hasattr(response_body1, "decode")
+                else response_body1
+            )
+        
+        else:
+            return (response_body1)
+        '''
+
         response_body = (
-            response_body1.decode("utf-8")
-            if hasattr(response_body1, "decode")
-            else response_body1
-        )
+                response_body1.decode("utf-8")
+                if hasattr(response_body1, "decode")
+                else response_body1
+            )
+        
 
         response_data = json.loads(response_body)
 

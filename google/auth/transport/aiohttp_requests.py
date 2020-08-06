@@ -52,7 +52,19 @@ class _Response(transport.Response):
 
     @property
     def data(self):
+        '''
+        TODO() figure out decompressed version 
+        import zlib
+        if 'Content-Encoding' in headers:
+            if headers['Content-Encoding'] == 'gzip':
+                d = zlib.decompressobj(zlib.MAX_WBITS|32)
+                decompressed = d.decompress()
+        '''
         return self._response.content
+    
+    @property
+    def text(self):
+        return self._response.text
 
 
 class Request(transport.Request):
@@ -115,6 +127,7 @@ class Request(transport.Request):
 
         try:
             if self.session is None:  # pragma: NO COVER
+                #self.session = aiohttp.ClientSession(auto_decompress=False)  # pragma: NO COVER
                 self.session = aiohttp.ClientSession()  # pragma: NO COVER
             requests._LOGGER.debug("Making request: %s %s", method, url)
             response = await self.session.request(
@@ -230,8 +243,14 @@ class AuthorizedSession(aiohttp.ClientSession):
                 transmitted. The timout error will be raised after such
                 request completes.
         """
+        if headers:
+            for key in headers.keys():
+                if type(headers[key]) is bytes:
+                    headers[key] = headers[key].decode("utf-8")
+                    #print("headers: ", headers)
+        #print("headers: ", headers)
 
-        async with aiohttp.ClientSession() as self._auth_request_session:
+        async with aiohttp.ClientSession(auto_decompress=False) as self._auth_request_session:
             auth_request = Request(self._auth_request_session)
             self._auth_request = auth_request
 
@@ -266,6 +285,7 @@ class AuthorizedSession(aiohttp.ClientSession):
                     timeout=timeout,
                     **kwargs
                 )
+                #text = await response.text()
 
             remaining_time = guard.remaining_timeout
 
