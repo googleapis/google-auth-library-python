@@ -108,7 +108,6 @@ async def _token_endpoint_request(request, token_uri, body):
 
         temp = response.headers['Content-Encoding']
 
-        '''
         #TODO() fix the decompression
         if response.headers['Content-Encoding'] != 'gzip':
             import gzip
@@ -121,7 +120,10 @@ async def _token_endpoint_request(request, token_uri, body):
             )
         
         else:
-            return (response_body1)
+
+            return response_body1, response.headers['Content-Encoding']
+        
+        
         '''
 
         response_body = (
@@ -129,7 +131,7 @@ async def _token_endpoint_request(request, token_uri, body):
                 if hasattr(response_body1, "decode")
                 else response_body1
             )
-        
+        '''
 
         response_data = json.loads(response_body)
 
@@ -146,7 +148,7 @@ async def _token_endpoint_request(request, token_uri, body):
                 continue
             _handle_error_response(response_body)
 
-    return response_data
+    return response_data, response.headers['Content-Encoding']
 
 
 async def jwt_grant(request, token_uri, assertion):
@@ -173,7 +175,14 @@ async def jwt_grant(request, token_uri, assertion):
     """
     body = {"assertion": assertion, "grant_type": client._JWT_GRANT_TYPE}
 
-    response_data = await _token_endpoint_request(request, token_uri, body)
+    response_data, gzip_val = await _token_endpoint_request(request, token_uri, body)
+    response_data_original = response_data
+
+    #TODO() Fix decompression:
+    if gzip_val == 'gzip':
+        import gzip
+        response_data = gzip.decompress(response_data)
+        response_data = json.loads(response_data)
 
     try:
         access_token = response_data["access_token"]
@@ -183,8 +192,8 @@ async def jwt_grant(request, token_uri, assertion):
 
     expiry = _parse_expiry(response_data)
 
-    return access_token, expiry, response_data
-
+    #return access_token, expiry, response_data
+    return access_token, expiry, response_data_original
 
 async def id_token_jwt_grant(request, token_uri, assertion):
     """Implements the JWT Profile for OAuth 2.0 Authorization Grants, but
@@ -213,7 +222,14 @@ async def id_token_jwt_grant(request, token_uri, assertion):
     """
     body = {"assertion": assertion, "grant_type": client._JWT_GRANT_TYPE}
 
-    response_data = await _token_endpoint_request(request, token_uri, body)
+    response_data, gzip_val = await _token_endpoint_request(request, token_uri, body)
+    response_data_original = response_data
+
+    #TODO() Fix decompression:
+    if gzip_val == 'gzip':
+        import gzip
+        response_data = gzip.decompress(response_data)
+        response_data = json.loads(response_data)
 
     try:
         id_token = response_data["id_token"]
@@ -224,7 +240,8 @@ async def id_token_jwt_grant(request, token_uri, assertion):
     payload = jwt.decode(id_token, verify=False)
     expiry = datetime.datetime.utcfromtimestamp(payload["exp"])
 
-    return id_token, expiry, response_data
+    #return id_token, expiry, response_data
+    return id_token, expiry, response_data_original
 
 
 async def refresh_grant(
