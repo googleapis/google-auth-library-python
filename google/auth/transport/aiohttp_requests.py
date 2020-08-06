@@ -41,6 +41,7 @@ class _Response(transport.Response):
 
     def __init__(self, response):
         self._response = response
+        self._raw_content = None
 
     @property
     def status(self):
@@ -52,19 +53,43 @@ class _Response(transport.Response):
 
     @property
     def data(self):
-        '''
+        """
         TODO() figure out decompressed version 
         import zlib
         if 'Content-Encoding' in headers:
             if headers['Content-Encoding'] == 'gzip':
                 d = zlib.decompressobj(zlib.MAX_WBITS|32)
                 decompressed = d.decompress()
-        '''
+        """
         return self._response.content
-    
+
     @property
     def text(self):
         return self._response.text
+
+    def _is_compressed(self):
+        # The gzip and deflate transfer-encodings are automatically decoded for you.
+        headers = self._client_response.headers
+        if "Content-Encoding" in headers and (
+            headers["Content-Encoding"] == "gzip"
+            or headers["Content-Encoding"] == "deflate"
+        ):
+            return True
+        return False
+
+    async def raw_content(self):
+        if self._raw_content is None:
+            self._raw_content = await self._response.content.read()
+        return self._raw_content
+
+    async def content(self):
+        if self._raw_content is None:
+            self._raw_content = await self._response.content.read()
+        if self._is_compressed:
+            d = zlib.decompressobj(zlib.MAX_WBITS | 32)
+            decompressed = d.decompress(self._raw_content)
+            return decompressed
+        return self._raw_content
 
 
 class Request(transport.Request):
@@ -127,8 +152,10 @@ class Request(transport.Request):
 
         try:
             if self.session is None:  # pragma: NO COVER
-                #self.session = aiohttp.ClientSession(auto_decompress=False)  # pragma: NO COVER
-                self.session = aiohttp.ClientSession(auto_decompress=False)  # pragma: NO COVER
+                # self.session = aiohttp.ClientSession(auto_decompress=False)  # pragma: NO COVER
+                self.session = aiohttp.ClientSession(
+                    auto_decompress=False
+                )  # pragma: NO COVER
             requests._LOGGER.debug("Making request: %s %s", method, url)
             response = await self.session.request(
                 method, url, data=body, headers=headers, timeout=timeout, **kwargs
@@ -200,6 +227,7 @@ class AuthorizedSession(aiohttp.ClientSession):
         self._loop = asyncio.get_event_loop()
         self._refresh_lock = asyncio.Lock()
 
+
     async def request(
         self,
         method,
@@ -208,7 +236,7 @@ class AuthorizedSession(aiohttp.ClientSession):
         headers=None,
         max_allowed_time=None,
         timeout=_DEFAULT_TIMEOUT,
-        **kwargs
+        auto_decompress=False ** kwargs,
     ):
 
         """Implementation of Authorized Session aiohttp request.
@@ -247,10 +275,12 @@ class AuthorizedSession(aiohttp.ClientSession):
             for key in headers.keys():
                 if type(headers[key]) is bytes:
                     headers[key] = headers[key].decode("utf-8")
-                    #print("headers: ", headers)
-        #print("headers: ", headers)
+                    # print("headers: ", headers)
+        # print("headers: ", headers)
 
-        async with aiohttp.ClientSession(auto_decompress=False) as self._auth_request_session:
+        async with aiohttp.ClientSession(
+            auto_decompress=auto_decompress
+        ) as self._auth_request_session:
             auth_request = Request(self._auth_request_session)
             self._auth_request = auth_request
 
@@ -285,7 +315,7 @@ class AuthorizedSession(aiohttp.ClientSession):
                     timeout=timeout,
                     **kwargs
                 )
-                #text = await response.text()
+                # text = await response.text()
 
             remaining_time = guard.remaining_timeout
 
