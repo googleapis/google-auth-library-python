@@ -21,6 +21,7 @@ import functools
 
 import aiohttp
 import six
+import zlib
 
 from google.auth import exceptions
 from google.auth import transport
@@ -213,6 +214,7 @@ class AuthorizedSession(aiohttp.ClientSession):
         max_refresh_attempts=transport.DEFAULT_MAX_REFRESH_ATTEMPTS,
         refresh_timeout=None,
         auth_request=None,
+        auto_decompress=False
     ):
         super(AuthorizedSession, self).__init__()
         self.credentials = credentials
@@ -224,6 +226,7 @@ class AuthorizedSession(aiohttp.ClientSession):
         self._auth_request_session = None
         self._loop = asyncio.get_event_loop()
         self._refresh_lock = asyncio.Lock()
+        self._auto_decompress = auto_decompress
 
 
     async def request(
@@ -234,7 +237,7 @@ class AuthorizedSession(aiohttp.ClientSession):
         headers=None,
         max_allowed_time=None,
         timeout=_DEFAULT_TIMEOUT,
-        auto_decompress=False ** kwargs,
+        auto_decompress=False, **kwargs,
     ):
 
         """Implementation of Authorized Session aiohttp request.
@@ -277,7 +280,7 @@ class AuthorizedSession(aiohttp.ClientSession):
         # print("headers: ", headers)
 
         async with aiohttp.ClientSession(
-            auto_decompress=auto_decompress
+            auto_decompress=self._auto_decompress
         ) as self._auth_request_session:
             auth_request = Request(self._auth_request_session)
             self._auth_request = auth_request
