@@ -70,12 +70,10 @@ class _Response(transport.Response):
     def _is_compressed(self):
         # The gzip and deflate transfer-encodings are automatically decoded for you.
         headers = self._client_response.headers
-        if "Content-Encoding" in headers and (
+        return "Content-Encoding" in headers and (
             headers["Content-Encoding"] == "gzip"
             or headers["Content-Encoding"] == "deflate"
-        ):
-            return True
-        return False
+        )
 
     async def raw_content(self):
         if self._raw_content is None:
