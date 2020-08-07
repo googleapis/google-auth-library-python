@@ -31,6 +31,7 @@ from google.auth.transport import requests
 # sync timeout.
 _DEFAULT_TIMEOUT = 180  # in seconds
 
+
 class _CombinedResponse(transport.Response):
     """
     In order to more closely resemble the `requests` interface, where a raw
@@ -76,7 +77,9 @@ class _CombinedResponse(transport.Response):
         if self._raw_content is None:
             self._raw_content = await self._response.content.read()
         if self._is_compressed():
-            decoder = urllib3.response.MultiDecoder(self._response.headers["Content-Encoding"])
+            decoder = urllib3.response.MultiDecoder(
+                self._response.headers["Content-Encoding"]
+            )
             decompressed = decoder.decompress(self._raw_content)
             return decompressed
 
