@@ -35,12 +35,12 @@ _DEFAULT_TIMEOUT = 180  # in seconds
 class _CombinedResponse(transport.Response):
     """
     In order to more closely resemble the `requests` interface, where a raw
-    and deflated content could be accessed at once, this class lazily reads the 
+    and deflated content could be accessed at once, this class lazily reads the
     stream in `transport.Response` so both return forms can be used.
 
-    The gzip and deflate transfer-encodings are automatically decoded for you 
+    The gzip and deflate transfer-encodings are automatically decoded for you
     because the default parameter for autodecompress into the ClientSession is set
-    to False, and therefore we add this class to act as a wrapper for a user to be 
+    to False, and therefore we add this class to act as a wrapper for a user to be
     able to access both the raw and decoded response bodies - mirroring the sync
     implementation.
     """
