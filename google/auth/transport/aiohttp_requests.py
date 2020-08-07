@@ -60,7 +60,7 @@ class _CombinedResponse(transport.Response):
 
     @property
     def data(self):
-        return self.content
+        return self._response.content
 
     async def raw_content(self):
         if self._raw_content is None:
@@ -167,7 +167,7 @@ class Request(transport.Request):
             response = await self.session.request(
                 method, url, data=body, headers=headers, timeout=timeout, **kwargs
             )
-            return _Response(response)
+            return _CombinedResponse(response)
 
         except aiohttp.ClientError as caught_exc:
             new_exc = exceptions.TransportError(caught_exc)
