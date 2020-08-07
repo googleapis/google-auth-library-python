@@ -18,10 +18,10 @@ from __future__ import absolute_import
 
 import asyncio
 import functools
+import zlib
 
 import aiohttp
 import six
-import zlib
 
 from google.auth import exceptions
 from google.auth import transport
@@ -35,7 +35,7 @@ _DEFAULT_TIMEOUT = 180  # in seconds
 class _CombinedResponse(transport.Response):
     """
     In order to more closely resemble the `requests` interface, where a raw
-    and deflated content could be accessed at once, this class lazily reads the 
+    and deflated content could be accessed at once, this class lazily reads the
     stream in `transport.Response` so both return forms can be used
     """
 
