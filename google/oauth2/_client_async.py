@@ -104,7 +104,8 @@ async def _token_endpoint_request(request, token_uri, body):
             method="POST", url=token_uri, headers=headers, body=body
         )
 
-        response_body1 = await response.data.read()
+        # Using data.read() resulted in zlib decompression errors. This may require future investigation.
+        response_body1 = await response.content()
 
         response_body = (
             response_body1.decode("utf-8")

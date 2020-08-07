@@ -18,6 +18,7 @@ from __future__ import absolute_import
 
 import asyncio
 import functools
+import zlib
 
 import aiohttp
 import six
@@ -29,6 +30,57 @@ from google.auth.transport import requests
 # Timeout can be re-defined depending on async requirement. Currently made 60s more than
 # sync timeout.
 _DEFAULT_TIMEOUT = 180  # in seconds
+
+
+class _CombinedResponse(transport.Response):
+    """
+    In order to more closely resemble the `requests` interface, where a raw
+    and deflated content could be accessed at once, this class lazily reads the 
+    stream in `transport.Response` so both return forms can be used.
+
+    The gzip and deflate transfer-encodings are automatically decoded for you 
+    because the default parameter for autodecompress into the ClientSession is set
+    to False, and therefore we add this class to act as a wrapper for a user to be 
+    able to access both the raw and decoded response bodies - mirroring the sync
+    implementation.
+    """
+
+    def __init__(self, response):
+        self._response = response
+        self._raw_content = None
+
+    def _is_compressed(self):
+        headers = self._client_response.headers
+        return "Content-Encoding" in headers and (
+            headers["Content-Encoding"] == "gzip"
+            or headers["Content-Encoding"] == "deflate"
+        )
+
+    @property
+    def status(self):
+        return self._response.status
+
+    @property
+    def headers(self):
+        return self._response.headers
+
+    @property
+    def data(self):
+        return self._response.content
+
+    async def raw_content(self):
+        if self._raw_content is None:
+            self._raw_content = await self._response.content.read()
+        return self._raw_content
+
+    async def content(self):
+        if self._raw_content is None:
+            self._raw_content = await self._response.content.read()
+        if self._is_compressed:
+            d = zlib.decompressobj(zlib.MAX_WBITS | 32)
+            decompressed = d.decompress(self._raw_content)
+            return decompressed
+        return self._raw_content
 
 
 class _Response(transport.Response):
@@ -79,7 +131,6 @@ class Request(transport.Request):
     """
 
     def __init__(self, session=None):
-
         self.session = None
 
     async def __call__(
@@ -89,7 +140,7 @@ class Request(transport.Request):
         body=None,
         headers=None,
         timeout=_DEFAULT_TIMEOUT,
-        **kwargs
+        **kwargs,
     ):
         """
         Make an HTTP request using aiohttp.
@@ -115,12 +166,14 @@ class Request(transport.Request):
 
         try:
             if self.session is None:  # pragma: NO COVER
-                self.session = aiohttp.ClientSession()  # pragma: NO COVER
+                self.session = aiohttp.ClientSession(
+                    auto_decompress=False
+                )  # pragma: NO COVER
             requests._LOGGER.debug("Making request: %s %s", method, url)
             response = await self.session.request(
                 method, url, data=body, headers=headers, timeout=timeout, **kwargs
             )
-            return _Response(response)
+            return _CombinedResponse(response)
 
         except aiohttp.ClientError as caught_exc:
             new_exc = exceptions.TransportError(caught_exc)
@@ -175,6 +228,7 @@ class AuthorizedSession(aiohttp.ClientSession):
         max_refresh_attempts=transport.DEFAULT_MAX_REFRESH_ATTEMPTS,
         refresh_timeout=None,
         auth_request=None,
+        auto_decompress=False,
     ):
         super(AuthorizedSession, self).__init__()
         self.credentials = credentials
@@ -186,6 +240,7 @@ class AuthorizedSession(aiohttp.ClientSession):
         self._auth_request_session = None
         self._loop = asyncio.get_event_loop()
         self._refresh_lock = asyncio.Lock()
+        self._auto_decompress = auto_decompress
 
     async def request(
         self,
@@ -195,7 +250,8 @@ class AuthorizedSession(aiohttp.ClientSession):
         headers=None,
         max_allowed_time=None,
         timeout=_DEFAULT_TIMEOUT,
-        **kwargs
+        auto_decompress=False,
+        **kwargs,
     ):
 
         """Implementation of Authorized Session aiohttp request.
@@ -230,8 +286,17 @@ class AuthorizedSession(aiohttp.ClientSession):
                 transmitted. The timout error will be raised after such
                 request completes.
         """
+        # Headers come in as bytes which isn't expected behavior, the resumable
+        # media libraries in some cases expect a str type for the header values,
+        # but sometimes the operations return these in bytes types.
+        if headers:
+            for key in headers.keys():
+                if type(headers[key]) is bytes:
+                    headers[key] = headers[key].decode("utf-8")
 
-        async with aiohttp.ClientSession() as self._auth_request_session:
+        async with aiohttp.ClientSession(
+            auto_decompress=self._auto_decompress
+        ) as self._auth_request_session:
             auth_request = Request(self._auth_request_session)
             self._auth_request = auth_request
 
@@ -264,7 +329,7 @@ class AuthorizedSession(aiohttp.ClientSession):
                     data=data,
                     headers=request_headers,
                     timeout=timeout,
-                    **kwargs
+                    **kwargs,
                 )
 
             remaining_time = guard.remaining_timeout
@@ -307,7 +372,7 @@ class AuthorizedSession(aiohttp.ClientSession):
                     max_allowed_time=remaining_time,
                     timeout=timeout,
                     _credential_refresh_attempt=_credential_refresh_attempt + 1,
-                    **kwargs
+                    **kwargs,
                 )
 
         return response

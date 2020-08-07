@@ -63,6 +63,7 @@ def make_request(response_data, status=http_client.OK):
     data = json.dumps(response_data).encode("utf-8")
     response.data = mock.AsyncMock(spec=["__call__", "read"])
     response.data.read = mock.AsyncMock(spec=["__call__"], return_value=data)
+    response.content = mock.AsyncMock(spec=["__call__"], return_value=data)
     request = mock.AsyncMock(spec=["transport.Request"])
     request.return_value = response
     return request
