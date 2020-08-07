@@ -18,10 +18,10 @@ from __future__ import absolute_import
 
 import asyncio
 import functools
+import zlib
 
 import aiohttp
 import six
-import zlib
 
 from google.auth import exceptions
 from google.auth import transport
@@ -87,7 +87,6 @@ class _Response(transport.Response):
 
     def __init__(self, response):
         self._response = response
-        # self._raw_content = None
 
     @property
     def status(self):
@@ -100,10 +99,6 @@ class _Response(transport.Response):
     @property
     def data(self):
         return self._response.content
-
-    @property
-    def text(self):
-        return self._response.text
 
 
 class Request(transport.Request):
@@ -130,7 +125,6 @@ class Request(transport.Request):
     """
 
     def __init__(self, session=None):
-
         self.session = None
 
     async def __call__(
@@ -166,7 +160,6 @@ class Request(transport.Request):
 
         try:
             if self.session is None:  # pragma: NO COVER
-                # self.session = aiohttp.ClientSession(auto_decompress=False)  # pragma: NO COVER
                 self.session = aiohttp.ClientSession(
                     auto_decompress=False
                 )  # pragma: NO COVER
@@ -291,8 +284,6 @@ class AuthorizedSession(aiohttp.ClientSession):
             for key in headers.keys():
                 if type(headers[key]) is bytes:
                     headers[key] = headers[key].decode("utf-8")
-                    # print("headers: ", headers)
-        # print("headers: ", headers)
 
         async with aiohttp.ClientSession(
             auto_decompress=self._auto_decompress
@@ -331,7 +322,6 @@ class AuthorizedSession(aiohttp.ClientSession):
                     timeout=timeout,
                     **kwargs,
                 )
-                # text = await response.text()
 
             remaining_time = guard.remaining_timeout
 

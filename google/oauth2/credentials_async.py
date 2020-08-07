@@ -61,7 +61,12 @@ class Credentials(oauth2_credentials.Credentials):
                 "token_uri, client_id, and client_secret."
             )
 
-        access_token, refresh_token, expiry, grant_response = await _client.refresh_grant(
+        (
+            access_token,
+            refresh_token,
+            expiry,
+            grant_response,
+        ) = await _client.refresh_grant(
             request,
             self._token_uri,
             self._refresh_token,
