@@ -50,6 +50,18 @@ class _CombinedResponse(transport.Response):
             or headers["Content-Encoding"] == "deflate"
         )
 
+    @property
+    def status(self):
+        return self._response.status
+
+    @property
+    def headers(self):
+        return self._response.headers
+
+    @property
+    def data(self):
+        return self.content
+
     async def raw_content(self):
         if self._raw_content is None:
             self._raw_content = await self._response.content.read()
