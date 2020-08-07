@@ -280,10 +280,12 @@ class AuthorizedSession(aiohttp.ClientSession):
                 transmitted. The timout error will be raised after such
                 request completes.
         """
+        # Headers come in as bytes which isn't expected behavior (resumable)
         if headers:
             for key in headers.keys():
                 if type(headers[key]) is bytes:
                     headers[key] = headers[key].decode("utf-8")
+
 
         async with aiohttp.ClientSession(
             auto_decompress=self._auto_decompress
