@@ -33,11 +33,12 @@ _DEFAULT_TIMEOUT = 180  # in seconds
 
 
 class _CombinedResponse(transport.Response):
-    '''
+    """
     In order to more closely resemble the `requests` interface, where a raw
     and deflated content could be accessed at once, this class lazily reads the 
     stream in `transport.Response` so both return forms can be used
-    '''
+    """
+
     def __init__(self, response):
         self._response = response
         self._raw_content = None
@@ -75,6 +76,7 @@ class _CombinedResponse(transport.Response):
             decompressed = d.decompress(self._raw_content)
             return decompressed
         return self._raw_content
+
 
 class _Response(transport.Response):
     """
@@ -133,7 +135,7 @@ class Request(transport.Request):
         body=None,
         headers=None,
         timeout=_DEFAULT_TIMEOUT,
-        **kwargs
+        **kwargs,
     ):
         """
         Make an HTTP request using aiohttp.
@@ -221,7 +223,7 @@ class AuthorizedSession(aiohttp.ClientSession):
         max_refresh_attempts=transport.DEFAULT_MAX_REFRESH_ATTEMPTS,
         refresh_timeout=None,
         auth_request=None,
-        auto_decompress=False
+        auto_decompress=False,
     ):
         super(AuthorizedSession, self).__init__()
         self.credentials = credentials
@@ -235,7 +237,6 @@ class AuthorizedSession(aiohttp.ClientSession):
         self._refresh_lock = asyncio.Lock()
         self._auto_decompress = auto_decompress
 
-
     async def request(
         self,
         method,
@@ -244,7 +245,8 @@ class AuthorizedSession(aiohttp.ClientSession):
         headers=None,
         max_allowed_time=None,
         timeout=_DEFAULT_TIMEOUT,
-        auto_decompress=False, **kwargs,
+        auto_decompress=False,
+        **kwargs,
     ):
 
         """Implementation of Authorized Session aiohttp request.
@@ -319,7 +321,7 @@ class AuthorizedSession(aiohttp.ClientSession):
                     data=data,
                     headers=request_headers,
                     timeout=timeout,
-                    **kwargs
+                    **kwargs,
                 )
 
             remaining_time = guard.remaining_timeout
@@ -362,7 +364,7 @@ class AuthorizedSession(aiohttp.ClientSession):
                     max_allowed_time=remaining_time,
                     timeout=timeout,
                     _credential_refresh_attempt=_credential_refresh_attempt + 1,
-                    **kwargs
+                    **kwargs,
                 )
 
         return response

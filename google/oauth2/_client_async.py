@@ -107,11 +107,10 @@ async def _token_endpoint_request(request, token_uri, body):
         response_body1 = await response.content()
 
         response_body = (
-                response_body1.decode("utf-8")
-                if hasattr(response_body1, "decode")
-                else response_body1
-            )
-        
+            response_body1.decode("utf-8")
+            if hasattr(response_body1, "decode")
+            else response_body1
+        )
 
         response_data = json.loads(response_body)
 
@@ -155,7 +154,6 @@ async def jwt_grant(request, token_uri, assertion):
     """
     body = {"assertion": assertion, "grant_type": client._JWT_GRANT_TYPE}
 
-    
     response_data = await _token_endpoint_request(request, token_uri, body)
 
     try:
