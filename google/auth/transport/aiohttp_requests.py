@@ -36,7 +36,13 @@ class _CombinedResponse(transport.Response):
     """
     In order to more closely resemble the `requests` interface, where a raw
     and deflated content could be accessed at once, this class lazily reads the 
-    stream in `transport.Response` so both return forms can be used
+    stream in `transport.Response` so both return forms can be used.
+
+    The gzip and deflate transfer-encodings are automatically decoded for you 
+    because the default parameter for autodecompress into the ClientSession is set
+    to False, and therefore we add this class to act as a wrapper for a user to be 
+    able to access both the raw and decoded response bodies - mirroring the sync
+    implementation.
     """
 
     def __init__(self, response):
@@ -44,7 +50,6 @@ class _CombinedResponse(transport.Response):
         self._raw_content = None
 
     def _is_compressed(self):
-        # The gzip and deflate transfer-encodings are automatically decoded for you.
         headers = self._client_response.headers
         return "Content-Encoding" in headers and (
             headers["Content-Encoding"] == "gzip"
@@ -281,7 +286,9 @@ class AuthorizedSession(aiohttp.ClientSession):
                 transmitted. The timout error will be raised after such
                 request completes.
         """
-        # Headers come in as bytes which isn't expected behavior (resumable)
+        # Headers come in as bytes which isn't expected behavior, the resumable
+        # media libraries in some cases expect a str type for the header values,
+        # but sometimes the operations return these in bytes types.
         if headers:
             for key in headers.keys():
                 if type(headers[key]) is bytes:
