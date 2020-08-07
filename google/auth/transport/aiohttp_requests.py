@@ -18,10 +18,10 @@ from __future__ import absolute_import
 
 import asyncio
 import functools
-import zlib
 
 import aiohttp
 import six
+import urllib3
 
 from google.auth import exceptions
 from google.auth import transport
@@ -30,7 +30,6 @@ from google.auth.transport import requests
 # Timeout can be re-defined depending on async requirement. Currently made 60s more than
 # sync timeout.
 _DEFAULT_TIMEOUT = 180  # in seconds
-
 
 class _CombinedResponse(transport.Response):
     """
@@ -50,7 +49,7 @@ class _CombinedResponse(transport.Response):
         self._raw_content = None
 
     def _is_compressed(self):
-        headers = self._client_response.headers
+        headers = self._response.headers
         return "Content-Encoding" in headers and (
             headers["Content-Encoding"] == "gzip"
             or headers["Content-Encoding"] == "deflate"
@@ -76,10 +75,11 @@ class _CombinedResponse(transport.Response):
     async def content(self):
         if self._raw_content is None:
             self._raw_content = await self._response.content.read()
-        if self._is_compressed:
-            d = zlib.decompressobj(zlib.MAX_WBITS | 32)
-            decompressed = d.decompress(self._raw_content)
+        if self._is_compressed():
+            decoder = urllib3.response.MultiDecoder(self._response.headers["Content-Encoding"])
+            decompressed = decoder.decompress(self._raw_content)
             return decompressed
+
         return self._raw_content
 
 
