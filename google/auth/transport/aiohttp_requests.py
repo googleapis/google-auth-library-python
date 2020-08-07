@@ -33,11 +33,12 @@ _DEFAULT_TIMEOUT = 180  # in seconds
 
 
 class _CombinedResponse(transport.Response):
-    '''
+    """
     In order to more closely resemble the `requests` interface, where a raw
     and deflated content could be accessed at once, this class lazily reads the 
     stream in `transport.Response` so both return forms can be used
-    '''
+    """
+
     def __init__(self, response):
         self._response = response
         self._raw_content = None
@@ -285,7 +286,6 @@ class AuthorizedSession(aiohttp.ClientSession):
             for key in headers.keys():
                 if type(headers[key]) is bytes:
                     headers[key] = headers[key].decode("utf-8")
-
 
         async with aiohttp.ClientSession(
             auto_decompress=self._auto_decompress
