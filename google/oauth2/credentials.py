@@ -66,6 +66,7 @@ class Credentials(credentials.ReadOnlyScoped, credentials.Credentials):
         client_secret=None,
         scopes=None,
         quota_project_id=None,
+        expiry=None,
     ):
         """
         Args:
@@ -95,6 +96,7 @@ class Credentials(credentials.ReadOnlyScoped, credentials.Credentials):
         """
         super(Credentials, self).__init__()
         self.token = token
+        self.expiry = expiry
         self._refresh_token = refresh_token
         self._id_token = id_token
         self._scopes = scopes
@@ -127,6 +129,11 @@ class Credentials(credentials.ReadOnlyScoped, credentials.Credentials):
     def refresh_token(self):
         """Optional[str]: The OAuth 2.0 refresh token."""
         return self._refresh_token
+
+    @property
+    def scopes(self):
+        """Optional[str]: The OAuth 2.0 permission scopes."""
+        return self._scopes
 
     @property
     def token_uri(self):
@@ -241,16 +248,30 @@ class Credentials(credentials.ReadOnlyScoped, credentials.Credentials):
                 "fields {}.".format(", ".join(missing))
             )
 
+        # access token expiry; auto-expire if not saved
+        expiry = info.get('expiry')
+        if expiry:
+            from datetime import datetime as dt
+            expiry = dt.strptime(
+                    expiry.rstrip('Z').split('.')[0], "%Y-%m-%dT%H:%M:%S")
+        else:
+            expiry = _helpers.utcnow() - _helpers.CLOCK_SKEW
+
+        # process scopes, which needs to be a seq
+        if scopes is None and 'scopes' in info:
+            scopes = info.get('scopes')
+            if isinstance(scopes, str):
+                scopes = scopes.split(' ')
+
         return cls(
-            None,  # No access token, must be refreshed.
-            refresh_token=info["refresh_token"],
-            token_uri=_GOOGLE_OAUTH2_TOKEN_ENDPOINT,
+            token=info.get('token'),
+            refresh_token=info.get('refresh_token'),
+            token_uri=_GOOGLE_OAUTH2_TOKEN_ENDPOINT, # always overrides
             scopes=scopes,
-            client_id=info["client_id"],
-            client_secret=info["client_secret"],
-            quota_project_id=info.get(
-                "quota_project_id"
-            ),  # quota project may not exist
+            client_id=info.get('client_id'),
+            client_secret=info.get('client_secret'),
+            quota_project_id=info.get("quota_project_id"),  # may not exist
+            expiry=expiry,
         )
 
     @classmethod
@@ -294,6 +315,8 @@ class Credentials(credentials.ReadOnlyScoped, credentials.Credentials):
             "client_secret": self.client_secret,
             "scopes": self.scopes,
         }
+        if self.expiry:
+            prep["expiry"] = self.expiry.isoformat() + 'Z'
 
         # Remove empty entries
         prep = {k: v for k, v in prep.items() if v is not None}
@@ -316,7 +339,6 @@ class UserAccessTokenCredentials(credentials.Credentials):
             specified, the current active account will be used.
         quota_project_id (Optional[str]): The project ID used for quota
             and billing.
-
     """
 
     def __init__(self, account=None, quota_project_id=None):
