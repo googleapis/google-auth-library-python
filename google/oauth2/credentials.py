@@ -31,6 +31,7 @@ Authorization Code grant flow.
 .. _rfc6749 section 4.1: https://tools.ietf.org/html/rfc6749#section-4.1
 """
 
+from datetime import datetime
 import io
 import json
 
@@ -248,28 +249,28 @@ class Credentials(credentials.ReadOnlyScoped, credentials.Credentials):
                 "fields {}.".format(", ".join(missing))
             )
 
-        # access token expiry; auto-expire if not saved
-        expiry = info.get('expiry')
+        # access token expiry (datetime obj); auto-expire if not saved
+        expiry = info.get("expiry")
         if expiry:
-            from datetime import datetime as dt
-            expiry = dt.strptime(
-                    expiry.rstrip('Z').split('.')[0], "%Y-%m-%dT%H:%M:%S")
+            expiry = datetime.strptime(
+                expiry.rstrip("Z").split(".")[0], "%Y-%m-%dT%H:%M:%S"
+            )
         else:
             expiry = _helpers.utcnow() - _helpers.CLOCK_SKEW
 
         # process scopes, which needs to be a seq
-        if scopes is None and 'scopes' in info:
-            scopes = info.get('scopes')
-            if isinstance(scopes, str):
-                scopes = scopes.split(' ')
+        if scopes is None and "scopes" in info:
+            scopes = info.get("scopes")
+            if not isinstance(scopes, list):
+                scopes = scopes.split(" ")
 
         return cls(
-            token=info.get('token'),
-            refresh_token=info.get('refresh_token'),
-            token_uri=_GOOGLE_OAUTH2_TOKEN_ENDPOINT, # always overrides
+            token=info.get("token"),
+            refresh_token=info.get("refresh_token"),
+            token_uri=_GOOGLE_OAUTH2_TOKEN_ENDPOINT,  # always overrides
             scopes=scopes,
-            client_id=info.get('client_id'),
-            client_secret=info.get('client_secret'),
+            client_id=info.get("client_id"),
+            client_secret=info.get("client_secret"),
             quota_project_id=info.get("quota_project_id"),  # may not exist
             expiry=expiry,
         )
@@ -315,10 +316,10 @@ class Credentials(credentials.ReadOnlyScoped, credentials.Credentials):
             "client_secret": self.client_secret,
             "scopes": self.scopes,
         }
-        if self.expiry:
-            prep["expiry"] = self.expiry.isoformat() + 'Z'
+        if self.expiry:  # flatten expiry timestamp
+            prep["expiry"] = self.expiry.isoformat() + "Z"
 
-        # Remove empty entries
+        # Remove empty entries (those which are None)
         prep = {k: v for k, v in prep.items() if v is not None}
 
         # Remove entries that explicitely need to be removed

@@ -359,6 +359,16 @@ class TestCredentials(object):
         assert creds.token_uri == credentials._GOOGLE_OAUTH2_TOKEN_ENDPOINT
         assert creds.scopes == scopes
 
+        info["scopes"] = "email"    # single non-array scope from file
+        creds = credentials.Credentials.from_authorized_user_info(info)
+        assert creds.scopes == [info["scopes"]]
+
+        expiry = datetime.datetime(2020, 8, 14, 15, 54, 1)
+        info["expiry"] = expiry.isoformat() + "Z"
+        creds = credentials.Credentials.from_authorized_user_info(info)
+        assert creds.expiry == expiry
+        assert creds.expired
+
     def test_from_authorized_user_file(self):
         info = AUTH_USER_INFO.copy()
 
@@ -381,6 +391,7 @@ class TestCredentials(object):
 
     def test_to_json(self):
         info = AUTH_USER_INFO.copy()
+        info['expiry'] = datetime.datetime.now().isoformat()+"Z"
         creds = credentials.Credentials.from_authorized_user_info(info)
 
         # Test with no `strip` arg
