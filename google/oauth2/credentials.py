@@ -261,7 +261,7 @@ class Credentials(credentials.ReadOnlyScoped, credentials.Credentials):
         # process scopes, which needs to be a seq
         if scopes is None and "scopes" in info:
             scopes = info.get("scopes")
-            if not isinstance(scopes, list):
+            if isinstance(scopes, str):
                 scopes = scopes.split(" ")
 
         return cls(

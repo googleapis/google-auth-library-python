@@ -359,7 +359,7 @@ class TestCredentials(object):
         assert creds.token_uri == credentials._GOOGLE_OAUTH2_TOKEN_ENDPOINT
         assert creds.scopes == scopes
 
-        info["scopes"] = "email"    # single non-array scope from file
+        info["scopes"] = "email"  # single non-array scope from file
         creds = credentials.Credentials.from_authorized_user_info(info)
         assert creds.scopes == [info["scopes"]]
 
@@ -391,8 +391,10 @@ class TestCredentials(object):
 
     def test_to_json(self):
         info = AUTH_USER_INFO.copy()
-        info['expiry'] = datetime.datetime.now().isoformat()+"Z"
+        expiry = datetime.datetime(2020, 8, 14, 15, 54, 1)
+        info["expiry"] = expiry.isoformat() + "Z"
         creds = credentials.Credentials.from_authorized_user_info(info)
+        assert creds.expiry == expiry
 
         # Test with no `strip` arg
         json_output = creds.to_json()
@@ -403,6 +405,7 @@ class TestCredentials(object):
         assert json_asdict.get("client_id") == creds.client_id
         assert json_asdict.get("scopes") == creds.scopes
         assert json_asdict.get("client_secret") == creds.client_secret
+        assert json_asdict.get("expiry") == info["expiry"]
 
         # Test with a `strip` arg
         json_output = creds.to_json(strip=["client_secret"])
