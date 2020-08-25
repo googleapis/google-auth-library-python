@@ -18,6 +18,7 @@ import time
 
 import google.auth
 import google.auth.credentials
+from google.auth import environment_vars
 from google.auth.transport import mtls
 import google.auth.transport.requests
 import google.auth.transport.urllib3
@@ -33,7 +34,7 @@ def test_requests():
     )
 
     authed_session = google.auth.transport.requests.AuthorizedSession(credentials)
-    with mock.patch.dict(os.environ, {"GOOGLE_API_USE_CLIENT_CERTIFICATE": "True"}):
+    with mock.patch.dict(os.environ, {environment_vars.GOOGLE_API_USE_CLIENT_CERTIFICATE: "True"}):
         authed_session.configure_mtls_channel()
 
     # If the devices has default client cert source, then a mutual TLS channel
@@ -58,7 +59,7 @@ def test_urllib3():
     )
 
     authed_http = google.auth.transport.urllib3.AuthorizedHttp(credentials)
-    with mock.patch.dict(os.environ, {"GOOGLE_API_USE_CLIENT_CERTIFICATE": "True"}):
+    with mock.patch.dict(os.environ, {environment_vars.GOOGLE_API_USE_CLIENT_CERTIFICATE: "True"}):
         is_mtls = authed_http.configure_mtls_channel()
 
     # If the devices has default client cert source, then a mutual TLS channel

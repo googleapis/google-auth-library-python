@@ -21,6 +21,7 @@ import pytest
 from six.moves import http_client
 import urllib3
 
+from google.auth import environment_vars
 from google.auth import exceptions
 import google.auth.credentials
 import google.auth.transport._mtls_helper
@@ -181,7 +182,7 @@ class TestAuthorizedHttp(object):
 
         with pytest.warns(UserWarning):
             with mock.patch.dict(
-                os.environ, {"GOOGLE_API_USE_CLIENT_CERTIFICATE": "True"}
+                os.environ, {environment_vars.GOOGLE_API_USE_CLIENT_CERTIFICATE: "True"}
             ):
                 is_mtls = authed_http.configure_mtls_channel(callback)
 
@@ -206,7 +207,9 @@ class TestAuthorizedHttp(object):
             pytest.public_cert_bytes,
             pytest.private_key_bytes,
         )
-        with mock.patch.dict(os.environ, {"GOOGLE_API_USE_CLIENT_CERTIFICATE": "True"}):
+        with mock.patch.dict(
+            os.environ, {environment_vars.GOOGLE_API_USE_CLIENT_CERTIFICATE: "True"}
+        ):
             is_mtls = authed_http.configure_mtls_channel()
 
         assert is_mtls
@@ -227,7 +230,9 @@ class TestAuthorizedHttp(object):
         )
 
         mock_get_client_cert_and_key.return_value = (False, None, None)
-        with mock.patch.dict(os.environ, {"GOOGLE_API_USE_CLIENT_CERTIFICATE": "True"}):
+        with mock.patch.dict(
+            os.environ, {environment_vars.GOOGLE_API_USE_CLIENT_CERTIFICATE: "True"}
+        ):
             is_mtls = authed_http.configure_mtls_channel()
 
         assert not is_mtls
@@ -245,7 +250,7 @@ class TestAuthorizedHttp(object):
         mock_get_client_cert_and_key.side_effect = exceptions.ClientCertError()
         with pytest.raises(exceptions.MutualTLSChannelError):
             with mock.patch.dict(
-                os.environ, {"GOOGLE_API_USE_CLIENT_CERTIFICATE": "True"}
+                os.environ, {environment_vars.GOOGLE_API_USE_CLIENT_CERTIFICATE: "True"}
             ):
                 authed_http.configure_mtls_channel()
 
@@ -254,7 +259,8 @@ class TestAuthorizedHttp(object):
             sys.modules["OpenSSL"] = None
             with pytest.raises(exceptions.MutualTLSChannelError):
                 with mock.patch.dict(
-                    os.environ, {"GOOGLE_API_USE_CLIENT_CERTIFICATE": "True"}
+                    os.environ,
+                    {environment_vars.GOOGLE_API_USE_CLIENT_CERTIFICATE: "True"},
                 ):
                     authed_http.configure_mtls_channel()
 

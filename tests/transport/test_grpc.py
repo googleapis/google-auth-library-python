@@ -21,6 +21,7 @@ import pytest
 
 from google.auth import _helpers
 from google.auth import credentials
+from google.auth import environment_vars
 from google.auth import exceptions
 from google.auth import transport
 
@@ -140,7 +141,9 @@ class TestSecureAuthorizedChannel(object):
         )
 
         channel = None
-        with mock.patch.dict(os.environ, {"GOOGLE_API_USE_CLIENT_CERTIFICATE": "True"}):
+        with mock.patch.dict(
+            os.environ, {environment_vars.GOOGLE_API_USE_CLIENT_CERTIFICATE: "True"}
+        ):
             channel = google.auth.transport.grpc.secure_authorized_channel(
                 credentials, request, target, options=mock.sentinel.options
             )
@@ -278,7 +281,9 @@ class TestSecureAuthorizedChannel(object):
         client_cert_callback = mock.Mock()
         client_cert_callback.return_value = (PUBLIC_CERT_BYTES, PRIVATE_KEY_BYTES)
 
-        with mock.patch.dict(os.environ, {"GOOGLE_API_USE_CLIENT_CERTIFICATE": "True"}):
+        with mock.patch.dict(
+            os.environ, {environment_vars.GOOGLE_API_USE_CLIENT_CERTIFICATE: "True"}
+        ):
             google.auth.transport.grpc.secure_authorized_channel(
                 credentials, request, target, client_cert_callback=client_cert_callback
             )
@@ -320,7 +325,7 @@ class TestSecureAuthorizedChannel(object):
 
         with pytest.raises(Exception) as excinfo:
             with mock.patch.dict(
-                os.environ, {"GOOGLE_API_USE_CLIENT_CERTIFICATE": "True"}
+                os.environ, {environment_vars.GOOGLE_API_USE_CLIENT_CERTIFICATE: "True"}
             ):
                 google.auth.transport.grpc.secure_authorized_channel(
                     credentials,
@@ -381,7 +386,9 @@ class TestSslCredentials(object):
         # Mock that the metadata file doesn't exist.
         mock_check_dca_metadata_path.return_value = None
 
-        with mock.patch.dict(os.environ, {"GOOGLE_API_USE_CLIENT_CERTIFICATE": "True"}):
+        with mock.patch.dict(
+            os.environ, {environment_vars.GOOGLE_API_USE_CLIENT_CERTIFICATE: "True"}
+        ):
             ssl_credentials = google.auth.transport.grpc.SslCredentials()
 
         # Since no context aware metadata is found, we wouldn't call
@@ -409,7 +416,7 @@ class TestSslCredentials(object):
 
         with pytest.raises(exceptions.MutualTLSChannelError):
             with mock.patch.dict(
-                os.environ, {"GOOGLE_API_USE_CLIENT_CERTIFICATE": "True"}
+                os.environ, {environment_vars.GOOGLE_API_USE_CLIENT_CERTIFICATE: "True"}
             ):
                 assert google.auth.transport.grpc.SslCredentials().ssl_credentials
 
@@ -431,7 +438,9 @@ class TestSslCredentials(object):
             None,
         )
 
-        with mock.patch.dict(os.environ, {"GOOGLE_API_USE_CLIENT_CERTIFICATE": "True"}):
+        with mock.patch.dict(
+            os.environ, {environment_vars.GOOGLE_API_USE_CLIENT_CERTIFICATE: "True"}
+        ):
             ssl_credentials = google.auth.transport.grpc.SslCredentials()
 
         assert ssl_credentials.ssl_credentials is not None

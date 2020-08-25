@@ -46,6 +46,7 @@ except ImportError as caught_exc:  # pragma: NO COVER
 import six
 import urllib3.exceptions  # pylint: disable=ungrouped-imports
 
+from google.auth import environment_vars
 from google.auth import exceptions
 from google.auth import transport
 
@@ -310,7 +311,9 @@ class AuthorizedHttp(urllib3.request.RequestMethods):
             google.auth.exceptions.MutualTLSChannelError: If mutual TLS channel
                 creation failed for any reason.
         """
-        use_client_cert = os.getenv("GOOGLE_API_USE_CLIENT_CERTIFICATE", False)
+        use_client_cert = os.getenv(
+            environment_vars.GOOGLE_API_USE_CLIENT_CERTIFICATE, False
+        )
         if not use_client_cert:
             return False
 

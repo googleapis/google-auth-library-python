@@ -41,6 +41,7 @@ from requests.packages.urllib3.util.ssl_ import (
 )  # pylint: disable=ungrouped-imports
 import six  # pylint: disable=ungrouped-imports
 
+from google.auth import environment_vars
 from google.auth import exceptions
 from google.auth import transport
 import google.auth.transport._mtls_helper
@@ -366,7 +367,9 @@ class AuthorizedSession(requests.Session):
             google.auth.exceptions.MutualTLSChannelError: If mutual TLS channel
                 creation failed for any reason.
         """
-        use_client_cert = os.getenv("GOOGLE_API_USE_CLIENT_CERTIFICATE", False)
+        use_client_cert = os.getenv(
+            environment_vars.GOOGLE_API_USE_CLIENT_CERTIFICATE, False
+        )
         if not use_client_cert:
             self._is_mtls = False
             return
