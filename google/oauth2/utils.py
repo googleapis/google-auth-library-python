@@ -43,16 +43,21 @@ capabilities:
 import abc
 import base64
 import json
-import six
-from six.moves import http_client
-from six.moves import urllib
 
-from enum import Enum
+import six
 
 from google.auth import exceptions
 
-# Valid types accepted for file-based credentials.
+
 def enum(**named_values):
+    """Defines an enum utility.
+
+    Args:
+        named_values: The enum named values.
+
+    Returns:
+       type: The Enum metaclass.
+    """
     return type("Enum", (), named_values)
 
 
