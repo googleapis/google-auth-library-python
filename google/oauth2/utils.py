@@ -42,6 +42,7 @@ capabilities:
 
 import abc
 import base64
+import enum
 import json
 
 import six
@@ -49,21 +50,11 @@ import six
 from google.auth import exceptions
 
 
-def enum(**named_values):
-    """Defines an enum utility.
-
-    Args:
-        named_values: The enum named values.
-
-    Returns:
-       type: The Enum metaclass.
-    """
-    return type("Enum", (), named_values)
-
-
 # OAuth client authentication based on
 # https://tools.ietf.org/html/rfc6749#section-2.3.
-ClientAuthType = enum(BASIC="basic", REQUEST_BODY="request-body")
+class ClientAuthType(enum.Enum):
+    basic = 1
+    request_body = 2
 
 
 class ClientAuthentication(object):
@@ -126,7 +117,7 @@ class OAuthClientAuthHandler(object):
             headers["Authorization"] = "Bearer %s" % bearer_token
         elif (
             self._client_authentication is not None
-            and self._client_authentication.client_auth_type is ClientAuthType.BASIC
+            and self._client_authentication.client_auth_type is ClientAuthType.basic
         ):
             username = self._client_authentication.client_id
             password = self._client_authentication.client_secret or ""
@@ -140,7 +131,7 @@ class OAuthClientAuthHandler(object):
         if (
             self._client_authentication is not None
             and self._client_authentication.client_auth_type
-            is ClientAuthType.REQUEST_BODY
+            is ClientAuthType.request_body
         ):
             if request_body is None:
                 raise exceptions.OAuthError(

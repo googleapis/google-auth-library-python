@@ -44,36 +44,36 @@ class TestClientAuthentication(object):
     @classmethod
     def make_client_auth(cls, client_secret=None):
         return utils.ClientAuthentication(
-            utils.ClientAuthType.BASIC, CLIENT_ID, client_secret
+            utils.ClientAuthType.basic, CLIENT_ID, client_secret
         )
 
     def test_initialization_with_client_secret(self):
         client_auth = self.make_client_auth(CLIENT_SECRET)
 
-        assert client_auth.client_auth_type == utils.ClientAuthType.BASIC
+        assert client_auth.client_auth_type == utils.ClientAuthType.basic
         assert client_auth.client_id == CLIENT_ID
         assert client_auth.client_secret == CLIENT_SECRET
 
     def test_initialization_no_client_secret(self):
         client_auth = self.make_client_auth()
 
-        assert client_auth.client_auth_type == utils.ClientAuthType.BASIC
+        assert client_auth.client_auth_type == utils.ClientAuthType.basic
         assert client_auth.client_id == CLIENT_ID
         assert client_auth.client_secret is None
 
 
 class TestOAuthClientAuthHandler(object):
     CLIENT_AUTH_BASIC = utils.ClientAuthentication(
-        utils.ClientAuthType.BASIC, CLIENT_ID, CLIENT_SECRET
+        utils.ClientAuthType.basic, CLIENT_ID, CLIENT_SECRET
     )
     CLIENT_AUTH_BASIC_SECRETLESS = utils.ClientAuthentication(
-        utils.ClientAuthType.BASIC, CLIENT_ID
+        utils.ClientAuthType.basic, CLIENT_ID
     )
     CLIENT_AUTH_REQUEST_BODY = utils.ClientAuthentication(
-        utils.ClientAuthType.REQUEST_BODY, CLIENT_ID, CLIENT_SECRET
+        utils.ClientAuthType.request_body, CLIENT_ID, CLIENT_SECRET
     )
     CLIENT_AUTH_REQUEST_BODY_SECRETLESS = utils.ClientAuthentication(
-        utils.ClientAuthType.REQUEST_BODY, CLIENT_ID
+        utils.ClientAuthType.request_body, CLIENT_ID
     )
 
     @classmethod
