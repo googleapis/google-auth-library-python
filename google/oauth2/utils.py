@@ -68,7 +68,7 @@ ClientAuthType = enum(BASIC="basic", REQUEST_BODY="request-body")
 
 class ClientAuthentication(object):
     """Defines the client authentication credentials for basic and request-body
-    types based on Based on https://tools.ietf.org/html/rfc6749#section-2.3.1.
+    types based on https://tools.ietf.org/html/rfc6749#section-2.3.1.
     """
 
     def __init__(self, client_auth_type, client_id, client_secret=None):
