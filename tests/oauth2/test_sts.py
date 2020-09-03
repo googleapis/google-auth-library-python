@@ -67,11 +67,10 @@ class TestStsClient(object):
         return sts.Client(cls.TOKEN_EXCHANGE_ENDPOINT, client_auth)
 
     @classmethod
-    def make_mock_request(cls, status=http_client.OK, data=None):
+    def make_mock_request(cls, data, status=http_client.OK):
         response = mock.create_autospec(transport.Response, instance=True)
         response.status = status
-        if data is not None:
-            response.data = json.dumps(data).encode("utf-8")
+        response.data = json.dumps(data).encode("utf-8")
 
         request = mock.create_autospec(transport.Request)
         request.return_value = response
