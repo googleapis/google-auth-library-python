@@ -363,6 +363,10 @@ class TestCredentials(object):
         creds = credentials.Credentials.from_authorized_user_info(info)
         assert creds.scopes == [info["scopes"]]
 
+        info["scopes"] = ["email", "profile"]  # array scope from file
+        creds = credentials.Credentials.from_authorized_user_info(info)
+        assert creds.scopes == info["scopes"]
+
         expiry = datetime.datetime(2020, 8, 14, 15, 54, 1)
         info["expiry"] = expiry.isoformat() + "Z"
         creds = credentials.Credentials.from_authorized_user_info(info)
@@ -416,6 +420,12 @@ class TestCredentials(object):
         assert json_asdict.get("client_id") == creds.client_id
         assert json_asdict.get("scopes") == creds.scopes
         assert json_asdict.get("client_secret") is None
+
+        # Test with no expiry
+        creds.expiry = None
+        json_output = creds.to_json()
+        json_asdict = json.loads(json_output)
+        assert json_asdict.get("expiry") is None
 
     def test_pickle_and_unpickle(self):
         creds = self.make_credentials()
