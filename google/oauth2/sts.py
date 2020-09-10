@@ -21,7 +21,7 @@ for GCP access tokens in workload identity pools to access Google APIs.
 The implementation will support various types of client authentication as
 allowed in the spec.
 
-A deviation on the spec will be for additional GCP specific options that
+A deviation on the spec will be for additional Google specific options that
 cannot be easily mapped to parameters defined in the RFC.
 
 The returned dictionary response will be based on the `rfc8693 section 2.2.1`_
@@ -66,7 +66,7 @@ class Client(utils.OAuthClientAuthHandler):
         subject_token_type,
         resource=None,
         audience=None,
-        scope=None,
+        scopes=None,
         requested_token_type=None,
         actor_token=None,
         actor_token_type=None,
@@ -84,13 +84,13 @@ class Client(utils.OAuthClientAuthHandler):
             subject_token_type (str): The OAuth 2.0 token exchange subject token type.
             resource (Optional[str]): The optional OAuth 2.0 token exchange resource field.
             audience (Optional[str]): The optional OAuth 2.0 token exchange audience field.
-            scope (Optional[Sequence[str]]): The optional list of scopes to use.
+            scopes (Optional[Sequence[str]]): The optional list of scopes to use.
             requested_token_type (Optional[str]): The optional OAuth 2.0 token exchange requested
                 token type.
             actor_token (Optional[str]): The optional OAuth 2.0 token exchange actor token.
             actor_token_type (Optional[str]): The optional OAuth 2.0 token exchange actor token type.
             additional_options (Optional[Mapping[str, str]]): The optional additional
-                non-standard GCP specific options.
+                non-standard Google specific options.
             additional_headers (Optional[Mapping[str, str]]): The optional additional
                 headers to pass to the token exchange endpoint.
 
@@ -113,7 +113,7 @@ class Client(utils.OAuthClientAuthHandler):
             "grant_type": grant_type,
             "resource": resource,
             "audience": audience,
-            "scope": " ".join(scope or []),
+            "scope": " ".join(scopes or []),
             "requested_token_type": requested_token_type,
             "subject_token": subject_token,
             "subject_token_type": subject_token_type,

@@ -34,7 +34,7 @@ class TestStsClient(object):
     GRANT_TYPE = "urn:ietf:params:oauth:grant-type:token-exchange"
     RESOURCE = "https://api.example.com/"
     AUDIENCE = "urn:example:cooperation-context"
-    SCOPE = ["scope1", "scope2"]
+    SCOPES = ["scope1", "scope2"]
     REQUESTED_TOKEN_TYPE = "urn:ietf:params:oauth:token-type:access_token"
     SUBJECT_TOKEN = "HEADER.SUBJECT_TOKEN_PAYLOAD.SIGNATURE"
     SUBJECT_TOKEN_TYPE = "urn:ietf:params:oauth:token-type:jwt"
@@ -101,7 +101,7 @@ class TestStsClient(object):
             "grant_type": self.GRANT_TYPE,
             "resource": self.RESOURCE,
             "audience": self.AUDIENCE,
-            "scope": " ".join(self.SCOPE),
+            "scope": " ".join(self.SCOPES),
             "requested_token_type": self.REQUESTED_TOKEN_TYPE,
             "subject_token": self.SUBJECT_TOKEN,
             "subject_token_type": self.SUBJECT_TOKEN_TYPE,
@@ -120,7 +120,7 @@ class TestStsClient(object):
             self.SUBJECT_TOKEN_TYPE,
             self.RESOURCE,
             self.AUDIENCE,
-            self.SCOPE,
+            self.SCOPES,
             self.REQUESTED_TOKEN_TYPE,
             self.ACTOR_TOKEN,
             self.ACTOR_TOKEN_TYPE,
@@ -176,7 +176,7 @@ class TestStsClient(object):
                 self.SUBJECT_TOKEN_TYPE,
                 self.RESOURCE,
                 self.AUDIENCE,
-                self.SCOPE,
+                self.SCOPES,
                 self.REQUESTED_TOKEN_TYPE,
                 self.ACTOR_TOKEN,
                 self.ACTOR_TOKEN_TYPE,
@@ -200,7 +200,7 @@ class TestStsClient(object):
             "grant_type": self.GRANT_TYPE,
             "resource": self.RESOURCE,
             "audience": self.AUDIENCE,
-            "scope": " ".join(self.SCOPE),
+            "scope": " ".join(self.SCOPES),
             "requested_token_type": self.REQUESTED_TOKEN_TYPE,
             "subject_token": self.SUBJECT_TOKEN,
             "subject_token_type": self.SUBJECT_TOKEN_TYPE,
@@ -219,7 +219,7 @@ class TestStsClient(object):
             self.SUBJECT_TOKEN_TYPE,
             self.RESOURCE,
             self.AUDIENCE,
-            self.SCOPE,
+            self.SCOPES,
             self.REQUESTED_TOKEN_TYPE,
             self.ACTOR_TOKEN,
             self.ACTOR_TOKEN_TYPE,
@@ -279,7 +279,7 @@ class TestStsClient(object):
                 self.SUBJECT_TOKEN_TYPE,
                 self.RESOURCE,
                 self.AUDIENCE,
-                self.SCOPE,
+                self.SCOPES,
                 self.REQUESTED_TOKEN_TYPE,
                 self.ACTOR_TOKEN,
                 self.ACTOR_TOKEN_TYPE,
@@ -302,7 +302,7 @@ class TestStsClient(object):
             "grant_type": self.GRANT_TYPE,
             "resource": self.RESOURCE,
             "audience": self.AUDIENCE,
-            "scope": " ".join(self.SCOPE),
+            "scope": " ".join(self.SCOPES),
             "requested_token_type": self.REQUESTED_TOKEN_TYPE,
             "subject_token": self.SUBJECT_TOKEN,
             "subject_token_type": self.SUBJECT_TOKEN_TYPE,
@@ -323,7 +323,7 @@ class TestStsClient(object):
             self.SUBJECT_TOKEN_TYPE,
             self.RESOURCE,
             self.AUDIENCE,
-            self.SCOPE,
+            self.SCOPES,
             self.REQUESTED_TOKEN_TYPE,
             self.ACTOR_TOKEN,
             self.ACTOR_TOKEN_TYPE,
@@ -382,7 +382,7 @@ class TestStsClient(object):
                 self.SUBJECT_TOKEN_TYPE,
                 self.RESOURCE,
                 self.AUDIENCE,
-                self.SCOPE,
+                self.SCOPES,
                 self.REQUESTED_TOKEN_TYPE,
                 self.ACTOR_TOKEN,
                 self.ACTOR_TOKEN_TYPE,
