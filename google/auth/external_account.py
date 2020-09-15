@@ -33,6 +33,8 @@ import six
 
 from google.auth import _helpers
 from google.auth import credentials
+from google.auth import exceptions
+from google.auth import impersonated_credentials
 from google.oauth2 import sts
 from google.oauth2 import utils
 
@@ -58,6 +60,7 @@ class Credentials(credentials.Scoped, credentials.CredentialsWithQuotaProject):
         subject_token_type,
         token_url,
         credential_source,
+        service_account_impersonation_url=None,
         client_id=None,
         client_secret=None,
         quota_project_id=None,
@@ -70,17 +73,23 @@ class Credentials(credentials.Scoped, credentials.CredentialsWithQuotaProject):
             subject_token_type (str): The subject token type.
             token_url (str): The STS endpoint URL.
             credential_source (Mapping): The credential source dictionary.
+            service_account_impersonation_url (Optional[str]): The optional service account
+                impersonation generateAccessToken URL.
             client_id (Optional[str]): The optional client ID.
             client_secret (Optional[str]): The optional client secret.
             quota_project_id (Optional[str]): The optional quota project ID.
             scopes (Optional[Sequence[str]]): Optional scopes to request during the
                 authorization grant.
+        Raises:
+            google.auth.exceptions.RefreshError: If the generateAccessToken
+                endpoint returned an error.
         """
         super(Credentials, self).__init__()
         self._audience = audience
         self._subject_token_type = subject_token_type
         self._token_url = token_url
         self._credential_source = credential_source
+        self._service_account_impersonation_url = service_account_impersonation_url
         self._client_id = client_id
         self._client_secret = client_secret
         self._quota_project_id = quota_project_id
@@ -93,6 +102,11 @@ class Credentials(credentials.Scoped, credentials.CredentialsWithQuotaProject):
         else:
             self._client_auth = None
         self._sts_client = sts.Client(self._token_url, self._client_auth)
+
+        if self._service_account_impersonation_url:
+            self._impersonated_credentials = self._initialize_impersonated_credentials()
+        else:
+            self._impersonated_credentials = None
 
     @property
     def requires_scopes(self):
@@ -132,20 +146,24 @@ class Credentials(credentials.Scoped, credentials.CredentialsWithQuotaProject):
 
     @_helpers.copy_docstring(credentials.Credentials)
     def refresh(self, request):
-        now = _helpers.utcnow()
-        response_data = self._sts_client.exchange_token(
-            request=request,
-            grant_type=_STS_GRANT_TYPE,
-            subject_token=self.retrieve_subject_token(request),
-            subject_token_type=self._subject_token_type,
-            audience=self._audience,
-            scopes=self._scopes,
-            requested_token_type=_STS_REQUESTED_TOKEN_TYPE,
-        )
-
-        self.token = response_data.get("access_token")
-        lifetime = datetime.timedelta(seconds=response_data.get("expires_in"))
-        self.expiry = now + lifetime
+        if self._impersonated_credentials:
+            self._impersonated_credentials.refresh(request)
+            self.token = self._impersonated_credentials.token
+            self.expiry = self._impersonated_credentials.expiry
+        else:
+            now = _helpers.utcnow()
+            response_data = self._sts_client.exchange_token(
+                request=request,
+                grant_type=_STS_GRANT_TYPE,
+                subject_token=self.retrieve_subject_token(request),
+                subject_token_type=self._subject_token_type,
+                audience=self._audience,
+                scopes=self._scopes,
+                requested_token_type=_STS_REQUESTED_TOKEN_TYPE,
+            )
+            self.token = response_data.get("access_token")
+            lifetime = datetime.timedelta(seconds=response_data.get("expires_in"))
+            self.expiry = now + lifetime
 
     @_helpers.copy_docstring(credentials.CredentialsWithQuotaProject)
     def with_quota_project(self, quota_project_id):
@@ -155,8 +173,59 @@ class Credentials(credentials.Scoped, credentials.CredentialsWithQuotaProject):
             subject_token_type=self._subject_token_type,
             token_url=self._token_url,
             credential_source=self._credential_source,
+            service_account_impersonation_url=self._service_account_impersonation_url,
             client_id=self._client_id,
             client_secret=self._client_secret,
             quota_project_id=quota_project_id,
             scopes=self._scopes,
+        )
+
+    def _initialize_impersonated_credentials(self):
+        """Generates an impersonated credentials.
+
+        For more details, see `projects.serviceAccounts.generateAccessToken`_.
+
+        .. _projects.serviceAccounts.generateAccessToken: https://cloud.google.com/iam/docs/reference/credentials/rest/v1/projects.serviceAccounts/generateAccessToken
+
+        Returns:
+            impersonated_credentials.Credential: The impersonated credentials
+                object.
+
+        Raises:
+            google.auth.exceptions.RefreshError: If the generateAccessToken
+                endpoint returned an error.
+        """
+        # Return copy of instance with no service account impersonation.
+        source_credentials = self.__class__(
+            audience=self._audience,
+            subject_token_type=self._subject_token_type,
+            token_url=self._token_url,
+            credential_source=self._credential_source,
+            service_account_impersonation_url=None,
+            client_id=self._client_id,
+            client_secret=self._client_secret,
+            quota_project_id=self._quota_project_id,
+            scopes=self._scopes,
+        )
+
+        # Determine target_principal.
+        start_index = self._service_account_impersonation_url.rfind("/")
+        end_index = self._service_account_impersonation_url.find(":generateAccessToken")
+        if start_index != -1 and end_index != -1 and start_index < end_index:
+            start_index = start_index + 1
+            target_principal = self._service_account_impersonation_url[
+                start_index:end_index
+            ]
+        else:
+            raise exceptions.RefreshError(
+                "Unable to determine target principal from service account impersonation URL."
+            )
+
+        # Initialize and return impersonated credentials.
+        return impersonated_credentials.Credentials(
+            source_credentials=source_credentials,
+            target_principal=target_principal,
+            target_scopes=self._scopes,
+            quota_project_id=self._quota_project_id,
+            iam_endpoint_override=self._service_account_impersonation_url,
         )
