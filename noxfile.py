@@ -30,7 +30,7 @@ TEST_DEPENDENCIES = [
     "grpcio",
 ]
 
-ASYNC_DEPENDENCIES = ["pytest-asyncio", "aioresponses", "aiohttp"]
+ASYNC_DEPENDENCIES = ["pytest-asyncio", "aioresponses"]
 
 BLACK_VERSION = "black==19.3b0"
 BLACK_PATHS = [
