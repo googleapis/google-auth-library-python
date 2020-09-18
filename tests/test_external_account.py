@@ -30,6 +30,7 @@ CLIENT_ID = "username"
 CLIENT_SECRET = "password"
 # Base64 encoding of "username:password"
 BASIC_AUTH_ENCODING = "dXNlcm5hbWU6cGFzc3dvcmQ="
+SERVICE_ACCOUNT_EMAIL = "service-1234@service-name.iam.gserviceaccount.com"
 
 
 class CredentialsImpl(external_account.Credentials):
@@ -39,6 +40,7 @@ class CredentialsImpl(external_account.Credentials):
         subject_token_type,
         token_url,
         credential_source,
+        service_account_impersonation_url=None,
         client_id=None,
         client_secret=None,
         quota_project_id=None,
@@ -49,6 +51,7 @@ class CredentialsImpl(external_account.Credentials):
             subject_token_type,
             token_url,
             credential_source,
+            service_account_impersonation_url,
             client_id,
             client_secret,
             quota_project_id,
@@ -87,15 +90,33 @@ class TestCredentials(object):
         "error_uri": "https://tools.ietf.org/html/rfc6749",
     }
     QUOTA_PROJECT_ID = "QUOTA_PROJECT_ID"
+    SERVICE_ACCOUNT_IMPERSONATION_URL = (
+        "https://us-east1-iamcredentials.googleapis.com/v1/projects/-"
+        + "/serviceAccounts/{}:generateAccessToken".format(SERVICE_ACCOUNT_EMAIL)
+    )
+    SCOPES = ["scope1", "scope2"]
+    IMPERSONATION_ERROR_RESPONSE = {
+        "error": {
+            "code": 400,
+            "message": "Request contains an invalid argument",
+            "status": "INVALID_ARGUMENT",
+        }
+    }
 
     @classmethod
     def make_credentials(
-        cls, client_id=None, client_secret=None, quota_project_id=None, scopes=None
+        cls,
+        client_id=None,
+        client_secret=None,
+        quota_project_id=None,
+        scopes=None,
+        service_account_impersonation_url=None,
     ):
         return CredentialsImpl(
             audience=cls.AUDIENCE,
             subject_token_type=cls.SUBJECT_TOKEN_TYPE,
             token_url=cls.TOKEN_URL,
+            service_account_impersonation_url=service_account_impersonation_url,
             credential_source=cls.CREDENTIAL_SOURCE,
             client_id=client_id,
             client_secret=client_secret,
@@ -104,18 +125,35 @@ class TestCredentials(object):
         )
 
     @classmethod
-    def make_mock_request(cls, data, status=http_client.OK):
-        response = mock.create_autospec(transport.Response, instance=True)
-        response.status = status
-        response.data = json.dumps(data).encode("utf-8")
+    def make_mock_request(
+        cls,
+        data,
+        status=http_client.OK,
+        impersonation_data=None,
+        impersonation_status=None,
+    ):
+        # STS token exchange request.
+        token_response = mock.create_autospec(transport.Response, instance=True)
+        token_response.status = status
+        token_response.data = json.dumps(data).encode("utf-8")
+        responses = [token_response]
+
+        # If service account impersonation is requested, mock the expected response.
+        if impersonation_status and impersonation_status:
+            impersonation_response = mock.create_autospec(
+                transport.Response, instance=True
+            )
+            impersonation_response.status = impersonation_status
+            impersonation_response.data = json.dumps(impersonation_data).encode("utf-8")
+            responses.append(impersonation_response)
 
         request = mock.create_autospec(transport.Request)
-        request.return_value = response
+        request.side_effect = responses
 
         return request
 
     @classmethod
-    def assert_request_kwargs(cls, request_kwargs, headers, request_data):
+    def assert_token_request_kwargs(cls, request_kwargs, headers, request_data):
         assert request_kwargs["url"] == cls.TOKEN_URL
         assert request_kwargs["method"] == "POST"
         assert request_kwargs["headers"] == headers
@@ -124,6 +162,15 @@ class TestCredentials(object):
         for (k, v) in body_tuples:
             assert v.decode("utf-8") == request_data[k.decode("utf-8")]
         assert len(body_tuples) == len(request_data.keys())
+
+    @classmethod
+    def assert_impersonation_request_kwargs(cls, request_kwargs, headers, request_data):
+        assert request_kwargs["url"] == cls.SERVICE_ACCOUNT_IMPERSONATION_URL
+        assert request_kwargs["method"] == "POST"
+        assert request_kwargs["headers"] == headers
+        assert request_kwargs["body"] is not None
+        body_json = json.loads(request_kwargs["body"].decode("utf-8"))
+        assert body_json == request_data
 
     def test_default_state(self):
         credentials = self.make_credentials()
@@ -160,6 +207,16 @@ class TestCredentials(object):
 
         assert quota_project_creds.quota_project_id == "project-foo"
 
+    def test_with_invalid_impersonation_target_principal(self):
+        invalid_url = "https://iamcredentials.googleapis.com/v1/invalid"
+
+        with pytest.raises(exceptions.RefreshError) as excinfo:
+            self.make_credentials(service_account_impersonation_url=invalid_url)
+
+        assert excinfo.match(
+            r"Unable to determine target principal from service account impersonation URL."
+        )
+
     @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
     def test_refresh_without_client_auth_success(self, unused_utcnow):
         response = self.SUCCESS_RESPONSE.copy()
@@ -181,11 +238,77 @@ class TestCredentials(object):
 
         credentials.refresh(request)
 
-        self.assert_request_kwargs(request.call_args.kwargs, headers, request_data)
+        self.assert_token_request_kwargs(
+            request.call_args.kwargs, headers, request_data
+        )
         assert credentials.valid
         assert credentials.expiry == expected_expiry
         assert not credentials.expired
         assert credentials.token == response["access_token"]
+
+    def test_refresh_impersonation_without_client_auth_success(self):
+        # Simulate service account access token expires in 2800 seconds.
+        expire_time = (
+            _helpers.utcnow().replace(microsecond=0) + datetime.timedelta(seconds=2800)
+        ).isoformat("T") + "Z"
+        expected_expiry = datetime.datetime.strptime(expire_time, "%Y-%m-%dT%H:%M:%SZ")
+        # STS token exchange request/response.
+        token_response = self.SUCCESS_RESPONSE.copy()
+        token_headers = {"Content-Type": "application/x-www-form-urlencoded"}
+        token_request_data = {
+            "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
+            "audience": self.AUDIENCE,
+            "requested_token_type": "urn:ietf:params:oauth:token-type:access_token",
+            "subject_token": "subject_token_0",
+            "subject_token_type": self.SUBJECT_TOKEN_TYPE,
+            "scope": "https://www.googleapis.com/auth/iam",
+        }
+        # Service account impersonation request/response.
+        impersonation_response = {
+            "accessToken": "SA_ACCESS_TOKEN",
+            "expireTime": expire_time,
+        }
+        impersonation_headers = {
+            "Content-Type": "application/json",
+            "authorization": "Bearer {}".format(token_response["access_token"]),
+        }
+        impersonation_request_data = {
+            "delegates": None,
+            "scope": self.SCOPES,
+            "lifetime": "3600s",
+        }
+        # Initialize mock request to handle token exchange and service account
+        # impersonation request.
+        request = self.make_mock_request(
+            status=http_client.OK,
+            data=token_response,
+            impersonation_status=http_client.OK,
+            impersonation_data=impersonation_response,
+        )
+        # Initialize credentials with service account impersonation.
+        credentials = self.make_credentials(
+            service_account_impersonation_url=self.SERVICE_ACCOUNT_IMPERSONATION_URL,
+            scopes=self.SCOPES,
+        )
+
+        credentials.refresh(request)
+
+        # Only 2 requests should be processed.
+        assert len(request.call_args_list) == 2
+        # Verify token exchange request parameters.
+        self.assert_token_request_kwargs(
+            request.call_args_list[0].kwargs, token_headers, token_request_data
+        )
+        # Verify service account impersonation request parameters.
+        self.assert_impersonation_request_kwargs(
+            request.call_args_list[1].kwargs,
+            impersonation_headers,
+            impersonation_request_data,
+        )
+        assert credentials.valid
+        assert credentials.expiry == expected_expiry
+        assert not credentials.expired
+        assert credentials.token == impersonation_response["accessToken"]
 
     def test_refresh_without_client_auth_success_explicit_scopes(self):
         headers = {"Content-Type": "application/x-www-form-urlencoded"}
@@ -204,7 +327,9 @@ class TestCredentials(object):
 
         credentials.refresh(request)
 
-        self.assert_request_kwargs(request.call_args.kwargs, headers, request_data)
+        self.assert_token_request_kwargs(
+            request.call_args.kwargs, headers, request_data
+        )
         assert credentials.valid
         assert not credentials.expired
         assert credentials.token == self.SUCCESS_RESPONSE["access_token"]
@@ -222,6 +347,25 @@ class TestCredentials(object):
         assert excinfo.match(
             r"Error code invalid_request: Invalid subject token - https://tools.ietf.org/html/rfc6749"
         )
+        assert not credentials.expired
+        assert credentials.token is None
+
+    def test_refresh_impersonation_without_client_auth_error(self):
+        request = self.make_mock_request(
+            status=http_client.OK,
+            data=self.SUCCESS_RESPONSE,
+            impersonation_status=http_client.BAD_REQUEST,
+            impersonation_data=self.IMPERSONATION_ERROR_RESPONSE,
+        )
+        credentials = self.make_credentials(
+            service_account_impersonation_url=self.SERVICE_ACCOUNT_IMPERSONATION_URL,
+            scopes=self.SCOPES,
+        )
+
+        with pytest.raises(exceptions.RefreshError) as excinfo:
+            credentials.refresh(request)
+
+        assert excinfo.match(r"Unable to acquire impersonated credentials")
         assert not credentials.expired
         assert credentials.token is None
 
@@ -246,10 +390,81 @@ class TestCredentials(object):
 
         credentials.refresh(request)
 
-        self.assert_request_kwargs(request.call_args.kwargs, headers, request_data)
+        self.assert_token_request_kwargs(
+            request.call_args.kwargs, headers, request_data
+        )
         assert credentials.valid
         assert not credentials.expired
         assert credentials.token == self.SUCCESS_RESPONSE["access_token"]
+
+    def test_refresh_impersonation_with_client_auth_success(self):
+        # Simulate service account access token expires in 2800 seconds.
+        expire_time = (
+            _helpers.utcnow().replace(microsecond=0) + datetime.timedelta(seconds=2800)
+        ).isoformat("T") + "Z"
+        expected_expiry = datetime.datetime.strptime(expire_time, "%Y-%m-%dT%H:%M:%SZ")
+        # STS token exchange request/response.
+        token_response = self.SUCCESS_RESPONSE.copy()
+        token_headers = {
+            "Content-Type": "application/x-www-form-urlencoded",
+            "Authorization": "Basic {}".format(BASIC_AUTH_ENCODING),
+        }
+        token_request_data = {
+            "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
+            "audience": self.AUDIENCE,
+            "requested_token_type": "urn:ietf:params:oauth:token-type:access_token",
+            "subject_token": "subject_token_0",
+            "subject_token_type": self.SUBJECT_TOKEN_TYPE,
+            "scope": "https://www.googleapis.com/auth/iam",
+        }
+        # Service account impersonation request/response.
+        impersonation_response = {
+            "accessToken": "SA_ACCESS_TOKEN",
+            "expireTime": expire_time,
+        }
+        impersonation_headers = {
+            "Content-Type": "application/json",
+            "authorization": "Bearer {}".format(token_response["access_token"]),
+        }
+        impersonation_request_data = {
+            "delegates": None,
+            "scope": self.SCOPES,
+            "lifetime": "3600s",
+        }
+        # Initialize mock request to handle token exchange and service account
+        # impersonation request.
+        request = self.make_mock_request(
+            status=http_client.OK,
+            data=token_response,
+            impersonation_status=http_client.OK,
+            impersonation_data=impersonation_response,
+        )
+        # Initialize credentials with service account impersonation and basic auth.
+        credentials = self.make_credentials(
+            client_id=CLIENT_ID,
+            client_secret=CLIENT_SECRET,
+            service_account_impersonation_url=self.SERVICE_ACCOUNT_IMPERSONATION_URL,
+            scopes=self.SCOPES,
+        )
+
+        credentials.refresh(request)
+
+        # Only 2 requests should be processed.
+        assert len(request.call_args_list) == 2
+        # Verify token exchange request parameters.
+        self.assert_token_request_kwargs(
+            request.call_args_list[0].kwargs, token_headers, token_request_data
+        )
+        # Verify service account impersonation request parameters.
+        self.assert_impersonation_request_kwargs(
+            request.call_args_list[1].kwargs,
+            impersonation_headers,
+            impersonation_request_data,
+        )
+        assert credentials.valid
+        assert credentials.expiry == expected_expiry
+        assert not credentials.expired
+        assert credentials.token == impersonation_response["accessToken"]
 
     def test_apply_without_quota_project_id(self):
         headers = {}
@@ -265,6 +480,37 @@ class TestCredentials(object):
             "authorization": "Bearer {}".format(self.SUCCESS_RESPONSE["access_token"])
         }
 
+    def test_apply_impersonation_without_quota_project_id(self):
+        expire_time = (
+            _helpers.utcnow().replace(microsecond=0) + datetime.timedelta(seconds=3600)
+        ).isoformat("T") + "Z"
+        # Service account impersonation response.
+        impersonation_response = {
+            "accessToken": "SA_ACCESS_TOKEN",
+            "expireTime": expire_time,
+        }
+        # Initialize mock request to handle token exchange and service account
+        # impersonation request.
+        request = self.make_mock_request(
+            status=http_client.OK,
+            data=self.SUCCESS_RESPONSE.copy(),
+            impersonation_status=http_client.OK,
+            impersonation_data=impersonation_response,
+        )
+        # Initialize credentials with service account impersonation.
+        credentials = self.make_credentials(
+            service_account_impersonation_url=self.SERVICE_ACCOUNT_IMPERSONATION_URL,
+            scopes=self.SCOPES,
+        )
+        headers = {}
+
+        credentials.refresh(request)
+        credentials.apply(headers)
+
+        assert headers == {
+            "authorization": "Bearer {}".format(impersonation_response["accessToken"])
+        }
+
     def test_apply_with_quota_project_id(self):
         headers = {"other": "header-value"}
         request = self.make_mock_request(
@@ -278,6 +524,40 @@ class TestCredentials(object):
         assert headers == {
             "other": "header-value",
             "authorization": "Bearer {}".format(self.SUCCESS_RESPONSE["access_token"]),
+            "x-goog-user-project": self.QUOTA_PROJECT_ID,
+        }
+
+    def test_apply_impersonation_with_quota_project_id(self):
+        expire_time = (
+            _helpers.utcnow().replace(microsecond=0) + datetime.timedelta(seconds=3600)
+        ).isoformat("T") + "Z"
+        # Service account impersonation response.
+        impersonation_response = {
+            "accessToken": "SA_ACCESS_TOKEN",
+            "expireTime": expire_time,
+        }
+        # Initialize mock request to handle token exchange and service account
+        # impersonation request.
+        request = self.make_mock_request(
+            status=http_client.OK,
+            data=self.SUCCESS_RESPONSE.copy(),
+            impersonation_status=http_client.OK,
+            impersonation_data=impersonation_response,
+        )
+        # Initialize credentials with service account impersonation.
+        credentials = self.make_credentials(
+            service_account_impersonation_url=self.SERVICE_ACCOUNT_IMPERSONATION_URL,
+            scopes=self.SCOPES,
+            quota_project_id=self.QUOTA_PROJECT_ID,
+        )
+        headers = {"other": "header-value"}
+
+        credentials.refresh(request)
+        credentials.apply(headers)
+
+        assert headers == {
+            "other": "header-value",
+            "authorization": "Bearer {}".format(impersonation_response["accessToken"]),
             "x-goog-user-project": self.QUOTA_PROJECT_ID,
         }
 
@@ -302,6 +582,44 @@ class TestCredentials(object):
         assert headers == {
             "other": "header-value",
             "authorization": "Bearer {}".format(self.SUCCESS_RESPONSE["access_token"]),
+        }
+
+    def test_before_request_impersonation(self):
+        expire_time = (
+            _helpers.utcnow().replace(microsecond=0) + datetime.timedelta(seconds=3600)
+        ).isoformat("T") + "Z"
+        # Service account impersonation response.
+        impersonation_response = {
+            "accessToken": "SA_ACCESS_TOKEN",
+            "expireTime": expire_time,
+        }
+        # Initialize mock request to handle token exchange and service account
+        # impersonation request.
+        request = self.make_mock_request(
+            status=http_client.OK,
+            data=self.SUCCESS_RESPONSE.copy(),
+            impersonation_status=http_client.OK,
+            impersonation_data=impersonation_response,
+        )
+        headers = {"other": "header-value"}
+        credentials = self.make_credentials(
+            service_account_impersonation_url=self.SERVICE_ACCOUNT_IMPERSONATION_URL
+        )
+
+        # First call should call refresh, setting the token.
+        credentials.before_request(request, "POST", "https://example.com/api", headers)
+
+        assert headers == {
+            "other": "header-value",
+            "authorization": "Bearer {}".format(impersonation_response["accessToken"]),
+        }
+
+        # Second call shouldn't call refresh.
+        credentials.before_request(request, "POST", "https://example.com/api", headers)
+
+        assert headers == {
+            "other": "header-value",
+            "authorization": "Bearer {}".format(impersonation_response["accessToken"]),
         }
 
     @mock.patch("google.auth._helpers.utcnow")
@@ -338,4 +656,56 @@ class TestCredentials(object):
         # New token should be retrieved.
         assert headers == {
             "authorization": "Bearer {}".format(self.SUCCESS_RESPONSE["access_token"])
+        }
+
+    @mock.patch("google.auth._helpers.utcnow")
+    def test_before_request_impersonation_expired(self, utcnow):
+        headers = {}
+        expire_time = (
+            datetime.datetime.min + datetime.timedelta(seconds=3601)
+        ).isoformat("T") + "Z"
+        # Service account impersonation response.
+        impersonation_response = {
+            "accessToken": "SA_ACCESS_TOKEN",
+            "expireTime": expire_time,
+        }
+        # Initialize mock request to handle token exchange and service account
+        # impersonation request.
+        request = self.make_mock_request(
+            status=http_client.OK,
+            data=self.SUCCESS_RESPONSE.copy(),
+            impersonation_status=http_client.OK,
+            impersonation_data=impersonation_response,
+        )
+        credentials = self.make_credentials(
+            service_account_impersonation_url=self.SERVICE_ACCOUNT_IMPERSONATION_URL
+        )
+        credentials.token = "token"
+        utcnow.return_value = datetime.datetime.min
+        # Set the expiration to one second more than now plus the clock skew
+        # accomodation. These credentials should be valid.
+        credentials.expiry = (
+            datetime.datetime.min + _helpers.CLOCK_SKEW + datetime.timedelta(seconds=1)
+        )
+
+        assert credentials.valid
+        assert not credentials.expired
+
+        credentials.before_request(request, "POST", "https://example.com/api", headers)
+
+        # Cached token should be used.
+        assert headers == {"authorization": "Bearer token"}
+
+        # Next call should simulate 1 second passed. This will trigger the expiration
+        # threshold.
+        utcnow.return_value = datetime.datetime.min + datetime.timedelta(seconds=1)
+
+        assert not credentials.valid
+        assert credentials.expired
+
+        credentials.before_request(request, "POST", "https://example.com/api", headers)
+
+        # New token should be retrieved.
+        assert headers == {
+            "authorization": "Bearer {}".format(impersonation_response["accessToken"])
         }
