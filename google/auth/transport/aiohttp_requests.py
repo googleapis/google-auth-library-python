@@ -269,12 +269,11 @@ class AuthorizedSession(aiohttp.ClientSession):
             send the http request allows us to use this parallel corresponding structure
             in our Authorized Session class.
 
-            timeout (Optional[Union[float, Tuple[float, float]]]):
+            timeout (Optional[Union[float, aiohttp.ClientTimeout]]):
                 The amount of time in seconds to wait for the server response
                 with each individual request.
 
-                Can also be passed as a tuple (connect_timeout, read_timeout).
-                See :meth:`requests.Session.request` documentation for details.
+                Can also be passed as an `aiohttp.ClientTimeout` object.
 
             max_allowed_time (Optional[float]):
                 If the method runs longer than this, a ``Timeout`` exception is
