@@ -54,9 +54,7 @@ class TestAuthorizedSession(object):
     method = "GET"
 
     def test_constructor(self):
-        authed_session = aiohttp_requests.AuthorizedSession(
-            mock.sentinel.credentials
-        )
+        authed_session = aiohttp_requests.AuthorizedSession(mock.sentinel.credentials)
         assert authed_session.credentials == mock.sentinel.credentials
 
     def test_constructor_with_auth_request(self):
@@ -137,9 +135,7 @@ class TestAuthorizedSession(object):
         credentials = mock.Mock(wraps=CredentialsStub())
         with aioresponses() as mocked:
             mocked.get("http://example.com", status=200)
-            authed_session = aiohttp_requests.AuthorizedSession(
-                credentials
-            )
+            authed_session = aiohttp_requests.AuthorizedSession(credentials)
             response = await authed_session.request("GET", "http://example.com")
             assert response.status == 200
             assert credentials.before_request.called
@@ -153,9 +149,7 @@ class TestAuthorizedSession(object):
         with aioresponses() as mocked:
             mocked.get("http://example.com", status=401)
             mocked.get("http://example.com", status=200)
-            authed_session = aiohttp_requests.AuthorizedSession(
-                credentials
-            )
+            authed_session = aiohttp_requests.AuthorizedSession(credentials)
             response = await authed_session.request("GET", "http://example.com")
             assert credentials.refresh.called
             assert response.status == 200
