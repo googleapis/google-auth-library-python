@@ -17,12 +17,12 @@ import pytest
 from google.auth import _helpers
 from google.auth import exceptions
 from google.auth import iam
-from google.oauth2 import service_account_async
+from google.oauth2 import _service_account_async
 
 
 @pytest.fixture
 def credentials(service_account_file):
-    yield service_account_async.Credentials.from_service_account_file(service_account_file)
+    yield _service_account_async.Credentials.from_service_account_file(service_account_file)
 
 
 @pytest.mark.asyncio

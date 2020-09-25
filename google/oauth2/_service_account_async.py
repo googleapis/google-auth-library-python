@@ -23,7 +23,7 @@ credentials file google.oauth2.service_account
 """
 
 from google.auth import _helpers
-from google.auth import credentials_async
+from google.auth import _credentials_async as credentials_async
 from google.oauth2 import _client_async
 from google.oauth2 import service_account
 
@@ -37,19 +37,19 @@ class Credentials(
     constructors. To create credentials using a Google service account
     private key JSON file::
 
-        credentials = service_account_async.Credentials.from_service_account_file(
+        credentials = _service_account_async.Credentials.from_service_account_file(
             'service-account.json')
 
     Or if you already have the service account file loaded::
 
         service_account_info = json.load(open('service_account.json'))
-        credentials = service_account_async.Credentials.from_service_account_info(
+        credentials = _service_account_async.Credentials.from_service_account_info(
             service_account_info)
 
     Both helper methods pass on arguments to the constructor, so you can
     specify additional scopes and a subject if necessary::
 
-        credentials = service_account_async.Credentials.from_service_account_file(
+        credentials = _service_account_async.Credentials.from_service_account_file(
             'service-account.json',
             scopes=['email'],
             subject='user@example.com')
@@ -94,21 +94,21 @@ class IDTokenCredentials(
     private key JSON file::
 
         credentials = (
-            service_account_async.IDTokenCredentials.from_service_account_file(
+            _service_account_async.IDTokenCredentials.from_service_account_file(
                 'service-account.json'))
 
     Or if you already have the service account file loaded::
 
         service_account_info = json.load(open('service_account.json'))
         credentials = (
-            service_account_async.IDTokenCredentials.from_service_account_info(
+            _service_account_async.IDTokenCredentials.from_service_account_info(
                 service_account_info))
 
     Both helper methods pass on arguments to the constructor, so you can
     specify additional scopes and a subject if necessary::
 
         credentials = (
-            service_account_async.IDTokenCredentials.from_service_account_file(
+            _service_account_async.IDTokenCredentials.from_service_account_file(
                 'service-account.json',
                 scopes=['email'],
                 subject='user@example.com'))

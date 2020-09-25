@@ -94,7 +94,7 @@ class ReadOnlyScoped(credentials.ReadOnlyScoped):
 
         if credentials.requires_scopes:
             # Scoping is required.
-            credentials = credentials_async.with_scopes(scopes=['one', 'two'])
+            credentials = _credentials_async.with_scopes(scopes=['one', 'two'])
 
     Credentials that require scopes must either be constructed with scopes::
 
@@ -102,7 +102,7 @@ class ReadOnlyScoped(credentials.ReadOnlyScoped):
 
     Or must copy an existing instance using :meth:`with_scopes`::
 
-        scoped_credentials = credentials_async.with_scopes(scopes=['one', 'two'])
+        scoped_credentials = _credentials_async.with_scopes(scopes=['one', 'two'])
 
     Some credentials have scopes but do not allow or require scopes to be set,
     these credentials can be used as-is.
@@ -124,7 +124,7 @@ class Scoped(credentials.Scoped):
 
         if credentials.requires_scopes:
             # Scoping is required.
-            credentials = credentials_async.create_scoped(['one', 'two'])
+            credentials = _credentials_async.create_scoped(['one', 'two'])
 
     Credentials that require scopes must either be constructed with scopes::
 
@@ -157,7 +157,7 @@ def with_scopes_if_required(credentials, scopes):
         scopes (Sequence[str]): The list of scopes to use.
 
     Returns:
-        google.auth.credentials_async.Credentials: Either a new set of scoped
+        google.auth._credentials_async.Credentials: Either a new set of scoped
             credentials, or the passed in credentials instance if no scoping
             was required.
     """

@@ -14,12 +14,12 @@
 import pytest
 
 from google.auth import jwt
-import google.oauth2.id_token_async
+import google.oauth2._id_token_async
 
 @pytest.mark.asyncio
 async def test_fetch_id_token(http_request):
     audience = "https://pubsub.googleapis.com"
-    token = await google.oauth2.id_token_async.fetch_id_token(http_request, audience)
+    token = await google.oauth2._id_token_async.fetch_id_token(http_request, audience)
 
     _, payload, _, _ = jwt._unverified_decode(token)
     assert payload["aud"] == audience

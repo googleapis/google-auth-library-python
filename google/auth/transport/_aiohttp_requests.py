@@ -211,7 +211,7 @@ class AuthorizedSession(aiohttp.ClientSession):
     credentials' headers to the request and refreshing credentials as needed.
 
     Args:
-        credentials (google.auth.credentials_async.Credentials): The credentials to
+        credentials (google.auth._credentials_async.Credentials): The credentials to
             add to the request.
         refresh_status_codes (Sequence[int]): Which HTTP status codes indicate
             that credentials should be refreshed and the request should be

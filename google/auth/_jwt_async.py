@@ -92,8 +92,8 @@ def decode(token, certs=None, verify=True, audience=None):
 
 class Credentials(
     jwt.Credentials,
-    google.auth.credentials_async.Signing,
-    google.auth.credentials_async.Credentials,
+    google.auth._credentials_async.Signing,
+    google.auth._credentials_async.Credentials,
 ):
     """Credentials that use a JWT as the bearer token.
 
@@ -147,8 +147,8 @@ class Credentials(
 
 class OnDemandCredentials(
     jwt.OnDemandCredentials,
-    google.auth.credentials_async.Signing,
-    google.auth.credentials_async.Credentials,
+    google.auth._credentials_async.Signing,
+    google.auth._credentials_async.Credentials,
 ):
     """On-demand JWT credentials.
 

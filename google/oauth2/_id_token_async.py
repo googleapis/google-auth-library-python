@@ -25,12 +25,12 @@ A general purpose ID Token verifier is available as :func:`verify_token`.
 
 Example::
 
-    from google.oauth2 import id_token_async
+    from google.oauth2 import _id_token_async
     from google.auth.transport import aiohttp_requests
 
     request = aiohttp_requests.Request()
 
-    id_info = await id_token_async.verify_oauth2_token(
+    id_info = await _id_token_async.verify_oauth2_token(
         token, request, 'my-client-id.example.com')
 
     if id_info['iss'] != 'https://accounts.google.com':
@@ -193,13 +193,13 @@ async def fetch_id_token(request, audience):
 
     Example::
 
-        import google.oauth2.id_token_async
+        import google.oauth2._id_token_async
         import google.auth.transport.aiohttp_requests
 
         request = google.auth.transport.aiohttp_requests.Request()
         target_audience = "https://pubsub.googleapis.com"
 
-        id_token = await google.oauth2.id_token_async.fetch_id_token(request, target_audience)
+        id_token = await google.oauth2._id_token_async.fetch_id_token(request, target_audience)
 
     Args:
         request (google.auth.transport.aiohttp_requests.Request): A callable used to make
@@ -251,7 +251,7 @@ async def fetch_id_token(request, audience):
                 (info.get("type") == "service_account") and info or None
             )
 
-            from google.oauth2 import service_account_async as service_account
+            from google.oauth2 import _service_account_async as service_account
 
             credentials = service_account.IDTokenCredentials.from_service_account_info(
                 credentials_content, target_audience=audience

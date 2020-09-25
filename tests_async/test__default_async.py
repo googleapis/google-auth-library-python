@@ -21,10 +21,10 @@ import pytest
 from google.auth import _default_async as _default
 from google.auth import app_engine
 from google.auth import compute_engine
-from google.auth import credentials_async as credentials
+from google.auth import _credentials_async as credentials
 from google.auth import environment_vars
 from google.auth import exceptions
-from google.oauth2 import service_account_async as service_account
+from google.oauth2 import _service_account_async as service_account
 import google.oauth2.credentials
 from tests import test__default as test_default
 
@@ -69,7 +69,7 @@ def test_load_credentials_from_file_authorized_user():
     credentials, project_id = _default.load_credentials_from_file(
         test_default.AUTHORIZED_USER_FILE
     )
-    assert isinstance(credentials, google.oauth2.credentials_async.Credentials)
+    assert isinstance(credentials, google.oauth2._credentials_async.Credentials)
     assert project_id is None
 
 
@@ -99,14 +99,14 @@ def test_load_credentials_from_file_authorized_user_cloud_sdk():
         credentials, project_id = _default.load_credentials_from_file(
             test_default.AUTHORIZED_USER_CLOUD_SDK_FILE
         )
-    assert isinstance(credentials, google.oauth2.credentials_async.Credentials)
+    assert isinstance(credentials, google.oauth2._credentials_async.Credentials)
     assert project_id is None
 
     # No warning if the json file has quota project id.
     credentials, project_id = _default.load_credentials_from_file(
         test_default.AUTHORIZED_USER_CLOUD_SDK_WITH_QUOTA_PROJECT_ID_FILE
     )
-    assert isinstance(credentials, google.oauth2.credentials_async.Credentials)
+    assert isinstance(credentials, google.oauth2._credentials_async.Credentials)
     assert project_id is None
 
 
@@ -116,7 +116,7 @@ def test_load_credentials_from_file_authorized_user_cloud_sdk_with_scopes():
             test_default.AUTHORIZED_USER_CLOUD_SDK_FILE,
             scopes=["https://www.google.com/calendar/feeds"],
         )
-    assert isinstance(credentials, google.oauth2.credentials_async.Credentials)
+    assert isinstance(credentials, google.oauth2._credentials_async.Credentials)
     assert project_id is None
     assert credentials.scopes == ["https://www.google.com/calendar/feeds"]
 
@@ -126,7 +126,7 @@ def test_load_credentials_from_file_authorized_user_cloud_sdk_with_quota_project
         test_default.AUTHORIZED_USER_CLOUD_SDK_FILE, quota_project_id="project-foo"
     )
 
-    assert isinstance(credentials, google.oauth2.credentials_async.Credentials)
+    assert isinstance(credentials, google.oauth2._credentials_async.Credentials)
     assert project_id is None
     assert credentials.quota_project_id == "project-foo"
 
@@ -435,7 +435,7 @@ def test_default_fail(unused_gce, unused_gae, unused_sdk, unused_explicit):
     autospec=True,
 )
 @mock.patch(
-    "google.auth.credentials_async.with_scopes_if_required",
+    "google.auth._credentials_async.with_scopes_if_required",
     return_value=MOCK_CREDENTIALS,
     autospec=True,
 )

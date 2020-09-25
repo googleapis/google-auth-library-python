@@ -17,7 +17,7 @@ import datetime
 import pytest
 
 from google.auth import _helpers
-from google.auth import credentials_async as credentials
+from google.auth import _credentials_async as credentials
 
 
 class CredentialsImpl(credentials.Credentials):

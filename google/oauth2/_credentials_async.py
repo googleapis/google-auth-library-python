@@ -32,7 +32,7 @@ Authorization Code grant flow.
 """
 
 from google.auth import _helpers
-from google.auth import credentials_async as credentials
+from google.auth import _credentials_async as credentials
 from google.auth import exceptions
 from google.oauth2 import _client_async as _client
 from google.oauth2 import credentials as oauth2_credentials

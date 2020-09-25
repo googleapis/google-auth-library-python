@@ -70,7 +70,7 @@ def load_credentials_from_file(filename, scopes=None, quota_project_id=None):
     credential_type = info.get("type")
 
     if credential_type == _default._AUTHORIZED_USER_TYPE:
-        from google.oauth2 import credentials_async as credentials
+        from google.oauth2 import _credentials_async as credentials
 
         try:
             credentials = credentials.Credentials.from_authorized_user_info(
@@ -85,7 +85,7 @@ def load_credentials_from_file(filename, scopes=None, quota_project_id=None):
         return credentials, None
 
     elif credential_type == _default._SERVICE_ACCOUNT_TYPE:
-        from google.oauth2 import service_account_async as service_account
+        from google.oauth2 import _service_account_async as service_account
 
         try:
             credentials = service_account.Credentials.from_service_account_info(
@@ -234,7 +234,7 @@ def default_async(scopes=None, request=None, quota_project_id=None):
             If no credentials were found, or if the credentials found were
             invalid.
     """
-    from google.auth.credentials_async import with_scopes_if_required
+    from google.auth._credentials_async import with_scopes_if_required
 
     explicit_project_id = os.environ.get(
         environment_vars.PROJECT, os.environ.get(environment_vars.LEGACY_PROJECT)

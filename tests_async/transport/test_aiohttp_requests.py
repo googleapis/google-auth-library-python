@@ -18,7 +18,7 @@ import mock
 import pytest
 from tests_async.transport import async_compliance
 
-import google.auth.credentials_async
+import google.auth._credentials_async
 from google.auth.transport import _aiohttp_requests as aiohttp_requests
 import google.auth.transport._mtls_helper
 
@@ -37,7 +37,7 @@ class TestRequestResponse(async_compliance.RequestResponseTests):
         request(url="http://example.com", method="GET", timeout=5)
 
 
-class CredentialsStub(google.auth.credentials_async.Credentials):
+class CredentialsStub(google.auth._credentials_async.Credentials):
     def __init__(self, token="token"):
         super(CredentialsStub, self).__init__()
         self.token = token
