@@ -24,7 +24,7 @@ import urllib3
 
 import aiohttp
 from google.auth.transport import _aiohttp_requests as aiohttp_requests
-from system_tests import conftest as sync_conftest
+from system_tests.system_tests_sync import conftest as sync_conftest
 
 ASYNC_REQUESTS_SESSION = aiohttp.ClientSession()
 
