@@ -17,10 +17,9 @@
 import logging
 
 from google.auth._default import default, load_credentials_from_file
-from google.auth._default_async import default_async
+# from google.auth._default_async import default_async
 
-
-__all__ = ["default", "load_credentials_from_file", "default_async"]
+# __all__ = ["default", "load_credentials_from_file", "default_async"]
 
 
 # Set default logging handler to avoid "No handler found" warnings.
