@@ -18,9 +18,9 @@ import json
 import mock
 import pytest
 
+from google.auth import _jwt_async as jwt_async
 from google.auth import crypt
 from google.auth import exceptions
-from google.auth import _jwt_async as jwt_async
 from tests import test_jwt
 
 
