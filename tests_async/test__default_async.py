@@ -28,7 +28,7 @@ from google.oauth2 import _service_account_async as service_account
 import google.oauth2.credentials
 from tests import test__default as test_default
 
-MOCK_CREDENTIALS = mock.Mock(spec=credentials.Credentials)
+MOCK_CREDENTIALS = mock.Mock(spec=credentials.CredentialsWithQuotaProject)
 MOCK_CREDENTIALS.with_quota_project.return_value = MOCK_CREDENTIALS
 
 LOAD_FILE_PATCH = mock.patch(

@@ -70,6 +70,10 @@ class Credentials(credentials.Credentials):
         self.apply(headers)
 
 
+class CredentialsWithQuotaProject(credentials.CredentialsWithQuotaProject):
+    """Abstract base for credentials supporting ``with_quota_project`` factory"""
+
+
 class AnonymousCredentials(credentials.AnonymousCredentials, Credentials):
     """Credentials that do not provide any authentication information.
 
