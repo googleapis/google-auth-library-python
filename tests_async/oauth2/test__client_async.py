@@ -22,8 +22,8 @@ from six.moves import http_client
 from six.moves import urllib
 
 from google.auth import _helpers
+from google.auth import _jwt_async as jwt
 from google.auth import exceptions
-from google.auth import jwt_async as jwt
 from google.oauth2 import _client as sync_client
 from google.oauth2 import _client_async as _client
 from tests.oauth2 import test__client as test_client

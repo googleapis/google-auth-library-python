@@ -19,7 +19,7 @@ import pytest
 from tests_async.transport import async_compliance
 
 import google.auth.credentials_async
-from google.auth.transport import aiohttp_requests
+from google.auth.transport import _aiohttp_requests as aiohttp_requests
 import google.auth.transport._mtls_helper
 
 
@@ -33,7 +33,7 @@ class TestRequestResponse(async_compliance.RequestResponseTests):
 
     def test_timeout(self):
         http = mock.create_autospec(aiohttp.ClientSession, instance=True)
-        request = google.auth.transport.aiohttp_requests.Request(http)
+        request = aiohttp_requests.Request(http)
         request(url="http://example.com", method="GET", timeout=5)
 
 
@@ -54,16 +54,14 @@ class TestAuthorizedSession(object):
     method = "GET"
 
     def test_constructor(self):
-        authed_session = google.auth.transport.aiohttp_requests.AuthorizedSession(
-            mock.sentinel.credentials
-        )
+        authed_session = aiohttp_requests.AuthorizedSession(mock.sentinel.credentials)
         assert authed_session.credentials == mock.sentinel.credentials
 
     def test_constructor_with_auth_request(self):
         http = mock.create_autospec(aiohttp.ClientSession)
-        auth_request = google.auth.transport.aiohttp_requests.Request(http)
+        auth_request = aiohttp_requests.Request(http)
 
-        authed_session = google.auth.transport.aiohttp_requests.AuthorizedSession(
+        authed_session = aiohttp_requests.AuthorizedSession(
             mock.sentinel.credentials, auth_request=auth_request
         )
 
@@ -137,9 +135,7 @@ class TestAuthorizedSession(object):
         credentials = mock.Mock(wraps=CredentialsStub())
         with aioresponses() as mocked:
             mocked.get("http://example.com", status=200)
-            authed_session = google.auth.transport.aiohttp_requests.AuthorizedSession(
-                credentials
-            )
+            authed_session = aiohttp_requests.AuthorizedSession(credentials)
             response = await authed_session.request("GET", "http://example.com")
             assert response.status == 200
             assert credentials.before_request.called
@@ -153,9 +149,7 @@ class TestAuthorizedSession(object):
         with aioresponses() as mocked:
             mocked.get("http://example.com", status=401)
             mocked.get("http://example.com", status=200)
-            authed_session = google.auth.transport.aiohttp_requests.AuthorizedSession(
-                credentials
-            )
+            authed_session = aiohttp_requests.AuthorizedSession(credentials)
             response = await authed_session.request("GET", "http://example.com")
             assert credentials.refresh.called
             assert response.status == 200

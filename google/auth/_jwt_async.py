@@ -38,6 +38,9 @@ You can also skip verification::
 
 .. _rfc7519: https://tools.ietf.org/html/rfc7519
 
+
+NOTE: This async support is experimental and marked internal. This surface may
+change in minor releases.
 """
 
 import google.auth
