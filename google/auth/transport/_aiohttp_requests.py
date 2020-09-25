@@ -12,7 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Transport adapter for Async HTTP (aiohttp)."""
+"""Transport adapter for Async HTTP (aiohttp).
+
+NOTE: This async support is experimental and marked internal. This surface may
+change in minor releases.
+"""
 
 from __future__ import absolute_import
 
@@ -197,7 +201,7 @@ class AuthorizedSession(aiohttp.ClientSession):
     This class is used to perform requests to API endpoints that require
     authorization::
 
-        import google.auth.transport.aiohttp_requests
+        from google.auth.transport import aiohttp_requests
 
         async with aiohttp_requests.AuthorizedSession(credentials) as authed_session:
             response = await authed_session.request(

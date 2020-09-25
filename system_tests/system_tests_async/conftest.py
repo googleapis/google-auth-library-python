@@ -23,7 +23,7 @@ import requests
 import urllib3
 
 import aiohttp
-import google.auth.transport.aiohttp_requests
+from google.auth.transport import _aiohttp_requests as aiohttp_requests
 from system_tests import conftest as sync_conftest
 
 ASYNC_REQUESTS_SESSION = aiohttp.ClientSession()
@@ -52,7 +52,7 @@ def authorized_user_file():
 @pytest.fixture(params=["aiohttp"])
 async def http_request(request):
     """A transport.request object."""
-    yield google.auth.transport.aiohttp_requests.Request(ASYNC_REQUESTS_SESSION)
+    yield aiohttp_requests.Request(ASYNC_REQUESTS_SESSION)
 
 @pytest.fixture
 async def token_info(http_request):
