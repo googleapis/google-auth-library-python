@@ -23,20 +23,20 @@ from google.auth.transport import _aiohttp_requests as aiohttp_requests
 import google.auth.transport._mtls_helper
 
 
-class TestCombinedResponse():
+class TestCombinedResponse:
     @pytest.mark.asyncio
     async def test__is_compressed(self):
-        response = core.CallbackResult(headers= { "Content-Encoding": "gzip" })
+        response = core.CallbackResult(headers={"Content-Encoding": "gzip"})
         combined_response = aiohttp_requests._CombinedResponse(response)
-        compressed =  combined_response._is_compressed()
-        assert compressed == True
-    
+        compressed = combined_response._is_compressed()
+        assert compressed
+
     def test__is_compressed_not(self):
-        response = core.CallbackResult(headers= { "Content-Encoding": "not" })
+        response = core.CallbackResult(headers={"Content-Encoding": "not"})
         combined_response = aiohttp_requests._CombinedResponse(response)
-        compressed =  combined_response._is_compressed()
-        assert compressed == False
-    
+        compressed = combined_response._is_compressed()
+        assert not compressed
+
     @pytest.mark.asyncio
     async def test_raw_content(self):
 
@@ -58,17 +58,17 @@ class TestCombinedResponse():
         combined_response = aiohttp_requests._CombinedResponse(response=mock_response)
         content = await combined_response.content()
         assert content == mock.sentinel.read
-        
 
     @mock.patch(
         "google.auth.transport._aiohttp_requests.urllib3.response.MultiDecoder.decompress",
-        return_value="decompressed", autospec=True)
+        return_value="decompressed",
+        autospec=True,
+    )
     @pytest.mark.asyncio
     async def test_content_compressed(self, urllib3_mock):
         rm = core.RequestMatch(
-            "url",
-            headers={ "Content-Encoding": "gzip" },
-            payload="compressed")
+            "url", headers={"Content-Encoding": "gzip"}, payload="compressed"
+        )
         response = await rm.build_response(core.URL("url"))
 
         combined_response = aiohttp_requests._CombinedResponse(response=response)
@@ -77,27 +77,23 @@ class TestCombinedResponse():
         urllib3_mock.assert_called_once()
         assert content == "decompressed"
 
-class TestResponse():
+
+class TestResponse:
     def test_ctor(self):
         response = aiohttp_requests._Response(mock.sentinel.response)
         assert response._response == mock.sentinel.response
 
     @pytest.mark.asyncio
     async def test_headers_prop(self):
-        rm = core.RequestMatch(
-            "url",
-            headers={ "Content-Encoding": "header prop" }
-        )
+        rm = core.RequestMatch("url", headers={"Content-Encoding": "header prop"})
         mock_response = await rm.build_response(core.URL("url"))
 
         response = aiohttp_requests._Response(mock_response)
-        assert response.headers["Content-Encoding"] == "header prop" 
-        
+        assert response.headers["Content-Encoding"] == "header prop"
+
     @pytest.mark.asyncio
     async def test_status_prop(self):
-        rm = core.RequestMatch(
-            "url",
-            status=123)
+        rm = core.RequestMatch("url", status=123)
         mock_response = await rm.build_response(core.URL("url"))
         response = aiohttp_requests._Response(mock_response)
         assert response.status == 123
@@ -107,8 +103,9 @@ class TestResponse():
         mock_response = mock.AsyncMock()
         mock_response.content.read.return_value = mock.sentinel.read
         response = aiohttp_requests._Response(mock_response)
-        data = await response.data.read() 
-        assert data == mock.sentinel.read 
+        data = await response.data.read()
+        assert data == mock.sentinel.read
+
 
 class TestRequestResponse(async_compliance.RequestResponseTests):
     def make_request(self):
@@ -164,10 +161,7 @@ class TestAuthorizedSession(object):
             resp = await session.request(
                 "GET",
                 "http://example.com/",
-                headers={
-                    "Keep-Alive": "timeout=5, max=1000",
-                    "fake": b'bytes'
-                }
+                headers={"Keep-Alive": "timeout=5, max=1000", "fake": b"bytes"},
             )
 
             assert resp.status == 200
