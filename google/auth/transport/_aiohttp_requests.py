@@ -78,8 +78,8 @@ class _CombinedResponse(transport.Response):
         return self._raw_content
 
     async def content(self):
-        if self._raw_content is None:
-            self._raw_content = await self._response.content.read()
+        # Load raw_content if necessary
+        await self.raw_content()
         if self._is_compressed():
             decoder = urllib3.response.MultiDecoder(
                 self._response.headers["Content-Encoding"]
