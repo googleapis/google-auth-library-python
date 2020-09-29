@@ -4,6 +4,27 @@
 
 [1]: https://pypi.org/project/google-auth/#history
 
+## [1.22.0](https://www.github.com/googleapis/google-auth-library-python/compare/v1.21.3...v1.22.0) (2020-09-28)
+
+
+### Features
+
+* add asyncio based auth flow ([#612](https://www.github.com/googleapis/google-auth-library-python/issues/612)) ([7e15258](https://www.github.com/googleapis/google-auth-library-python/commit/7e1525822d51bd9ce7dffca42d71313e6e776fcd)), closes [#572](https://www.github.com/googleapis/google-auth-library-python/issues/572)
+
+### [1.21.3](https://www.github.com/googleapis/google-auth-library-python/compare/v1.21.2...v1.21.3) (2020-09-22)
+
+
+### Bug Fixes
+
+* fix expiry for `to_json()` ([#589](https://www.github.com/googleapis/google-auth-library-python/issues/589)) ([d0e0aba](https://www.github.com/googleapis/google-auth-library-python/commit/d0e0aba0a9f665268ffa1b22d44f4bd7e9b449d6)), closes [/github.com/googleapis/oauth2client/blob/master/oauth2client/client.py#L55](https://www.github.com/googleapis//github.com/googleapis/oauth2client/blob/master/oauth2client/client.py/issues/L55)
+
+### [1.21.2](https://www.github.com/googleapis/google-auth-library-python/compare/v1.21.1...v1.21.2) (2020-09-08)
+
+
+### Bug Fixes
+
+* migrate signBlob to iamcredentials.googleapis.com ([#600](https://www.github.com/googleapis/google-auth-library-python/issues/600)) ([694d83f](https://www.github.com/googleapis/google-auth-library-python/commit/694d83fd23c0e8c2fde27136d1b3f8f6db6338a6))
+
 ### [1.21.1](https://www.github.com/googleapis/google-auth-library-python/compare/v1.21.0...v1.21.1) (2020-09-03)
 
 
