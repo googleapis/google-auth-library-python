@@ -1,4 +1,4 @@
-# Copyright 2016 Google LLC
+# Copyright 2020 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -23,19 +23,13 @@ import pytest
 
 from google.auth import _helpers
 from google.auth import exceptions
-from google.auth import transport
+from google.oauth2 import _credentials_async as _credentials_async
 from google.oauth2 import credentials
+from tests.oauth2 import test_credentials
 
 
-DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
+class TestCredentials:
 
-AUTH_USER_JSON_FILE = os.path.join(DATA_DIR, "authorized_user.json")
-
-with open(AUTH_USER_JSON_FILE, "r") as fh:
-    AUTH_USER_INFO = json.load(fh)
-
-
-class TestCredentials(object):
     TOKEN_URI = "https://example.com/oauth2/token"
     REFRESH_TOKEN = "refresh_token"
     CLIENT_ID = "client_id"
@@ -43,7 +37,7 @@ class TestCredentials(object):
 
     @classmethod
     def make_credentials(cls):
-        return credentials.Credentials(
+        return _credentials_async.Credentials(
             token=None,
             refresh_token=cls.REFRESH_TOKEN,
             token_uri=cls.TOKEN_URI,
@@ -64,12 +58,13 @@ class TestCredentials(object):
         assert credentials.client_id == self.CLIENT_ID
         assert credentials.client_secret == self.CLIENT_SECRET
 
-    @mock.patch("google.oauth2._client.refresh_grant", autospec=True)
+    @mock.patch("google.oauth2._client_async.refresh_grant", autospec=True)
     @mock.patch(
         "google.auth._helpers.utcnow",
         return_value=datetime.datetime.min + _helpers.CLOCK_SKEW,
     )
-    def test_refresh_success(self, unused_utcnow, refresh_grant):
+    @pytest.mark.asyncio
+    async def test_refresh_success(self, unused_utcnow, refresh_grant):
         token = "token"
         expiry = _helpers.utcnow() + datetime.timedelta(seconds=500)
         grant_response = {"id_token": mock.sentinel.id_token}
@@ -84,11 +79,11 @@ class TestCredentials(object):
             grant_response,
         )
 
-        request = mock.create_autospec(transport.Request)
-        credentials = self.make_credentials()
+        request = mock.AsyncMock(spec=["transport.Request"])
+        creds = self.make_credentials()
 
         # Refresh credentials
-        credentials.refresh(request)
+        await creds.refresh(request)
 
         # Check jwt grant call.
         refresh_grant.assert_called_with(
@@ -101,29 +96,31 @@ class TestCredentials(object):
         )
 
         # Check that the credentials have the token and expiry
-        assert credentials.token == token
-        assert credentials.expiry == expiry
-        assert credentials.id_token == mock.sentinel.id_token
+        assert creds.token == token
+        assert creds.expiry == expiry
+        assert creds.id_token == mock.sentinel.id_token
 
         # Check that the credentials are valid (have a token and are not
         # expired)
-        assert credentials.valid
+        assert creds.valid
 
-    def test_refresh_no_refresh_token(self):
-        request = mock.create_autospec(transport.Request)
-        credentials_ = credentials.Credentials(token=None, refresh_token=None)
+    @pytest.mark.asyncio
+    async def test_refresh_no_refresh_token(self):
+        request = mock.AsyncMock(spec=["transport.Request"])
+        credentials_ = _credentials_async.Credentials(token=None, refresh_token=None)
 
         with pytest.raises(exceptions.RefreshError, match="necessary fields"):
-            credentials_.refresh(request)
+            await credentials_.refresh(request)
 
         request.assert_not_called()
 
-    @mock.patch("google.oauth2._client.refresh_grant", autospec=True)
+    @mock.patch("google.oauth2._client_async.refresh_grant", autospec=True)
     @mock.patch(
         "google.auth._helpers.utcnow",
         return_value=datetime.datetime.min + _helpers.CLOCK_SKEW,
     )
-    def test_credentials_with_scopes_requested_refresh_success(
+    @pytest.mark.asyncio
+    async def test_credentials_with_scopes_requested_refresh_success(
         self, unused_utcnow, refresh_grant
     ):
         scopes = ["email", "profile"]
@@ -141,8 +138,8 @@ class TestCredentials(object):
             grant_response,
         )
 
-        request = mock.create_autospec(transport.Request)
-        creds = credentials.Credentials(
+        request = mock.AsyncMock(spec=["transport.Request"])
+        creds = _credentials_async.Credentials(
             token=None,
             refresh_token=self.REFRESH_TOKEN,
             token_uri=self.TOKEN_URI,
@@ -152,7 +149,7 @@ class TestCredentials(object):
         )
 
         # Refresh credentials
-        creds.refresh(request)
+        await creds.refresh(request)
 
         # Check jwt grant call.
         refresh_grant.assert_called_with(
@@ -174,12 +171,13 @@ class TestCredentials(object):
         # expired.)
         assert creds.valid
 
-    @mock.patch("google.oauth2._client.refresh_grant", autospec=True)
+    @mock.patch("google.oauth2._client_async.refresh_grant", autospec=True)
     @mock.patch(
         "google.auth._helpers.utcnow",
         return_value=datetime.datetime.min + _helpers.CLOCK_SKEW,
     )
-    def test_credentials_with_scopes_returned_refresh_success(
+    @pytest.mark.asyncio
+    async def test_credentials_with_scopes_returned_refresh_success(
         self, unused_utcnow, refresh_grant
     ):
         scopes = ["email", "profile"]
@@ -200,8 +198,8 @@ class TestCredentials(object):
             grant_response,
         )
 
-        request = mock.create_autospec(transport.Request)
-        creds = credentials.Credentials(
+        request = mock.AsyncMock(spec=["transport.Request"])
+        creds = _credentials_async.Credentials(
             token=None,
             refresh_token=self.REFRESH_TOKEN,
             token_uri=self.TOKEN_URI,
@@ -211,7 +209,7 @@ class TestCredentials(object):
         )
 
         # Refresh credentials
-        creds.refresh(request)
+        await creds.refresh(request)
 
         # Check jwt grant call.
         refresh_grant.assert_called_with(
@@ -233,12 +231,13 @@ class TestCredentials(object):
         # expired.)
         assert creds.valid
 
-    @mock.patch("google.oauth2._client.refresh_grant", autospec=True)
+    @mock.patch("google.oauth2._client_async.refresh_grant", autospec=True)
     @mock.patch(
         "google.auth._helpers.utcnow",
         return_value=datetime.datetime.min + _helpers.CLOCK_SKEW,
     )
-    def test_credentials_with_scopes_refresh_failure_raises_refresh_error(
+    @pytest.mark.asyncio
+    async def test_credentials_with_scopes_refresh_failure_raises_refresh_error(
         self, unused_utcnow, refresh_grant
     ):
         scopes = ["email", "profile"]
@@ -260,8 +259,8 @@ class TestCredentials(object):
             grant_response,
         )
 
-        request = mock.create_autospec(transport.Request)
-        creds = credentials.Credentials(
+        request = mock.AsyncMock(spec=["transport.Request"])
+        creds = _credentials_async.Credentials(
             token=None,
             refresh_token=self.REFRESH_TOKEN,
             token_uri=self.TOKEN_URI,
@@ -274,7 +273,7 @@ class TestCredentials(object):
         with pytest.raises(
             exceptions.RefreshError, match="Not all requested scopes were granted"
         ):
-            creds.refresh(request)
+            await creds.refresh(request)
 
         # Check jwt grant call.
         refresh_grant.assert_called_with(
@@ -297,7 +296,7 @@ class TestCredentials(object):
         assert creds.valid
 
     def test_apply_with_quota_project_id(self):
-        creds = credentials.Credentials(
+        creds = _credentials_async.Credentials(
             token="token",
             refresh_token=self.REFRESH_TOKEN,
             token_uri=self.TOKEN_URI,
@@ -309,10 +308,9 @@ class TestCredentials(object):
         headers = {}
         creds.apply(headers)
         assert headers["x-goog-user-project"] == "quota-project-123"
-        assert "token" in headers["authorization"]
 
     def test_apply_with_no_quota_project_id(self):
-        creds = credentials.Credentials(
+        creds = _credentials_async.Credentials(
             token="token",
             refresh_token=self.REFRESH_TOKEN,
             token_uri=self.TOKEN_URI,
@@ -323,10 +321,9 @@ class TestCredentials(object):
         headers = {}
         creds.apply(headers)
         assert "x-goog-user-project" not in headers
-        assert "token" in headers["authorization"]
 
     def test_with_quota_project(self):
-        creds = credentials.Credentials(
+        creds = _credentials_async.Credentials(
             token="token",
             refresh_token=self.REFRESH_TOKEN,
             token_uri=self.TOKEN_URI,
@@ -342,9 +339,9 @@ class TestCredentials(object):
         assert "x-goog-user-project" in headers
 
     def test_from_authorized_user_info(self):
-        info = AUTH_USER_INFO.copy()
+        info = test_credentials.AUTH_USER_INFO.copy()
 
-        creds = credentials.Credentials.from_authorized_user_info(info)
+        creds = _credentials_async.Credentials.from_authorized_user_info(info)
         assert creds.client_secret == info["client_secret"]
         assert creds.client_id == info["client_id"]
         assert creds.refresh_token == info["refresh_token"]
@@ -352,31 +349,19 @@ class TestCredentials(object):
         assert creds.scopes is None
 
         scopes = ["email", "profile"]
-        creds = credentials.Credentials.from_authorized_user_info(info, scopes)
+        creds = _credentials_async.Credentials.from_authorized_user_info(info, scopes)
         assert creds.client_secret == info["client_secret"]
         assert creds.client_id == info["client_id"]
         assert creds.refresh_token == info["refresh_token"]
         assert creds.token_uri == credentials._GOOGLE_OAUTH2_TOKEN_ENDPOINT
         assert creds.scopes == scopes
 
-        info["scopes"] = "email"  # single non-array scope from file
-        creds = credentials.Credentials.from_authorized_user_info(info)
-        assert creds.scopes == [info["scopes"]]
-
-        info["scopes"] = ["email", "profile"]  # array scope from file
-        creds = credentials.Credentials.from_authorized_user_info(info)
-        assert creds.scopes == info["scopes"]
-
-        expiry = datetime.datetime(2020, 8, 14, 15, 54, 1)
-        info["expiry"] = expiry.isoformat() + "Z"
-        creds = credentials.Credentials.from_authorized_user_info(info)
-        assert creds.expiry == expiry
-        assert creds.expired
-
     def test_from_authorized_user_file(self):
-        info = AUTH_USER_INFO.copy()
+        info = test_credentials.AUTH_USER_INFO.copy()
 
-        creds = credentials.Credentials.from_authorized_user_file(AUTH_USER_JSON_FILE)
+        creds = _credentials_async.Credentials.from_authorized_user_file(
+            test_credentials.AUTH_USER_JSON_FILE
+        )
         assert creds.client_secret == info["client_secret"]
         assert creds.client_id == info["client_id"]
         assert creds.refresh_token == info["refresh_token"]
@@ -384,8 +369,8 @@ class TestCredentials(object):
         assert creds.scopes is None
 
         scopes = ["email", "profile"]
-        creds = credentials.Credentials.from_authorized_user_file(
-            AUTH_USER_JSON_FILE, scopes
+        creds = _credentials_async.Credentials.from_authorized_user_file(
+            test_credentials.AUTH_USER_JSON_FILE, scopes
         )
         assert creds.client_secret == info["client_secret"]
         assert creds.client_id == info["client_id"]
@@ -394,11 +379,8 @@ class TestCredentials(object):
         assert creds.scopes == scopes
 
     def test_to_json(self):
-        info = AUTH_USER_INFO.copy()
-        expiry = datetime.datetime(2020, 8, 14, 15, 54, 1)
-        info["expiry"] = expiry.isoformat() + "Z"
-        creds = credentials.Credentials.from_authorized_user_info(info)
-        assert creds.expiry == expiry
+        info = test_credentials.AUTH_USER_INFO.copy()
+        creds = _credentials_async.Credentials.from_authorized_user_info(info)
 
         # Test with no `strip` arg
         json_output = creds.to_json()
@@ -409,7 +391,6 @@ class TestCredentials(object):
         assert json_asdict.get("client_id") == creds.client_id
         assert json_asdict.get("scopes") == creds.scopes
         assert json_asdict.get("client_secret") == creds.client_secret
-        assert json_asdict.get("expiry") == info["expiry"]
 
         # Test with a `strip` arg
         json_output = creds.to_json(strip=["client_secret"])
@@ -420,12 +401,6 @@ class TestCredentials(object):
         assert json_asdict.get("client_id") == creds.client_id
         assert json_asdict.get("scopes") == creds.scopes
         assert json_asdict.get("client_secret") is None
-
-        # Test with no expiry
-        creds.expiry = None
-        json_output = creds.to_json()
-        json_asdict = json.loads(json_output)
-        assert json_asdict.get("expiry") is None
 
     def test_pickle_and_unpickle(self):
         creds = self.make_credentials()
@@ -459,7 +434,8 @@ class TestCredentials(object):
         # make sure a credentials file pickled with an older
         # library version (google-auth==1.5.1) can be unpickled
         with open(
-            os.path.join(DATA_DIR, "old_oauth_credentials_py3.pickle"), "rb"
+            os.path.join(test_credentials.DATA_DIR, "old_oauth_credentials_py3.pickle"),
+            "rb",
         ) as f:
             credentials = pickle.load(f)
             assert credentials.quota_project_id is None
@@ -467,7 +443,7 @@ class TestCredentials(object):
 
 class TestUserAccessTokenCredentials(object):
     def test_instance(self):
-        cred = credentials.UserAccessTokenCredentials()
+        cred = _credentials_async.UserAccessTokenCredentials()
         assert cred._account is None
 
         cred = cred.with_account("account")
@@ -476,25 +452,27 @@ class TestUserAccessTokenCredentials(object):
     @mock.patch("google.auth._cloud_sdk.get_auth_access_token", autospec=True)
     def test_refresh(self, get_auth_access_token):
         get_auth_access_token.return_value = "access_token"
-        cred = credentials.UserAccessTokenCredentials()
+        cred = _credentials_async.UserAccessTokenCredentials()
         cred.refresh(None)
         assert cred.token == "access_token"
 
     def test_with_quota_project(self):
-        cred = credentials.UserAccessTokenCredentials()
+        cred = _credentials_async.UserAccessTokenCredentials()
         quota_project_cred = cred.with_quota_project("project-foo")
 
         assert quota_project_cred._quota_project_id == "project-foo"
         assert quota_project_cred._account == cred._account
 
     @mock.patch(
-        "google.oauth2.credentials.UserAccessTokenCredentials.apply", autospec=True
+        "google.oauth2._credentials_async.UserAccessTokenCredentials.apply",
+        autospec=True,
     )
     @mock.patch(
-        "google.oauth2.credentials.UserAccessTokenCredentials.refresh", autospec=True
+        "google.oauth2._credentials_async.UserAccessTokenCredentials.refresh",
+        autospec=True,
     )
     def test_before_request(self, refresh, apply):
-        cred = credentials.UserAccessTokenCredentials()
+        cred = _credentials_async.UserAccessTokenCredentials()
         cred.before_request(mock.Mock(), "GET", "https://example.com", {})
         refresh.assert_called()
         apply.assert_called()

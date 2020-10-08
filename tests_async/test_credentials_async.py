@@ -1,4 +1,4 @@
-# Copyright 2016 Google LLC
+# Copyright 2020 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,8 +16,8 @@ import datetime
 
 import pytest
 
+from google.auth import _credentials_async as credentials
 from google.auth import _helpers
-from google.auth import credentials
 
 
 class CredentialsImpl(credentials.Credentials):
@@ -60,13 +60,14 @@ def test_expired_and_valid():
     assert credentials.expired
 
 
-def test_before_request():
+@pytest.mark.asyncio
+async def test_before_request():
     credentials = CredentialsImpl()
     request = "token"
     headers = {}
 
     # First call should call refresh, setting the token.
-    credentials.before_request(request, "http://example.com", "GET", headers)
+    await credentials.before_request(request, "http://example.com", "GET", headers)
     assert credentials.valid
     assert credentials.token == "token"
     assert headers["authorization"] == "Bearer token"
@@ -76,13 +77,14 @@ def test_before_request():
 
     # Second call shouldn't call refresh.
     credentials.before_request(request, "http://example.com", "GET", headers)
+
     assert credentials.valid
     assert credentials.token == "token"
-    assert headers["authorization"] == "Bearer token"
 
 
 def test_anonymous_credentials_ctor():
     anon = credentials.AnonymousCredentials()
+
     assert anon.token is None
     assert anon.expiry is None
     assert not anon.expired
@@ -91,6 +93,7 @@ def test_anonymous_credentials_ctor():
 
 def test_anonymous_credentials_refresh():
     anon = credentials.AnonymousCredentials()
+
     request = object()
     with pytest.raises(ValueError):
         anon.refresh(request)

@@ -1,4 +1,4 @@
-# Copyright 2016 Google LLC
+# Copyright 2020 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,42 +18,21 @@ import os
 import mock
 import pytest
 
-from google.auth import _default
+from google.auth import _credentials_async as credentials
+from google.auth import _default_async as _default
 from google.auth import app_engine
 from google.auth import compute_engine
-from google.auth import credentials
 from google.auth import environment_vars
 from google.auth import exceptions
-from google.oauth2 import service_account
+from google.oauth2 import _service_account_async as service_account
 import google.oauth2.credentials
-
-
-DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
-AUTHORIZED_USER_FILE = os.path.join(DATA_DIR, "authorized_user.json")
-
-with open(AUTHORIZED_USER_FILE) as fh:
-    AUTHORIZED_USER_FILE_DATA = json.load(fh)
-
-AUTHORIZED_USER_CLOUD_SDK_FILE = os.path.join(
-    DATA_DIR, "authorized_user_cloud_sdk.json"
-)
-
-AUTHORIZED_USER_CLOUD_SDK_WITH_QUOTA_PROJECT_ID_FILE = os.path.join(
-    DATA_DIR, "authorized_user_cloud_sdk_with_quota_project_id.json"
-)
-
-SERVICE_ACCOUNT_FILE = os.path.join(DATA_DIR, "service_account.json")
-
-CLIENT_SECRETS_FILE = os.path.join(DATA_DIR, "client_secrets.json")
-
-with open(SERVICE_ACCOUNT_FILE) as fh:
-    SERVICE_ACCOUNT_FILE_DATA = json.load(fh)
+from tests import test__default as test_default
 
 MOCK_CREDENTIALS = mock.Mock(spec=credentials.CredentialsWithQuotaProject)
 MOCK_CREDENTIALS.with_quota_project.return_value = MOCK_CREDENTIALS
 
 LOAD_FILE_PATCH = mock.patch(
-    "google.auth._default.load_credentials_from_file",
+    "google.auth._default_async.load_credentials_from_file",
     return_value=(MOCK_CREDENTIALS, mock.sentinel.project_id),
     autospec=True,
 )
@@ -87,8 +66,10 @@ def test_load_credentials_from_file_invalid_type(tmpdir):
 
 
 def test_load_credentials_from_file_authorized_user():
-    credentials, project_id = _default.load_credentials_from_file(AUTHORIZED_USER_FILE)
-    assert isinstance(credentials, google.oauth2.credentials.Credentials)
+    credentials, project_id = _default.load_credentials_from_file(
+        test_default.AUTHORIZED_USER_FILE
+    )
+    assert isinstance(credentials, google.oauth2._credentials_async.Credentials)
     assert project_id is None
 
 
@@ -96,7 +77,7 @@ def test_load_credentials_from_file_no_type(tmpdir):
     # use the client_secrets.json, which is valid json but not a
     # loadable credentials type
     with pytest.raises(exceptions.DefaultCredentialsError) as excinfo:
-        _default.load_credentials_from_file(CLIENT_SECRETS_FILE)
+        _default.load_credentials_from_file(test_default.CLIENT_SECRETS_FILE)
 
     assert excinfo.match(r"does not have a valid type")
     assert excinfo.match(r"Type is None")
@@ -116,62 +97,56 @@ def test_load_credentials_from_file_authorized_user_bad_format(tmpdir):
 def test_load_credentials_from_file_authorized_user_cloud_sdk():
     with pytest.warns(UserWarning, match="Cloud SDK"):
         credentials, project_id = _default.load_credentials_from_file(
-            AUTHORIZED_USER_CLOUD_SDK_FILE
+            test_default.AUTHORIZED_USER_CLOUD_SDK_FILE
         )
-    assert isinstance(credentials, google.oauth2.credentials.Credentials)
+    assert isinstance(credentials, google.oauth2._credentials_async.Credentials)
     assert project_id is None
 
     # No warning if the json file has quota project id.
     credentials, project_id = _default.load_credentials_from_file(
-        AUTHORIZED_USER_CLOUD_SDK_WITH_QUOTA_PROJECT_ID_FILE
+        test_default.AUTHORIZED_USER_CLOUD_SDK_WITH_QUOTA_PROJECT_ID_FILE
     )
-    assert isinstance(credentials, google.oauth2.credentials.Credentials)
+    assert isinstance(credentials, google.oauth2._credentials_async.Credentials)
     assert project_id is None
 
 
 def test_load_credentials_from_file_authorized_user_cloud_sdk_with_scopes():
     with pytest.warns(UserWarning, match="Cloud SDK"):
         credentials, project_id = _default.load_credentials_from_file(
-            AUTHORIZED_USER_CLOUD_SDK_FILE,
+            test_default.AUTHORIZED_USER_CLOUD_SDK_FILE,
             scopes=["https://www.google.com/calendar/feeds"],
         )
-    assert isinstance(credentials, google.oauth2.credentials.Credentials)
+    assert isinstance(credentials, google.oauth2._credentials_async.Credentials)
     assert project_id is None
     assert credentials.scopes == ["https://www.google.com/calendar/feeds"]
 
 
 def test_load_credentials_from_file_authorized_user_cloud_sdk_with_quota_project():
     credentials, project_id = _default.load_credentials_from_file(
-        AUTHORIZED_USER_CLOUD_SDK_FILE, quota_project_id="project-foo"
+        test_default.AUTHORIZED_USER_CLOUD_SDK_FILE, quota_project_id="project-foo"
     )
 
-    assert isinstance(credentials, google.oauth2.credentials.Credentials)
+    assert isinstance(credentials, google.oauth2._credentials_async.Credentials)
     assert project_id is None
     assert credentials.quota_project_id == "project-foo"
 
 
 def test_load_credentials_from_file_service_account():
-    credentials, project_id = _default.load_credentials_from_file(SERVICE_ACCOUNT_FILE)
+    credentials, project_id = _default.load_credentials_from_file(
+        test_default.SERVICE_ACCOUNT_FILE
+    )
     assert isinstance(credentials, service_account.Credentials)
-    assert project_id == SERVICE_ACCOUNT_FILE_DATA["project_id"]
+    assert project_id == test_default.SERVICE_ACCOUNT_FILE_DATA["project_id"]
 
 
 def test_load_credentials_from_file_service_account_with_scopes():
     credentials, project_id = _default.load_credentials_from_file(
-        SERVICE_ACCOUNT_FILE, scopes=["https://www.google.com/calendar/feeds"]
+        test_default.SERVICE_ACCOUNT_FILE,
+        scopes=["https://www.google.com/calendar/feeds"],
     )
     assert isinstance(credentials, service_account.Credentials)
-    assert project_id == SERVICE_ACCOUNT_FILE_DATA["project_id"]
+    assert project_id == test_default.SERVICE_ACCOUNT_FILE_DATA["project_id"]
     assert credentials.scopes == ["https://www.google.com/calendar/feeds"]
-
-
-def test_load_credentials_from_file_service_account_with_quota_project():
-    credentials, project_id = _default.load_credentials_from_file(
-        SERVICE_ACCOUNT_FILE, quota_project_id="project-foo"
-    )
-    assert isinstance(credentials, service_account.Credentials)
-    assert project_id == SERVICE_ACCOUNT_FILE_DATA["project_id"]
-    assert credentials.quota_project_id == "project-foo"
 
 
 def test_load_credentials_from_file_service_account_bad_format(tmpdir):
@@ -217,13 +192,13 @@ def test__get_explicit_environ_credentials_no_project_id(load, monkeypatch):
     "google.auth._cloud_sdk.get_application_default_credentials_path", autospec=True
 )
 def test__get_gcloud_sdk_credentials(get_adc_path, load):
-    get_adc_path.return_value = SERVICE_ACCOUNT_FILE
+    get_adc_path.return_value = test_default.SERVICE_ACCOUNT_FILE
 
     credentials, project_id = _default._get_gcloud_sdk_credentials()
 
     assert credentials is MOCK_CREDENTIALS
     assert project_id is mock.sentinel.project_id
-    load.assert_called_with(SERVICE_ACCOUNT_FILE)
+    load.assert_called_with(test_default.SERVICE_ACCOUNT_FILE)
 
 
 @mock.patch(
@@ -373,101 +348,101 @@ def test__get_gce_credentials_explicit_request(ping):
 
 
 @mock.patch(
-    "google.auth._default._get_explicit_environ_credentials",
+    "google.auth._default_async._get_explicit_environ_credentials",
     return_value=(MOCK_CREDENTIALS, mock.sentinel.project_id),
     autospec=True,
 )
 def test_default_early_out(unused_get):
-    assert _default.default() == (MOCK_CREDENTIALS, mock.sentinel.project_id)
+    assert _default.default_async() == (MOCK_CREDENTIALS, mock.sentinel.project_id)
 
 
 @mock.patch(
-    "google.auth._default._get_explicit_environ_credentials",
+    "google.auth._default_async._get_explicit_environ_credentials",
     return_value=(MOCK_CREDENTIALS, mock.sentinel.project_id),
     autospec=True,
 )
 def test_default_explict_project_id(unused_get, monkeypatch):
     monkeypatch.setenv(environment_vars.PROJECT, "explicit-env")
-    assert _default.default() == (MOCK_CREDENTIALS, "explicit-env")
+    assert _default.default_async() == (MOCK_CREDENTIALS, "explicit-env")
 
 
 @mock.patch(
-    "google.auth._default._get_explicit_environ_credentials",
+    "google.auth._default_async._get_explicit_environ_credentials",
     return_value=(MOCK_CREDENTIALS, mock.sentinel.project_id),
     autospec=True,
 )
 def test_default_explict_legacy_project_id(unused_get, monkeypatch):
     monkeypatch.setenv(environment_vars.LEGACY_PROJECT, "explicit-env")
-    assert _default.default() == (MOCK_CREDENTIALS, "explicit-env")
+    assert _default.default_async() == (MOCK_CREDENTIALS, "explicit-env")
 
 
 @mock.patch("logging.Logger.warning", autospec=True)
 @mock.patch(
-    "google.auth._default._get_explicit_environ_credentials",
+    "google.auth._default_async._get_explicit_environ_credentials",
     return_value=(MOCK_CREDENTIALS, None),
     autospec=True,
 )
 @mock.patch(
-    "google.auth._default._get_gcloud_sdk_credentials",
+    "google.auth._default_async._get_gcloud_sdk_credentials",
     return_value=(MOCK_CREDENTIALS, None),
     autospec=True,
 )
 @mock.patch(
-    "google.auth._default._get_gae_credentials",
+    "google.auth._default_async._get_gae_credentials",
     return_value=(MOCK_CREDENTIALS, None),
     autospec=True,
 )
 @mock.patch(
-    "google.auth._default._get_gce_credentials",
+    "google.auth._default_async._get_gce_credentials",
     return_value=(MOCK_CREDENTIALS, None),
     autospec=True,
 )
 def test_default_without_project_id(
     unused_gce, unused_gae, unused_sdk, unused_explicit, logger_warning
 ):
-    assert _default.default() == (MOCK_CREDENTIALS, None)
+    assert _default.default_async() == (MOCK_CREDENTIALS, None)
     logger_warning.assert_called_with(mock.ANY, mock.ANY, mock.ANY)
 
 
 @mock.patch(
-    "google.auth._default._get_explicit_environ_credentials",
+    "google.auth._default_async._get_explicit_environ_credentials",
     return_value=(None, None),
     autospec=True,
 )
 @mock.patch(
-    "google.auth._default._get_gcloud_sdk_credentials",
+    "google.auth._default_async._get_gcloud_sdk_credentials",
     return_value=(None, None),
     autospec=True,
 )
 @mock.patch(
-    "google.auth._default._get_gae_credentials",
+    "google.auth._default_async._get_gae_credentials",
     return_value=(None, None),
     autospec=True,
 )
 @mock.patch(
-    "google.auth._default._get_gce_credentials",
+    "google.auth._default_async._get_gce_credentials",
     return_value=(None, None),
     autospec=True,
 )
 def test_default_fail(unused_gce, unused_gae, unused_sdk, unused_explicit):
     with pytest.raises(exceptions.DefaultCredentialsError):
-        assert _default.default()
+        assert _default.default_async()
 
 
 @mock.patch(
-    "google.auth._default._get_explicit_environ_credentials",
+    "google.auth._default_async._get_explicit_environ_credentials",
     return_value=(MOCK_CREDENTIALS, mock.sentinel.project_id),
     autospec=True,
 )
 @mock.patch(
-    "google.auth.credentials.with_scopes_if_required",
+    "google.auth._credentials_async.with_scopes_if_required",
     return_value=MOCK_CREDENTIALS,
     autospec=True,
 )
 def test_default_scoped(with_scopes, unused_get):
     scopes = ["one", "two"]
 
-    credentials, project_id = _default.default(scopes=scopes)
+    credentials, project_id = _default.default_async(scopes=scopes)
 
     assert credentials == with_scopes.return_value
     assert project_id == mock.sentinel.project_id
@@ -475,19 +450,7 @@ def test_default_scoped(with_scopes, unused_get):
 
 
 @mock.patch(
-    "google.auth._default._get_explicit_environ_credentials",
-    return_value=(MOCK_CREDENTIALS, mock.sentinel.project_id),
-    autospec=True,
-)
-def test_default_quota_project(with_quota_project):
-    credentials, project_id = _default.default(quota_project_id="project-foo")
-
-    MOCK_CREDENTIALS.with_quota_project.assert_called_once_with("project-foo")
-    assert project_id == mock.sentinel.project_id
-
-
-@mock.patch(
-    "google.auth._default._get_explicit_environ_credentials",
+    "google.auth._default_async._get_explicit_environ_credentials",
     return_value=(MOCK_CREDENTIALS, mock.sentinel.project_id),
     autospec=True,
 )
@@ -502,4 +465,4 @@ def test_default_no_app_engine_compute_engine_module(unused_get):
     with mock.patch.dict("sys.modules"):
         sys.modules["google.auth.compute_engine"] = None
         sys.modules["google.auth.app_engine"] = None
-        assert _default.default() == (MOCK_CREDENTIALS, mock.sentinel.project_id)
+        assert _default.default_async() == (MOCK_CREDENTIALS, mock.sentinel.project_id)
