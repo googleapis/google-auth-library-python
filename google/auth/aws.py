@@ -23,9 +23,8 @@ request signing algorithm.
 import hashlib
 import hmac
 import os
-from urllib.parse import parse_qs
-from urllib.parse import quote
-from urllib.parse import urlparse
+
+from six.moves import urllib
 
 from google.auth import _helpers
 
@@ -83,7 +82,7 @@ class RequestSigner(object):
         secret_key = aws_security_credentials.get("secret_access_key")
         security_token = aws_security_credentials.get("security_token")
 
-        uri = urlparse(url)
+        uri = urllib.parse.urlparse(url)
         header_map = _generate_authentication_header_map(
             host=uri.hostname,
             canonical_uri=os.path.normpath(uri.path or "/"),
@@ -130,15 +129,17 @@ def _get_canonical_querystring(query):
         str: The canonical query string.
     """
     # Parse raw query string.
-    querystring = parse_qs(query)
+    querystring = urllib.parse.parse_qs(query)
     querystring_encoded_map = {}
     for key in querystring:
-        quote_key = quote(key, safe="-_.~")
+        quote_key = urllib.parse.quote(key, safe="-_.~")
         # URI encode key.
         querystring_encoded_map[quote_key] = []
         for item in querystring[key]:
             # For each key, URI encode all values for that key.
-            querystring_encoded_map[quote_key].append(quote(item, safe="-_.~"))
+            querystring_encoded_map[quote_key].append(
+                urllib.parse.quote(item, safe="-_.~")
+            )
         # Sort values for each key.
         querystring_encoded_map[quote_key].sort()
     # Sort keys.

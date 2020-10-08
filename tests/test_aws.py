@@ -17,6 +17,7 @@ import json
 
 import mock
 import pytest
+from six.moves import urllib
 
 from google.auth import aws
 
@@ -224,11 +225,15 @@ TEST_FIXTURES = [
         },
         {
             "method": "GET",
-            "url": "https://host.foo.com/?ሴ=bar",
+            "url": "https://host.foo.com/?{}=bar".format(
+                urllib.parse.unquote("%E1%88%B4")
+            ),
             "headers": {"date": "Mon, 09 Sep 2011 23:36:00 GMT"},
         },
         {
-            "url": "https://host.foo.com/?ሴ=bar",
+            "url": "https://host.foo.com/?{}=bar".format(
+                urllib.parse.unquote("%E1%88%B4")
+            ),
             "method": "GET",
             "headers": {
                 "Authorization": "AWS4-HMAC-SHA256 Credential=AKIDEXAMPLE/20110909/us-east-1/host/aws4_request, SignedHeaders=date;host, Signature=6fb359e9a05394cc7074e0feb42573a2601abc0c869a953e8c5c12e4e01f1a8c",
