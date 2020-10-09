@@ -497,6 +497,4 @@ class TestRequestSigner(object):
             original_request.get("headers"),
         )
 
-        print(actual_signed_request)
-        print(signed_request)
         assert actual_signed_request == signed_request

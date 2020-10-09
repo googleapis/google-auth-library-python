@@ -33,6 +33,10 @@ _AWS_ALGORITHM = "AWS4-HMAC-SHA256"
 # The termination string for the AWS credential scope value as defined in
 # https://docs.aws.amazon.com/general/latest/gr/sigv4-create-string-to-sign.html
 _AWS_REQUEST_TYPE = "aws4_request"
+# The AWS authorization header name for the security session token if available.
+_AWS_SECURITY_TOKEN_HEADER = "x-amz-security-token"
+# The AWS authorization header name for the auto-generated date.
+_AWS_DATE_HEADER = "x-amz-date"
 
 
 class RequestSigner(object):
@@ -57,7 +61,7 @@ class RequestSigner(object):
         url,
         method,
         request_payload="",
-        additional_headers=None,
+        additional_headers={},
     ):
         """Generates the signed request for the provided HTTP request for calling
         an AWS API. This follows the steps described at:
@@ -82,6 +86,8 @@ class RequestSigner(object):
         secret_key = aws_security_credentials.get("secret_access_key")
         security_token = aws_security_credentials.get("security_token")
 
+        additional_headers = additional_headers or {}
+
         uri = urllib.parse.urlparse(url)
         header_map = _generate_authentication_header_map(
             host=uri.hostname,
@@ -101,15 +107,14 @@ class RequestSigner(object):
         }
         # Add x-amz-date if available.
         if "amz_date" in header_map:
-            headers["x-amz-date"] = header_map.get("amz_date")
+            headers[_AWS_DATE_HEADER] = header_map.get("amz_date")
         # Append additional optional headers, eg. X-Amz-Target, Content-Type, etc.
-        if additional_headers is not None:
-            for key in additional_headers:
-                headers[key] = additional_headers[key]
+        for key in additional_headers:
+            headers[key] = additional_headers[key]
 
         # Add session token if available.
         if security_token is not None:
-            headers["x-amz-security-token"] = security_token
+            headers[_AWS_SECURITY_TOKEN_HEADER] = security_token
 
         signed_request = {"url": url, "method": method, "headers": headers}
         if request_payload:
@@ -198,7 +203,7 @@ def _generate_authentication_header_map(
     secret_key,
     security_token,
     request_payload="",
-    additional_headers=None,
+    additional_headers={},
 ):
     """Generates the authentication header map needed for generating the AWS
     Signature Version 4 signed request.
@@ -232,12 +237,11 @@ def _generate_authentication_header_map(
 
     # Change all additional headers to be lower case.
     full_headers = {}
-    if additional_headers is not None:
-        for key in additional_headers:
-            full_headers[key.lower()] = additional_headers[key]
+    for key in additional_headers:
+        full_headers[key.lower()] = additional_headers[key]
     # Add AWS session token if available.
     if security_token is not None:
-        full_headers["x-amz-security-token"] = security_token
+        full_headers[_AWS_SECURITY_TOKEN_HEADER] = security_token
 
     # Required headers
     full_headers["host"] = host
@@ -246,7 +250,7 @@ def _generate_authentication_header_map(
     # manually.
     # https://github.com/boto/botocore/blob/879f8440a4e9ace5d3cf145ce8b3d5e5ffb892ef/tests/unit/auth/aws4_testsuite/get-header-value-trim.req
     if "date" not in full_headers:
-        full_headers["x-amz-date"] = amz_date
+        full_headers[_AWS_DATE_HEADER] = amz_date
 
     # Header keys need to be sorted alphabetically.
     canonical_headers = ""
