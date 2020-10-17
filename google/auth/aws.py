@@ -405,8 +405,8 @@ class Credentials(external_account.Credentials):
 
     def retrieve_subject_token(self, request):
         """Retrieves the subject token using the credential_source object.
-        In this case, this uses a serialized AWS signed request to the AWS STS
-        GetCallerIdentity endpoint.
+        The subject token is a serialized `AWS GetCallerIdentity signed request`_.
+
         The logic is summarized as:
 
         Retrieve the AWS region from the AWS_REGION environment variable or from
@@ -425,6 +425,8 @@ class Credentials(external_account.Credentials):
 
         Inject x-goog-cloud-target-resource into header and serialize the
         signed request. This will be the subject-token to pass to GCP STS.
+
+        _AWS GetCallerIdentity signed request: https://cloud.google.com/iam/docs/access-resources-aws#exchange-token
 
         Args:
             request (google.auth.transport.Request): A callable used to make
