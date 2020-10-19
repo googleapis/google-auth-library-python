@@ -25,6 +25,8 @@ For more information about the token endpoint, see
 
 import datetime
 import json
+import logging
+import os
 
 import six
 from six.moves import http_client
@@ -37,6 +39,8 @@ from google.auth import jwt
 _URLENCODED_CONTENT_TYPE = "application/x-www-form-urlencoded"
 _JWT_GRANT_TYPE = "urn:ietf:params:oauth:grant-type:jwt-bearer"
 _REFRESH_GRANT_TYPE = "refresh_token"
+
+_LOGGER = logging.getLogger(__name__)
 
 
 def _handle_error_response(response_body):
@@ -149,8 +153,11 @@ def jwt_grant(request, token_uri, assertion):
     .. _rfc7523 section 4: https://tools.ietf.org/html/rfc7523#section-4
     """
     body = {"assertion": assertion, "grant_type": _JWT_GRANT_TYPE}
+    start_time = datetime.datetime.utcnow()
 
     response_data = _token_endpoint_request(request, token_uri, body)
+    _LOGGER.info("GOOGLE_AUTH_DEBUG: token request, sent request at {}, received response at {}".format(
+        start_time, datetime.datetime.utcnow()))
 
     try:
         access_token = response_data["access_token"]

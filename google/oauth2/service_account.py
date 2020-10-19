@@ -72,6 +72,8 @@ specific subject using :meth:`~Credentials.with_subject`.
 
 import copy
 import datetime
+import logging
+import os
 
 from google.auth import _helpers
 from google.auth import _service_account_info
@@ -80,6 +82,8 @@ from google.auth import jwt
 from google.oauth2 import _client
 
 _DEFAULT_TOKEN_LIFETIME_SECS = 3600  # 1 hour in seconds
+
+_LOGGER = logging.getLogger(__name__)
 
 
 class Credentials(
@@ -152,6 +156,7 @@ class Credentials(
             :meth:`from_service_account_info` are used instead of calling the
             constructor directly.
         """
+        _LOGGER.info("GOOGLE_AUTH_DEBUG: creating {} for {}".format(self, service_account_email))
         super(Credentials, self).__init__()
 
         self._scopes = scopes
@@ -357,8 +362,11 @@ class Credentials(
 
     @_helpers.copy_docstring(credentials.Credentials)
     def refresh(self, request):
+        _LOGGER.info("GOOGLE_AUTH_DEBUG: refreshing token for {}".format(self))
         assertion = self._make_authorization_grant_assertion()
         access_token, expiry, _ = _client.jwt_grant(request, self._token_uri, assertion)
+        _LOGGER.info("GOOGLE_AUTH_DEBUG: refreshed token for {}, current time {}, old expiry {}, new expiry {}".format(
+            self, datetime.datetime.utcnow(), self.expiry, expiry))
         self.token = access_token
         self.expiry = expiry
 

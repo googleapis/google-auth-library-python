@@ -18,6 +18,7 @@ from __future__ import absolute_import
 
 import logging
 import os
+import datetime
 
 import six
 
@@ -69,9 +70,12 @@ class AuthMetadataPlugin(grpc.AuthMetadataPlugin):
                 to add to the request.
         """
         headers = {}
+        start_time = datetime.datetime.utcnow()
         self._credentials.before_request(
             self._request, context.method_name, context.service_url, headers
         )
+        _LOGGER.info("GOOGLE_AUTH_DEBUG: adding token to auth headers, creds {}, started at time {}, added at time {}".format(
+            self._credentials, start_time, datetime.datetime.utcnow()))
 
         return list(six.iteritems(headers))
 
