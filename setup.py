@@ -31,11 +31,12 @@ DEPENDENCIES = (
     'aiohttp >= 3.6.2, < 4.0.0dev; python_version>="3.6"',
 )
 
+extras = {"aiohttp": "aiohttp >= 3.6.2, < 4.0.0dev; python_version>='3.6'"}
 
 with io.open("README.rst", "r") as fh:
     long_description = fh.read()
 
-version = "1.22.0"
+version = "1.22.1"
 
 setup(
     name="google-auth",
@@ -48,6 +49,7 @@ setup(
     packages=find_packages(exclude=("tests*", "system_tests*")),
     namespace_packages=("google",),
     install_requires=DEPENDENCIES,
+    extras_require=extras,
     python_requires=">=2.7,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*",
     license="Apache 2.0",
     keywords="google auth oauth client",

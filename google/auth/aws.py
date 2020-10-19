@@ -12,21 +12,41 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Helper functions for AWS related operations
+"""AWS Credentials and AWS Signature V4 Request Signer.
 
 This module provides a basic implementation of the `AWS Signature Version 4`_
 request signing algorithm.
 
+This module also provides credentials for AWS workloads that are initialized
+using external_account arguments which are typically loaded from the external
+credentials JSON file.
+Unlike other Credentials that can be initialized with a list of explicit
+arguments, secrets or credentials, external account clients use the
+environment and hints/guidelines provided by the external_account JSON
+file to retrieve credentials and exchange them for Google access tokens.
+
+AWS Credentials use serialized signed requests to the
+`AWS STS GetCallerIdentity`_ API that can be exchanged for Google access tokens
+via the GCP STS endpoint.
+
 .. _AWS Signature Version 4: https://docs.aws.amazon.com/general/latest/gr/signature-version-4.html
+.. _AWS STS GetCallerIdentity: https://docs.aws.amazon.com/STS/latest/APIReference/API_GetCallerIdentity.html
 """
 
 import hashlib
 import hmac
+import io
+import json
 import os
+import re
 
+from six.moves import http_client
 from six.moves import urllib
 
 from google.auth import _helpers
+from google.auth import environment_vars
+from google.auth import exceptions
+from google.auth import external_account
 
 # AWS Signature Version 4 signing algorithm identifier.
 _AWS_ALGORITHM = "AWS4-HMAC-SHA256"
@@ -302,3 +322,377 @@ def _generate_authentication_header_map(
     if "date" not in full_headers:
         authentication_header["amz_date"] = amz_date
     return authentication_header
+
+
+class Credentials(external_account.Credentials):
+    """AWS external account credentials.
+    This is used to exchange serialized AWS signature v4 signed requests to
+    AWS STS GetCallerIdentity service for Google access tokens.
+    """
+
+    def __init__(
+        self,
+        audience,
+        subject_token_type,
+        token_url,
+        credential_source=None,
+        service_account_impersonation_url=None,
+        client_id=None,
+        client_secret=None,
+        quota_project_id=None,
+        scopes=None,
+    ):
+        """Instantiates an AWS workload external account credentials object.
+
+        Args:
+            audience (str): The STS audience field.
+            subject_token_type (str): The subject token type.
+            token_url (str): The STS endpoint URL.
+            credential_source (Mapping): The credential source dictionary used
+                to provide instructions on how to retrieve external credential
+                to be exchanged for Google access tokens.
+            service_account_impersonation_url (Optional[str]): The optional
+                service account impersonation getAccessToken URL.
+            client_id (Optional[str]): The optional client ID.
+            client_secret (Optional[str]): The optional client secret.
+            quota_project_id (Optional[str]): The optional quota project ID.
+            scopes (Optional[Sequence[str]]): Optional scopes to request during
+                the authorization grant.
+
+        .. note:: Typically one of the helper constructors
+            :meth:`from_file` or
+            :meth:`from_info` are used instead of calling the constructor directly.
+        """
+        super(Credentials, self).__init__(
+            audience=audience,
+            subject_token_type=subject_token_type,
+            token_url=token_url,
+            credential_source=credential_source,
+            service_account_impersonation_url=service_account_impersonation_url,
+            client_id=client_id,
+            client_secret=client_secret,
+            quota_project_id=quota_project_id,
+            scopes=scopes,
+        )
+        credential_source = credential_source or {}
+        self._environment_id = credential_source.get("environment_id") or ""
+        self._region_url = credential_source.get("region_url")
+        self._security_credentials_url = credential_source.get("url")
+        self._cred_verification_url = credential_source.get(
+            "regional_cred_verification_url"
+        )
+        self._region = None
+        self._request_signer = None
+        self._target_resource = audience
+
+        # Get the environment ID. Currently, only one version supported (v1).
+        matches = re.match(r"^(aws)([\d]+)$", self._environment_id)
+        if matches:
+            env_id, env_version = matches.groups()
+        else:
+            env_id, env_version = (None, None)
+
+        if env_id != "aws" or self._cred_verification_url is None:
+            raise exceptions.GoogleAuthError(
+                "No valid AWS 'credential_source' provided"
+            )
+        elif int(env_version or "") != 1:
+            raise exceptions.GoogleAuthError(
+                "aws version '{}' is not supported in the current build.".format(
+                    env_version
+                )
+            )
+
+    def retrieve_subject_token(self, request):
+        """Retrieves the subject token using the credential_source object.
+        The subject token is a serialized `AWS GetCallerIdentity signed request`_.
+
+        The logic is summarized as:
+
+        Retrieve the AWS region from the AWS_REGION environment variable or from
+        the AWS metadata server availability-zone if not found in the
+        environment variable.
+
+        Check AWS credentials in environment variables. If not found, retrieve
+        from the AWS metadata server security-credentials endpoint.
+
+        When retrieving AWS credentials from the metadata server
+        security-credentials endpoint, the AWS role needs to be determined by
+        calling the security-credentials endpoint without any argument. Then the
+        credentials can be retrieved via: security-credentials/role_name
+
+        Generate the signed request to AWS STS GetCallerIdentity action.
+
+        Inject x-goog-cloud-target-resource into header and serialize the
+        signed request. This will be the subject-token to pass to GCP STS.
+
+        _AWS GetCallerIdentity signed request: https://cloud.google.com/iam/docs/access-resources-aws#exchange-token
+
+        Args:
+            request (google.auth.transport.Request): A callable used to make
+                HTTP requests.
+        Returns:
+            str: The retrieved subject token.
+        """
+        # Initialize the request signer if not yet initialized after determining
+        # the current AWS region.
+        if self._request_signer is None:
+            self._region = self._get_region(request, self._region_url)
+            self._request_signer = RequestSigner(self._region)
+
+        # Retrieve the AWS security credentials needed to generate the signed
+        # request.
+        aws_security_credentials = self._get_security_credentials(request)
+        # Generate the signed request to AWS STS GetCallerIdentity API.
+        # Use the required regional endpoint. Otherwise, the request will fail.
+        request_options = self._request_signer.get_request_options(
+            aws_security_credentials,
+            self._cred_verification_url.replace("{region}", self._region),
+            "POST",
+        )
+        # The GCP STS endpoint expects the headers to be formatted as:
+        # [
+        #   {key: 'x-amz-date', value: '...'},
+        #   {key: 'Authorization', value: '...'},
+        #   ...
+        # ]
+        # And then serialized as:
+        # quote(json.dumps({
+        #   url: '...',
+        #   method: 'POST',
+        #   headers: [{key: 'x-amz-date', value: '...'}, ...]
+        # }))
+        request_headers = request_options.get("headers")
+        # The full, canonical resource name of the workload identity pool
+        # provider, with or without the HTTPS prefix.
+        # Including this header as part of the signature is recommended to
+        # ensure data integrity.
+        request_headers["x-goog-cloud-target-resource"] = self._target_resource
+
+        # Serialize AWS signed request.
+        # Keeping inner keys in sorted order makes testing easier for Python
+        # versions <=3.5 as the stringified JSON string would have a predictable
+        # key order.
+        aws_signed_req = {}
+        aws_signed_req["url"] = request_options.get("url")
+        aws_signed_req["method"] = request_options.get("method")
+        aws_signed_req["headers"] = []
+        # Reformat header to GCP STS expected format.
+        for key in sorted(request_headers.keys()):
+            aws_signed_req["headers"].append(
+                {"key": key, "value": request_headers[key]}
+            )
+
+        return urllib.parse.quote(
+            json.dumps(aws_signed_req, separators=(",", ":"), sort_keys=True)
+        )
+
+    def _get_region(self, request, url):
+        """Retrieves the current AWS region from either the AWS_REGION
+        environment variable or from the AWS metadata server.
+
+        Args:
+            request (google.auth.transport.Request): A callable used to make
+                HTTP requests.
+            url (str): The AWS metadata server region URL.
+
+        Returns:
+            str: The current AWS region.
+
+        Raises:
+            google.auth.exceptions.RefreshError: If an error occurs while
+                retrieving the AWS region.
+        """
+        # The AWS metadata server is not available in some AWS environments
+        # such as AWS lambda. Instead, it is available via environment
+        # variable.
+        env_aws_region = os.environ.get(environment_vars.AWS_REGION)
+        if env_aws_region is not None:
+            return env_aws_region
+
+        if not self._region_url:
+            raise exceptions.RefreshError("Unable to determine AWS region")
+        response = request(url=self._region_url, method="GET")
+
+        # Support both string and bytes type response.data.
+        response_body = (
+            response.data.decode("utf-8")
+            if hasattr(response.data, "decode")
+            else response.data
+        )
+
+        if response.status != 200:
+            raise exceptions.RefreshError(
+                "Unable to retrieve AWS region", response_body
+            )
+
+        # This endpoint will return the region in format: us-east-2b.
+        # Only the us-east-2 part should be used.
+        return response_body[:-1]
+
+    def _get_security_credentials(self, request):
+        """Retrieves the AWS security credentials required for signing AWS
+        requests from either the AWS security credentials environment variables
+        or from the AWS metadata server.
+
+        Args:
+            request (google.auth.transport.Request): A callable used to make
+                HTTP requests.
+
+        Returns:
+            Mapping[str, str]: The AWS security credentials dictionary object.
+
+        Raises:
+            google.auth.exceptions.RefreshError: If an error occurs while
+                retrieving the AWS security credentials.
+        """
+
+        # Check environment variables for permanent credentials first.
+        # https://docs.aws.amazon.com/general/latest/gr/aws-sec-cred-types.html
+        env_aws_access_key_id = os.environ.get(environment_vars.AWS_ACCESS_KEY_ID)
+        env_aws_secret_access_key = os.environ.get(
+            environment_vars.AWS_SECRET_ACCESS_KEY
+        )
+        # This is normally not available for permanent credentials.
+        env_aws_session_token = os.environ.get(environment_vars.AWS_SESSION_TOKEN)
+        if env_aws_access_key_id and env_aws_secret_access_key:
+            return {
+                "access_key_id": env_aws_access_key_id,
+                "secret_access_key": env_aws_secret_access_key,
+                "security_token": env_aws_session_token,
+            }
+
+        # Get role name.
+        role_name = self._get_metadata_role_name(request)
+
+        # Get security credentials.
+        credentials = self._get_metadata_security_credentials(request, role_name)
+
+        return {
+            "access_key_id": credentials.get("AccessKeyId"),
+            "secret_access_key": credentials.get("SecretAccessKey"),
+            "security_token": credentials.get("Token"),
+        }
+
+    def _get_metadata_security_credentials(self, request, role_name):
+        """Retrieves the AWS security credentials required for signing AWS
+        requests from the AWS metadata server.
+
+        Args:
+            request (google.auth.transport.Request): A callable used to make
+                HTTP requests.
+            role_name (str): The AWS role name required by the AWS metadata
+                server security_credentials endpoint in order to return the
+                credentials.
+
+        Returns:
+            Mapping[str, str]: The AWS metadata server security credentials
+                response.
+
+        Raises:
+            google.auth.exceptions.RefreshError: If an error occurs while
+                retrieving the AWS security credentials.
+        """
+        headers = {"Content-Type": "application/json"}
+        response = request(
+            url="{}/{}".format(self._security_credentials_url, role_name),
+            method="GET",
+            headers=headers,
+        )
+
+        # support both string and bytes type response.data
+        response_body = (
+            response.data.decode("utf-8")
+            if hasattr(response.data, "decode")
+            else response.data
+        )
+
+        if response.status != http_client.OK:
+            raise exceptions.RefreshError(
+                "Unable to retrieve AWS security credentials", response_body
+            )
+
+        credentials_response = json.loads(response_body)
+
+        return credentials_response
+
+    def _get_metadata_role_name(self, request):
+        """Retrieves the AWS role currently attached to the current AWS
+        workload by querying the AWS metadata server. This is needed for the
+        AWS metadata server security credentials endpoint in order to retrieve
+        the AWS security credentials needed to sign requests to AWS APIs.
+
+        Args:
+            request (google.auth.transport.Request): A callable used to make
+                HTTP requests.
+
+        Returns:
+            str: The AWS role name.
+
+        Raises:
+            google.auth.exceptions.RefreshError: If an error occurs while
+                retrieving the AWS role name.
+        """
+        if self._security_credentials_url is None:
+            raise exceptions.RefreshError(
+                "Unable to determine the AWS metadata server security credentials endpoint"
+            )
+        response = request(url=self._security_credentials_url, method="GET")
+
+        # support both string and bytes type response.data
+        response_body = (
+            response.data.decode("utf-8")
+            if hasattr(response.data, "decode")
+            else response.data
+        )
+
+        if response.status != http_client.OK:
+            raise exceptions.RefreshError(
+                "Unable to retrieve AWS role name", response_body
+            )
+
+        return response_body
+
+    @classmethod
+    def from_info(cls, info, **kwargs):
+        """Creates an AWS Credentials instance from parsed external account info.
+
+        Args:
+            info (Mapping[str, str]): The AWS external account info in Google
+                format.
+            kwargs: Additional arguments to pass to the constructor.
+
+        Returns:
+            google.auth.aws.Credentials: The constructed credentials.
+
+        Raises:
+            google.auth.exceptions.GoogleAuthError: For invalid parameters.
+        """
+        return cls(
+            audience=info.get("audience"),
+            subject_token_type=info.get("subject_token_type"),
+            token_url=info.get("token_url"),
+            service_account_impersonation_url=info.get(
+                "service_account_impersonation_url"
+            ),
+            client_id=info.get("client_id"),
+            client_secret=info.get("client_secret"),
+            credential_source=info.get("credential_source"),
+            quota_project_id=info.get("quota_project_id"),
+            **kwargs
+        )
+
+    @classmethod
+    def from_file(cls, filename, **kwargs):
+        """Creates an AWS Credentials instance from an external account json file.
+
+        Args:
+            filename (str): The path to the AWS external account json file.
+            kwargs: Additional arguments to pass to the constructor.
+
+        Returns:
+            google.auth.aws.Credentials: The constructed credentials.
+        """
+        with io.open(filename, "r", encoding="utf-8") as json_file:
+            data = json.load(json_file)
+            return cls.from_info(data, **kwargs)
