@@ -144,6 +144,7 @@ def docs(session):
 @nox.session(python="pypy")
 def pypy(session):
     session.install(*TEST_DEPENDENCIES)
+    session.install(*ASYNC_DEPENDENCIES)
     session.install(".")
     session.run(
         "pytest",
