@@ -72,19 +72,20 @@ class TestCredentials(object):
     @classmethod
     def make_mock_request(
         cls,
-        data,
-        status=http_client.OK,
-        impersonation_data=None,
+        token_status=http_client.OK,
+        token_data=None,
         impersonation_status=None,
+        impersonation_data=None,
     ):
+        responses = []
         # STS token exchange request.
         token_response = mock.create_autospec(transport.Response, instance=True)
-        token_response.status = status
-        token_response.data = json.dumps(data).encode("utf-8")
-        responses = [token_response]
+        token_response.status = token_status
+        token_response.data = json.dumps(token_data).encode("utf-8")
+        responses.append(token_response)
 
         # If service account impersonation is requested, mock the expected response.
-        if impersonation_status and impersonation_status:
+        if impersonation_status:
             impersonation_response = mock.create_autospec(
                 transport.Response, instance=True
             )
@@ -169,8 +170,6 @@ class TestCredentials(object):
             "subject_token": subject_token,
             "subject_token_type": subject_token_type,
         }
-        if token_scopes == "":
-            token_request_data.pop("scope", None)
         # Service account impersonation request/response.
         impersonation_response = {
             "accessToken": "SA_ACCESS_TOKEN",
@@ -180,8 +179,6 @@ class TestCredentials(object):
             "Content-Type": "application/json",
             "authorization": "Bearer {}".format(token_response["access_token"]),
         }
-        if quota_project_id:
-            impersonation_headers["x-goog-user-project"] = quota_project_id
         impersonation_request_data = {
             "delegates": None,
             "scope": scopes,
@@ -190,8 +187,8 @@ class TestCredentials(object):
         # Initialize mock request to handle token exchange and service account
         # impersonation request.
         request = cls.make_mock_request(
-            status=http_client.OK,
-            data=token_response,
+            token_status=http_client.OK,
+            token_data=token_response,
             impersonation_status=impersonation_status,
             impersonation_data=impersonation_response,
         )
@@ -243,7 +240,8 @@ class TestCredentials(object):
             scopes=scopes,
         )
 
-    def test_from_info_full_options(self):
+    @mock.patch.object(identity_pool.Credentials, "__init__", return_value=None)
+    def test_from_info_full_options(self, mock_init):
         credentials = identity_pool.Credentials.from_info(
             {
                 "audience": AUDIENCE,
@@ -259,18 +257,19 @@ class TestCredentials(object):
 
         # Confirm identity_pool.Credentials instantiated with expected attributes.
         assert isinstance(credentials, identity_pool.Credentials)
-        self.assert_underlying_credentials_refresh(
-            credentials=credentials,
+        mock_init.assert_called_once_with(
             audience=AUDIENCE,
-            subject_token=TEXT_FILE_SUBJECT_TOKEN,
             subject_token_type=SUBJECT_TOKEN_TYPE,
             token_url=TOKEN_URL,
             service_account_impersonation_url=SERVICE_ACCOUNT_IMPERSONATION_URL,
-            basic_auth_encoding=BASIC_AUTH_ENCODING,
+            client_id=CLIENT_ID,
+            client_secret=CLIENT_SECRET,
+            credential_source=self.CREDENTIAL_SOURCE_TEXT,
             quota_project_id=QUOTA_PROJECT_ID,
         )
 
-    def test_from_info_required_options_only(self):
+    @mock.patch.object(identity_pool.Credentials, "__init__", return_value=None)
+    def test_from_info_required_options_only(self, mock_init):
         credentials = identity_pool.Credentials.from_info(
             {
                 "audience": AUDIENCE,
@@ -282,15 +281,19 @@ class TestCredentials(object):
 
         # Confirm identity_pool.Credentials instantiated with expected attributes.
         assert isinstance(credentials, identity_pool.Credentials)
-        self.assert_underlying_credentials_refresh(
-            credentials=credentials,
+        mock_init.assert_called_once_with(
             audience=AUDIENCE,
-            subject_token=TEXT_FILE_SUBJECT_TOKEN,
             subject_token_type=SUBJECT_TOKEN_TYPE,
             token_url=TOKEN_URL,
+            service_account_impersonation_url=None,
+            client_id=None,
+            client_secret=None,
+            credential_source=self.CREDENTIAL_SOURCE_TEXT,
+            quota_project_id=None,
         )
 
-    def test_from_file_full_options(self, tmpdir):
+    @mock.patch.object(identity_pool.Credentials, "__init__", return_value=None)
+    def test_from_file_full_options(self, mock_init, tmpdir):
         info = {
             "audience": AUDIENCE,
             "subject_token_type": SUBJECT_TOKEN_TYPE,
@@ -307,18 +310,19 @@ class TestCredentials(object):
 
         # Confirm identity_pool.Credentials instantiated with expected attributes.
         assert isinstance(credentials, identity_pool.Credentials)
-        self.assert_underlying_credentials_refresh(
-            credentials=credentials,
+        mock_init.assert_called_once_with(
             audience=AUDIENCE,
-            subject_token=TEXT_FILE_SUBJECT_TOKEN,
             subject_token_type=SUBJECT_TOKEN_TYPE,
             token_url=TOKEN_URL,
             service_account_impersonation_url=SERVICE_ACCOUNT_IMPERSONATION_URL,
-            basic_auth_encoding=BASIC_AUTH_ENCODING,
+            client_id=CLIENT_ID,
+            client_secret=CLIENT_SECRET,
+            credential_source=self.CREDENTIAL_SOURCE_TEXT,
             quota_project_id=QUOTA_PROJECT_ID,
         )
 
-    def test_from_file_required_options_only(self, tmpdir):
+    @mock.patch.object(identity_pool.Credentials, "__init__", return_value=None)
+    def test_from_file_required_options_only(self, mock_init, tmpdir):
         info = {
             "audience": AUDIENCE,
             "subject_token_type": SUBJECT_TOKEN_TYPE,
@@ -331,12 +335,15 @@ class TestCredentials(object):
 
         # Confirm identity_pool.Credentials instantiated with expected attributes.
         assert isinstance(credentials, identity_pool.Credentials)
-        self.assert_underlying_credentials_refresh(
-            credentials=credentials,
+        mock_init.assert_called_once_with(
             audience=AUDIENCE,
-            subject_token=TEXT_FILE_SUBJECT_TOKEN,
             subject_token_type=SUBJECT_TOKEN_TYPE,
             token_url=TOKEN_URL,
+            service_account_impersonation_url=None,
+            client_id=None,
+            client_secret=None,
+            credential_source=self.CREDENTIAL_SOURCE_TEXT,
+            quota_project_id=None,
         )
 
     def test_constructor_invalid_options(self):
