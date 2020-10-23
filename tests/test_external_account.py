@@ -71,7 +71,7 @@ class TestCredentials(object):
     POOL_ID = "POOL_ID"
     PROVIDER_ID = "PROVIDER_ID"
     AUDIENCE = (
-        "//iam.googleapis.com/project/{}"
+        "//iam.googleapis.com/projects/{}"
         "/locations/global/workloadIdentityPools/{}"
         "/providers/{}"
     ).format(PROJECT_NUMBER, POOL_ID, PROVIDER_ID)
@@ -102,6 +102,18 @@ class TestCredentials(object):
             "status": "INVALID_ARGUMENT",
         }
     }
+    PROJECT_ID = "my-proj-id"
+    CLOUD_RESOURCE_MANAGER_URL = (
+        "https://cloudresourcemanager.googleapis.com/v1/projects/"
+    )
+    CLOUD_RESOURCE_MANAGER_SUCCESS_RESPONSE = {
+        "projectNumber": PROJECT_NUMBER,
+        "projectId": PROJECT_ID,
+        "lifecycleState": "ACTIVE",
+        "name": "project-name",
+        "createTime": "2018-11-06T04:42:54.109Z",
+        "parent": {"type": "folder", "id": "12345678901"},
+    }
 
     @classmethod
     def make_credentials(
@@ -127,10 +139,12 @@ class TestCredentials(object):
     @classmethod
     def make_mock_request(
         cls,
-        data,
         status=http_client.OK,
-        impersonation_data=None,
+        data=None,
         impersonation_status=None,
+        impersonation_data=None,
+        cloud_resource_manager_status=None,
+        cloud_resource_manager_data=None,
     ):
         # STS token exchange request.
         token_response = mock.create_autospec(transport.Response, instance=True)
@@ -139,13 +153,24 @@ class TestCredentials(object):
         responses = [token_response]
 
         # If service account impersonation is requested, mock the expected response.
-        if impersonation_status and impersonation_status:
+        if impersonation_status:
             impersonation_response = mock.create_autospec(
                 transport.Response, instance=True
             )
             impersonation_response.status = impersonation_status
             impersonation_response.data = json.dumps(impersonation_data).encode("utf-8")
             responses.append(impersonation_response)
+
+        # If cloud resource manager is requested, mock the expected response.
+        if cloud_resource_manager_status:
+            cloud_resource_manager_response = mock.create_autospec(
+                transport.Response, instance=True
+            )
+            cloud_resource_manager_response.status = cloud_resource_manager_status
+            cloud_resource_manager_response.data = json.dumps(
+                cloud_resource_manager_data
+            ).encode("utf-8")
+            responses.append(cloud_resource_manager_response)
 
         request = mock.create_autospec(transport.Request)
         request.side_effect = responses
@@ -171,6 +196,15 @@ class TestCredentials(object):
         assert request_kwargs["body"] is not None
         body_json = json.loads(request_kwargs["body"].decode("utf-8"))
         assert body_json == request_data
+
+    @classmethod
+    def assert_resource_manager_request_kwargs(
+        cls, request_kwargs, project_number, headers
+    ):
+        assert request_kwargs["url"] == cls.CLOUD_RESOURCE_MANAGER_URL + project_number
+        assert request_kwargs["method"] == "GET"
+        assert request_kwargs["headers"] == headers
+        assert "body" not in request_kwargs
 
     def test_default_state(self):
         credentials = self.make_credentials()
@@ -709,3 +743,142 @@ class TestCredentials(object):
         assert headers == {
             "authorization": "Bearer {}".format(impersonation_response["accessToken"])
         }
+
+    @pytest.mark.parametrize(
+        "audience",
+        [
+            # Legacy K8s audience format.
+            "identitynamespace:1f12345:my_provider",
+            # Unrealistic audiences.
+            "//iam.googleapis.com/projects",
+            "//iam.googleapis.com/projects/",
+            "//iam.googleapis.com/project/123456",
+            "//iam.googleapis.com/projects//123456",
+            "//iam.googleapis.com/prefix_projects/123456",
+            "//iam.googleapis.com/projects_suffix/123456",
+        ],
+    )
+    def test_project_number_indeterminable(self, audience):
+        credentials = CredentialsImpl(
+            audience=audience,
+            subject_token_type=self.SUBJECT_TOKEN_TYPE,
+            token_url=self.TOKEN_URL,
+            credential_source=self.CREDENTIAL_SOURCE,
+        )
+
+        assert credentials.project_number is None
+        assert credentials.get_project_id(None) is None
+
+    def test_project_number_determinable(self):
+        credentials = CredentialsImpl(
+            audience=self.AUDIENCE,
+            subject_token_type=self.SUBJECT_TOKEN_TYPE,
+            token_url=self.TOKEN_URL,
+            credential_source=self.CREDENTIAL_SOURCE,
+        )
+
+        assert credentials.project_number == self.PROJECT_NUMBER
+
+    def test_get_project_id_cloud_resource_manager_success(self):
+        # STS token exchange request/response.
+        token_response = self.SUCCESS_RESPONSE.copy()
+        token_headers = {"Content-Type": "application/x-www-form-urlencoded"}
+        token_request_data = {
+            "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
+            "audience": self.AUDIENCE,
+            "requested_token_type": "urn:ietf:params:oauth:token-type:access_token",
+            "subject_token": "subject_token_0",
+            "subject_token_type": self.SUBJECT_TOKEN_TYPE,
+            "scope": "https://www.googleapis.com/auth/iam",
+        }
+        # Service account impersonation request/response.
+        expire_time = (
+            _helpers.utcnow().replace(microsecond=0) + datetime.timedelta(seconds=3600)
+        ).isoformat("T") + "Z"
+        expected_expiry = datetime.datetime.strptime(expire_time, "%Y-%m-%dT%H:%M:%SZ")
+        impersonation_response = {
+            "accessToken": "SA_ACCESS_TOKEN",
+            "expireTime": expire_time,
+        }
+        impersonation_headers = {
+            "Content-Type": "application/json",
+            "x-goog-user-project": self.QUOTA_PROJECT_ID,
+            "authorization": "Bearer {}".format(token_response["access_token"]),
+        }
+        impersonation_request_data = {
+            "delegates": None,
+            "scope": self.SCOPES,
+            "lifetime": "3600s",
+        }
+        # Initialize mock request to handle token exchange, service account
+        # impersonation and cloud resource manager request.
+        request = self.make_mock_request(
+            status=http_client.OK,
+            data=self.SUCCESS_RESPONSE.copy(),
+            impersonation_status=http_client.OK,
+            impersonation_data=impersonation_response,
+            cloud_resource_manager_status=http_client.OK,
+            cloud_resource_manager_data=self.CLOUD_RESOURCE_MANAGER_SUCCESS_RESPONSE,
+        )
+        credentials = self.make_credentials(
+            service_account_impersonation_url=self.SERVICE_ACCOUNT_IMPERSONATION_URL,
+            scopes=self.SCOPES,
+            quota_project_id=self.QUOTA_PROJECT_ID,
+        )
+
+        # Expected project ID from cloud resource manager response should be returned.
+        project_id = credentials.get_project_id(request)
+
+        assert project_id == self.PROJECT_ID
+        # 3 requests should be processed.
+        assert len(request.call_args_list) == 3
+        # Verify token exchange request parameters.
+        self.assert_token_request_kwargs(
+            request.call_args_list[0].kwargs, token_headers, token_request_data
+        )
+        # Verify service account impersonation request parameters.
+        self.assert_impersonation_request_kwargs(
+            request.call_args_list[1].kwargs,
+            impersonation_headers,
+            impersonation_request_data,
+        )
+        # In the process of getting project ID, an access token should be
+        # retrieved.
+        assert credentials.valid
+        assert credentials.expiry == expected_expiry
+        assert not credentials.expired
+        assert credentials.token == impersonation_response["accessToken"]
+        # Verify cloud resource manager request parameters.
+        self.assert_resource_manager_request_kwargs(
+            request.call_args_list[2].kwargs,
+            self.PROJECT_NUMBER,
+            {
+                "x-goog-user-project": self.QUOTA_PROJECT_ID,
+                "authorization": "Bearer {}".format(
+                    impersonation_response["accessToken"]
+                ),
+            },
+        )
+
+        # Calling get_project_id again should return the cached project_id.
+        project_id = credentials.get_project_id(request)
+
+        assert project_id == self.PROJECT_ID
+        # No additional requests.
+        assert len(request.call_args_list) == 3
+
+    def test_get_project_id_cloud_resource_manager_error(self):
+        # Simulate resource doesn't have sufficient permissions to access
+        # cloud resource manager.
+        request = self.make_mock_request(
+            status=http_client.OK,
+            data=self.SUCCESS_RESPONSE.copy(),
+            cloud_resource_manager_status=http_client.UNAUTHORIZED,
+        )
+        credentials = self.make_credentials()
+
+        project_id = credentials.get_project_id(request)
+
+        assert project_id is None
+        # Only 2 requests to STS and cloud resource manager should be sent.
+        assert len(request.call_args_list) == 2
