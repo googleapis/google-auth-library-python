@@ -28,6 +28,7 @@ token exchange endpoint following the `OAuth 2.0 Token Exchange`_ spec.
 
 import abc
 import datetime
+import json
 
 import six
 
@@ -42,6 +43,8 @@ from google.oauth2 import utils
 _STS_GRANT_TYPE = "urn:ietf:params:oauth:grant-type:token-exchange"
 # The token exchange requested_token_type. This is always an access_token.
 _STS_REQUESTED_TOKEN_TYPE = "urn:ietf:params:oauth:token-type:access_token"
+# Cloud resource manager URL used to retrieve project information.
+_CLOUD_RESOURCE_MANAGER = "https://cloudresourcemanager.googleapis.com/v1/projects/"
 
 
 @six.add_metaclass(abc.ABCMeta)
@@ -107,6 +110,7 @@ class Credentials(credentials.Scoped, credentials.CredentialsWithQuotaProject):
             self._impersonated_credentials = self._initialize_impersonated_credentials()
         else:
             self._impersonated_credentials = None
+        self._project_id = None
 
     @property
     def requires_scopes(self):
@@ -116,6 +120,20 @@ class Credentials(credentials.Scoped, credentials.CredentialsWithQuotaProject):
             bool: True if there are no scopes set otherwise False.
         """
         return True if not self._scopes else False
+
+    @property
+    def project_number(self):
+        """Optional[str]: The project number corresponding to the workload identity pool."""
+
+        # STS audience pattern:
+        # //iam.googleapis.com/projects/$PROJECT_NUMBER/locations/...
+        components = self._audience.split("/")
+        try:
+            project_index = components.index("projects")
+            if project_index + 1 < len(components):
+                return components[project_index + 1] or None
+        except ValueError:
+            return None
 
     @_helpers.copy_docstring(credentials.Scoped)
     def with_scopes(self, scopes):
@@ -143,6 +161,49 @@ class Credentials(credentials.Scoped, credentials.CredentialsWithQuotaProject):
         # pylint: disable=missing-raises-doc
         # (pylint doesn't recognize that this is abstract)
         raise NotImplementedError("retrieve_subject_token must be implemented")
+
+    def get_project_id(self, request):
+        """Retrieves the project ID corresponding to the workload identity pool.
+
+        When not determinable, None is returned.
+
+        This is introduced to support the current pattern of using the Auth library:
+
+            credentials, project_id = google.auth.default()
+
+        The resource may not have permission (resourcemanager.projects.get) to
+        call this API or the required scopes may not be selected:
+        https://cloud.google.com/resource-manager/reference/rest/v1/projects/get#authorization-scopes
+
+        Args:
+            request (google.auth.transport.Request): A callable used to make
+                HTTP requests.
+        Returns:
+            Optional[str]: The project ID corresponding to the workload identity pool
+                if determinable.
+        """
+        if self._project_id:
+            # If already retrieved, return the cached project ID value.
+            return self._project_id
+        if self.project_number:
+            headers = {}
+            url = _CLOUD_RESOURCE_MANAGER + self.project_number
+            self.before_request(request, "GET", url, headers)
+            response = request(url=url, method="GET", headers=headers)
+
+            response_body = (
+                response.data.decode("utf-8")
+                if hasattr(response.data, "decode")
+                else response.data
+            )
+            response_data = json.loads(response_body)
+
+            if response.status == 200:
+                # Cache result as this field is immutable.
+                self._project_id = response_data.get("projectId")
+                return self._project_id
+
+        return None
 
     @_helpers.copy_docstring(credentials.Credentials)
     def refresh(self, request):
