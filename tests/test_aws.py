@@ -837,7 +837,7 @@ class TestCredentials(object):
         # Provide invalid credential source.
         credential_source = {"unsupported": "value"}
 
-        with pytest.raises(exceptions.GoogleAuthError) as excinfo:
+        with pytest.raises(ValueError) as excinfo:
             self.make_credentials(credential_source=credential_source)
 
         assert excinfo.match(r"No valid AWS 'credential_source' provided")
@@ -847,7 +847,7 @@ class TestCredentials(object):
         credential_source = self.CREDENTIAL_SOURCE.copy()
         credential_source["environment_id"] = "azure1"
 
-        with pytest.raises(exceptions.GoogleAuthError) as excinfo:
+        with pytest.raises(ValueError) as excinfo:
             self.make_credentials(credential_source=credential_source)
 
         assert excinfo.match(r"No valid AWS 'credential_source' provided")
@@ -857,7 +857,7 @@ class TestCredentials(object):
         credential_source = self.CREDENTIAL_SOURCE.copy()
         credential_source.pop("regional_cred_verification_url")
 
-        with pytest.raises(exceptions.GoogleAuthError) as excinfo:
+        with pytest.raises(ValueError) as excinfo:
             self.make_credentials(credential_source=credential_source)
 
         assert excinfo.match(r"No valid AWS 'credential_source' provided")
@@ -867,7 +867,7 @@ class TestCredentials(object):
         credential_source = self.CREDENTIAL_SOURCE.copy()
         credential_source["environment_id"] = "aws3"
 
-        with pytest.raises(exceptions.GoogleAuthError) as excinfo:
+        with pytest.raises(ValueError) as excinfo:
             self.make_credentials(credential_source=credential_source)
 
         assert excinfo.match(r"aws version '3' is not supported in the current build.")

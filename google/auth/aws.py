@@ -359,6 +359,11 @@ class Credentials(external_account.Credentials):
             scopes (Optional[Sequence[str]]): Optional scopes to request during
                 the authorization grant.
 
+        Raises:
+            google.auth.exceptions.RefreshError: If an error is encountered during
+                access token retrieval logic.
+            ValueError: For invalid parameters.
+
         .. note:: Typically one of the helper constructors
             :meth:`from_file` or
             :meth:`from_info` are used instead of calling the constructor directly.
@@ -393,11 +398,9 @@ class Credentials(external_account.Credentials):
             env_id, env_version = (None, None)
 
         if env_id != "aws" or self._cred_verification_url is None:
-            raise exceptions.GoogleAuthError(
-                "No valid AWS 'credential_source' provided"
-            )
+            raise ValueError("No valid AWS 'credential_source' provided")
         elif int(env_version or "") != 1:
-            raise exceptions.GoogleAuthError(
+            raise ValueError(
                 "aws version '{}' is not supported in the current build.".format(
                     env_version
                 )
@@ -666,7 +669,7 @@ class Credentials(external_account.Credentials):
             google.auth.aws.Credentials: The constructed credentials.
 
         Raises:
-            google.auth.exceptions.GoogleAuthError: For invalid parameters.
+            ValueError: For invalid parameters.
         """
         return cls(
             audience=info.get("audience"),
