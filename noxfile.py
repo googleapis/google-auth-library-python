@@ -30,7 +30,12 @@ TEST_DEPENDENCIES = [
     "grpcio",
 ]
 
-ASYNC_DEPENDENCIES = ["pytest-asyncio", "aioresponses"]
+ASYNC_DEPENDENCIES = [
+    "pytest-asyncio",
+    "aiohttp < 3.7.0dev",
+    "aioresponses",
+    "asynctest",
+]
 
 BLACK_VERSION = "black==19.3b0"
 BLACK_PATHS = [
@@ -144,6 +149,7 @@ def docs(session):
 @nox.session(python="pypy")
 def pypy(session):
     session.install(*TEST_DEPENDENCIES)
+    session.install(*ASYNC_DEPENDENCIES)
     session.install(".")
     session.run(
         "pytest",
