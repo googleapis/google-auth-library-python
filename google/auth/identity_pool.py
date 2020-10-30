@@ -73,7 +73,7 @@ class Credentials(external_account.Credentials):
         Raises:
             google.auth.exceptions.RefreshError: If an error is encountered during
                 access token retrieval logic.
-            google.auth.exceptions.GoogleAuthError: For invalid parameters.
+            ValueError: For invalid parameters.
 
         .. note:: Typically one of the helper constructors
             :meth:`from_file` or
@@ -101,7 +101,7 @@ class Credentials(external_account.Credentials):
                 credential_source_format.get("type") or "text"
             )
             if self._credential_source_format_type not in ["text", "json"]:
-                raise exceptions.GoogleAuthError(
+                raise ValueError(
                     "Invalid credential_source format '{}'".format(
                         self._credential_source_format_type
                     )
@@ -112,7 +112,7 @@ class Credentials(external_account.Credentials):
                     "subject_token_field_name"
                 )
                 if self._credential_source_field_name is None:
-                    raise exceptions.GoogleAuthError(
+                    raise ValueError(
                         "Missing subject_token_field_name for JSON credential_source format"
                     )
             else:
@@ -120,7 +120,7 @@ class Credentials(external_account.Credentials):
         else:
             self._credential_source_file = None
         if not self._credential_source_file:
-            raise exceptions.GoogleAuthError("Missing credential_source file")
+            raise ValueError("Missing credential_source file")
 
     @_helpers.copy_docstring(external_account.Credentials)
     def retrieve_subject_token(self, request):
@@ -173,7 +173,7 @@ class Credentials(external_account.Credentials):
                 credentials.
 
         Raises:
-            google.auth.exceptions.GoogleAuthError: For invalid parameters.
+            ValueError: For invalid parameters.
         """
         return cls(
             audience=info.get("audience"),

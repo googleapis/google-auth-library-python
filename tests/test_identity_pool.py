@@ -349,13 +349,13 @@ class TestCredentials(object):
     def test_constructor_invalid_options(self):
         credential_source = {"unsupported": "value"}
 
-        with pytest.raises(exceptions.GoogleAuthError) as excinfo:
+        with pytest.raises(ValueError) as excinfo:
             self.make_credentials(credential_source=credential_source)
 
         assert excinfo.match(r"Missing credential_source file")
 
     def test_constructor_invalid_credential_source(self):
-        with pytest.raises(exceptions.GoogleAuthError) as excinfo:
+        with pytest.raises(ValueError) as excinfo:
             self.make_credentials(credential_source="non-dict")
 
         assert excinfo.match(r"Missing credential_source file")
@@ -363,7 +363,7 @@ class TestCredentials(object):
     def test_constructor_invalid_credential_source_format_type(self):
         credential_source = {"format": {"type": "xml"}}
 
-        with pytest.raises(exceptions.GoogleAuthError) as excinfo:
+        with pytest.raises(ValueError) as excinfo:
             self.make_credentials(credential_source=credential_source)
 
         assert excinfo.match(r"Invalid credential_source format 'xml'")
@@ -371,7 +371,7 @@ class TestCredentials(object):
     def test_constructor_missing_subject_token_field_name(self):
         credential_source = {"format": {"type": "json"}}
 
-        with pytest.raises(exceptions.GoogleAuthError) as excinfo:
+        with pytest.raises(ValueError) as excinfo:
             self.make_credentials(credential_source=credential_source)
 
         assert excinfo.match(
