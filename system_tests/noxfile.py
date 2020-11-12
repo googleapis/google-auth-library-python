@@ -168,7 +168,11 @@ def configure_cloud_sdk(session, application_default_credentials, project=False)
 
 # Test sesssions
 
+<<<<<<< HEAD
 TEST_DEPENDENCIES_ASYNC = ["aiohttp", "pytest-asyncio", "nest-asyncio"]
+=======
+TEST_DEPENDENCIES_ASYNC = ["aiohttp < 3.7.0dev", "pytest-asyncio", "nest-asyncio"]
+>>>>>>> upstream/byoid
 TEST_DEPENDENCIES_SYNC = ["pytest", "requests"]
 PYTHON_VERSIONS_ASYNC = ["3.7"]
 PYTHON_VERSIONS_SYNC = ["2.7", "3.7"]
@@ -315,7 +319,11 @@ def default_explicit_service_account_async(session):
     session.env[EXPECT_PROJECT_ENV] = "1"
     session.install(*(TEST_DEPENDENCIES_SYNC + TEST_DEPENDENCIES_ASYNC))
     session.install(LIBRARY_DIR)
+<<<<<<< HEAD
     session.run("pytest", "system_tests_async/test_default.py",
+=======
+    session.run("pytest", "system_tests_async/test_default.py", 
+>>>>>>> upstream/byoid
     "system_tests_async/test_id_token.py")
 
 
