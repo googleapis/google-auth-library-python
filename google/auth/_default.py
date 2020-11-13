@@ -189,9 +189,26 @@ def _get_gcloud_sdk_credentials():
     return credentials, project_id
 
 
-def _get_explicit_environ_credentials(request=None):
+def _get_explicit_environ_credentials(request=None, scopes=None):
     """Gets credentials from the GOOGLE_APPLICATION_CREDENTIALS environment
-    variable."""
+    variable.
+
+    Args:
+        request (Optional[google.auth.transport.Request]): An object used to make
+            HTTP requests. This is used to determine the associated project ID
+            for a workload identity pool resource (external account credentials).
+            If not specified, then it will use a
+            google.auth.transport.requests.Request client to make requests.
+        scopes (Optional[Sequence[str]]): The list of scopes for the credentials. If
+            specified, the credentials will automatically be scoped if
+            necessary.
+
+    Returns:
+        Tuple[Optional[google.auth.credentials.Credentials], Optional[str]]: Loaded
+            credentials and the project ID. Authorized user credentials do not
+            have the project ID information. External account credentials project
+            IDs may not always be determined.
+    """
     explicit_file = os.environ.get(environment_vars.CREDENTIALS)
 
     _LOGGER.debug(
@@ -200,7 +217,7 @@ def _get_explicit_environ_credentials(request=None):
 
     if explicit_file is not None:
         credentials, project_id = load_credentials_from_file(
-            os.environ[environment_vars.CREDENTIALS], request=request
+            os.environ[environment_vars.CREDENTIALS], request=request, scopes=scopes
         )
 
         return credentials, project_id
@@ -411,7 +428,7 @@ def default(scopes=None, request=None, quota_project_id=None):
     )
 
     checkers = (
-        lambda: _get_explicit_environ_credentials(request=request),
+        lambda: _get_explicit_environ_credentials(request=request, scopes=scopes),
         _get_gcloud_sdk_credentials,
         _get_gae_credentials,
         lambda: _get_gce_credentials(request),

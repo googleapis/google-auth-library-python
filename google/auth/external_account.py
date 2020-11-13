@@ -142,6 +142,7 @@ class Credentials(credentials.Scoped, credentials.CredentialsWithQuotaProject):
             subject_token_type=self._subject_token_type,
             token_url=self._token_url,
             credential_source=self._credential_source,
+            service_account_impersonation_url=self._service_account_impersonation_url,
             client_id=self._client_id,
             client_secret=self._client_secret,
             quota_project_id=self._quota_project_id,

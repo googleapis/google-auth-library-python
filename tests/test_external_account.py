@@ -47,15 +47,15 @@ class CredentialsImpl(external_account.Credentials):
         scopes=None,
     ):
         super(CredentialsImpl, self).__init__(
-            audience,
-            subject_token_type,
-            token_url,
-            credential_source,
-            service_account_impersonation_url,
-            client_id,
-            client_secret,
-            quota_project_id,
-            scopes,
+            audience=audience,
+            subject_token_type=subject_token_type,
+            token_url=token_url,
+            credential_source=credential_source,
+            service_account_impersonation_url=service_account_impersonation_url,
+            client_id=client_id,
+            client_secret=client_secret,
+            quota_project_id=quota_project_id,
+            scopes=scopes,
         )
         self._counter = 0
 
@@ -231,6 +231,34 @@ class TestCredentials(object):
         assert scoped_credentials.has_scopes(["email"])
         assert not scoped_credentials.requires_scopes
 
+    def test_with_scopes_full_options_propagated(self):
+        credentials = self.make_credentials(
+            client_id=CLIENT_ID,
+            client_secret=CLIENT_SECRET,
+            quota_project_id=self.QUOTA_PROJECT_ID,
+            scopes=self.SCOPES,
+            service_account_impersonation_url=self.SERVICE_ACCOUNT_IMPERSONATION_URL,
+        )
+
+        with mock.patch.object(
+            external_account.Credentials, "__init__", return_value=None
+        ) as mock_init:
+            credentials.with_scopes(["email"])
+
+        # Confirm with_scopes initialized the credential with the expected
+        # parameters and scopes.
+        mock_init.assert_called_once_with(
+            audience=self.AUDIENCE,
+            subject_token_type=self.SUBJECT_TOKEN_TYPE,
+            token_url=self.TOKEN_URL,
+            credential_source=self.CREDENTIAL_SOURCE,
+            service_account_impersonation_url=self.SERVICE_ACCOUNT_IMPERSONATION_URL,
+            client_id=CLIENT_ID,
+            client_secret=CLIENT_SECRET,
+            quota_project_id=self.QUOTA_PROJECT_ID,
+            scopes=["email"],
+        )
+
     def test_with_quota_project(self):
         credentials = self.make_credentials()
 
@@ -240,6 +268,34 @@ class TestCredentials(object):
         quota_project_creds = credentials.with_quota_project("project-foo")
 
         assert quota_project_creds.quota_project_id == "project-foo"
+
+    def test_with_quota_project_full_options_propagated(self):
+        credentials = self.make_credentials(
+            client_id=CLIENT_ID,
+            client_secret=CLIENT_SECRET,
+            quota_project_id=self.QUOTA_PROJECT_ID,
+            scopes=self.SCOPES,
+            service_account_impersonation_url=self.SERVICE_ACCOUNT_IMPERSONATION_URL,
+        )
+
+        with mock.patch.object(
+            external_account.Credentials, "__init__", return_value=None
+        ) as mock_init:
+            credentials.with_quota_project("project-foo")
+
+        # Confirm with_quota_project initialized the credential with the
+        # expected parameters and quota project ID.
+        mock_init.assert_called_once_with(
+            audience=self.AUDIENCE,
+            subject_token_type=self.SUBJECT_TOKEN_TYPE,
+            token_url=self.TOKEN_URL,
+            credential_source=self.CREDENTIAL_SOURCE,
+            service_account_impersonation_url=self.SERVICE_ACCOUNT_IMPERSONATION_URL,
+            client_id=CLIENT_ID,
+            client_secret=CLIENT_SECRET,
+            quota_project_id="project-foo",
+            scopes=self.SCOPES,
+        )
 
     def test_with_invalid_impersonation_target_principal(self):
         invalid_url = "https://iamcredentials.googleapis.com/v1/invalid"
