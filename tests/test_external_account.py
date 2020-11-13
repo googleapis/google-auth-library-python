@@ -835,6 +835,17 @@ class TestCredentials(object):
 
         assert credentials.project_number == self.PROJECT_NUMBER
 
+    def test_project_id_without_scopes(self):
+        # Initialize credentials with no scopes.
+        credentials = CredentialsImpl(
+            audience=self.AUDIENCE,
+            subject_token_type=self.SUBJECT_TOKEN_TYPE,
+            token_url=self.TOKEN_URL,
+            credential_source=self.CREDENTIAL_SOURCE,
+        )
+
+        assert credentials.get_project_id(None) is None
+
     def test_get_project_id_cloud_resource_manager_success(self):
         # STS token exchange request/response.
         token_response = self.SUCCESS_RESPONSE.copy()
@@ -931,7 +942,7 @@ class TestCredentials(object):
             data=self.SUCCESS_RESPONSE.copy(),
             cloud_resource_manager_status=http_client.UNAUTHORIZED,
         )
-        credentials = self.make_credentials()
+        credentials = self.make_credentials(scopes=self.SCOPES)
 
         project_id = credentials.get_project_id(request)
 

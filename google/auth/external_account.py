@@ -186,7 +186,8 @@ class Credentials(credentials.Scoped, credentials.CredentialsWithQuotaProject):
         if self._project_id:
             # If already retrieved, return the cached project ID value.
             return self._project_id
-        if self.project_number:
+        # Scopes are required in order to retrieve a valid access token.
+        if self.project_number and self._scopes:
             headers = {}
             url = _CLOUD_RESOURCE_MANAGER + self.project_number
             self.before_request(request, "GET", url, headers)
