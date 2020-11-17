@@ -316,7 +316,22 @@ def test__get_explicit_environ_credentials(load, monkeypatch):
 
     assert credentials is MOCK_CREDENTIALS
     assert project_id is mock.sentinel.project_id
-    load.assert_called_with("filename", request=None)
+    load.assert_called_with("filename", request=None, scopes=None)
+
+
+@LOAD_FILE_PATCH
+def test__get_explicit_environ_credentials_with_scopes_and_request(load, monkeypatch):
+    scopes = ["one", "two"]
+    monkeypatch.setenv(environment_vars.CREDENTIALS, "filename")
+
+    credentials, project_id = _default._get_explicit_environ_credentials(
+        request=mock.sentinel.request, scopes=scopes
+    )
+
+    assert credentials is MOCK_CREDENTIALS
+    assert project_id is mock.sentinel.project_id
+    # Request and scopes should be propagated.
+    load.assert_called_with("filename", request=mock.sentinel.request, scopes=scopes)
 
 
 @LOAD_FILE_PATCH

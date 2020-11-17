@@ -189,9 +189,26 @@ def _get_gcloud_sdk_credentials():
     return credentials, project_id
 
 
-def _get_explicit_environ_credentials(request=None):
+def _get_explicit_environ_credentials(request=None, scopes=None):
     """Gets credentials from the GOOGLE_APPLICATION_CREDENTIALS environment
-    variable."""
+    variable.
+
+    Args:
+        request (Optional[google.auth.transport.Request]): An object used to make
+            HTTP requests. This is used to determine the associated project ID
+            for a workload identity pool resource (external account credentials).
+            If not specified, then it will use a
+            google.auth.transport.requests.Request client to make requests.
+        scopes (Optional[Sequence[str]]): The list of scopes for the credentials. If
+            specified, the credentials will automatically be scoped if
+            necessary.
+
+    Returns:
+        Tuple[Optional[google.auth.credentials.Credentials], Optional[str]]: Loaded
+            credentials and the project ID. Authorized user credentials do not
+            have the project ID information. External account credentials project
+            IDs may not always be determined.
+    """
     explicit_file = os.environ.get(environment_vars.CREDENTIALS)
 
     _LOGGER.debug(
@@ -200,7 +217,7 @@ def _get_explicit_environ_credentials(request=None):
 
     if explicit_file is not None:
         credentials, project_id = load_credentials_from_file(
-            os.environ[environment_vars.CREDENTIALS], request=request
+            os.environ[environment_vars.CREDENTIALS], request=request, scopes=scopes
         )
 
         return credentials, project_id
@@ -351,10 +368,11 @@ def default(scopes=None, request=None, quota_project_id=None):
             gcloud config set project
 
     3. If the application is running in the `App Engine standard environment`_
-       then the credentials and project ID from the `App Identity Service`_
-       are used.
-    4. If the application is running in `Compute Engine`_ or the
-       `App Engine flexible environment`_ then the credentials and project ID
+       (first generation) then the credentials and project ID from the
+       `App Identity Service`_ are used.
+    4. If the application is running in `Compute Engine`_ or `Cloud Run`_ or
+       the `App Engine flexible environment`_ or the `App Engine standard
+       environment`_ (second generation) then the credentials and project ID
        are obtained from the `Metadata Service`_.
     5. If no credentials are found,
        :class:`~google.auth.exceptions.DefaultCredentialsError` will be raised.
@@ -370,6 +388,7 @@ def default(scopes=None, request=None, quota_project_id=None):
             /appengine/flexible
     .. _Metadata Service: https://cloud.google.com/compute/docs\
             /storing-retrieving-metadata
+    .. _Cloud Run: https://cloud.google.com/run
 
     Example::
 
@@ -409,7 +428,7 @@ def default(scopes=None, request=None, quota_project_id=None):
     )
 
     checkers = (
-        lambda: _get_explicit_environ_credentials(request=request),
+        lambda: _get_explicit_environ_credentials(request=request, scopes=scopes),
         _get_gcloud_sdk_credentials,
         _get_gae_credentials,
         lambda: _get_gce_credentials(request),
