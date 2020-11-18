@@ -47,8 +47,8 @@ with open(SUBJECT_TOKEN_TEXT_FILE) as fh:
     TEXT_FILE_SUBJECT_TOKEN = fh.read()
 
 with open(SUBJECT_TOKEN_JSON_FILE) as fh:
-    content = json.load(fh)
-    JSON_FILE_SUBJECT_TOKEN = content.get(SUBJECT_TOKEN_FIELD_NAME)
+    JSON_FILE_CONTENT = json.load(fh)
+    JSON_FILE_SUBJECT_TOKEN = JSON_FILE_CONTENT.get(SUBJECT_TOKEN_FIELD_NAME)
 
 TOKEN_URL = "https://sts.googleapis.com/v1/token"
 SUBJECT_TOKEN_TYPE = "urn:ietf:params:oauth:token-type:jwt"
@@ -68,6 +68,16 @@ class TestCredentials(object):
         "expires_in": 3600,
         "scope": " ".join(SCOPES),
     }
+
+    class FakeResponse:
+        def __init__(self, data, status=http_client.OK):
+            self.status = status
+            self.data = data
+            if isinstance(data, dict):
+                self.data = json.dumps(data)
+
+        def read(self):
+            return self.data
 
     @classmethod
     def make_mock_request(
@@ -352,13 +362,13 @@ class TestCredentials(object):
         with pytest.raises(ValueError) as excinfo:
             self.make_credentials(credential_source=credential_source)
 
-        assert excinfo.match(r"Missing credential_source file")
+        assert excinfo.match(r"Missing credential_source")
 
     def test_constructor_invalid_credential_source(self):
         with pytest.raises(ValueError) as excinfo:
             self.make_credentials(credential_source="non-dict")
 
-        assert excinfo.match(r"Missing credential_source file")
+        assert excinfo.match(r"Missing credential_source")
 
     def test_constructor_invalid_credential_source_format_type(self):
         credential_source = {"format": {"type": "xml"}}
@@ -551,3 +561,36 @@ class TestCredentials(object):
                 SUBJECT_TOKEN_JSON_FILE, "not_found"
             )
         )
+
+    @mock.patch.object(urllib.request, "urlopen", return_value=FakeResponse(
+        TEXT_FILE_SUBJECT_TOKEN))
+    def test_retrieve_subject_token_from_url(self, mock_urlopen):
+        credential_source = {
+            "url": "http://fakeurl.com",
+        }
+        credentials = self.make_credentials(credential_source=credential_source)
+        subject_token = credentials.retrieve_subject_token(None)
+
+        assert subject_token == TEXT_FILE_SUBJECT_TOKEN
+
+    @mock.patch.object(urllib.request, "urlopen", return_value=FakeResponse(
+        JSON_FILE_CONTENT))
+    def test_retrieve_subject_token_from_url_json(self, mock_urlopen):
+        credential_source = {
+            "url": "http://fakeurl.com",
+            "format": {"type": "json", "subject_token_field_name": "access_token"},
+        }
+        credentials = self.make_credentials(credential_source=credential_source)
+        subject_token = credentials.retrieve_subject_token(None)
+
+        assert subject_token == JSON_FILE_SUBJECT_TOKEN
+
+    @mock.patch.object(urllib.request, "urlopen", return_value=FakeResponse(
+        TEXT_FILE_SUBJECT_TOKEN, status=http_client.NOT_FOUND))
+    def test_retrieve_subject_token_from_url_not_found(self, mock_urlopen):
+        credential_source = {
+            "url": "http://fakeurl.com",
+        }
+        credentials = self.make_credentials(credential_source=credential_source)
+        with pytest.raises(exceptions.RefreshError) as excinfo:
+            credentials.retrieve_subject_token(None)

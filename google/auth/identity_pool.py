@@ -33,6 +33,8 @@ import os
 from google.auth import _helpers
 from google.auth import exceptions
 from google.auth import external_account
+from six.moves import http_client
+from six.moves import urllib
 
 
 class Credentials(external_account.Credentials):
@@ -52,6 +54,7 @@ class Credentials(external_account.Credentials):
         client_secret=None,
         quota_project_id=None,
         scopes=None,
+        success_codes=(http_client.OK,),
     ):
         """Instantiates a file-sourced external account credentials object.
 
@@ -91,9 +94,14 @@ class Credentials(external_account.Credentials):
             quota_project_id=quota_project_id,
             scopes=scopes,
         )
-        if isinstance(credential_source, dict):
+        if not isinstance(credential_source, dict):
+            self._credential_source_file = None
+            self._credential_source_url = None
+        else:
             self._credential_source_file = credential_source.get("file")
+            self._credential_source_url = credential_source.get("url")
             self._credential_source_headers = credential_source.get("headers")
+            self._success_codes = success_codes
             credential_source_format = credential_source.get("format") or {}
             # Get credential_source format type. When not provided, this
             # defaults to text.
@@ -117,28 +125,46 @@ class Credentials(external_account.Credentials):
                     )
             else:
                 self._credential_source_field_name = None
-        else:
-            self._credential_source_file = None
-        if not self._credential_source_file:
-            raise ValueError("Missing credential_source file")
+
+        if self._credential_source_file and self._credential_source_url:
+            raise ValueError("Ambiguous credential_source")
+        if not self._credential_source_file and not self._credential_source_url:
+            raise ValueError("Missing credential_source")
 
     @_helpers.copy_docstring(external_account.Credentials)
     def retrieve_subject_token(self, request):
-        return self._get_token_file(
-            self._credential_source_file,
+        return self._parse_token_data(
+            self._get_token_data(),
             self._credential_source_format_type,
             self._credential_source_field_name,
         )
 
-    def _get_token_file(
-        self, filename, format_type="text", subject_token_field_name=None
-    ):
+    def _get_token_data(self):
+        if self._credential_source_file:
+            return self._get_file_data(self._credential_source_file)
+        if self._credential_source_url:
+            return self._get_url_data(self._credential_source_url)
+
+    def _get_file_data(self, filename):
         if not os.path.exists(filename):
             raise exceptions.RefreshError("File '{}' was not found.".format(filename))
 
         with io.open(filename, "r", encoding="utf-8") as file_obj:
-            content = file_obj.read()
+            return file_obj.read(), filename
 
+    def _get_url_data(self, url):
+        response = urllib.request.urlopen(url)
+        if response.status not in self._success_codes:
+            raise exceptions.RefreshError("Url '{}' was not found.".format(url))
+        return response.read(), url
+
+    def _parse_token_data(
+        self,
+        token_content,
+        format_type="text",
+        subject_token_field_name=None
+    ):
+        content, filename = token_content
         if format_type == "text":
             token = content
         else:
