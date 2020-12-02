@@ -15,15 +15,17 @@
 """Identity Pool Credentials.
 
 This module provides credentials that are initialized using external_account
-arguments which are typically loaded from the external credentials file.
-Unlike other Credentials that can be initialized with a list of explicit
-arguments, secrets or credentials, external account clients use the
-environment and hints/guidelines provided by the external_account JSON
-file to retrieve credentials and exchange them for Google access tokens.
+arguments which are typically loaded from an external credentials file or
+an external credentials url. Unlike other Credentials that can be initialized
+with a list of explicit arguments, secrets or credentials, external account
+clients use the environment and hints/guidelines provided by the
+external_account JSON file to retrieve credentials and exchange them for Google
+access tokens.
 
 Identity Pool Credentials are used with external credentials (eg. OIDC
 ID tokens) retrieved from a file location, typical for K8s workloads
-registered with Hub with Hub workload identity enabled.
+registered with Hub with Hub workload identity enabled, or retrieved from an
+url, typical for AWS and Azure based workflows.
 """
 
 import io
@@ -33,15 +35,10 @@ import os
 from google.auth import _helpers
 from google.auth import exceptions
 from google.auth import external_account
-from six.moves import http_client
-from six.moves import urllib
 
 
 class Credentials(external_account.Credentials):
-    """File-sourced external account credentials.
-    This is typically used to exchange OIDC ID tokens in K8s (file-sourced
-    credentials) for Google access tokens.
-    """
+    """External account credentials sourced from files and urls."""
 
     def __init__(
         self,
@@ -54,9 +51,8 @@ class Credentials(external_account.Credentials):
         client_secret=None,
         quota_project_id=None,
         scopes=None,
-        success_codes=(http_client.OK,),
     ):
-        """Instantiates a file-sourced external account credentials object.
+        """Instantiates an external account credentials object from a file/url.
 
         Args:
             audience (str): The STS audience field.
@@ -101,7 +97,6 @@ class Credentials(external_account.Credentials):
             self._credential_source_file = credential_source.get("file")
             self._credential_source_url = credential_source.get("url")
             self._credential_source_headers = credential_source.get("headers")
-            self._success_codes = success_codes
             credential_source_format = credential_source.get("format") or {}
             # Get credential_source format type. When not provided, this
             # defaults to text.
@@ -134,16 +129,19 @@ class Credentials(external_account.Credentials):
     @_helpers.copy_docstring(external_account.Credentials)
     def retrieve_subject_token(self, request):
         return self._parse_token_data(
-            self._get_token_data(),
+            self._get_token_data(request),
             self._credential_source_format_type,
             self._credential_source_field_name,
         )
 
-    def _get_token_data(self):
+    def _get_token_data(self, request):
         if self._credential_source_file:
             return self._get_file_data(self._credential_source_file)
         if self._credential_source_url:
-            return self._get_url_data(self._credential_source_url)
+            return self._get_url_data(
+                request,
+                self._credential_source_url,
+                self._credential_source_headers)
 
     def _get_file_data(self, filename):
         if not os.path.exists(filename):
@@ -152,11 +150,27 @@ class Credentials(external_account.Credentials):
         with io.open(filename, "r", encoding="utf-8") as file_obj:
             return file_obj.read(), filename
 
-    def _get_url_data(self, url):
-        response = urllib.request.urlopen(url)
-        if response.status not in self._success_codes:
-            raise exceptions.RefreshError("Url '{}' was not found.".format(url))
-        return response.read(), url
+    def _get_url_data(self, request, url, headers):
+        response = request(
+            url=url,
+            method="GET",
+            headers=headers
+        )
+
+        # support both string and bytes type response.data
+        response_body = (
+            response.data.decode("utf-8")
+            if hasattr(response.data, "decode")
+            else response.data
+        )
+
+        if response.status != 200:
+            raise exceptions.RefreshError(
+                "Unable to retrieve Identity Pool subject token",
+                response_body
+            )
+
+        return response_body, url
 
     def _parse_token_data(
         self,
