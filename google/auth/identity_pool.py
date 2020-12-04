@@ -25,7 +25,7 @@ access tokens.
 Identity Pool Credentials are used with external credentials (eg. OIDC
 ID tokens) retrieved from a file location, typical for K8s workloads
 registered with Hub with Hub workload identity enabled, or retrieved from an
-url, typical for AWS and Azure based workflows.
+url, typical for Azure based workflows.
 """
 
 import io

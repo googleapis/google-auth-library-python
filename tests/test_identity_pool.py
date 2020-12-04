@@ -61,9 +61,10 @@ class TestCredentials(object):
         "file": SUBJECT_TOKEN_JSON_FILE,
         "format": {"type": "json", "subject_token_field_name": "access_token"},
     }
-    CREDENTIAL_SOURCE_TEXT_URL = {"url": "http://fakeurl.com"}
+    CREDENTIAL_URL = "http://fakeurl.com"
+    CREDENTIAL_SOURCE_TEXT_URL = {"url": CREDENTIAL_URL}
     CREDENTIAL_SOURCE_JSON_URL = {
-        "url": "http://fakeurl.com",
+        "url": CREDENTIAL_URL,
         "format": {"type": "json", "subject_token_field_name": "access_token"},
     }
     SUCCESS_RESPONSE = {
@@ -103,6 +104,15 @@ class TestCredentials(object):
         request.side_effect = responses
 
         return request
+
+    @classmethod
+    def assert_credential_request_kwargs(
+        cls, request_kwargs, url=CREDENTIAL_URL
+    ):
+        assert request_kwargs["url"] == url
+        assert request_kwargs["method"] == "GET"
+        assert request_kwargs["headers"] is None
+        assert request_kwargs.get("body", None) is None
 
     @classmethod
     def assert_token_request_kwargs(
@@ -209,6 +219,10 @@ class TestCredentials(object):
         credentials.refresh(request)
 
         assert len(request.call_args_list) == len(requests)
+        if credential_data:
+            cls.assert_credential_request_kwargs(
+                request.call_args_list[0].kwargs,
+            )
         # Verify token exchange request parameters.
         cls.assert_token_request_kwargs(
             request.call_args_list[token_request_index].kwargs,
@@ -566,41 +580,32 @@ class TestCredentials(object):
         )
 
     def test_retrieve_subject_token_from_url(self):
-        credential_source = {
-            "url": "http://fakeurl.com",
-        }
-        credentials = self.make_credentials(credential_source=credential_source)
+        credentials = self.make_credentials(credential_source=self.CREDENTIAL_SOURCE_TEXT_URL)
         subject_token = credentials.retrieve_subject_token(
             self.make_mock_request(token_data=TEXT_FILE_SUBJECT_TOKEN))
 
         assert subject_token == TEXT_FILE_SUBJECT_TOKEN
 
     def test_retrieve_subject_token_from_url_json(self):
-        credential_source = {
-            "url": "http://fakeurl.com",
-            "format": {"type": "json", "subject_token_field_name": "access_token"},
-        }
-        credentials = self.make_credentials(credential_source=credential_source)
+        credentials = self.make_credentials(credential_source=self.CREDENTIAL_SOURCE_JSON_URL)
         subject_token = credentials.retrieve_subject_token(
             self.make_mock_request(token_data=JSON_FILE_CONTENT))
 
         assert subject_token == JSON_FILE_SUBJECT_TOKEN
 
     def test_retrieve_subject_token_from_url_not_found(self):
-        credential_source = {
-            "url": "http://fakeurl.com",
-        }
-        credentials = self.make_credentials(credential_source=credential_source)
+        credentials = self.make_credentials(credential_source=self.CREDENTIAL_SOURCE_TEXT_URL)
         with pytest.raises(exceptions.RefreshError) as excinfo:
             credentials.retrieve_subject_token(
                 self.make_mock_request(
-                    token_status=500,
+                    token_status=404,
                     token_data=JSON_FILE_CONTENT))
 
+        assert excinfo.match("Unable to retrieve Identity Pool subject token")
+
     def test_retrieve_subject_token_from_url_json_invalid_field(self):
-        url = "http://fakeurl.com"
         credential_source = {
-            "url": url,
+            "url": self.CREDENTIAL_URL,
             "format": {"type": "json", "subject_token_field_name": "not_found"},
         }
         credentials = self.make_credentials(credential_source=credential_source)
@@ -611,17 +616,12 @@ class TestCredentials(object):
 
         assert excinfo.match(
             "Unable to parse subject_token from JSON file '{}' using key '{}'".format(
-                url, "not_found"
+                self.CREDENTIAL_URL, "not_found"
             )
         )
 
     def test_retrieve_subject_token_from_url_json_invalid_format(self):
-        url = "http://fakeurl.com"
-        credential_source = {
-            "url": url,
-            "format": {"type": "json", "subject_token_field_name": "access_token"},
-        }
-        credentials = self.make_credentials(credential_source=credential_source)
+        credentials = self.make_credentials(credential_source=self.CREDENTIAL_SOURCE_JSON_URL)
 
         with pytest.raises(exceptions.RefreshError) as excinfo:
             credentials.retrieve_subject_token(
@@ -629,7 +629,7 @@ class TestCredentials(object):
 
         assert excinfo.match(
             "Unable to parse subject_token from JSON file '{}' using key '{}'".format(
-                url, "access_token"
+                self.CREDENTIAL_URL, "access_token"
             )
         )
 
@@ -722,9 +722,8 @@ class TestCredentials(object):
         )
 
     def test_refresh_with_retrieve_subject_token_error_url(self):
-        url = "http://fakeurl.com"
         credential_source = {
-            "url": url,
+            "url": self.CREDENTIAL_URL,
             "format": {"type": "json", "subject_token_field_name": "not_found"},
         }
         credentials = self.make_credentials(credential_source=credential_source)
@@ -735,6 +734,6 @@ class TestCredentials(object):
 
         assert excinfo.match(
             "Unable to parse subject_token from JSON file '{}' using key '{}'".format(
-                url, "not_found"
+                self.CREDENTIAL_URL, "not_found"
             )
         )
