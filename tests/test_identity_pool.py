@@ -107,11 +107,11 @@ class TestCredentials(object):
 
     @classmethod
     def assert_credential_request_kwargs(
-        cls, request_kwargs, url=CREDENTIAL_URL
+        cls, request_kwargs, headers, url=CREDENTIAL_URL
     ):
         assert request_kwargs["url"] == url
         assert request_kwargs["method"] == "GET"
-        assert request_kwargs["headers"] is None
+        assert request_kwargs["headers"] == headers
         assert request_kwargs.get("body", None) is None
 
     @classmethod
@@ -222,6 +222,7 @@ class TestCredentials(object):
         if credential_data:
             cls.assert_credential_request_kwargs(
                 request.call_args_list[0].kwargs,
+                None,
             )
         # Verify token exchange request parameters.
         cls.assert_token_request_kwargs(
@@ -580,21 +581,59 @@ class TestCredentials(object):
         )
 
     def test_retrieve_subject_token_from_url(self):
-        credentials = self.make_credentials(credential_source=self.CREDENTIAL_SOURCE_TEXT_URL)
-        subject_token = credentials.retrieve_subject_token(
-            self.make_mock_request(token_data=TEXT_FILE_SUBJECT_TOKEN))
+        credentials = self.make_credentials(
+            credential_source=self.CREDENTIAL_SOURCE_TEXT_URL)
+        request = self.make_mock_request(token_data=TEXT_FILE_SUBJECT_TOKEN)
+        subject_token = credentials.retrieve_subject_token(request)
 
         assert subject_token == TEXT_FILE_SUBJECT_TOKEN
+        self.assert_credential_request_kwargs(
+            request.call_args_list[0].kwargs,
+            None)
+
+    def test_retrieve_subject_token_from_url_with_headers(self):
+        credentials = self.make_credentials(
+            credential_source={
+                "url": self.CREDENTIAL_URL,
+                "headers": {"foo": "bar"}})
+        request = self.make_mock_request(token_data=TEXT_FILE_SUBJECT_TOKEN)
+        subject_token = credentials.retrieve_subject_token(request)
+
+        assert subject_token == TEXT_FILE_SUBJECT_TOKEN
+        self.assert_credential_request_kwargs(
+            request.call_args_list[0].kwargs,
+            {"foo": "bar"})
 
     def test_retrieve_subject_token_from_url_json(self):
-        credentials = self.make_credentials(credential_source=self.CREDENTIAL_SOURCE_JSON_URL)
-        subject_token = credentials.retrieve_subject_token(
-            self.make_mock_request(token_data=JSON_FILE_CONTENT))
+        credentials = self.make_credentials(
+            credential_source=self.CREDENTIAL_SOURCE_JSON_URL)
+        request = self.make_mock_request(token_data=JSON_FILE_CONTENT)
+        subject_token = credentials.retrieve_subject_token(request)
 
         assert subject_token == JSON_FILE_SUBJECT_TOKEN
+        self.assert_credential_request_kwargs(
+            request.call_args_list[0].kwargs,
+            None)
+
+    def test_retrieve_subject_token_from_url_json_with_headers(self):
+        credentials = self.make_credentials(
+            credential_source={
+                "url": self.CREDENTIAL_URL,
+                "format": {
+                    "type": "json",
+                    "subject_token_field_name": "access_token"},
+                "headers": {"foo": "bar"}})
+        request = self.make_mock_request(token_data=JSON_FILE_CONTENT)
+        subject_token = credentials.retrieve_subject_token(request)
+
+        assert subject_token == JSON_FILE_SUBJECT_TOKEN
+        self.assert_credential_request_kwargs(
+            request.call_args_list[0].kwargs,
+            {"foo": "bar"})
 
     def test_retrieve_subject_token_from_url_not_found(self):
-        credentials = self.make_credentials(credential_source=self.CREDENTIAL_SOURCE_TEXT_URL)
+        credentials = self.make_credentials(
+            credential_source=self.CREDENTIAL_SOURCE_TEXT_URL)
         with pytest.raises(exceptions.RefreshError) as excinfo:
             credentials.retrieve_subject_token(
                 self.make_mock_request(
@@ -621,7 +660,8 @@ class TestCredentials(object):
         )
 
     def test_retrieve_subject_token_from_url_json_invalid_format(self):
-        credentials = self.make_credentials(credential_source=self.CREDENTIAL_SOURCE_JSON_URL)
+        credentials = self.make_credentials(
+            credential_source=self.CREDENTIAL_SOURCE_JSON_URL)
 
         with pytest.raises(exceptions.RefreshError) as excinfo:
             credentials.retrieve_subject_token(
