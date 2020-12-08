@@ -4,6 +4,13 @@
 
 [1]: https://pypi.org/project/google-auth/#history
 
+### [1.23.1](https://www.github.com/googleapis/google-auth-library-python/compare/v1.23.0...v1.23.1) (2020-12-08)
+
+
+### Documentation
+
+* fix typo in import ([#651](https://www.github.com/googleapis/google-auth-library-python/issues/651)) ([3319ea8](https://www.github.com/googleapis/google-auth-library-python/commit/3319ea8ae876c73a94f51237b3bbb3f5df2aef89)), closes [#650](https://www.github.com/googleapis/google-auth-library-python/issues/650)
+
 ## [1.23.0](https://www.github.com/googleapis/google-auth-library-python/compare/v1.22.1...v1.23.0) (2020-10-29)
 
 
