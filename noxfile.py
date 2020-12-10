@@ -90,7 +90,7 @@ def unit(session):
     )
 
 
-@nox.session(python=["2.7", "3.5"])
+@nox.session(python=["2.7"])
 def unit_prev_versions(session):
     session.install(*TEST_DEPENDENCIES)
     session.install(".")
