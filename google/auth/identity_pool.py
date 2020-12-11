@@ -32,6 +32,8 @@ import io
 import json
 import os
 
+from collections.abc import Mapping
+
 from google.auth import _helpers
 from google.auth import exceptions
 from google.auth import external_account
@@ -60,7 +62,19 @@ class Credentials(external_account.Credentials):
             token_url (str): The STS endpoint URL.
             credential_source (Mapping): The credential source dictionary used to
                 provide instructions on how to retrieve external credential to be
-                exchanged for Google access tokens..
+                exchanged for Google access tokens
+                Example credential_source's:
+                    {
+                        "url": "http://www.example.com",
+                        "format": {
+                            "type": "json",
+                            "subject_token_field_name": "access_token",
+                        },
+                        "headers": {"foo": "bar"},
+                    }
+                    {
+                        "file": "/path/to/token/file.txt"
+                    }
             service_account_impersonation_url (Optional[str]): The optional service account
                 impersonation getAccessToken URL.
             client_id (Optional[str]): The optional client ID.
@@ -90,14 +104,14 @@ class Credentials(external_account.Credentials):
             quota_project_id=quota_project_id,
             scopes=scopes,
         )
-        if not isinstance(credential_source, dict):
+        if not isinstance(credential_source, Mapping):
             self._credential_source_file = None
             self._credential_source_url = None
         else:
             self._credential_source_file = credential_source.get("file")
             self._credential_source_url = credential_source.get("url")
             self._credential_source_headers = credential_source.get("headers")
-            credential_source_format = credential_source.get("format") or {}
+            credential_source_format = credential_source.get("format", {})
             # Get credential_source format type. When not provided, this
             # defaults to text.
             self._credential_source_format_type = (
@@ -122,9 +136,11 @@ class Credentials(external_account.Credentials):
                 self._credential_source_field_name = None
 
         if self._credential_source_file and self._credential_source_url:
-            raise ValueError("Ambiguous credential_source")
+            raise ValueError(
+                "Ambiguous credential_source. 'file' is mutually exclusive with 'url'.")
         if not self._credential_source_file and not self._credential_source_url:
-            raise ValueError("Missing credential_source")
+            raise ValueError(
+                "Missing credential_source. A 'file' or 'url' must be provided.")
 
     @_helpers.copy_docstring(external_account.Credentials)
     def retrieve_subject_token(self, request):
