@@ -87,17 +87,18 @@ class TestCredentials(object):
 
     @classmethod
     def make_mock_request(
-        cls,
-        token_status=http_client.OK,
-        token_data=None,
-        *extra_requests,
+        cls, token_status=http_client.OK, token_data=None, *extra_requests
     ):
         responses = []
         responses.append(cls.make_mock_response(token_status, token_data))
 
         while len(extra_requests) > 0:
             # If service account impersonation is requested, mock the expected response.
-            status, data, extra_requests = extra_requests[0], extra_requests[1], extra_requests[2:]
+            status, data, extra_requests = (
+                extra_requests[0],
+                extra_requests[1],
+                extra_requests[2:],
+            )
             responses.append(cls.make_mock_response(status, data))
 
         request = mock.create_autospec(transport.Request)
@@ -184,7 +185,8 @@ class TestCredentials(object):
         if service_account_impersonation_url:
             # Service account impersonation request/response.
             expire_time = (
-                _helpers.utcnow().replace(microsecond=0) + datetime.timedelta(seconds=3600)
+                _helpers.utcnow().replace(microsecond=0)
+                + datetime.timedelta(seconds=3600)
             ).isoformat("T") + "Z"
             impersonation_response = {
                 "accessToken": "SA_ACCESS_TOKEN",
@@ -213,17 +215,13 @@ class TestCredentials(object):
             impersonation_request_index = len(requests)
             requests.append((http_client.OK, impersonation_response))
 
-        request = cls.make_mock_request(
-            *[el for req in requests for el in req])
+        request = cls.make_mock_request(*[el for req in requests for el in req])
 
         credentials.refresh(request)
 
         assert len(request.call_args_list) == len(requests)
         if credential_data:
-            cls.assert_credential_request_kwargs(
-                request.call_args_list[0].kwargs,
-                None,
-            )
+            cls.assert_credential_request_kwargs(request.call_args_list[0].kwargs, None)
         # Verify token exchange request parameters.
         cls.assert_token_request_kwargs(
             request.call_args_list[token_request_index].kwargs,
@@ -381,6 +379,27 @@ class TestCredentials(object):
             self.make_credentials(credential_source=credential_source)
 
         assert excinfo.match(r"Missing credential_source")
+
+    def test_constructor_invalid_options_url_and_file(self):
+        credential_source = {
+            "url": self.CREDENTIAL_URL,
+            "file": SUBJECT_TOKEN_TEXT_FILE,
+        }
+
+        with pytest.raises(ValueError) as excinfo:
+            self.make_credentials(credential_source=credential_source)
+
+        assert excinfo.match(r"Ambiguous credential_source")
+
+    def test_constructor_invalid_options_environment_id(self):
+        credential_source = {"url": self.CREDENTIAL_URL, "environment_id": "aws1"}
+
+        with pytest.raises(ValueError) as excinfo:
+            self.make_credentials(credential_source=credential_source)
+
+        assert excinfo.match(
+            r"Invalid Identity Pool credential_source field 'environment_id'"
+        )
 
     def test_constructor_invalid_credential_source(self):
         with pytest.raises(ValueError) as excinfo:
@@ -582,63 +601,60 @@ class TestCredentials(object):
 
     def test_retrieve_subject_token_from_url(self):
         credentials = self.make_credentials(
-            credential_source=self.CREDENTIAL_SOURCE_TEXT_URL)
+            credential_source=self.CREDENTIAL_SOURCE_TEXT_URL
+        )
         request = self.make_mock_request(token_data=TEXT_FILE_SUBJECT_TOKEN)
         subject_token = credentials.retrieve_subject_token(request)
 
         assert subject_token == TEXT_FILE_SUBJECT_TOKEN
-        self.assert_credential_request_kwargs(
-            request.call_args_list[0].kwargs,
-            None)
+        self.assert_credential_request_kwargs(request.call_args_list[0].kwargs, None)
 
     def test_retrieve_subject_token_from_url_with_headers(self):
         credentials = self.make_credentials(
-            credential_source={
-                "url": self.CREDENTIAL_URL,
-                "headers": {"foo": "bar"}})
+            credential_source={"url": self.CREDENTIAL_URL, "headers": {"foo": "bar"}}
+        )
         request = self.make_mock_request(token_data=TEXT_FILE_SUBJECT_TOKEN)
         subject_token = credentials.retrieve_subject_token(request)
 
         assert subject_token == TEXT_FILE_SUBJECT_TOKEN
         self.assert_credential_request_kwargs(
-            request.call_args_list[0].kwargs,
-            {"foo": "bar"})
+            request.call_args_list[0].kwargs, {"foo": "bar"}
+        )
 
     def test_retrieve_subject_token_from_url_json(self):
         credentials = self.make_credentials(
-            credential_source=self.CREDENTIAL_SOURCE_JSON_URL)
+            credential_source=self.CREDENTIAL_SOURCE_JSON_URL
+        )
         request = self.make_mock_request(token_data=JSON_FILE_CONTENT)
         subject_token = credentials.retrieve_subject_token(request)
 
         assert subject_token == JSON_FILE_SUBJECT_TOKEN
-        self.assert_credential_request_kwargs(
-            request.call_args_list[0].kwargs,
-            None)
+        self.assert_credential_request_kwargs(request.call_args_list[0].kwargs, None)
 
     def test_retrieve_subject_token_from_url_json_with_headers(self):
         credentials = self.make_credentials(
             credential_source={
                 "url": self.CREDENTIAL_URL,
-                "format": {
-                    "type": "json",
-                    "subject_token_field_name": "access_token"},
-                "headers": {"foo": "bar"}})
+                "format": {"type": "json", "subject_token_field_name": "access_token"},
+                "headers": {"foo": "bar"},
+            }
+        )
         request = self.make_mock_request(token_data=JSON_FILE_CONTENT)
         subject_token = credentials.retrieve_subject_token(request)
 
         assert subject_token == JSON_FILE_SUBJECT_TOKEN
         self.assert_credential_request_kwargs(
-            request.call_args_list[0].kwargs,
-            {"foo": "bar"})
+            request.call_args_list[0].kwargs, {"foo": "bar"}
+        )
 
     def test_retrieve_subject_token_from_url_not_found(self):
         credentials = self.make_credentials(
-            credential_source=self.CREDENTIAL_SOURCE_TEXT_URL)
+            credential_source=self.CREDENTIAL_SOURCE_TEXT_URL
+        )
         with pytest.raises(exceptions.RefreshError) as excinfo:
             credentials.retrieve_subject_token(
-                self.make_mock_request(
-                    token_status=404,
-                    token_data=JSON_FILE_CONTENT))
+                self.make_mock_request(token_status=404, token_data=JSON_FILE_CONTENT)
+            )
 
         assert excinfo.match("Unable to retrieve Identity Pool subject token")
 
@@ -651,7 +667,8 @@ class TestCredentials(object):
 
         with pytest.raises(exceptions.RefreshError) as excinfo:
             credentials.retrieve_subject_token(
-                self.make_mock_request(token_data=JSON_FILE_CONTENT))
+                self.make_mock_request(token_data=JSON_FILE_CONTENT)
+            )
 
         assert excinfo.match(
             "Unable to parse subject_token from JSON file '{}' using key '{}'".format(
@@ -661,11 +678,11 @@ class TestCredentials(object):
 
     def test_retrieve_subject_token_from_url_json_invalid_format(self):
         credentials = self.make_credentials(
-            credential_source=self.CREDENTIAL_SOURCE_JSON_URL)
+            credential_source=self.CREDENTIAL_SOURCE_JSON_URL
+        )
 
         with pytest.raises(exceptions.RefreshError) as excinfo:
-            credentials.retrieve_subject_token(
-                self.make_mock_request(token_data="{"))
+            credentials.retrieve_subject_token(self.make_mock_request(token_data="{"))
 
         assert excinfo.match(
             "Unable to parse subject_token from JSON file '{}' using key '{}'".format(
@@ -769,8 +786,7 @@ class TestCredentials(object):
         credentials = self.make_credentials(credential_source=credential_source)
 
         with pytest.raises(exceptions.RefreshError) as excinfo:
-            credentials.refresh(
-                self.make_mock_request(token_data=JSON_FILE_CONTENT))
+            credentials.refresh(self.make_mock_request(token_data=JSON_FILE_CONTENT))
 
         assert excinfo.match(
             "Unable to parse subject_token from JSON file '{}' using key '{}'".format(

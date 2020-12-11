@@ -28,11 +28,14 @@ registered with Hub with Hub workload identity enabled, or retrieved from an
 url, typical for Azure based workflows.
 """
 
+try:
+    from collections.abc import Mapping
+# Python 2.7 compatibility
+except ImportError:  # pragma: NO COVER
+    from collections import Mapping
 import io
 import json
 import os
-
-from collections.abc import Mapping
 
 from google.auth import _helpers
 from google.auth import exceptions
@@ -117,6 +120,12 @@ class Credentials(external_account.Credentials):
             self._credential_source_format_type = (
                 credential_source_format.get("type") or "text"
             )
+            # environment_id is only supported in AWS or dedicated future external
+            # account credentials.
+            if "environment_id" in credential_source:
+                raise ValueError(
+                    "Invalid Identity Pool credential_source field 'environment_id'"
+                )
             if self._credential_source_format_type not in ["text", "json"]:
                 raise ValueError(
                     "Invalid credential_source format '{}'".format(
@@ -137,10 +146,12 @@ class Credentials(external_account.Credentials):
 
         if self._credential_source_file and self._credential_source_url:
             raise ValueError(
-                "Ambiguous credential_source. 'file' is mutually exclusive with 'url'.")
+                "Ambiguous credential_source. 'file' is mutually exclusive with 'url'."
+            )
         if not self._credential_source_file and not self._credential_source_url:
             raise ValueError(
-                "Missing credential_source. A 'file' or 'url' must be provided.")
+                "Missing credential_source. A 'file' or 'url' must be provided."
+            )
 
     @_helpers.copy_docstring(external_account.Credentials)
     def retrieve_subject_token(self, request):
@@ -153,11 +164,10 @@ class Credentials(external_account.Credentials):
     def _get_token_data(self, request):
         if self._credential_source_file:
             return self._get_file_data(self._credential_source_file)
-        if self._credential_source_url:
+        else:
             return self._get_url_data(
-                request,
-                self._credential_source_url,
-                self._credential_source_headers)
+                request, self._credential_source_url, self._credential_source_headers
+            )
 
     def _get_file_data(self, filename):
         if not os.path.exists(filename):
@@ -167,11 +177,7 @@ class Credentials(external_account.Credentials):
             return file_obj.read(), filename
 
     def _get_url_data(self, request, url, headers):
-        response = request(
-            url=url,
-            method="GET",
-            headers=headers
-        )
+        response = request(url=url, method="GET", headers=headers)
 
         # support both string and bytes type response.data
         response_body = (
@@ -182,17 +188,13 @@ class Credentials(external_account.Credentials):
 
         if response.status != 200:
             raise exceptions.RefreshError(
-                "Unable to retrieve Identity Pool subject token",
-                response_body
+                "Unable to retrieve Identity Pool subject token", response_body
             )
 
         return response_body, url
 
     def _parse_token_data(
-        self,
-        token_content,
-        format_type="text",
-        subject_token_field_name=None
+        self, token_content, format_type="text", subject_token_field_name=None
     ):
         content, filename = token_content
         if format_type == "text":
