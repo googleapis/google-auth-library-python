@@ -47,8 +47,8 @@ with open(SUBJECT_TOKEN_TEXT_FILE) as fh:
     TEXT_FILE_SUBJECT_TOKEN = fh.read()
 
 with open(SUBJECT_TOKEN_JSON_FILE) as fh:
-    content = json.load(fh)
-    JSON_FILE_SUBJECT_TOKEN = content.get(SUBJECT_TOKEN_FIELD_NAME)
+    JSON_FILE_CONTENT = json.load(fh)
+    JSON_FILE_SUBJECT_TOKEN = JSON_FILE_CONTENT.get(SUBJECT_TOKEN_FIELD_NAME)
 
 TOKEN_URL = "https://sts.googleapis.com/v1/token"
 SUBJECT_TOKEN_TYPE = "urn:ietf:params:oauth:token-type:jwt"
@@ -61,6 +61,12 @@ class TestCredentials(object):
         "file": SUBJECT_TOKEN_JSON_FILE,
         "format": {"type": "json", "subject_token_field_name": "access_token"},
     }
+    CREDENTIAL_URL = "http://fakeurl.com"
+    CREDENTIAL_SOURCE_TEXT_URL = {"url": CREDENTIAL_URL}
+    CREDENTIAL_SOURCE_JSON_URL = {
+        "url": CREDENTIAL_URL,
+        "format": {"type": "json", "subject_token_field_name": "access_token"},
+    }
     SUCCESS_RESPONSE = {
         "access_token": "ACCESS_TOKEN",
         "issued_token_type": "urn:ietf:params:oauth:token-type:access_token",
@@ -70,33 +76,44 @@ class TestCredentials(object):
     }
 
     @classmethod
+    def make_mock_response(cls, status, data):
+        response = mock.create_autospec(transport.Response, instance=True)
+        response.status = status
+        if isinstance(data, dict):
+            response.data = json.dumps(data).encode("utf-8")
+        else:
+            response.data = data
+        return response
+
+    @classmethod
     def make_mock_request(
-        cls,
-        token_status=http_client.OK,
-        token_data=None,
-        impersonation_status=None,
-        impersonation_data=None,
+        cls, token_status=http_client.OK, token_data=None, *extra_requests
     ):
         responses = []
-        # STS token exchange request.
-        token_response = mock.create_autospec(transport.Response, instance=True)
-        token_response.status = token_status
-        token_response.data = json.dumps(token_data).encode("utf-8")
-        responses.append(token_response)
+        responses.append(cls.make_mock_response(token_status, token_data))
 
-        # If service account impersonation is requested, mock the expected response.
-        if impersonation_status:
-            impersonation_response = mock.create_autospec(
-                transport.Response, instance=True
+        while len(extra_requests) > 0:
+            # If service account impersonation is requested, mock the expected response.
+            status, data, extra_requests = (
+                extra_requests[0],
+                extra_requests[1],
+                extra_requests[2:],
             )
-            impersonation_response.status = impersonation_status
-            impersonation_response.data = json.dumps(impersonation_data).encode("utf-8")
-            responses.append(impersonation_response)
+            responses.append(cls.make_mock_response(status, data))
 
         request = mock.create_autospec(transport.Request)
         request.side_effect = responses
 
         return request
+
+    @classmethod
+    def assert_credential_request_kwargs(
+        cls, request_kwargs, headers, url=CREDENTIAL_URL
+    ):
+        assert request_kwargs["url"] == url
+        assert request_kwargs["method"] == "GET"
+        assert request_kwargs["headers"] == headers
+        assert request_kwargs.get("body", None) is None
 
     @classmethod
     def assert_token_request_kwargs(
@@ -138,30 +155,24 @@ class TestCredentials(object):
         basic_auth_encoding=None,
         quota_project_id=None,
         scopes=None,
+        credential_data=None,
     ):
         """Utility to assert that a credentials are initialized with the expected
         attributes by calling refresh functionality and confirming response matches
         expected one and that the underlying requests were populated with the
         expected parameters.
         """
-
-        expire_time = (
-            _helpers.utcnow().replace(microsecond=0) + datetime.timedelta(seconds=3600)
-        ).isoformat("T") + "Z"
         # STS token exchange request/response.
         token_response = cls.SUCCESS_RESPONSE.copy()
-
         token_headers = {"Content-Type": "application/x-www-form-urlencoded"}
         if basic_auth_encoding:
             token_headers["Authorization"] = "Basic " + basic_auth_encoding
+
         if service_account_impersonation_url:
             token_scopes = "https://www.googleapis.com/auth/iam"
-            impersonation_status = http_client.OK
-            total_requests = 2
         else:
             token_scopes = " ".join(scopes or [])
-            impersonation_status = None
-            total_requests = 1
+
         token_request_data = {
             "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
             "audience": audience,
@@ -170,44 +181,59 @@ class TestCredentials(object):
             "subject_token": subject_token,
             "subject_token_type": subject_token_type,
         }
-        # Service account impersonation request/response.
-        impersonation_response = {
-            "accessToken": "SA_ACCESS_TOKEN",
-            "expireTime": expire_time,
-        }
-        impersonation_headers = {
-            "Content-Type": "application/json",
-            "authorization": "Bearer {}".format(token_response["access_token"]),
-        }
-        impersonation_request_data = {
-            "delegates": None,
-            "scope": scopes,
-            "lifetime": "3600s",
-        }
-        # Initialize mock request to handle token exchange and service account
-        # impersonation request.
-        request = cls.make_mock_request(
-            token_status=http_client.OK,
-            token_data=token_response,
-            impersonation_status=impersonation_status,
-            impersonation_data=impersonation_response,
-        )
+
+        if service_account_impersonation_url:
+            # Service account impersonation request/response.
+            expire_time = (
+                _helpers.utcnow().replace(microsecond=0)
+                + datetime.timedelta(seconds=3600)
+            ).isoformat("T") + "Z"
+            impersonation_response = {
+                "accessToken": "SA_ACCESS_TOKEN",
+                "expireTime": expire_time,
+            }
+            impersonation_headers = {
+                "Content-Type": "application/json",
+                "authorization": "Bearer {}".format(token_response["access_token"]),
+            }
+            impersonation_request_data = {
+                "delegates": None,
+                "scope": scopes,
+                "lifetime": "3600s",
+            }
+
+        # Initialize mock request to handle token retrieval, token exchange and
+        # service account impersonation request.
+        requests = []
+        if credential_data:
+            requests.append((http_client.OK, credential_data))
+
+        token_request_index = len(requests)
+        requests.append((http_client.OK, token_response))
+
+        if service_account_impersonation_url:
+            impersonation_request_index = len(requests)
+            requests.append((http_client.OK, impersonation_response))
+
+        request = cls.make_mock_request(*[el for req in requests for el in req])
 
         credentials.refresh(request)
 
-        assert len(request.call_args_list) == total_requests
+        assert len(request.call_args_list) == len(requests)
+        if credential_data:
+            cls.assert_credential_request_kwargs(request.call_args_list[0].kwargs, None)
         # Verify token exchange request parameters.
         cls.assert_token_request_kwargs(
-            request.call_args_list[0].kwargs,
+            request.call_args_list[token_request_index].kwargs,
             token_headers,
             token_request_data,
             token_url,
         )
         # Verify service account impersonation request parameters if the request
         # is processed.
-        if impersonation_status:
+        if service_account_impersonation_url:
             cls.assert_impersonation_request_kwargs(
-                request.call_args_list[1].kwargs,
+                request.call_args_list[impersonation_request_index].kwargs,
                 impersonation_headers,
                 impersonation_request_data,
                 service_account_impersonation_url,
@@ -352,13 +378,34 @@ class TestCredentials(object):
         with pytest.raises(ValueError) as excinfo:
             self.make_credentials(credential_source=credential_source)
 
-        assert excinfo.match(r"Missing credential_source file")
+        assert excinfo.match(r"Missing credential_source")
+
+    def test_constructor_invalid_options_url_and_file(self):
+        credential_source = {
+            "url": self.CREDENTIAL_URL,
+            "file": SUBJECT_TOKEN_TEXT_FILE,
+        }
+
+        with pytest.raises(ValueError) as excinfo:
+            self.make_credentials(credential_source=credential_source)
+
+        assert excinfo.match(r"Ambiguous credential_source")
+
+    def test_constructor_invalid_options_environment_id(self):
+        credential_source = {"url": self.CREDENTIAL_URL, "environment_id": "aws1"}
+
+        with pytest.raises(ValueError) as excinfo:
+            self.make_credentials(credential_source=credential_source)
+
+        assert excinfo.match(
+            r"Invalid Identity Pool credential_source field 'environment_id'"
+        )
 
     def test_constructor_invalid_credential_source(self):
         with pytest.raises(ValueError) as excinfo:
             self.make_credentials(credential_source="non-dict")
 
-        assert excinfo.match(r"Missing credential_source file")
+        assert excinfo.match(r"Missing credential_source")
 
     def test_constructor_invalid_credential_source_format_type(self):
         credential_source = {"format": {"type": "xml"}}
@@ -549,5 +596,200 @@ class TestCredentials(object):
         assert excinfo.match(
             "Unable to parse subject_token from JSON file '{}' using key '{}'".format(
                 SUBJECT_TOKEN_JSON_FILE, "not_found"
+            )
+        )
+
+    def test_retrieve_subject_token_from_url(self):
+        credentials = self.make_credentials(
+            credential_source=self.CREDENTIAL_SOURCE_TEXT_URL
+        )
+        request = self.make_mock_request(token_data=TEXT_FILE_SUBJECT_TOKEN)
+        subject_token = credentials.retrieve_subject_token(request)
+
+        assert subject_token == TEXT_FILE_SUBJECT_TOKEN
+        self.assert_credential_request_kwargs(request.call_args_list[0].kwargs, None)
+
+    def test_retrieve_subject_token_from_url_with_headers(self):
+        credentials = self.make_credentials(
+            credential_source={"url": self.CREDENTIAL_URL, "headers": {"foo": "bar"}}
+        )
+        request = self.make_mock_request(token_data=TEXT_FILE_SUBJECT_TOKEN)
+        subject_token = credentials.retrieve_subject_token(request)
+
+        assert subject_token == TEXT_FILE_SUBJECT_TOKEN
+        self.assert_credential_request_kwargs(
+            request.call_args_list[0].kwargs, {"foo": "bar"}
+        )
+
+    def test_retrieve_subject_token_from_url_json(self):
+        credentials = self.make_credentials(
+            credential_source=self.CREDENTIAL_SOURCE_JSON_URL
+        )
+        request = self.make_mock_request(token_data=JSON_FILE_CONTENT)
+        subject_token = credentials.retrieve_subject_token(request)
+
+        assert subject_token == JSON_FILE_SUBJECT_TOKEN
+        self.assert_credential_request_kwargs(request.call_args_list[0].kwargs, None)
+
+    def test_retrieve_subject_token_from_url_json_with_headers(self):
+        credentials = self.make_credentials(
+            credential_source={
+                "url": self.CREDENTIAL_URL,
+                "format": {"type": "json", "subject_token_field_name": "access_token"},
+                "headers": {"foo": "bar"},
+            }
+        )
+        request = self.make_mock_request(token_data=JSON_FILE_CONTENT)
+        subject_token = credentials.retrieve_subject_token(request)
+
+        assert subject_token == JSON_FILE_SUBJECT_TOKEN
+        self.assert_credential_request_kwargs(
+            request.call_args_list[0].kwargs, {"foo": "bar"}
+        )
+
+    def test_retrieve_subject_token_from_url_not_found(self):
+        credentials = self.make_credentials(
+            credential_source=self.CREDENTIAL_SOURCE_TEXT_URL
+        )
+        with pytest.raises(exceptions.RefreshError) as excinfo:
+            credentials.retrieve_subject_token(
+                self.make_mock_request(token_status=404, token_data=JSON_FILE_CONTENT)
+            )
+
+        assert excinfo.match("Unable to retrieve Identity Pool subject token")
+
+    def test_retrieve_subject_token_from_url_json_invalid_field(self):
+        credential_source = {
+            "url": self.CREDENTIAL_URL,
+            "format": {"type": "json", "subject_token_field_name": "not_found"},
+        }
+        credentials = self.make_credentials(credential_source=credential_source)
+
+        with pytest.raises(exceptions.RefreshError) as excinfo:
+            credentials.retrieve_subject_token(
+                self.make_mock_request(token_data=JSON_FILE_CONTENT)
+            )
+
+        assert excinfo.match(
+            "Unable to parse subject_token from JSON file '{}' using key '{}'".format(
+                self.CREDENTIAL_URL, "not_found"
+            )
+        )
+
+    def test_retrieve_subject_token_from_url_json_invalid_format(self):
+        credentials = self.make_credentials(
+            credential_source=self.CREDENTIAL_SOURCE_JSON_URL
+        )
+
+        with pytest.raises(exceptions.RefreshError) as excinfo:
+            credentials.retrieve_subject_token(self.make_mock_request(token_data="{"))
+
+        assert excinfo.match(
+            "Unable to parse subject_token from JSON file '{}' using key '{}'".format(
+                self.CREDENTIAL_URL, "access_token"
+            )
+        )
+
+    def test_refresh_text_file_success_without_impersonation_url(self):
+        credentials = self.make_credentials(
+            client_id=CLIENT_ID,
+            client_secret=CLIENT_SECRET,
+            # Test with text format type.
+            credential_source=self.CREDENTIAL_SOURCE_TEXT_URL,
+            scopes=SCOPES,
+        )
+
+        self.assert_underlying_credentials_refresh(
+            credentials=credentials,
+            audience=AUDIENCE,
+            subject_token=TEXT_FILE_SUBJECT_TOKEN,
+            subject_token_type=SUBJECT_TOKEN_TYPE,
+            token_url=TOKEN_URL,
+            service_account_impersonation_url=None,
+            basic_auth_encoding=BASIC_AUTH_ENCODING,
+            quota_project_id=None,
+            scopes=SCOPES,
+            credential_data=TEXT_FILE_SUBJECT_TOKEN,
+        )
+
+    def test_refresh_text_file_success_with_impersonation_url(self):
+        # Initialize credentials with service account impersonation and basic auth.
+        credentials = self.make_credentials(
+            # Test with text format type.
+            credential_source=self.CREDENTIAL_SOURCE_TEXT_URL,
+            service_account_impersonation_url=SERVICE_ACCOUNT_IMPERSONATION_URL,
+            scopes=SCOPES,
+        )
+
+        self.assert_underlying_credentials_refresh(
+            credentials=credentials,
+            audience=AUDIENCE,
+            subject_token=TEXT_FILE_SUBJECT_TOKEN,
+            subject_token_type=SUBJECT_TOKEN_TYPE,
+            token_url=TOKEN_URL,
+            service_account_impersonation_url=SERVICE_ACCOUNT_IMPERSONATION_URL,
+            basic_auth_encoding=None,
+            quota_project_id=None,
+            scopes=SCOPES,
+            credential_data=TEXT_FILE_SUBJECT_TOKEN,
+        )
+
+    def test_refresh_json_file_success_without_impersonation_url(self):
+        credentials = self.make_credentials(
+            client_id=CLIENT_ID,
+            client_secret=CLIENT_SECRET,
+            # Test with JSON format type.
+            credential_source=self.CREDENTIAL_SOURCE_JSON_URL,
+            scopes=SCOPES,
+        )
+
+        self.assert_underlying_credentials_refresh(
+            credentials=credentials,
+            audience=AUDIENCE,
+            subject_token=JSON_FILE_SUBJECT_TOKEN,
+            subject_token_type=SUBJECT_TOKEN_TYPE,
+            token_url=TOKEN_URL,
+            service_account_impersonation_url=None,
+            basic_auth_encoding=BASIC_AUTH_ENCODING,
+            quota_project_id=None,
+            scopes=SCOPES,
+            credential_data=JSON_FILE_CONTENT,
+        )
+
+    def test_refresh_json_file_success_with_impersonation_url(self):
+        # Initialize credentials with service account impersonation and basic auth.
+        credentials = self.make_credentials(
+            # Test with JSON format type.
+            credential_source=self.CREDENTIAL_SOURCE_JSON_URL,
+            service_account_impersonation_url=SERVICE_ACCOUNT_IMPERSONATION_URL,
+            scopes=SCOPES,
+        )
+
+        self.assert_underlying_credentials_refresh(
+            credentials=credentials,
+            audience=AUDIENCE,
+            subject_token=JSON_FILE_SUBJECT_TOKEN,
+            subject_token_type=SUBJECT_TOKEN_TYPE,
+            token_url=TOKEN_URL,
+            service_account_impersonation_url=SERVICE_ACCOUNT_IMPERSONATION_URL,
+            basic_auth_encoding=None,
+            quota_project_id=None,
+            scopes=SCOPES,
+            credential_data=JSON_FILE_CONTENT,
+        )
+
+    def test_refresh_with_retrieve_subject_token_error_url(self):
+        credential_source = {
+            "url": self.CREDENTIAL_URL,
+            "format": {"type": "json", "subject_token_field_name": "not_found"},
+        }
+        credentials = self.make_credentials(credential_source=credential_source)
+
+        with pytest.raises(exceptions.RefreshError) as excinfo:
+            credentials.refresh(self.make_mock_request(token_data=JSON_FILE_CONTENT))
+
+        assert excinfo.match(
+            "Unable to parse subject_token from JSON file '{}' using key '{}'".format(
+                self.CREDENTIAL_URL, "not_found"
             )
         )

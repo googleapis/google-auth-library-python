@@ -311,16 +311,16 @@ def _get_external_account_credentials(info, filename, scopes=None, request=None)
     """
     # There are currently 2 types of external_account credentials.
     try:
-        # Check if configuration corresponds to an Identity Pool credentials.
-        from google.auth import identity_pool
+        # Check if configuration corresponds to an AWS credentials.
+        from google.auth import aws
 
-        credentials = identity_pool.Credentials.from_info(info, scopes=scopes)
+        credentials = aws.Credentials.from_info(info, scopes=scopes)
     except ValueError:
         try:
-            # Check if configuration corresponds to an AWS credentials.
-            from google.auth import aws
+            # Check if configuration corresponds to an Identity Pool credentials.
+            from google.auth import identity_pool
 
-            credentials = aws.Credentials.from_info(info, scopes=scopes)
+            credentials = identity_pool.Credentials.from_info(info, scopes=scopes)
         except ValueError:
             # If the configuration is invalid or does not correspond to any
             # supported external_account credentials, raise an error.
