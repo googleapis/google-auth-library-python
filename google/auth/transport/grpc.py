@@ -24,6 +24,7 @@ import six
 from google.auth import environment_vars
 from google.auth import exceptions
 from google.auth.transport import _mtls_helper
+from google.oauth2 import service_account
 
 try:
     import grpc
@@ -51,15 +52,19 @@ class AuthMetadataPlugin(grpc.AuthMetadataPlugin):
             add to requests.
         request (google.auth.transport.Request): A HTTP transport request
             object used to refresh credentials as needed.
+        audience (Optional[str]): An audience like "pubsub.googleapis.com".
+            This is used when a self-signed JWT is created from service
+            account credentials.
     """
 
-    def __init__(self, credentials, request):
+    def __init__(self, credentials, request, audience=None):
         # pylint: disable=no-value-for-parameter
         # pylint doesn't realize that the super method takes no arguments
         # because this class is the same name as the superclass.
         super(AuthMetadataPlugin, self).__init__()
         self._credentials = credentials
         self._request = request
+        self._audience = audience
 
     def _get_authorization_headers(self, context):
         """Gets the authorization headers for a request.
@@ -69,6 +74,17 @@ class AuthMetadataPlugin(grpc.AuthMetadataPlugin):
                 to add to the request.
         """
         headers = {}
+
+        # https://google.aip.dev/auth/4111
+        # Attempt to use self-signed JWTs when a service account is used.
+        # An audience must be explicitly provided since it cannot always
+        # be determined from the context.service_url.
+        if (
+            isinstance(self._credentials, service_account.Credentials)
+            and self._audience
+        ):
+            self._credentials._create_self_signed_jwt(f"https://{self._audience}")
+
         self._credentials.before_request(
             self._request, context.method_name, context.service_url, headers
         )
@@ -92,7 +108,7 @@ def secure_authorized_channel(
     target,
     ssl_credentials=None,
     client_cert_callback=None,
-    **kwargs
+    **kwargs,
 ):
     """Creates a secure authorized gRPC channel.
 
