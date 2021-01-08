@@ -524,6 +524,51 @@ class TestRequestSigner(object):
 
         assert actual_signed_request == signed_request
 
+    def test_get_request_options_with_missing_scheme_url(self):
+        request_signer = aws.RequestSigner("us-east-2")
+
+        with pytest.raises(ValueError) as excinfo:
+            request_signer.get_request_options(
+                {
+                    "access_key_id": ACCESS_KEY_ID,
+                    "secret_access_key": SECRET_ACCESS_KEY,
+                },
+                "invalid",
+                "POST",
+            )
+
+        assert excinfo.match(r"Invalid AWS service URL")
+
+    def test_get_request_options_with_invalid_scheme_url(self):
+        request_signer = aws.RequestSigner("us-east-2")
+
+        with pytest.raises(ValueError) as excinfo:
+            request_signer.get_request_options(
+                {
+                    "access_key_id": ACCESS_KEY_ID,
+                    "secret_access_key": SECRET_ACCESS_KEY,
+                },
+                "http://invalid",
+                "POST",
+            )
+
+        assert excinfo.match(r"Invalid AWS service URL")
+
+    def test_get_request_options_with_missing_hostname_url(self):
+        request_signer = aws.RequestSigner("us-east-2")
+
+        with pytest.raises(ValueError) as excinfo:
+            request_signer.get_request_options(
+                {
+                    "access_key_id": ACCESS_KEY_ID,
+                    "secret_access_key": SECRET_ACCESS_KEY,
+                },
+                "https://",
+                "POST",
+            )
+
+        assert excinfo.match(r"Invalid AWS service URL")
+
 
 class TestCredentials(object):
     AWS_REGION = "us-east-2"
