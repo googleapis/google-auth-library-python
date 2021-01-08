@@ -109,6 +109,10 @@ class RequestSigner(object):
         additional_headers = additional_headers or {}
 
         uri = urllib.parse.urlparse(url)
+        # Validate provided URL.
+        if not uri.hostname or uri.scheme != "https":
+            raise ValueError("Invalid AWS service URL")
+
         header_map = _generate_authentication_header_map(
             host=uri.hostname,
             canonical_uri=os.path.normpath(uri.path or "/"),
