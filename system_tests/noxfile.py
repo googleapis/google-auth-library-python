@@ -288,7 +288,7 @@ def app_engine(session):
 @nox.session(python=PYTHON_VERSIONS_SYNC)
 def grpc(session):
     session.install(LIBRARY_DIR)
-    session.install(*TEST_DEPENDENCIES_SYNC, "google-cloud-pubsub==1.0.0")
+    session.install(*TEST_DEPENDENCIES_SYNC, "google-cloud-pubsub==2.2.0")
     session.env[EXPLICIT_CREDENTIALS_ENV] = SERVICE_ACCOUNT_FILE
     session.run("pytest", "system_tests_sync/test_grpc.py")
 

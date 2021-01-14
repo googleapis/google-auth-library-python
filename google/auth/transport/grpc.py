@@ -83,7 +83,9 @@ class AuthMetadataPlugin(grpc.AuthMetadataPlugin):
             isinstance(self._credentials, service_account.Credentials)
             and self._audience
         ):
-            self._credentials._create_self_signed_jwt(f"https://{self._audience}")
+            self._credentials._create_self_signed_jwt(
+                "https://{}".format(self._audience)
+            )
 
         self._credentials.before_request(
             self._request, context.method_name, context.service_url, headers
@@ -108,7 +110,7 @@ def secure_authorized_channel(
     target,
     ssl_credentials=None,
     client_cert_callback=None,
-    **kwargs,
+    **kwargs
 ):
     """Creates a secure authorized gRPC channel.
 
