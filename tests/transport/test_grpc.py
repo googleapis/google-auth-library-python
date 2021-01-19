@@ -111,16 +111,16 @@ class TestAuthMetadataPlugin(object):
 
         plugin._get_authorization_headers(context)
 
-        # self-signed JWT should not be created when audience is not set
+        # self-signed JWT should not be created when default_host is not set
         credentials._create_self_signed_jwt.assert_not_called()
 
-    def test__get_authorization_headers_with_service_account_and_audience(self):
+    def test__get_authorization_headers_with_service_account_and_default_host(self):
         credentials = mock.create_autospec(service_account.Credentials)
         request = mock.create_autospec(transport.Request)
 
-        audience = "pubsub.googleapis.com"
+        default_host = "pubsub.googleapis.com"
         plugin = google.auth.transport.grpc.AuthMetadataPlugin(
-            credentials, request, audience=audience
+            credentials, request, default_host=default_host
         )
 
         context = mock.create_autospec(grpc.AuthMetadataContext, instance=True)
@@ -130,7 +130,7 @@ class TestAuthMetadataPlugin(object):
         plugin._get_authorization_headers(context)
 
         credentials._create_self_signed_jwt.assert_called_once_with(
-            "https://{}".format(audience)
+            "https://{}".format(default_host)
         )
 
 
