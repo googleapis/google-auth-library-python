@@ -48,5 +48,9 @@ else
     python3 -m nox
 fi
 
+
+# Decrypt system test secrets
+./scripts/decrypt-secrets.sh
+
 # Run system tests which use a different noxfile
 python3 -m nox -f system_tests/noxfile.py
