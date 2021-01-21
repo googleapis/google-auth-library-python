@@ -47,3 +47,6 @@ if [[ -n "${NOX_SESSION:-}" ]]; then
 else
     python3 -m nox
 fi
+
+# Run system tests which use a different noxfile
+python3 -m nox -f system_tests/noxfile.py
