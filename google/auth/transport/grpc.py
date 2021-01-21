@@ -84,7 +84,7 @@ class AuthMetadataPlugin(grpc.AuthMetadataPlugin):
             and self._default_host
         ):
             self._credentials._create_self_signed_jwt(
-                "https://{}".format(self._default_host)
+                "https://{}/".format(self._default_host)
             )
 
         self._credentials.before_request(

@@ -25,7 +25,7 @@ from google.cloud.pubsub_v1.gapic import publisher_client
 def test_grpc_request_with_regular_credentials(http_request):
     credentials, project_id = google.auth.default()
     credentials = google.auth.credentials.with_scopes_if_required(
-        credentials, ["https://www.googleapis.com/auth/pubsub"]
+        credentials, scopes=["https://www.googleapis.com/auth/pubsub"]
     )
 
     # Create a pub/sub client.
@@ -35,6 +35,22 @@ def test_grpc_request_with_regular_credentials(http_request):
     # call works.
     list_topics_iter = client.list_topics(project="projects/{}".format(project_id))
     list(list_topics_iter)
+
+
+def test_grpc_request_with_regular_credentials_and_self_signed_jwt(http_request):
+    # a service account will use a self-signed JWT when no scopes are provided
+    credentials, project_id = google.auth.default()
+
+    # Create a pub/sub client.
+    client = pubsub_v1.PublisherClient(credentials=credentials)
+
+    # list the topics and drain the iterator to test that an authorized API
+    # call works.
+    list_topics_iter = client.list_topics(project="projects/{}".format(project_id))
+    list(list_topics_iter)
+    
+    # Check that self-signed JWT flow was invoked
+    assert credentials._jwt_credentials is not None
 
 
 def test_grpc_request_with_jwt_credentials():

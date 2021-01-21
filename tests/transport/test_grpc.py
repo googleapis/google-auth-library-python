@@ -130,7 +130,7 @@ class TestAuthMetadataPlugin(object):
         plugin._get_authorization_headers(context)
 
         credentials._create_self_signed_jwt.assert_called_once_with(
-            "https://{}".format(default_host)
+            "https://{}/".format(default_host)
         )
 
 
