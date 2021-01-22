@@ -15,7 +15,11 @@
 
 set -eo pipefail
 
-cd github/google-auth-library-python
+if [[ -z "${PROJECT_ROOT:-}" ]]; then
+    PROJECT_ROOT="github/google-auth-library-python"
+fi
+
+cd "${PROJECT_ROOT}"
 
 # Disable buffering, so that the logs stream through.
 export PYTHONUNBUFFERED=1
@@ -27,14 +31,33 @@ env | grep KOKORO
 export GOOGLE_APPLICATION_CREDENTIALS=${KOKORO_GFILE_DIR}/service-account.json
 
 # Setup project id.
-export PROJECT_ID=$(cat "${KOKORO_GFILE_DIR}/project-id.json")
+export PROJECT_ID=$(cat "${KOKORO_GFILE_DIR}/project-id.txt")
+
+# Activate gcloud with service account credentials	
+gcloud auth activate-service-account --key-file=$GOOGLE_APPLICATION_CREDENTIALS	
+gcloud config set project ${PROJECT_ID}	
+
+# Decrypt system test secrets	
+./scripts/decrypt-secrets.sh
 
 # Remove old nox
-python3.6 -m pip uninstall --yes --quiet nox-automation
+python3 -m pip uninstall --yes --quiet nox-automation
 
 # Install nox
-python3.6 -m pip install --upgrade --quiet nox
-python3.6 -m nox --version
+python3 -m pip install --upgrade --quiet nox
+python3 -m nox --version
+
+# If NOX_SESSION is set, it only runs the specified session,
+# otherwise run all the sessions.
+if [[ -n "${NOX_SESSION:-}" ]]; then
+    python3 -m nox -s ${NOX_SESSION:-}
+else
+    python3 -m nox
+fi
+
+
+# Decrypt system test secrets
+./scripts/decrypt-secrets.sh
 
 # If NOX_SESSION is set, it only runs the specified session,
 # otherwise run all the sessions.
@@ -43,3 +66,5 @@ if [[ -n "${NOX_SESSION:-}" ]]; then
 else
     python3.6 -m nox
 fi
+# Run system tests which use a different noxfile
+python3 -m nox -f system_tests/noxfile.py
