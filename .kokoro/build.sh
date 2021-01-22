@@ -59,12 +59,5 @@ fi
 # Decrypt system test secrets
 ./scripts/decrypt-secrets.sh
 
-# If NOX_SESSION is set, it only runs the specified session,
-# otherwise run all the sessions.
-if [[ -n "${NOX_SESSION:-}" ]]; then
-    python3.6 -m nox -s "${NOX_SESSION:-}"
-else
-    python3.6 -m nox
-fi
 # Run system tests which use a different noxfile
 python3 -m nox -f system_tests/noxfile.py
