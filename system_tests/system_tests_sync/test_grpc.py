@@ -19,7 +19,6 @@ import google.auth.transport.grpc
 from google.oauth2 import service_account
 
 from google.cloud import pubsub_v1
-from google.cloud.pubsub_v1.gapic import publisher_client
 
 
 def test_grpc_request_with_regular_credentials(http_request):
