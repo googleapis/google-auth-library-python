@@ -37,8 +37,16 @@ def test_grpc_request_with_regular_credentials(http_request):
 
 
 def test_grpc_request_with_regular_credentials_and_self_signed_jwt(http_request):
-    # a service account will use a self-signed JWT when no scopes are provided
     credentials, project_id = google.auth.default()
+
+    # At the time this test is being written, there are no GAPIC libraries
+    # that will trigger the self-signed JWT flow. Manually create the self-signed
+    # jwt on the service account credential to check that the request
+    # succeeds.
+    credentials = credentials.with_scopes(
+        scopes=[], default_scopes=["https://www.googleapis.com/auth/pubsub"]
+    )
+    credentials._create_self_signed_jwt(audience="https://pubsub.googleapis.com/")
 
     # Create a pub/sub client.
     client = pubsub_v1.PublisherClient(credentials=credentials)
@@ -48,7 +56,7 @@ def test_grpc_request_with_regular_credentials_and_self_signed_jwt(http_request)
     list_topics_iter = client.list_topics(project="projects/{}".format(project_id))
     list(list_topics_iter)
     
-    # Check that self-signed JWT flow was invoked
+    # Check that self-signed JWT was created
     assert credentials._jwt_credentials is not None
 
 

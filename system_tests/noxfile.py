@@ -30,7 +30,7 @@ import nox
 import py.path
 
 HERE = os.path.abspath(os.path.dirname(__file__))
-LIBRARY_DIR = os.path.join(HERE, "..")
+LIBRARY_DIR = os.path.abspath(os.path.dirname(HERE))
 DATA_DIR = os.path.join(HERE, "data")
 SERVICE_ACCOUNT_FILE = os.path.join(DATA_DIR, "service_account.json")
 AUTHORIZED_USER_FILE = os.path.join(DATA_DIR, "authorized_user.json")
@@ -249,6 +249,7 @@ def app_engine(session):
         session.log("Skipping App Engine tests.")
         return
 
+    session.install(LIBRARY_DIR)
     # Unlike the default tests above, the App Engine system test require a
     # 'real' gcloud sdk installation that is configured to deploy to an
     # app engine project.
@@ -271,7 +272,6 @@ def app_engine(session):
     # Vendor in the test application's dependencies
     session.chdir(os.path.join(HERE, "system_tests_sync/app_engine_test_app"))
     session.install(*TEST_DEPENDENCIES_SYNC)
-    session.install(LIBRARY_DIR)
     session.run(
         "pip", "install", "--target", "lib", "-r", "requirements.txt", silent=True
     )

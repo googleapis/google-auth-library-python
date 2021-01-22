@@ -14,8 +14,10 @@
 
 import json
 import mock
-from os import path
+import os
 import time
+from os import path
+
 
 import google.auth
 import google.auth.credentials
