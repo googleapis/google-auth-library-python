@@ -41,13 +41,8 @@ def test_grpc_request_with_jwt_credentials():
         credentials, audience=audience
     )
 
-    transport = publisher_grpc_transport.PublisherGrpcTransport(
-        address=publisher_client.PublisherClient.SERVICE_ADDRESS,
-        credentials=credentials,
-    )
-
     # Create a pub/sub client.
-    client = pubsub_v1.PublisherClient(transport=transport)
+    client = pubsub_v1.PublisherClient(credentials=credentials)
 
     # list the topics and drain the iterator to test that an authorized API
     # call works.
@@ -61,13 +56,8 @@ def test_grpc_request_with_on_demand_jwt_credentials():
         credentials
     )
 
-    transport = publisher_grpc_transport.PublisherGrpcTransport(
-        address=publisher_client.PublisherClient.SERVICE_ADDRESS,
-        credentials=credentials,
-    )
-
     # Create a pub/sub client.
-    client = pubsub_v1.PublisherClient(transport=transport)
+    client = pubsub_v1.PublisherClient(credentials=credentials)
 
     # list the topics and drain the iterator to test that an authorized API
     # call works.
