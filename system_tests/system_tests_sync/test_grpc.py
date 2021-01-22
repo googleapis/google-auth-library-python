@@ -27,6 +27,7 @@ def test_grpc_request_with_regular_credentials(http_request):
         credentials, scopes=["https://www.googleapis.com/auth/pubsub"]
     )
 
+
     # Create a pub/sub client.
     client = pubsub_v1.PublisherClient(credentials=credentials)
 
