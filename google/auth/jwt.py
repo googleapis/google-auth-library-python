@@ -40,11 +40,7 @@ You can also skip verification::
 
 """
 
-try:
-    from collections.abc import Mapping
-# Python 2.7 compatibility
-except ImportError:  # pragma: NO COVER
-    from collections import Mapping
+from collections.abc import Mapping
 import copy
 import datetime
 import json

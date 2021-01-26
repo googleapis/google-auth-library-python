@@ -14,27 +14,32 @@
 
 import io
 
-from setuptools import find_packages
+from setuptools import PEP420PackageFinder
 from setuptools import setup
 
 
 DEPENDENCIES = (
     "cachetools>=2.0.0,<5.0",
     "pyasn1-modules>=0.2.1",
-    # rsa==4.5 is the last version to support 2.7
-    # https://github.com/sybrenstuvel/python-rsa/issues/152#issuecomment-643470233
-    'rsa<4.6; python_version < "3.6"',
-    'rsa>=3.1.4,<5; python_version >= "3.6"',
+    'rsa>=3.1.4,<5',
     "setuptools>=40.3.0",
     "six>=1.9.0",
 )
 
-extras = {"aiohttp": "aiohttp >= 3.6.2, < 4.0.0dev; python_version>='3.6'"}
+extras = {"aiohttp": "aiohttp >= 3.6.2, < 4.0.0dev"}
 
 with io.open("README.rst", "r") as fh:
     long_description = fh.read()
 
-version = "1.24.0"
+version = "2.0.0dev"
+
+# Only include packages under the 'google' namespace. Do not include tests,
+# benchmarks, etc.
+packages = [
+    package
+    for package in PEP420PackageFinder.find()
+    if package.startswith("google")
+]
 
 setup(
     name="google-auth",
@@ -44,16 +49,14 @@ setup(
     description="Google Authentication Library",
     long_description=long_description,
     url="https://github.com/googleapis/google-auth-library-python",
-    packages=find_packages(exclude=("tests*", "system_tests*")),
+    packages=packages,
     namespace_packages=("google",),
     install_requires=DEPENDENCIES,
     extras_require=extras,
-    python_requires=">=2.7,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,!=3.5.*",
+    python_requires=">=3.6",
     license="Apache 2.0",
     keywords="google auth oauth client",
     classifiers=[
-        "Programming Language :: Python :: 2",
-        "Programming Language :: Python :: 2.7",
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
