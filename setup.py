@@ -31,7 +31,7 @@ extras = {"aiohttp": "aiohttp >= 3.6.2, < 4.0.0dev"}
 with io.open("README.rst", "r") as fh:
     long_description = fh.read()
 
-version = "2.0.0dev"
+version = "2.0.0.dev0"
 
 # Only include packages under the 'google' namespace. Do not include tests,
 # benchmarks, etc.
