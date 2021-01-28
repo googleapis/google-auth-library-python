@@ -21,7 +21,7 @@ from setuptools import setup
 DEPENDENCIES = (
     "cachetools>=2.0.0,<5.0",
     "pyasn1-modules>=0.2.1",
-    'rsa>=3.1.4,<5',
+    "rsa>=3.1.4,<5",
     "setuptools>=40.3.0",
     "six>=1.9.0",
 )
@@ -36,9 +36,7 @@ version = "2.0.0dev"
 # Only include packages under the 'google' namespace. Do not include tests,
 # benchmarks, etc.
 packages = [
-    package
-    for package in PEP420PackageFinder.find()
-    if package.startswith("google")
+    package for package in PEP420PackageFinder.find() if package.startswith("google")
 ]
 
 setup(
