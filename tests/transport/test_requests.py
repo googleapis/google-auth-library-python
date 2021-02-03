@@ -27,10 +27,10 @@ from six.moves import http_client
 
 from google.auth import environment_vars
 from google.auth import exceptions
-from google.oauth2 import service_account
 import google.auth.credentials
 import google.auth.transport._mtls_helper
 import google.auth.transport.requests
+from google.oauth2 import service_account
 from tests.transport import compliance
 
 
@@ -376,9 +376,7 @@ class TestAuthorizedSession(object):
     def test_authorized_session_without_default_host(self):
         credentials = mock.create_autospec(service_account.Credentials)
 
-        authed_session = google.auth.transport.requests.AuthorizedSession(
-            credentials,
-        )
+        authed_session = google.auth.transport.requests.AuthorizedSession(credentials)
 
         authed_session.credentials._create_self_signed_jwt.assert_not_called()
 
@@ -387,8 +385,7 @@ class TestAuthorizedSession(object):
         credentials = mock.create_autospec(service_account.Credentials)
 
         authed_session = google.auth.transport.requests.AuthorizedSession(
-            credentials,
-            default_host=default_host
+            credentials, default_host=default_host
         )
 
         authed_session.credentials._create_self_signed_jwt.assert_called_once_with(

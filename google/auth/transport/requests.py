@@ -44,8 +44,8 @@ import six  # pylint: disable=ungrouped-imports
 from google.auth import environment_vars
 from google.auth import exceptions
 from google.auth import transport
-from google.oauth2 import service_account
 import google.auth.transport._mtls_helper
+from google.oauth2 import service_account
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -363,7 +363,6 @@ class AuthorizedSession(requests.Session):
             self.credentials._create_self_signed_jwt(
                 "https://{}/".format(self._default_host)
             )
-
 
     def configure_mtls_channel(self, client_cert_callback=None):
         """Configure the client certificate and key for SSL connection.

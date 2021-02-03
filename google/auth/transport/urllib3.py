@@ -302,7 +302,6 @@ class AuthorizedHttp(urllib3.request.RequestMethods):
                 "https://{}/".format(self._default_host)
             )
 
-
         super(AuthorizedHttp, self).__init__()
 
     def configure_mtls_channel(self, client_cert_callback=None):
