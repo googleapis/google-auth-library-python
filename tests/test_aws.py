@@ -718,6 +718,7 @@ class TestCredentials(object):
         client_secret=None,
         quota_project_id=None,
         scopes=None,
+        default_scopes=None,
         service_account_impersonation_url=None,
     ):
         return aws.Credentials(
@@ -730,6 +731,7 @@ class TestCredentials(object):
             client_secret=client_secret,
             quota_project_id=quota_project_id,
             scopes=scopes,
+            default_scopes=default_scopes,
         )
 
     @classmethod
@@ -1143,7 +1145,7 @@ class TestCredentials(object):
         assert excinfo.match(r"Unable to retrieve AWS security credentials")
 
     @mock.patch("google.auth._helpers.utcnow")
-    def test_refresh_success_without_impersonation(self, utcnow):
+    def test_refresh_success_without_impersonation_ignore_default_scopes(self, utcnow):
         utcnow.return_value = datetime.datetime.strptime(
             self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
         )
@@ -1182,6 +1184,8 @@ class TestCredentials(object):
             credential_source=self.CREDENTIAL_SOURCE,
             quota_project_id=QUOTA_PROJECT_ID,
             scopes=SCOPES,
+            # Default scopes should be ignored.
+            default_scopes=["ignored"],
         )
 
         credentials.refresh(request)
@@ -1194,9 +1198,66 @@ class TestCredentials(object):
         assert credentials.token == self.SUCCESS_RESPONSE["access_token"]
         assert credentials.quota_project_id == QUOTA_PROJECT_ID
         assert credentials.scopes == SCOPES
+        assert credentials.default_scopes == ["ignored"]
 
     @mock.patch("google.auth._helpers.utcnow")
-    def test_refresh_success_with_impersonation(self, utcnow):
+    def test_refresh_success_without_impersonation_use_default_scopes(self, utcnow):
+        utcnow.return_value = datetime.datetime.strptime(
+            self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
+        )
+        expected_subject_token = self.make_serialized_aws_signed_request(
+            {
+                "access_key_id": ACCESS_KEY_ID,
+                "secret_access_key": SECRET_ACCESS_KEY,
+                "security_token": TOKEN,
+            }
+        )
+        token_headers = {
+            "Content-Type": "application/x-www-form-urlencoded",
+            "Authorization": "Basic " + BASIC_AUTH_ENCODING,
+        }
+        token_request_data = {
+            "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
+            "audience": AUDIENCE,
+            "requested_token_type": "urn:ietf:params:oauth:token-type:access_token",
+            "scope": " ".join(SCOPES),
+            "subject_token": expected_subject_token,
+            "subject_token_type": SUBJECT_TOKEN_TYPE,
+        }
+        request = self.make_mock_request(
+            region_status=http_client.OK,
+            region_name=self.AWS_REGION,
+            role_status=http_client.OK,
+            role_name=self.AWS_ROLE,
+            security_credentials_status=http_client.OK,
+            security_credentials_data=self.AWS_SECURITY_CREDENTIALS_RESPONSE,
+            token_status=http_client.OK,
+            token_data=self.SUCCESS_RESPONSE,
+        )
+        credentials = self.make_credentials(
+            client_id=CLIENT_ID,
+            client_secret=CLIENT_SECRET,
+            credential_source=self.CREDENTIAL_SOURCE,
+            quota_project_id=QUOTA_PROJECT_ID,
+            scopes=None,
+            # Default scopes should be used since user specified scopes are none.
+            default_scopes=SCOPES,
+        )
+
+        credentials.refresh(request)
+
+        assert len(request.call_args_list) == 4
+        # Fourth request should be sent to GCP STS endpoint.
+        self.assert_token_request_kwargs(
+            request.call_args_list[3].kwargs, token_headers, token_request_data
+        )
+        assert credentials.token == self.SUCCESS_RESPONSE["access_token"]
+        assert credentials.quota_project_id == QUOTA_PROJECT_ID
+        assert credentials.scopes is None
+        assert credentials.default_scopes == SCOPES
+
+    @mock.patch("google.auth._helpers.utcnow")
+    def test_refresh_success_with_impersonation_ignore_default_scopes(self, utcnow):
         utcnow.return_value = datetime.datetime.strptime(
             self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
         )
@@ -1256,6 +1317,8 @@ class TestCredentials(object):
             service_account_impersonation_url=SERVICE_ACCOUNT_IMPERSONATION_URL,
             quota_project_id=QUOTA_PROJECT_ID,
             scopes=SCOPES,
+            # Default scopes should be ignored.
+            default_scopes=["ignored"],
         )
 
         credentials.refresh(request)
@@ -1275,6 +1338,91 @@ class TestCredentials(object):
         assert credentials.token == impersonation_response["accessToken"]
         assert credentials.quota_project_id == QUOTA_PROJECT_ID
         assert credentials.scopes == SCOPES
+        assert credentials.default_scopes == ["ignored"]
+
+    @mock.patch("google.auth._helpers.utcnow")
+    def test_refresh_success_with_impersonation_use_default_scopes(self, utcnow):
+        utcnow.return_value = datetime.datetime.strptime(
+            self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
+        )
+        expire_time = (
+            _helpers.utcnow().replace(microsecond=0) + datetime.timedelta(seconds=3600)
+        ).isoformat("T") + "Z"
+        expected_subject_token = self.make_serialized_aws_signed_request(
+            {
+                "access_key_id": ACCESS_KEY_ID,
+                "secret_access_key": SECRET_ACCESS_KEY,
+                "security_token": TOKEN,
+            }
+        )
+        token_headers = {
+            "Content-Type": "application/x-www-form-urlencoded",
+            "Authorization": "Basic " + BASIC_AUTH_ENCODING,
+        }
+        token_request_data = {
+            "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
+            "audience": AUDIENCE,
+            "requested_token_type": "urn:ietf:params:oauth:token-type:access_token",
+            "scope": "https://www.googleapis.com/auth/iam",
+            "subject_token": expected_subject_token,
+            "subject_token_type": SUBJECT_TOKEN_TYPE,
+        }
+        # Service account impersonation request/response.
+        impersonation_response = {
+            "accessToken": "SA_ACCESS_TOKEN",
+            "expireTime": expire_time,
+        }
+        impersonation_headers = {
+            "Content-Type": "application/json",
+            "authorization": "Bearer {}".format(self.SUCCESS_RESPONSE["access_token"]),
+            "x-goog-user-project": QUOTA_PROJECT_ID,
+        }
+        impersonation_request_data = {
+            "delegates": None,
+            "scope": SCOPES,
+            "lifetime": "3600s",
+        }
+        request = self.make_mock_request(
+            region_status=http_client.OK,
+            region_name=self.AWS_REGION,
+            role_status=http_client.OK,
+            role_name=self.AWS_ROLE,
+            security_credentials_status=http_client.OK,
+            security_credentials_data=self.AWS_SECURITY_CREDENTIALS_RESPONSE,
+            token_status=http_client.OK,
+            token_data=self.SUCCESS_RESPONSE,
+            impersonation_status=http_client.OK,
+            impersonation_data=impersonation_response,
+        )
+        credentials = self.make_credentials(
+            client_id=CLIENT_ID,
+            client_secret=CLIENT_SECRET,
+            credential_source=self.CREDENTIAL_SOURCE,
+            service_account_impersonation_url=SERVICE_ACCOUNT_IMPERSONATION_URL,
+            quota_project_id=QUOTA_PROJECT_ID,
+            scopes=None,
+            # Default scopes should be used since user specified scopes are none.
+            default_scopes=SCOPES,
+        )
+
+        credentials.refresh(request)
+
+        assert len(request.call_args_list) == 5
+        # Fourth request should be sent to GCP STS endpoint.
+        self.assert_token_request_kwargs(
+            request.call_args_list[3].kwargs, token_headers, token_request_data
+        )
+        # Fifth request should be sent to iamcredentials endpoint for service
+        # account impersonation.
+        self.assert_impersonation_request_kwargs(
+            request.call_args_list[4].kwargs,
+            impersonation_headers,
+            impersonation_request_data,
+        )
+        assert credentials.token == impersonation_response["accessToken"]
+        assert credentials.quota_project_id == QUOTA_PROJECT_ID
+        assert credentials.scopes is None
+        assert credentials.default_scopes == SCOPES
 
     def test_refresh_with_retrieve_subject_token_error(self):
         request = self.make_mock_request(region_status=http_client.BAD_REQUEST)

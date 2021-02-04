@@ -154,8 +154,10 @@ class TestCredentials(object):
         service_account_impersonation_url=None,
         basic_auth_encoding=None,
         quota_project_id=None,
-        scopes=None,
+        used_scopes=None,
         credential_data=None,
+        scopes=None,
+        default_scopes=None,
     ):
         """Utility to assert that a credentials are initialized with the expected
         attributes by calling refresh functionality and confirming response matches
@@ -171,7 +173,7 @@ class TestCredentials(object):
         if service_account_impersonation_url:
             token_scopes = "https://www.googleapis.com/auth/iam"
         else:
-            token_scopes = " ".join(scopes or [])
+            token_scopes = " ".join(used_scopes or [])
 
         token_request_data = {
             "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
@@ -198,7 +200,7 @@ class TestCredentials(object):
             }
             impersonation_request_data = {
                 "delegates": None,
-                "scope": scopes,
+                "scope": used_scopes,
                 "lifetime": "3600s",
             }
 
@@ -243,6 +245,7 @@ class TestCredentials(object):
             assert credentials.token == token_response["access_token"]
         assert credentials.quota_project_id == quota_project_id
         assert credentials.scopes == scopes
+        assert credentials.default_scopes == default_scopes
 
     @classmethod
     def make_credentials(
@@ -251,6 +254,7 @@ class TestCredentials(object):
         client_secret=None,
         quota_project_id=None,
         scopes=None,
+        default_scopes=None,
         service_account_impersonation_url=None,
         credential_source=None,
     ):
@@ -264,6 +268,7 @@ class TestCredentials(object):
             client_secret=client_secret,
             quota_project_id=quota_project_id,
             scopes=scopes,
+            default_scopes=default_scopes,
         )
 
     @mock.patch.object(identity_pool.Credentials, "__init__", return_value=None)
@@ -499,13 +504,17 @@ class TestCredentials(object):
 
         assert excinfo.match(r"File './not_found.txt' was not found")
 
-    def test_refresh_text_file_success_without_impersonation(self):
+    def test_refresh_text_file_success_without_impersonation_ignore_default_scopes(
+        self
+    ):
         credentials = self.make_credentials(
             client_id=CLIENT_ID,
             client_secret=CLIENT_SECRET,
             # Test with text format type.
             credential_source=self.CREDENTIAL_SOURCE_TEXT,
             scopes=SCOPES,
+            # Default scopes should be ignored.
+            default_scopes=["ignored"],
         )
 
         self.assert_underlying_credentials_refresh(
@@ -517,16 +526,45 @@ class TestCredentials(object):
             service_account_impersonation_url=None,
             basic_auth_encoding=BASIC_AUTH_ENCODING,
             quota_project_id=None,
+            used_scopes=SCOPES,
             scopes=SCOPES,
+            default_scopes=["ignored"],
         )
 
-    def test_refresh_text_file_success_with_impersonation(self):
+    def test_refresh_text_file_success_without_impersonation_use_default_scopes(self):
+        credentials = self.make_credentials(
+            client_id=CLIENT_ID,
+            client_secret=CLIENT_SECRET,
+            # Test with text format type.
+            credential_source=self.CREDENTIAL_SOURCE_TEXT,
+            scopes=None,
+            # Default scopes should be used since user specified scopes are none.
+            default_scopes=SCOPES,
+        )
+
+        self.assert_underlying_credentials_refresh(
+            credentials=credentials,
+            audience=AUDIENCE,
+            subject_token=TEXT_FILE_SUBJECT_TOKEN,
+            subject_token_type=SUBJECT_TOKEN_TYPE,
+            token_url=TOKEN_URL,
+            service_account_impersonation_url=None,
+            basic_auth_encoding=BASIC_AUTH_ENCODING,
+            quota_project_id=None,
+            used_scopes=SCOPES,
+            scopes=None,
+            default_scopes=SCOPES,
+        )
+
+    def test_refresh_text_file_success_with_impersonation_ignore_default_scopes(self):
         # Initialize credentials with service account impersonation and basic auth.
         credentials = self.make_credentials(
             # Test with text format type.
             credential_source=self.CREDENTIAL_SOURCE_TEXT,
             service_account_impersonation_url=SERVICE_ACCOUNT_IMPERSONATION_URL,
             scopes=SCOPES,
+            # Default scopes should be ignored.
+            default_scopes=["ignored"],
         )
 
         self.assert_underlying_credentials_refresh(
@@ -538,7 +576,35 @@ class TestCredentials(object):
             service_account_impersonation_url=SERVICE_ACCOUNT_IMPERSONATION_URL,
             basic_auth_encoding=None,
             quota_project_id=None,
+            used_scopes=SCOPES,
             scopes=SCOPES,
+            default_scopes=["ignored"],
+        )
+
+    def test_refresh_text_file_success_with_impersonation_use_default_scopes(self):
+        # Initialize credentials with service account impersonation, basic auth
+        # and default scopes (no user scopes).
+        credentials = self.make_credentials(
+            # Test with text format type.
+            credential_source=self.CREDENTIAL_SOURCE_TEXT,
+            service_account_impersonation_url=SERVICE_ACCOUNT_IMPERSONATION_URL,
+            scopes=None,
+            # Default scopes should be used since user specified scopes are none.
+            default_scopes=SCOPES,
+        )
+
+        self.assert_underlying_credentials_refresh(
+            credentials=credentials,
+            audience=AUDIENCE,
+            subject_token=TEXT_FILE_SUBJECT_TOKEN,
+            subject_token_type=SUBJECT_TOKEN_TYPE,
+            token_url=TOKEN_URL,
+            service_account_impersonation_url=SERVICE_ACCOUNT_IMPERSONATION_URL,
+            basic_auth_encoding=None,
+            quota_project_id=None,
+            used_scopes=SCOPES,
+            scopes=None,
+            default_scopes=SCOPES,
         )
 
     def test_refresh_json_file_success_without_impersonation(self):
@@ -559,7 +625,9 @@ class TestCredentials(object):
             service_account_impersonation_url=None,
             basic_auth_encoding=BASIC_AUTH_ENCODING,
             quota_project_id=None,
+            used_scopes=SCOPES,
             scopes=SCOPES,
+            default_scopes=None,
         )
 
     def test_refresh_json_file_success_with_impersonation(self):
@@ -580,7 +648,9 @@ class TestCredentials(object):
             service_account_impersonation_url=SERVICE_ACCOUNT_IMPERSONATION_URL,
             basic_auth_encoding=None,
             quota_project_id=None,
+            used_scopes=SCOPES,
             scopes=SCOPES,
+            default_scopes=None,
         )
 
     def test_refresh_with_retrieve_subject_token_error(self):
@@ -708,7 +778,9 @@ class TestCredentials(object):
             service_account_impersonation_url=None,
             basic_auth_encoding=BASIC_AUTH_ENCODING,
             quota_project_id=None,
+            used_scopes=SCOPES,
             scopes=SCOPES,
+            default_scopes=None,
             credential_data=TEXT_FILE_SUBJECT_TOKEN,
         )
 
@@ -730,7 +802,9 @@ class TestCredentials(object):
             service_account_impersonation_url=SERVICE_ACCOUNT_IMPERSONATION_URL,
             basic_auth_encoding=None,
             quota_project_id=None,
+            used_scopes=SCOPES,
             scopes=SCOPES,
+            default_scopes=None,
             credential_data=TEXT_FILE_SUBJECT_TOKEN,
         )
 
@@ -752,7 +826,9 @@ class TestCredentials(object):
             service_account_impersonation_url=None,
             basic_auth_encoding=BASIC_AUTH_ENCODING,
             quota_project_id=None,
+            used_scopes=SCOPES,
             scopes=SCOPES,
+            default_scopes=None,
             credential_data=JSON_FILE_CONTENT,
         )
 
@@ -774,7 +850,9 @@ class TestCredentials(object):
             service_account_impersonation_url=SERVICE_ACCOUNT_IMPERSONATION_URL,
             basic_auth_encoding=None,
             quota_project_id=None,
+            used_scopes=SCOPES,
             scopes=SCOPES,
+            default_scopes=None,
             credential_data=JSON_FILE_CONTENT,
         )
 

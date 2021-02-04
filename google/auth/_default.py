@@ -71,7 +71,7 @@ def _warn_about_problematic_credentials(credentials):
 
 
 def load_credentials_from_file(
-    filename, scopes=None, quota_project_id=None, request=None
+    filename, scopes=None, default_scopes=None, quota_project_id=None, request=None
 ):
     """Loads Google credentials from a file.
 
@@ -83,6 +83,8 @@ def load_credentials_from_file(
         scopes (Optional[Sequence[str]]): The list of scopes for the credentials. If
             specified, the credentials will automatically be scoped if
             necessary
+        default_scopes (Optional[Sequence[str]]): Default scopes passed by a
+            Google client library. Use 'scopes' for user-defined scopes.
         quota_project_id (Optional[str]):  The project ID used for
             quota and billing.
         request (Optional[google.auth.transport.Request]): An object used to make
@@ -141,7 +143,7 @@ def load_credentials_from_file(
 
         try:
             credentials = service_account.Credentials.from_service_account_info(
-                info, scopes=scopes
+                info, scopes=scopes, default_scopes=default_scopes
             )
         except ValueError as caught_exc:
             msg = "Failed to load service account credentials from {}".format(filename)
@@ -153,7 +155,11 @@ def load_credentials_from_file(
 
     elif credential_type == _EXTERNAL_ACCOUNT_TYPE:
         credentials, project_id = _get_external_account_credentials(
-            info, filename, scopes=scopes, request=request
+            info,
+            filename,
+            scopes=scopes,
+            default_scopes=default_scopes,
+            request=request,
         )
         if quota_project_id:
             credentials = credentials.with_quota_project(quota_project_id)
@@ -189,7 +195,7 @@ def _get_gcloud_sdk_credentials():
     return credentials, project_id
 
 
-def _get_explicit_environ_credentials(request=None, scopes=None):
+def _get_explicit_environ_credentials(request=None, scopes=None, default_scopes=None):
     """Gets credentials from the GOOGLE_APPLICATION_CREDENTIALS environment
     variable.
 
@@ -202,6 +208,8 @@ def _get_explicit_environ_credentials(request=None, scopes=None):
         scopes (Optional[Sequence[str]]): The list of scopes for the credentials. If
             specified, the credentials will automatically be scoped if
             necessary.
+        default_scopes (Optional[Sequence[str]]): Default scopes passed by a
+            Google client library. Use 'scopes' for user-defined scopes.
 
     Returns:
         Tuple[Optional[google.auth.credentials.Credentials], Optional[str]]: Loaded
@@ -217,7 +225,11 @@ def _get_explicit_environ_credentials(request=None, scopes=None):
 
     if explicit_file is not None:
         credentials, project_id = load_credentials_from_file(
-            os.environ[environment_vars.CREDENTIALS], request=request, scopes=scopes
+            os.environ[environment_vars.CREDENTIALS],
+            scopes=scopes,
+            default_scopes=default_scopes,
+            quota_project_id=None,
+            request=request,
         )
 
         return credentials, project_id
@@ -282,7 +294,9 @@ def _get_gce_credentials(request=None):
         return None, None
 
 
-def _get_external_account_credentials(info, filename, scopes=None, request=None):
+def _get_external_account_credentials(
+    info, filename, scopes=None, default_scopes=None, request=None
+):
     """Loads external account Credentials from the parsed external account info.
 
     The credentials information must correspond to a supported external account
@@ -294,6 +308,8 @@ def _get_external_account_credentials(info, filename, scopes=None, request=None)
         scopes (Optional[Sequence[str]]): The list of scopes for the credentials. If
             specified, the credentials will automatically be scoped if
             necessary.
+        default_scopes (Optional[Sequence[str]]): Default scopes passed by a
+            Google client library. Use 'scopes' for user-defined scopes.
         request (Optional[google.auth.transport.Request]): An object used to make
             HTTP requests. This is used to determine the associated project ID
             for a workload identity pool resource (external account credentials).
@@ -314,13 +330,17 @@ def _get_external_account_credentials(info, filename, scopes=None, request=None)
         # Check if configuration corresponds to an AWS credentials.
         from google.auth import aws
 
-        credentials = aws.Credentials.from_info(info, scopes=scopes)
+        credentials = aws.Credentials.from_info(
+            info, scopes=scopes, default_scopes=default_scopes
+        )
     except ValueError:
         try:
             # Check if configuration corresponds to an Identity Pool credentials.
             from google.auth import identity_pool
 
-            credentials = identity_pool.Credentials.from_info(info, scopes=scopes)
+            credentials = identity_pool.Credentials.from_info(
+                info, scopes=scopes, default_scopes=default_scopes
+            )
         except ValueError:
             # If the configuration is invalid or does not correspond to any
             # supported external_account credentials, raise an error.
@@ -333,7 +353,7 @@ def _get_external_account_credentials(info, filename, scopes=None, request=None)
     return credentials, credentials.get_project_id(request=request)
 
 
-def default(scopes=None, request=None, quota_project_id=None):
+def default(scopes=None, request=None, quota_project_id=None, default_scopes=None):
     """Gets the default credentials for the current environment.
 
     `Application Default Credentials`_ provides an easy way to obtain
@@ -410,6 +430,8 @@ def default(scopes=None, request=None, quota_project_id=None):
             account credentials.
         quota_project_id (Optional[str]): The project ID used for
             quota and billing.
+        default_scopes (Optional[Sequence[str]]): Default scopes passed by a
+            Google client library. Use 'scopes' for user-defined scopes.
     Returns:
         Tuple[~google.auth.credentials.Credentials, Optional[str]]:
             the current environment's credentials and project ID. Project ID
@@ -428,7 +450,9 @@ def default(scopes=None, request=None, quota_project_id=None):
     )
 
     checkers = (
-        lambda: _get_explicit_environ_credentials(request=request, scopes=scopes),
+        lambda: _get_explicit_environ_credentials(
+            request=request, scopes=scopes, default_scopes=default_scopes
+        ),
         _get_gcloud_sdk_credentials,
         _get_gae_credentials,
         lambda: _get_gce_credentials(request),
@@ -437,7 +461,9 @@ def default(scopes=None, request=None, quota_project_id=None):
     for checker in checkers:
         credentials, project_id = checker()
         if credentials is not None:
-            credentials = with_scopes_if_required(credentials, scopes)
+            credentials = with_scopes_if_required(
+                credentials, scopes, default_scopes=default_scopes
+            )
             if quota_project_id:
                 credentials = credentials.with_quota_project(quota_project_id)
 

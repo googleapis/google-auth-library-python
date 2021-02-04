@@ -345,6 +345,7 @@ class Credentials(external_account.Credentials):
         client_secret=None,
         quota_project_id=None,
         scopes=None,
+        default_scopes=None,
     ):
         """Instantiates an AWS workload external account credentials object.
 
@@ -362,6 +363,8 @@ class Credentials(external_account.Credentials):
             quota_project_id (Optional[str]): The optional quota project ID.
             scopes (Optional[Sequence[str]]): Optional scopes to request during
                 the authorization grant.
+            default_scopes (Optional[Sequence[str]]): Default scopes passed by a
+                Google client library. Use 'scopes' for user-defined scopes.
 
         Raises:
             google.auth.exceptions.RefreshError: If an error is encountered during
@@ -382,6 +385,7 @@ class Credentials(external_account.Credentials):
             client_secret=client_secret,
             quota_project_id=quota_project_id,
             scopes=scopes,
+            default_scopes=default_scopes,
         )
         credential_source = credential_source or {}
         self._environment_id = credential_source.get("environment_id") or ""

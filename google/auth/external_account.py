@@ -68,6 +68,7 @@ class Credentials(credentials.Scoped, credentials.CredentialsWithQuotaProject):
         client_secret=None,
         quota_project_id=None,
         scopes=None,
+        default_scopes=None,
     ):
         """Instantiates an external account credentials object.
 
@@ -83,6 +84,8 @@ class Credentials(credentials.Scoped, credentials.CredentialsWithQuotaProject):
             quota_project_id (Optional[str]): The optional quota project ID.
             scopes (Optional[Sequence[str]]): Optional scopes to request during the
                 authorization grant.
+            default_scopes (Optional[Sequence[str]]): Default scopes passed by a
+                Google client library. Use 'scopes' for user-defined scopes.
         Raises:
             google.auth.exceptions.RefreshError: If the generateAccessToken
                 endpoint returned an error.
@@ -97,6 +100,7 @@ class Credentials(credentials.Scoped, credentials.CredentialsWithQuotaProject):
         self._client_secret = client_secret
         self._quota_project_id = quota_project_id
         self._scopes = scopes
+        self._default_scopes = default_scopes
 
         if self._client_id:
             self._client_auth = utils.ClientAuthentication(
@@ -119,7 +123,7 @@ class Credentials(credentials.Scoped, credentials.CredentialsWithQuotaProject):
         Returns:
             bool: True if there are no scopes set otherwise False.
         """
-        return True if not self._scopes else False
+        return not self._scopes and not self._default_scopes
 
     @property
     def project_number(self):
@@ -136,7 +140,7 @@ class Credentials(credentials.Scoped, credentials.CredentialsWithQuotaProject):
             return None
 
     @_helpers.copy_docstring(credentials.Scoped)
-    def with_scopes(self, scopes):
+    def with_scopes(self, scopes, default_scopes=None):
         return self.__class__(
             audience=self._audience,
             subject_token_type=self._subject_token_type,
@@ -147,6 +151,7 @@ class Credentials(credentials.Scoped, credentials.CredentialsWithQuotaProject):
             client_secret=self._client_secret,
             quota_project_id=self._quota_project_id,
             scopes=scopes,
+            default_scopes=default_scopes,
         )
 
     @abc.abstractmethod
@@ -186,8 +191,9 @@ class Credentials(credentials.Scoped, credentials.CredentialsWithQuotaProject):
         if self._project_id:
             # If already retrieved, return the cached project ID value.
             return self._project_id
+        scopes = self._scopes if self._scopes is not None else self._default_scopes
         # Scopes are required in order to retrieve a valid access token.
-        if self.project_number and self._scopes:
+        if self.project_number and scopes:
             headers = {}
             url = _CLOUD_RESOURCE_MANAGER + self.project_number
             self.before_request(request, "GET", url, headers)
@@ -209,6 +215,7 @@ class Credentials(credentials.Scoped, credentials.CredentialsWithQuotaProject):
 
     @_helpers.copy_docstring(credentials.Credentials)
     def refresh(self, request):
+        scopes = self._scopes if self._scopes is not None else self._default_scopes
         if self._impersonated_credentials:
             self._impersonated_credentials.refresh(request)
             self.token = self._impersonated_credentials.token
@@ -221,7 +228,7 @@ class Credentials(credentials.Scoped, credentials.CredentialsWithQuotaProject):
                 subject_token=self.retrieve_subject_token(request),
                 subject_token_type=self._subject_token_type,
                 audience=self._audience,
-                scopes=self._scopes,
+                scopes=scopes,
                 requested_token_type=_STS_REQUESTED_TOKEN_TYPE,
             )
             self.token = response_data.get("access_token")
@@ -241,6 +248,7 @@ class Credentials(credentials.Scoped, credentials.CredentialsWithQuotaProject):
             client_secret=self._client_secret,
             quota_project_id=quota_project_id,
             scopes=self._scopes,
+            default_scopes=self._default_scopes,
         )
 
     def _initialize_impersonated_credentials(self):
@@ -269,6 +277,7 @@ class Credentials(credentials.Scoped, credentials.CredentialsWithQuotaProject):
             client_secret=self._client_secret,
             quota_project_id=self._quota_project_id,
             scopes=self._scopes,
+            default_scopes=self._default_scopes,
         )
 
         # Determine target_principal.
@@ -284,11 +293,12 @@ class Credentials(credentials.Scoped, credentials.CredentialsWithQuotaProject):
                 "Unable to determine target principal from service account impersonation URL."
             )
 
+        scopes = self._scopes if self._scopes is not None else self._default_scopes
         # Initialize and return impersonated credentials.
         return impersonated_credentials.Credentials(
             source_credentials=source_credentials,
             target_principal=target_principal,
-            target_scopes=self._scopes,
+            target_scopes=scopes,
             quota_project_id=self._quota_project_id,
             iam_endpoint_override=self._service_account_impersonation_url,
         )

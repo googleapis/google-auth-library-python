@@ -45,6 +45,7 @@ class CredentialsImpl(external_account.Credentials):
         client_secret=None,
         quota_project_id=None,
         scopes=None,
+        default_scopes=None,
     ):
         super(CredentialsImpl, self).__init__(
             audience=audience,
@@ -56,6 +57,7 @@ class CredentialsImpl(external_account.Credentials):
             client_secret=client_secret,
             quota_project_id=quota_project_id,
             scopes=scopes,
+            default_scopes=default_scopes,
         )
         self._counter = 0
 
@@ -122,6 +124,7 @@ class TestCredentials(object):
         client_secret=None,
         quota_project_id=None,
         scopes=None,
+        default_scopes=None,
         service_account_impersonation_url=None,
     ):
         return CredentialsImpl(
@@ -134,6 +137,7 @@ class TestCredentials(object):
             client_secret=client_secret,
             quota_project_id=quota_project_id,
             scopes=scopes,
+            default_scopes=default_scopes,
         )
 
     @classmethod
@@ -231,19 +235,47 @@ class TestCredentials(object):
         assert scoped_credentials.has_scopes(["email"])
         assert not scoped_credentials.requires_scopes
 
+    def test_with_scopes_using_user_and_default_scopes(self):
+        credentials = self.make_credentials()
+
+        assert not credentials.scopes
+        assert credentials.requires_scopes
+
+        scoped_credentials = credentials.with_scopes(
+            ["email"], default_scopes=["profile"]
+        )
+
+        assert scoped_credentials.has_scopes(["email"])
+        assert not scoped_credentials.has_scopes(["profile"])
+        assert not scoped_credentials.requires_scopes
+        assert scoped_credentials.scopes == ["email"]
+        assert scoped_credentials.default_scopes == ["profile"]
+
+    def test_with_scopes_using_default_scopes_only(self):
+        credentials = self.make_credentials()
+
+        assert not credentials.scopes
+        assert credentials.requires_scopes
+
+        scoped_credentials = credentials.with_scopes(None, default_scopes=["profile"])
+
+        assert scoped_credentials.has_scopes(["profile"])
+        assert not scoped_credentials.requires_scopes
+
     def test_with_scopes_full_options_propagated(self):
         credentials = self.make_credentials(
             client_id=CLIENT_ID,
             client_secret=CLIENT_SECRET,
             quota_project_id=self.QUOTA_PROJECT_ID,
             scopes=self.SCOPES,
+            default_scopes=["default1"],
             service_account_impersonation_url=self.SERVICE_ACCOUNT_IMPERSONATION_URL,
         )
 
         with mock.patch.object(
             external_account.Credentials, "__init__", return_value=None
         ) as mock_init:
-            credentials.with_scopes(["email"])
+            credentials.with_scopes(["email"], ["default2"])
 
         # Confirm with_scopes initialized the credential with the expected
         # parameters and scopes.
@@ -257,6 +289,7 @@ class TestCredentials(object):
             client_secret=CLIENT_SECRET,
             quota_project_id=self.QUOTA_PROJECT_ID,
             scopes=["email"],
+            default_scopes=["default2"],
         )
 
     def test_with_quota_project(self):
@@ -275,6 +308,7 @@ class TestCredentials(object):
             client_secret=CLIENT_SECRET,
             quota_project_id=self.QUOTA_PROJECT_ID,
             scopes=self.SCOPES,
+            default_scopes=["default1"],
             service_account_impersonation_url=self.SERVICE_ACCOUNT_IMPERSONATION_URL,
         )
 
@@ -295,6 +329,7 @@ class TestCredentials(object):
             client_secret=CLIENT_SECRET,
             quota_project_id="project-foo",
             scopes=self.SCOPES,
+            default_scopes=["default1"],
         )
 
     def test_with_invalid_impersonation_target_principal(self):
@@ -400,7 +435,9 @@ class TestCredentials(object):
         assert not credentials.expired
         assert credentials.token == impersonation_response["accessToken"]
 
-    def test_refresh_without_client_auth_success_explicit_scopes(self):
+    def test_refresh_without_client_auth_success_explicit_user_scopes_ignore_default_scopes(
+        self
+    ):
         headers = {"Content-Type": "application/x-www-form-urlencoded"}
         request_data = {
             "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
@@ -413,7 +450,41 @@ class TestCredentials(object):
         request = self.make_mock_request(
             status=http_client.OK, data=self.SUCCESS_RESPONSE
         )
-        credentials = self.make_credentials(scopes=["scope1", "scope2"])
+        credentials = self.make_credentials(
+            scopes=["scope1", "scope2"],
+            # Default scopes will be ignored in favor of user scopes.
+            default_scopes=["ignored"],
+        )
+
+        credentials.refresh(request)
+
+        self.assert_token_request_kwargs(
+            request.call_args.kwargs, headers, request_data
+        )
+        assert credentials.valid
+        assert not credentials.expired
+        assert credentials.token == self.SUCCESS_RESPONSE["access_token"]
+        assert credentials.has_scopes(["scope1", "scope2"])
+        assert not credentials.has_scopes(["ignored"])
+
+    def test_refresh_without_client_auth_success_explicit_default_scopes_only(self):
+        headers = {"Content-Type": "application/x-www-form-urlencoded"}
+        request_data = {
+            "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
+            "audience": self.AUDIENCE,
+            "requested_token_type": "urn:ietf:params:oauth:token-type:access_token",
+            "scope": "scope1 scope2",
+            "subject_token": "subject_token_0",
+            "subject_token_type": self.SUBJECT_TOKEN_TYPE,
+        }
+        request = self.make_mock_request(
+            status=http_client.OK, data=self.SUCCESS_RESPONSE
+        )
+        credentials = self.make_credentials(
+            scopes=None,
+            # Default scopes will be used since user scopes are none.
+            default_scopes=["scope1", "scope2"],
+        )
 
         credentials.refresh(request)
 
@@ -487,7 +558,7 @@ class TestCredentials(object):
         assert not credentials.expired
         assert credentials.token == self.SUCCESS_RESPONSE["access_token"]
 
-    def test_refresh_impersonation_with_client_auth_success(self):
+    def test_refresh_impersonation_with_client_auth_success_ignore_default_scopes(self):
         # Simulate service account access token expires in 2800 seconds.
         expire_time = (
             _helpers.utcnow().replace(microsecond=0) + datetime.timedelta(seconds=2800)
@@ -535,6 +606,79 @@ class TestCredentials(object):
             client_secret=CLIENT_SECRET,
             service_account_impersonation_url=self.SERVICE_ACCOUNT_IMPERSONATION_URL,
             scopes=self.SCOPES,
+            # Default scopes will be ignored since user scopes are specified.
+            default_scopes=["ignored"],
+        )
+
+        credentials.refresh(request)
+
+        # Only 2 requests should be processed.
+        assert len(request.call_args_list) == 2
+        # Verify token exchange request parameters.
+        self.assert_token_request_kwargs(
+            request.call_args_list[0].kwargs, token_headers, token_request_data
+        )
+        # Verify service account impersonation request parameters.
+        self.assert_impersonation_request_kwargs(
+            request.call_args_list[1].kwargs,
+            impersonation_headers,
+            impersonation_request_data,
+        )
+        assert credentials.valid
+        assert credentials.expiry == expected_expiry
+        assert not credentials.expired
+        assert credentials.token == impersonation_response["accessToken"]
+
+    def test_refresh_impersonation_with_client_auth_success_use_default_scopes(self):
+        # Simulate service account access token expires in 2800 seconds.
+        expire_time = (
+            _helpers.utcnow().replace(microsecond=0) + datetime.timedelta(seconds=2800)
+        ).isoformat("T") + "Z"
+        expected_expiry = datetime.datetime.strptime(expire_time, "%Y-%m-%dT%H:%M:%SZ")
+        # STS token exchange request/response.
+        token_response = self.SUCCESS_RESPONSE.copy()
+        token_headers = {
+            "Content-Type": "application/x-www-form-urlencoded",
+            "Authorization": "Basic {}".format(BASIC_AUTH_ENCODING),
+        }
+        token_request_data = {
+            "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
+            "audience": self.AUDIENCE,
+            "requested_token_type": "urn:ietf:params:oauth:token-type:access_token",
+            "subject_token": "subject_token_0",
+            "subject_token_type": self.SUBJECT_TOKEN_TYPE,
+            "scope": "https://www.googleapis.com/auth/iam",
+        }
+        # Service account impersonation request/response.
+        impersonation_response = {
+            "accessToken": "SA_ACCESS_TOKEN",
+            "expireTime": expire_time,
+        }
+        impersonation_headers = {
+            "Content-Type": "application/json",
+            "authorization": "Bearer {}".format(token_response["access_token"]),
+        }
+        impersonation_request_data = {
+            "delegates": None,
+            "scope": self.SCOPES,
+            "lifetime": "3600s",
+        }
+        # Initialize mock request to handle token exchange and service account
+        # impersonation request.
+        request = self.make_mock_request(
+            status=http_client.OK,
+            data=token_response,
+            impersonation_status=http_client.OK,
+            impersonation_data=impersonation_response,
+        )
+        # Initialize credentials with service account impersonation and basic auth.
+        credentials = self.make_credentials(
+            client_id=CLIENT_ID,
+            client_secret=CLIENT_SECRET,
+            service_account_impersonation_url=self.SERVICE_ACCOUNT_IMPERSONATION_URL,
+            scopes=None,
+            # Default scopes will be used since user specified scopes are none.
+            default_scopes=self.SCOPES,
         )
 
         credentials.refresh(request)

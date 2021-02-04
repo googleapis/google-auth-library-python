@@ -247,18 +247,23 @@ def test_load_credentials_from_file_external_account_aws(get_project_id, tmpdir)
 
 
 @EXTERNAL_ACCOUNT_GET_PROJECT_ID_PATCH
-def test_load_credentials_from_file_external_account_with_scopes(
+def test_load_credentials_from_file_external_account_with_user_and_default_scopes(
     get_project_id, tmpdir
 ):
     config_file = tmpdir.join("config.json")
     config_file.write(json.dumps(IDENTITY_POOL_DATA))
     credentials, project_id = _default.load_credentials_from_file(
-        str(config_file), scopes=["https://www.google.com/calendar/feeds"]
+        str(config_file),
+        scopes=["https://www.google.com/calendar/feeds"],
+        default_scopes=["https://www.googleapis.com/auth/cloud-platform"],
     )
 
     assert isinstance(credentials, identity_pool.Credentials)
     assert project_id is mock.sentinel.project_id
     assert credentials.scopes == ["https://www.google.com/calendar/feeds"]
+    assert credentials.default_scopes == [
+        "https://www.googleapis.com/auth/cloud-platform"
+    ]
 
 
 @EXTERNAL_ACCOUNT_GET_PROJECT_ID_PATCH
@@ -316,7 +321,13 @@ def test__get_explicit_environ_credentials(load, monkeypatch):
 
     assert credentials is MOCK_CREDENTIALS
     assert project_id is mock.sentinel.project_id
-    load.assert_called_with("filename", request=None, scopes=None)
+    load.assert_called_with(
+        "filename",
+        scopes=None,
+        default_scopes=None,
+        quota_project_id=None,
+        request=None,
+    )
 
 
 @LOAD_FILE_PATCH
@@ -331,7 +342,13 @@ def test__get_explicit_environ_credentials_with_scopes_and_request(load, monkeyp
     assert credentials is MOCK_CREDENTIALS
     assert project_id is mock.sentinel.project_id
     # Request and scopes should be propagated.
-    load.assert_called_with("filename", request=mock.sentinel.request, scopes=scopes)
+    load.assert_called_with(
+        "filename",
+        scopes=scopes,
+        default_scopes=None,
+        quota_project_id=None,
+        request=mock.sentinel.request,
+    )
 
 
 @LOAD_FILE_PATCH
@@ -604,7 +621,7 @@ def test_default_scoped(with_scopes, unused_get):
 
     assert credentials == with_scopes.return_value
     assert project_id == mock.sentinel.project_id
-    with_scopes.assert_called_once_with(MOCK_CREDENTIALS, scopes)
+    with_scopes.assert_called_once_with(MOCK_CREDENTIALS, scopes, default_scopes=None)
 
 
 @mock.patch(
@@ -651,7 +668,7 @@ def test_default_environ_external_credentials(get_project_id, monkeypatch, tmpdi
 
 
 @EXTERNAL_ACCOUNT_GET_PROJECT_ID_PATCH
-def test_default_environ_external_credentials_with_scopes_and_quota_project_id(
+def test_default_environ_external_credentials_with_user_and_default_scopes_and_quota_project_id(
     get_project_id, monkeypatch, tmpdir
 ):
     config_file = tmpdir.join("config.json")
@@ -659,13 +676,18 @@ def test_default_environ_external_credentials_with_scopes_and_quota_project_id(
     monkeypatch.setenv(environment_vars.CREDENTIALS, str(config_file))
 
     credentials, project_id = _default.default(
-        scopes=["https://www.google.com/calendar/feeds"], quota_project_id="project-foo"
+        scopes=["https://www.google.com/calendar/feeds"],
+        default_scopes=["https://www.googleapis.com/auth/cloud-platform"],
+        quota_project_id="project-foo",
     )
 
     assert isinstance(credentials, identity_pool.Credentials)
     assert project_id is mock.sentinel.project_id
     assert credentials.quota_project_id == "project-foo"
     assert credentials.scopes == ["https://www.google.com/calendar/feeds"]
+    assert credentials.default_scopes == [
+        "https://www.googleapis.com/auth/cloud-platform"
+    ]
 
 
 @EXTERNAL_ACCOUNT_GET_PROJECT_ID_PATCH
