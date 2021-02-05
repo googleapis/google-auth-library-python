@@ -15,10 +15,11 @@
 """External Account Credentials.
 
 This module provides credentials that exchange workload identity pool external
-credentials for Google access tokens. This facilitates calling Google APIs from
-Kubernetes, Azure and AWS workloads securely, using native credentials retrieved
-from the current environment without the need to copy, save and manage service
-account keys.
+credentials for Google access tokens. This facilitates accessing Google Cloud
+Platform resources from on-prem and non-Google Cloud platforms (e.g. AWS,
+Microsoft Azure, OIDC identity providers), using native credentials retrieved
+from the current environment without the need to copy, save and manage
+long-lived service account credentials.
 
 Specifically, this is intended to use access tokens acquired using the GCP STS
 token exchange endpoint following the `OAuth 2.0 Token Exchange`_ spec.

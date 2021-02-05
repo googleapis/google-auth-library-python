@@ -14,16 +14,20 @@
 
 """AWS Credentials and AWS Signature V4 Request Signer.
 
-This module provides a basic implementation of the `AWS Signature Version 4`_
-request signing algorithm.
+This module provides credentials to access Google Cloud resources from Amazon
+Web Services (AWS) workloads. These credentials are recommended over the
+use of service account credentials in AWS as they do not involve the management
+of long-live service account private keys.
 
-This module also provides credentials for AWS workloads that are initialized
-using external_account arguments which are typically loaded from the external
-credentials JSON file.
+AWS Credentials are initialized using external_account arguments which are
+typically loaded from the external credentials JSON file.
 Unlike other Credentials that can be initialized with a list of explicit
 arguments, secrets or credentials, external account clients use the
 environment and hints/guidelines provided by the external_account JSON
 file to retrieve credentials and exchange them for Google access tokens.
+
+This module also provides a basic implementation of the
+`AWS Signature Version 4`_ request signing algorithm.
 
 AWS Credentials use serialized signed requests to the
 `AWS STS GetCallerIdentity`_ API that can be exchanged for Google access tokens
@@ -437,7 +441,8 @@ class Credentials(external_account.Credentials):
         Inject x-goog-cloud-target-resource into header and serialize the
         signed request. This will be the subject-token to pass to GCP STS.
 
-        _AWS GetCallerIdentity signed request: https://cloud.google.com/iam/docs/access-resources-aws#exchange-token
+        .. _AWS GetCallerIdentity signed request:
+            https://cloud.google.com/iam/docs/access-resources-aws#exchange-token
 
         Args:
             request (google.auth.transport.Request): A callable used to make
