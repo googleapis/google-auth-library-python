@@ -368,9 +368,9 @@ def default(scopes=None, request=None, quota_project_id=None, default_scopes=Non
        contain project ID information).
 
        If the environment variable is set to the path of a valid external
-       account JSON configuration file, then the configuration file is used to
-       determine and retrieve the external credentials from the current
-       environment (AWS, Azure, etc).
+       account JSON configuration file (workload identity federation), then the
+       configuration file is used to determine and retrieve the external
+       credentials from the current environment (AWS, Azure, etc).
        These will then be exchanged for Google access tokens via the Google STS
        endpoint.
        The project ID returned in this case is the one corresponding to the

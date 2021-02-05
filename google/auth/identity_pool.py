@@ -14,18 +14,23 @@
 
 """Identity Pool Credentials.
 
-This module provides credentials that are initialized using external_account
+This module provides credentials to access Google Cloud resources from on-prem
+or non-Google Cloud platforms which support external credentials (e.g. OIDC ID
+tokens) retrieved from local file locations or local servers. This includes
+Microsoft Azure and OIDC identity providers (e.g. K8s workloads registered with
+Hub with Hub workload identity enabled).
+
+These credentials are recommended over the use of service account credentials
+in on-prem/non-Google Cloud platforms as they do not involve the management of
+long-live service account private keys.
+
+Identity Pool Credentials are initialized using external_account
 arguments which are typically loaded from an external credentials file or
-an external credentials url. Unlike other Credentials that can be initialized
+an external credentials URL. Unlike other Credentials that can be initialized
 with a list of explicit arguments, secrets or credentials, external account
 clients use the environment and hints/guidelines provided by the
 external_account JSON file to retrieve credentials and exchange them for Google
 access tokens.
-
-Identity Pool Credentials are used with external credentials (eg. OIDC
-ID tokens) retrieved from a file location, typical for K8s workloads
-registered with Hub with Hub workload identity enabled, or retrieved from an
-url, typical for Azure based workflows.
 """
 
 try:
@@ -43,7 +48,7 @@ from google.auth import external_account
 
 
 class Credentials(external_account.Credentials):
-    """External account credentials sourced from files and urls."""
+    """External account credentials sourced from files and URLs."""
 
     def __init__(
         self,
@@ -58,7 +63,7 @@ class Credentials(external_account.Credentials):
         scopes=None,
         default_scopes=None,
     ):
-        """Instantiates an external account credentials object from a file/url.
+        """Instantiates an external account credentials object from a file/URL.
 
         Args:
             audience (str): The STS audience field.
@@ -66,8 +71,10 @@ class Credentials(external_account.Credentials):
             token_url (str): The STS endpoint URL.
             credential_source (Mapping): The credential source dictionary used to
                 provide instructions on how to retrieve external credential to be
-                exchanged for Google access tokens
-                Example credential_source's:
+                exchanged for Google access tokens.
+
+                Example credential_source for url-sourced credential::
+
                     {
                         "url": "http://www.example.com",
                         "format": {
@@ -76,9 +83,13 @@ class Credentials(external_account.Credentials):
                         },
                         "headers": {"foo": "bar"},
                     }
+                
+                Example credential_source for file-sourced credential::
+
                     {
                         "file": "/path/to/token/file.txt"
                     }
+
             service_account_impersonation_url (Optional[str]): The optional service account
                 impersonation getAccessToken URL.
             client_id (Optional[str]): The optional client ID.
