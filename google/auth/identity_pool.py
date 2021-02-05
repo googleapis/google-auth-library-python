@@ -83,7 +83,7 @@ class Credentials(external_account.Credentials):
                         },
                         "headers": {"foo": "bar"},
                     }
-                
+
                 Example credential_source for file-sourced credential::
 
                     {
