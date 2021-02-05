@@ -335,11 +335,11 @@ In order to use external identities with Application Default Credentials, you
 need to generate the JSON credentials configuration file for your external
 identity.
 Once generated, store the path to this file in the
-``GOOGLE_APPLICATION_CREDENTIALS`` environment variable::
+``GOOGLE_APPLICATION_CREDENTIALS`` environment variable.
 
-    .. code-block:: bash
+.. code-block:: bash
 
-        $ export GOOGLE_APPLICATION_CREDENTIALS=/path/to/config.json
+    $ export GOOGLE_APPLICATION_CREDENTIALS=/path/to/config.json
 
 The library can now automatically choose the right type of client and initialize
 credentials from the context provided in the configuration file::
