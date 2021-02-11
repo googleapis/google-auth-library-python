@@ -195,28 +195,9 @@ def _get_gcloud_sdk_credentials():
     return credentials, project_id
 
 
-def _get_explicit_environ_credentials(request=None, scopes=None, default_scopes=None):
+def _get_explicit_environ_credentials():
     """Gets credentials from the GOOGLE_APPLICATION_CREDENTIALS environment
-    variable.
-
-    Args:
-        request (Optional[google.auth.transport.Request]): An object used to make
-            HTTP requests. This is used to determine the associated project ID
-            for a workload identity pool resource (external account credentials).
-            If not specified, then it will use a
-            google.auth.transport.requests.Request client to make requests.
-        scopes (Optional[Sequence[str]]): The list of scopes for the credentials. If
-            specified, the credentials will automatically be scoped if
-            necessary.
-        default_scopes (Optional[Sequence[str]]): Default scopes passed by a
-            Google client library. Use 'scopes' for user-defined scopes.
-
-    Returns:
-        Tuple[Optional[google.auth.credentials.Credentials], Optional[str]]: Loaded
-            credentials and the project ID. Authorized user credentials do not
-            have the project ID information. External account credentials project
-            IDs may not always be determined.
-    """
+    variable."""
     explicit_file = os.environ.get(environment_vars.CREDENTIALS)
 
     _LOGGER.debug(
@@ -225,11 +206,7 @@ def _get_explicit_environ_credentials(request=None, scopes=None, default_scopes=
 
     if explicit_file is not None:
         credentials, project_id = load_credentials_from_file(
-            os.environ[environment_vars.CREDENTIALS],
-            scopes=scopes,
-            default_scopes=default_scopes,
-            quota_project_id=None,
-            request=request,
+            os.environ[environment_vars.CREDENTIALS]
         )
 
         return credentials, project_id
@@ -450,9 +427,11 @@ def default(scopes=None, request=None, quota_project_id=None, default_scopes=Non
     )
 
     checkers = (
-        lambda: _get_explicit_environ_credentials(
-            request=request, scopes=scopes, default_scopes=default_scopes
-        ),
+        # Avoid passing scopes here to prevent passing scopes to user credentials.
+        # with_scopes_if_required() below will ensure scopes/default scopes are
+        # safely set on the returned credentials since requires_scopes will
+        # guard against setting scopes on user credentials.
+        _get_explicit_environ_credentials,
         _get_gcloud_sdk_credentials,
         _get_gae_credentials,
         lambda: _get_gce_credentials(request),
@@ -464,6 +443,17 @@ def default(scopes=None, request=None, quota_project_id=None, default_scopes=Non
             credentials = with_scopes_if_required(
                 credentials, scopes, default_scopes=default_scopes
             )
+
+            # For external account credentials, scopes are required to determine
+            # the project ID. Try to get the project ID again if not yet
+            # determined.
+            if not project_id and callable(
+                getattr(credentials, "get_project_id", None)
+            ):
+                if request is None:
+                    request = google.auth.transport.requests.Request()
+                project_id = credentials.get_project_id(request=request)
+
             if quota_project_id:
                 credentials = credentials.with_quota_project(quota_project_id)
 
