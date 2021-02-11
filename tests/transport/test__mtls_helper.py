@@ -141,7 +141,7 @@ class TestReadMetadataFile(object):
 
 class TestRunCertProviderCommand(object):
     def create_mock_process(self, output, error):
-        # There are two steps to execute a script with subprocess.Popen.
+        # There are two steps to execute a script with "subprocess.Popen".
         # (1) process = subprocess.Popen([comannds])
         # (2) stdout, stderr = process.communicate()
         # This function creates a mock process which can be returned by a mock
