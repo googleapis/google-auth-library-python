@@ -83,6 +83,14 @@ AWS_DATA = {
 MOCK_CREDENTIALS = mock.Mock(spec=credentials.CredentialsWithQuotaProject)
 MOCK_CREDENTIALS.with_quota_project.return_value = MOCK_CREDENTIALS
 
+
+def get_project_id_side_effect(self, request=None):
+    # If no scopes are set, this will always return None.
+    if not self.scopes:
+        return None
+    return mock.sentinel.project_id
+
+
 LOAD_FILE_PATCH = mock.patch(
     "google.auth._default.load_credentials_from_file",
     return_value=(MOCK_CREDENTIALS, mock.sentinel.project_id),
@@ -91,7 +99,7 @@ LOAD_FILE_PATCH = mock.patch(
 EXTERNAL_ACCOUNT_GET_PROJECT_ID_PATCH = mock.patch.object(
     external_account.Credentials,
     "get_project_id",
-    return_value=mock.sentinel.project_id,
+    side_effect=get_project_id_side_effect,
     autospec=True,
 )
 
@@ -231,7 +239,8 @@ def test_load_credentials_from_file_external_account_identity_pool(
     credentials, project_id = _default.load_credentials_from_file(str(config_file))
 
     assert isinstance(credentials, identity_pool.Credentials)
-    assert project_id is mock.sentinel.project_id
+    # Since no scopes are specified, the project ID cannot be determined.
+    assert project_id is None
     assert get_project_id.called
 
 
@@ -242,7 +251,8 @@ def test_load_credentials_from_file_external_account_aws(get_project_id, tmpdir)
     credentials, project_id = _default.load_credentials_from_file(str(config_file))
 
     assert isinstance(credentials, aws.Credentials)
-    assert project_id is mock.sentinel.project_id
+    # Since no scopes are specified, the project ID cannot be determined.
+    assert project_id is None
     assert get_project_id.called
 
 
@@ -259,6 +269,7 @@ def test_load_credentials_from_file_external_account_with_user_and_default_scope
     )
 
     assert isinstance(credentials, identity_pool.Credentials)
+    # Since scopes are specified, the project ID can be determined.
     assert project_id is mock.sentinel.project_id
     assert credentials.scopes == ["https://www.google.com/calendar/feeds"]
     assert credentials.default_scopes == [
@@ -277,7 +288,8 @@ def test_load_credentials_from_file_external_account_with_quota_project(
     )
 
     assert isinstance(credentials, identity_pool.Credentials)
-    assert project_id is mock.sentinel.project_id
+    # Since no scopes are specified, the project ID cannot be determined.
+    assert project_id is None
     assert credentials.quota_project_id == "project-foo"
 
 
@@ -300,10 +312,13 @@ def test_load_credentials_from_file_external_account_explicit_request(
     config_file = tmpdir.join("config.json")
     config_file.write(json.dumps(IDENTITY_POOL_DATA))
     credentials, project_id = _default.load_credentials_from_file(
-        str(config_file), request=mock.sentinel.request
+        str(config_file),
+        request=mock.sentinel.request,
+        scopes=["https://www.googleapis.com/auth/cloud-platform"],
     )
 
     assert isinstance(credentials, identity_pool.Credentials)
+    # Since scopes are specified, the project ID can be determined.
     assert project_id is mock.sentinel.project_id
     get_project_id.assert_called_with(credentials, request=mock.sentinel.request)
 
@@ -321,34 +336,7 @@ def test__get_explicit_environ_credentials(load, monkeypatch):
 
     assert credentials is MOCK_CREDENTIALS
     assert project_id is mock.sentinel.project_id
-    load.assert_called_with(
-        "filename",
-        scopes=None,
-        default_scopes=None,
-        quota_project_id=None,
-        request=None,
-    )
-
-
-@LOAD_FILE_PATCH
-def test__get_explicit_environ_credentials_with_scopes_and_request(load, monkeypatch):
-    scopes = ["one", "two"]
-    monkeypatch.setenv(environment_vars.CREDENTIALS, "filename")
-
-    credentials, project_id = _default._get_explicit_environ_credentials(
-        request=mock.sentinel.request, scopes=scopes
-    )
-
-    assert credentials is MOCK_CREDENTIALS
-    assert project_id is mock.sentinel.project_id
-    # Request and scopes should be propagated.
-    load.assert_called_with(
-        "filename",
-        scopes=scopes,
-        default_scopes=None,
-        quota_project_id=None,
-        request=mock.sentinel.request,
-    )
+    load.assert_called_with("filename")
 
 
 @LOAD_FILE_PATCH
@@ -664,7 +652,8 @@ def test_default_environ_external_credentials(get_project_id, monkeypatch, tmpdi
     credentials, project_id = _default.default()
 
     assert isinstance(credentials, identity_pool.Credentials)
-    assert project_id is mock.sentinel.project_id
+    # Without scopes, project ID cannot be determined.
+    assert project_id is None
 
 
 @EXTERNAL_ACCOUNT_GET_PROJECT_ID_PATCH
@@ -691,14 +680,17 @@ def test_default_environ_external_credentials_with_user_and_default_scopes_and_q
 
 
 @EXTERNAL_ACCOUNT_GET_PROJECT_ID_PATCH
-def test_default_environ_external_credentials_explicit_request(
+def test_default_environ_external_credentials_explicit_request_with_scopes(
     get_project_id, monkeypatch, tmpdir
 ):
     config_file = tmpdir.join("config.json")
     config_file.write(json.dumps(IDENTITY_POOL_DATA))
     monkeypatch.setenv(environment_vars.CREDENTIALS, str(config_file))
 
-    credentials, project_id = _default.default(request=mock.sentinel.request)
+    credentials, project_id = _default.default(
+        request=mock.sentinel.request,
+        scopes=["https://www.googleapis.com/auth/cloud-platform"],
+    )
 
     assert isinstance(credentials, identity_pool.Credentials)
     assert project_id is mock.sentinel.project_id
