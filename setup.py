@@ -24,7 +24,7 @@ DEPENDENCIES = (
     # rsa==4.5 is the last version to support 2.7
     # https://github.com/sybrenstuvel/python-rsa/issues/152#issuecomment-643470233
     'rsa<4.6; python_version < "3.6"',
-    'rsa>=3.1.4,<5; python_version >= "3.6"',
+    'rsa>=4.7,<5; python_version >= "3.6"',
     "setuptools>=40.3.0",
     "six>=1.9.0",
 )
