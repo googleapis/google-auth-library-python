@@ -31,7 +31,7 @@ DEPENDENCIES = (
 
 extras = {
     "aiohttp": "aiohttp >= 3.6.2, < 4.0.0dev; python_version>='3.6'",
-    "pyopenssl": "pyopenssl",
+    "pyopenssl": "pyopenssl>=20.0.0",
 }
 
 with io.open("README.rst", "r") as fh:
