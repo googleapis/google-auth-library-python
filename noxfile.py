@@ -93,7 +93,7 @@ def unit(session):
 @nox.session(python=["2.7"])
 def unit_prev_versions(session):
     session.install(".")
-    session.install(*TEST_DEPENDENCIES) 
+    session.install(*TEST_DEPENDENCIES)
     session.run(
         "pytest", "--cov=google.auth", "--cov=google.oauth2", "--cov=tests", "tests"
     )
