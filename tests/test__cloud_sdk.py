@@ -87,7 +87,7 @@ def test__run_subprocess_ignore_stderr():
 
     # If we pipe stderr to stdout, then the output is mixed with stdout and stderr.
     output = subprocess.check_output(command, stderr=subprocess.STDOUT)
-    assert output == b"output\nerror\n"
+    assert output == b"output\nerror\n" or output == b"error\noutput\n"
 
 
 @mock.patch("os.name", new="nt")
