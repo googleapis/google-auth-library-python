@@ -133,12 +133,15 @@ def docgen(session):
         "google",
     )
 
+
 @nox.session(python="3.7")
 def docs(session):
     """Build the docs for this library."""
 
     session.install("-e", ".[aiohttp]")
-    session.install("sphinx<3.0.0", "alabaster", "recommonmark", "sphinx-docstring-typing")
+    session.install(
+        "sphinx<3.0.0", "alabaster", "recommonmark", "sphinx-docstring-typing"
+    )
 
     shutil.rmtree(os.path.join("docs", "_build"), ignore_errors=True)
     session.run(
@@ -153,6 +156,7 @@ def docs(session):
         os.path.join("docs", ""),
         os.path.join("docs", "_build", "html", ""),
     )
+
 
 @nox.session(python="pypy")
 def pypy(session):
