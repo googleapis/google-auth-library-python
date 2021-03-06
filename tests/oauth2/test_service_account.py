@@ -203,7 +203,7 @@ class TestCredentials(object):
         assert "x-goog-user-project" not in headers
         assert "token" in headers["authorization"]
 
-    @mock.patch("google.auth.jwt.Credentials.from_signing_credentials", autospec=True)
+    @mock.patch("google.auth.jwt.Credentials.from_signing_credentials")
     def test__create_self_signed_jwt(self, from_signing_credentials):
         credentials = service_account.Credentials(
             SIGNER, self.SERVICE_ACCOUNT_EMAIL, self.TOKEN_URI
@@ -213,7 +213,7 @@ class TestCredentials(object):
         credentials._create_self_signed_jwt(audience)
         from_signing_credentials.assert_called_once_with(credentials, audience)
 
-    @mock.patch("google.auth.jwt.Credentials.from_signing_credentials", autospec=True)
+    @mock.patch("google.auth.jwt.Credentials.from_signing_credentials")
     def test__create_self_signed_jwt_with_user_scopes(self, from_signing_credentials):
         credentials = service_account.Credentials(
             SIGNER, self.SERVICE_ACCOUNT_EMAIL, self.TOKEN_URI, scopes=["foo"]
