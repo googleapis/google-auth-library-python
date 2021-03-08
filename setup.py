@@ -30,7 +30,7 @@ DEPENDENCIES = (
 )
 
 extras = {
-    "aiohttp": "aiohttp >= 3.6.2, < 4.0.0dev; python_version>='3.6'",
+    "aiohttp": "aiohttp >= 3.6.2, < 3.7.4; python_version>='3.6'",
     "pyopenssl": "pyopenssl>=20.0.0",
 }
 
