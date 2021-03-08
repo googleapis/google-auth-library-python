@@ -317,6 +317,12 @@ def mtls_http(session):
     session.run("pytest", "system_tests_sync/test_mtls_http.py")
 
 
+@nox.session(python=["3.7"]) # These tests include our Client Libraries, which are only guaranteed to work in v3.6+
+def byoid(session):
+    session.install(*TEST_DEPENDENCIES_SYNC, "google-auth", "google-api-python-client")
+    session.run("pytest", "system_tests_sync/test_byoid.py")
+
+
 #ASYNC SYSTEM TESTS
 
 @nox.session(python=PYTHON_VERSIONS_ASYNC)
