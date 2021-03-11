@@ -526,6 +526,10 @@ class Credentials(external_account.Credentials):
         if env_aws_region is not None:
             return env_aws_region
 
+        env_aws_region = os.environ.get(environment_vars.AWS_DEFAULT_REGION)
+        if env_aws_region is not None:
+            return env_aws_region
+
         if not self._region_url:
             raise exceptions.RefreshError("Unable to determine AWS region")
         response = request(url=self._region_url, method="GET")
