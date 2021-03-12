@@ -374,7 +374,8 @@ def default_explicit_service_account_async(session):
     session.install(LIBRARY_DIR)
     default(
         session,
-        ["system_tests_async/test_default.py", "system_tests_async/test_id_token.py",],
+        "system_tests_async/test_default.py", 
+        "system_tests_async/test_id_token.py",
     )
 
 
