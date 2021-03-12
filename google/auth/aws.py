@@ -424,9 +424,9 @@ class Credentials(external_account.Credentials):
 
         The logic is summarized as:
 
-        Retrieve the AWS region from the AWS_REGION environment variable or from
-        the AWS metadata server availability-zone if not found in the
-        environment variable.
+        Retrieve the AWS region from the AWS_REGION or AWS_DEFAULT_REGION
+        environment variable or from the AWS metadata server availability-zone
+        if not found in the environment variable.
 
         Check AWS credentials in environment variables. If not found, retrieve
         from the AWS metadata server security-credentials endpoint.
@@ -504,8 +504,8 @@ class Credentials(external_account.Credentials):
         )
 
     def _get_region(self, request, url):
-        """Retrieves the current AWS region from either the AWS_REGION
-        environment variable or from the AWS metadata server.
+        """Retrieves the current AWS region from either the AWS_REGION or
+        AWS_DEFAULT_REGION environment variable or from the AWS metadata server.
 
         Args:
             request (google.auth.transport.Request): A callable used to make
