@@ -15,7 +15,7 @@
 
 import json
 import os
-import tempfile
+from tempfile import NamedTemporaryFile
 
 from google.oauth2 import service_account
 from googleapiclient import discovery
@@ -27,8 +27,8 @@ _AUDIENCE_OIDC = "//iam.googleapis.com/projects/79992041559/locations/global/wor
 @pytest.fixture
 def oidc_credentials(service_account_file, http_request):
     result = service_account.IDTokenCredentials.from_service_account_file(
-        service_account_file,
-        target_audience=_AUDIENCE_OIDC)
+        service_account_file, target_audience=_AUDIENCE_OIDC
+    )
     result.refresh(http_request)
     yield result
 
@@ -42,39 +42,37 @@ def service_account_info(service_account_file):
 # Our BYOID tests involve setting up some preconditions, setting a credential file,
 # and then making sure that our client libraries can work with the set credentials.
 def get_project_dns(project_id, credential_data):
-    fd, credfile_path = tempfile.mkstemp()
-    try:
-        with os.fdopen(fd, 'w') as credfile:
-            credfile.write(json.dumps(credential_data))
-
-        os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = credfile_path
+    with NamedTemporaryFile() as credfile:
+        credfile.write(bytes(json.dumps(credential_data), encoding="utf-8"))
+        credfile.flush()
+        os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = credfile.name
 
         # If our setup and credential file are correct,
         # discovery.build should be able to establish these as the default credentials.
-        service = discovery.build('dns', 'v1')
+        service = discovery.build("dns", "v1")
         request = service.projects().get(project=project_id)
         return request.execute()
-    finally:
-        os.remove(credfile_path)
 
 
 # This test makes sure that setting an accesible credential file
 # works to allow access to Google resources.
 def test_file_based_byoid(oidc_credentials, service_account_info):
-    fd, tmpfile_path = tempfile.mkstemp()
-    try:
-        with os.fdopen(fd, 'w') as tmpfile:
-            tmpfile.write(oidc_credentials.token)
+    with NamedTemporaryFile() as tmpfile:
+        tmpfile.write(bytes(oidc_credentials.token, encoding="utf-8"))
+        tmpfile.flush()
 
-        assert get_project_dns(service_account_info["project_id"], {
-            "type": "external_account",
-            "audience": _AUDIENCE_OIDC,
-            "subject_token_type": "urn:ietf:params:oauth:token-type:jwt",
-            "token_url": "https://sts.googleapis.com/v1beta/token",
-            "service_account_impersonation_url": "https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/{}:generateAccessToken".format(oidc_credentials.service_account_email),
-            "credential_source": {
-                "file": tmpfile_path,
+        assert get_project_dns(
+            service_account_info["project_id"],
+            {
+                "type": "external_account",
+                "audience": _AUDIENCE_OIDC,
+                "subject_token_type": "urn:ietf:params:oauth:token-type:jwt",
+                "token_url": "https://sts.googleapis.com/v1beta/token",
+                "service_account_impersonation_url": "https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/{}:generateAccessToken".format(
+                    oidc_credentials.service_account_email
+                ),
+                "credential_source": {
+                    "file": tmpfile.name,
+                },
             },
-        })
-    finally:
-        os.remove(tmpfile_path)
+        )
