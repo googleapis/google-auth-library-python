@@ -43,7 +43,7 @@ def service_account_info(service_account_file):
 # and then making sure that our client libraries can work with the set credentials.
 def get_project_dns(project_id, credential_data):
     with NamedTemporaryFile() as credfile:
-        credfile.write(bytes(json.dumps(credential_data), encoding="utf-8"))
+        credfile.write(json.dumps(credential_data).encode("utf-8"))
         credfile.flush()
         os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = credfile.name
 
@@ -58,7 +58,7 @@ def get_project_dns(project_id, credential_data):
 # works to allow access to Google resources.
 def test_file_based_byoid(oidc_credentials, service_account_info):
     with NamedTemporaryFile() as tmpfile:
-        tmpfile.write(bytes(oidc_credentials.token, encoding="utf-8"))
+        tmpfile.write(oidc_credentials.token.encode("utf-8"))
         tmpfile.flush()
 
         assert get_project_dns(
