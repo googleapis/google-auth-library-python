@@ -93,10 +93,10 @@ Copy the credentials file to ``service_account.json``.
 Grant the account associated with ``service_account.json`` the following roles.
 
 - App Engine Admin (for App Engine tests)
-- Service Account Token Creator (for impersonated credentials and BYOID tests)
+- Service Account Token Creator (for impersonated credentials and workload identity federation tests)
 - Pub/Sub Viewer (for gRPC tests)
 - Storage Object Viewer (for impersonated credentials tests)
-- DNS Viewer (for BYOID tests)
+- DNS Viewer (for workload identity federation tests)
 
 ``impersonated_service_account.json``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -107,15 +107,15 @@ Copy the credentials file to ``impersonated_service_account.json``.
 
 .. _Creating and Managing Service Account Keys: https://cloud.google.com/iam/docs/creating-managing-service-account-keys
 
-``setup_byoid``
+``setup_external_accounts``
 ~~~~~~~~~~~~~~~~
 
-In order to run the BYOID tests, you will need to set up a Workload Identity Pool,
-as well as attach relevant policy bindings for this new resource to our service account.
-To do this, make sure you have IAM Workload Identity Pool Admin and Service
-Account Admin permissions, and then run:
+In order to run the workload identity federation tests, you will need to set up
+a Workload Identity Pool, as well as attach relevant policy bindings for this
+new resource to our service account. To do this, make sure you have IAM Workload
+Identity Pool Admin and Security Admin permissions, and then run:
 
-  $ ./scripts/setup_byoid.sh
+  $ ./scripts/setup_external_accounts.sh
 
 and then use the output to replace the variables near
 the top of system_tests/system_tests_sync/test_byoid.py

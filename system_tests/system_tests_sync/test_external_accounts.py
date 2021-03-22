@@ -12,6 +12,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Prerequisites:
+# Make sure to run the setup in scripts/setup_external_accounts.sh
+# and copy the logged constant strings (_AUDIENCE_OIDC, _AUDIENCE_AWS
+# into this file before running this test suite.
+# Once that is done, this test can be run indefinitely.
+#
+# The only requirement for this test suite to run is to set the environment
+# variable GOOGLE_APPLICATION_CREDENTIALS to point to the expected service
+# account keys whose email is referred to in the setup script.
+#
+# This script follows the following logic.
+# OIDC provider (file-sourced and url-sourced credentials):
+# Use the service account keys to generate a Google ID token using the
+# iamcredentials generateIdToken API, using the default STS audience.
+# This will use the service account client ID as the sub field of the token.
+# This OIDC token will be used as the external subject token to be exchanged
+# for a Google access token via GCP STS endpoint and then to impersonate the
+# original service account key.
+
 
 import json
 import os
@@ -22,6 +41,7 @@ import google.auth
 from google.oauth2 import service_account
 import pytest
 
+# Populate values from the output of scripts/setup_external_accounts.sh.
 _AUDIENCE_OIDC = "//iam.googleapis.com/projects/79992041559/locations/global/workloadIdentityPools/pool-73wslmxn/providers/oidc-73wslmxn"
 
 
@@ -83,8 +103,9 @@ def service_account_info(service_account_file):
         yield json.load(f)
 
 
-# Our BYOID tests involve setting up some preconditions, setting a credential file,
-# and then making sure that our client libraries can work with the set credentials.
+# Our external accounts tests involve setting up some preconditions, setting a
+# credential file, and then making sure that our client libraries can work with
+# the set credentials.
 def get_project_dns(dns_access, project_id, credential_data):
     with NamedTemporaryFile() as credfile:
         credfile.write(json.dumps(credential_data).encode("utf-8"))
@@ -98,7 +119,7 @@ def get_project_dns(dns_access, project_id, credential_data):
 
 # This test makes sure that setting an accesible credential file
 # works to allow access to Google resources.
-def test_file_based_byoid(oidc_credentials, service_account_info, dns_access):
+def test_file_based_external_account(oidc_credentials, service_account_info, dns_access):
     with NamedTemporaryFile() as tmpfile:
         tmpfile.write(oidc_credentials.token.encode("utf-8"))
         tmpfile.flush()
