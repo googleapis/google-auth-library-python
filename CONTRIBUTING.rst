@@ -118,7 +118,7 @@ Identity Pool Admin and Security Admin permissions, and then run:
   $ ./scripts/setup_external_accounts.sh
 
 and then use the output to replace the variables near
-the top of system_tests/system_tests_sync/test_byoid.py
+the top of system_tests/system_tests_sync/test_external_accounts.py
 
 App Engine System Tests
 ~~~~~~~~~~~~~~~~~~~~~~~~

@@ -110,16 +110,24 @@ def get_project_dns(dns_access, project_id, credential_data):
     with NamedTemporaryFile() as credfile:
         credfile.write(json.dumps(credential_data).encode("utf-8"))
         credfile.flush()
+        old_credentials = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
         os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = credfile.name
-
-        # If our setup and credential file are correct,
-        # discovery.build should be able to establish these as the default credentials.
-        return dns_access(project_id)
+        try:
+            # If our setup and credential file are correct,
+            # discovery.build should be able to establish these as the default credentials.
+            return dns_access(project_id)
+        finally:
+            if old_credentials:
+                os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = old_credentials
+            else:
+                del os.environ["GOOGLE_APPLICATION_CREDENTIALS"]
 
 
 # This test makes sure that setting an accesible credential file
 # works to allow access to Google resources.
-def test_file_based_external_account(oidc_credentials, service_account_info, dns_access):
+def test_file_based_external_account(
+    oidc_credentials, service_account_info, dns_access
+):
     with NamedTemporaryFile() as tmpfile:
         tmpfile.write(oidc_credentials.token.encode("utf-8"))
         tmpfile.flush()
