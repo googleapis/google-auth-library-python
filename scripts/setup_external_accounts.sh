@@ -3,10 +3,10 @@
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
 
-# This file is a mostly common setup file to ensure all BYOID integration tests
-# are set up in a consistent fashion across the languages in our various client libraries.
-# It assumes that the current user has the relevant permissions to run each of
-# the commands listed.
+# This file is a mostly common setup file to ensure all workload identity
+# federation integration tests are set up in a consistent fashion across the
+# languages in our various client libraries. It assumes that the current user
+# has the relevant permissions to run each of the commands listed.
 
 # This script needs to be run once. It will do the following:
 # 1. Create a random workload identity pool.

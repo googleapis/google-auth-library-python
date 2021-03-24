@@ -14,7 +14,7 @@
 
 # Prerequisites:
 # Make sure to run the setup in scripts/setup_external_accounts.sh
-# and copy the logged constant strings (_AUDIENCE_OIDC, _AUDIENCE_AWS
+# and copy the logged constant strings (_AUDIENCE_OIDC, _AUDIENCE_AWS)
 # into this file before running this test suite.
 # Once that is done, this test can be run indefinitely.
 #
@@ -139,7 +139,7 @@ def test_file_based_external_account(
                 "type": "external_account",
                 "audience": _AUDIENCE_OIDC,
                 "subject_token_type": "urn:ietf:params:oauth:token-type:jwt",
-                "token_url": "https://sts.googleapis.com/v1beta/token",
+                "token_url": "https://sts.googleapis.com/v1/token",
                 "service_account_impersonation_url": "https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/{}:generateAccessToken".format(
                     oidc_credentials.service_account_email
                 ),
