@@ -17,6 +17,8 @@
 import base64
 import calendar
 import datetime
+import getpass
+import sys
 
 import six
 from six.moves import urllib
@@ -230,3 +232,35 @@ def unpadded_urlsafe_b64encode(value):
         Union[str|bytes]: The encoded value
     """
     return base64.urlsafe_b64encode(value).rstrip(b"=")
+
+
+def get_user_password(text):
+    """Get password from user.
+
+    Override this function with a different logic if you are using this library
+    outside a CLI.
+
+    Args:
+        text (str): message for the password prompt.
+
+    Returns:
+        str: password string.
+    """
+    return getpass.getpass(text)
+
+
+def is_interactive():
+    """Check if we are in an interractive environment.
+
+    Override this function with a different logic if you are using this library
+    outside a CLI.
+
+    If the rapt token needs refreshing, the user needs to answer the challenges.
+    If the user is not in an interractive environment, the challenges can not
+    be answered and we just wait for timeout for no reason.
+
+    Returns:
+        bool: True if is interactive environment, False otherwise.
+    """
+
+    return sys.stdin.isatty()
