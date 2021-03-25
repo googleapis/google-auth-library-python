@@ -38,8 +38,10 @@ from tempfile import NamedTemporaryFile
 
 import sys
 import google.auth
+from googleapiclient import discovery
 from google.oauth2 import service_account
 import pytest
+from mock import patch
 
 # Populate values from the output of scripts/setup_external_accounts.sh.
 _AUDIENCE_OIDC = "//iam.googleapis.com/projects/79992041559/locations/global/workloadIdentityPools/pool-73wslmxn/providers/oidc-73wslmxn"
@@ -64,26 +66,18 @@ def dns_access_direct(request, project_id):
         return response.data
 
 
-def dns_access_client_library(request, project_id):
+def dns_access_client_library(_, project_id):
     service = discovery.build("dns", "v1")
     request = service.projects().get(project=project_id)
     return request.execute()
 
 
-dns_access_funcs = [dns_access_direct]
-try:
-    from googleapiclient import discovery
-
-    dns_access_funcs.append(dns_access_client_library)
-except ImportError as e:
-    if sys.version_info[0] == 3:
-        raise e
-
-
-@pytest.fixture(params=dns_access_funcs)
-def dns_access(request, http_request):
-    def wrapper(project_id):
-        return request.param(http_request, project_id)
+@pytest.fixture(params=[dns_access_direct, dns_access_client_library])
+def dns_access(request, http_request, service_account_info):
+    # Fill in the fixtures on the functions,
+    # so that we don't have to fill in the parameters manually.
+    def wrapper():
+        return request.param(http_request, service_account_info["project_id"])
 
     yield wrapper
 
@@ -106,21 +100,16 @@ def service_account_info(service_account_file):
 # Our external accounts tests involve setting up some preconditions, setting a
 # credential file, and then making sure that our client libraries can work with
 # the set credentials.
-def get_project_dns(dns_access, project_id, credential_data):
+def get_project_dns(dns_access, credential_data):
     with NamedTemporaryFile() as credfile:
         credfile.write(json.dumps(credential_data).encode("utf-8"))
         credfile.flush()
         old_credentials = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
-        os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = credfile.name
-        try:
+
+        with patch.dict(os.environ, {"GOOGLE_APPLICATION_CREDENTIALS": credfile.name}):
             # If our setup and credential file are correct,
             # discovery.build should be able to establish these as the default credentials.
-            return dns_access(project_id)
-        finally:
-            if old_credentials:
-                os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = old_credentials
-            else:
-                del os.environ["GOOGLE_APPLICATION_CREDENTIALS"]
+            return dns_access()
 
 
 # This test makes sure that setting an accesible credential file
@@ -134,7 +123,6 @@ def test_file_based_external_account(
 
         assert get_project_dns(
             dns_access,
-            service_account_info["project_id"],
             {
                 "type": "external_account",
                 "audience": _AUDIENCE_OIDC,

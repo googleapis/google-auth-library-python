@@ -1,7 +1,17 @@
 #!/bin/bash
-# Copyright 2021 Google LLC.
-# Use of this source code is governed by a BSD-style
-# license that can be found in the LICENSE file.
+# Copyright 2021 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 # This file is a mostly common setup file to ensure all workload identity
 # federation integration tests are set up in a consistent fashion across the
@@ -57,7 +67,7 @@ pool_id="pool-"$suffix
 oidc_provider_id="oidc-"$suffix
 aws_provider_id="aws-"$suffix
 
-# Fill in.
+# TODO: Fill in.
 project_id="stellar-day-254222"
 project_number="79992041559"
 aws_account_id="077071391996"
