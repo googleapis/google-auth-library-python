@@ -125,6 +125,7 @@ def _token_endpoint_request_no_throw(request, token_uri, body, access_token=None
 
     return response.status, response_data
 
+
 def _token_endpoint_request(request, token_uri, body, access_token=None):
     """Makes a request to the OAuth 2.0 authorization server's token endpoint.
 
@@ -142,7 +143,9 @@ def _token_endpoint_request(request, token_uri, body, access_token=None):
         google.auth.exceptions.RefreshError: If the token endpoint returned
             an error.
     """
-    response_status, response_data = _token_endpoint_request_no_throw(request, token_uri, body, access_token)
+    response_status, response_data = _token_endpoint_request_no_throw(
+        request, token_uri, body, access_token
+    )
     _handle_error_response(response_status, response_data)
     return response_data
 
@@ -226,7 +229,13 @@ def id_token_jwt_grant(request, token_uri, assertion):
 
 
 def _make_refresh_grant_request_no_throw(
-    request, token_uri, refresh_token, client_id, client_secret, scopes=None, rapt_token=None
+    request,
+    token_uri,
+    refresh_token,
+    client_id,
+    client_secret,
+    scopes=None,
+    rapt_token=None,
 ):
     """Implements the OAuth 2.0 refresh token grant.
 
@@ -267,7 +276,7 @@ def _make_refresh_grant_request_no_throw(
     if scopes:
         body["scope"] = " ".join(scopes)
     if rapt_token:
-        parameters['rapt'] = rapt_token
+        parameters["rapt"] = rapt_token
 
     response = request(method="POST", url=token_uri, headers=headers, body=body)
     response_body = (
@@ -292,7 +301,13 @@ def _handle_refresh_grant_response(response_data):
 
 
 def refresh_grant(
-    request, token_uri, refresh_token, client_id, client_secret, scopes=None, rapt_token=None
+    request,
+    token_uri,
+    refresh_token,
+    client_id,
+    client_secret,
+    scopes=None,
+    rapt_token=None,
 ):
     """Implements the OAuth 2.0 refresh token grant.
 
@@ -323,6 +338,8 @@ def refresh_grant(
 
     .. _rfc6748 section 6: https://tools.ietf.org/html/rfc6749#section-6
     """
-    response_status, response_data = _make_refresh_grant_request_no_throw(request, token_uri, refresh_token, client_id, scopes, rapt_token)
+    response_status, response_data = _make_refresh_grant_request_no_throw(
+        request, token_uri, refresh_token, client_id, scopes, rapt_token
+    )
     _handle_error_response(response_status, response_data)
     return _handle_refresh_grant_response(response_data)

@@ -177,7 +177,7 @@ class Credentials(credentials.ReadOnlyScoped, credentials.CredentialsWithQuotaPr
         """False: OAuth 2.0 credentials have their scopes set when
         the initial token is requested and can not be changed."""
         return False
-    
+
     @property
     def rapt_token(self):
         """Optional[str]: The OAuth 2.0 authorization server's token endpoint
@@ -197,7 +197,7 @@ class Credentials(credentials.ReadOnlyScoped, credentials.CredentialsWithQuotaPr
             scopes=self.scopes,
             default_scopes=self.default_scopes,
             quota_project_id=quota_project_id,
-            rapt_token=self.rapt_token
+            rapt_token=self.rapt_token,
         )
 
     @_helpers.copy_docstring(credentials.Credentials)

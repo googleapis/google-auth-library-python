@@ -52,11 +52,13 @@ class OAuthError(GoogleAuthError):
 
 class ReauthError(GoogleAuthError):
     """Base exception for reauthentication."""
+
     pass
 
 
 class HttpAccessTokenRefreshError(GoogleAuthError):
     """Error (with HTTP status) trying to refresh an expired access token."""
+
     def __init__(self, message, status=None):
         super(HttpAccessTokenRefreshError, self).__init__(message)
         self.status = status
@@ -67,8 +69,9 @@ class ReauthUnattendedError(ReauthError):
 
     def __init__(self):
         super(ReauthUnattendedError, self).__init__(
-            'Reauthentication challenge could not be answered because you are '
-            'not in an interactive session.')
+            "Reauthentication challenge could not be answered because you are "
+            "not in an interactive session."
+        )
 
 
 class ReauthFailError(ReauthError):
@@ -76,7 +79,8 @@ class ReauthFailError(ReauthError):
 
     def __init__(self, message=None):
         super(ReauthFailError, self).__init__(
-            'Reauthentication challenge failed. {0}'.format(message))
+            "Reauthentication challenge failed. {0}".format(message)
+        )
 
 
 class ReauthAPIError(ReauthError):
@@ -84,8 +88,8 @@ class ReauthAPIError(ReauthError):
 
     def __init__(self, api_error):
         super(ReauthAPIError, self).__init__(
-            'Reauthentication challenge failed due to API error: {0}.'.format(
-                api_error))
+            "Reauthentication challenge failed due to API error: {0}.".format(api_error)
+        )
 
 
 class ReauthAccessTokenRefreshError(ReauthError):
@@ -93,8 +97,8 @@ class ReauthAccessTokenRefreshError(ReauthError):
 
     def __init__(self, message=None, status=None):
         super(ReauthAccessTokenRefreshError, self).__init__(
-            'Failed to get an access token for reauthentication. {0}'.format(
-                message))
+            "Failed to get an access token for reauthentication. {0}".format(message)
+        )
         self.status = status
 
 
@@ -107,5 +111,6 @@ class ReauthSamlLoginRequiredError(ReauthError):
 
     def __init__(self):
         super(ReauthSamlLoginRequiredError, self).__init__(
-            'SAML login is required for the current account to complete '
-            'reauthentication.')
+            "SAML login is required for the current account to complete "
+            "reauthentication."
+        )
