@@ -39,25 +39,26 @@ _JWT_GRANT_TYPE = "urn:ietf:params:oauth:grant-type:jwt-bearer"
 _REFRESH_GRANT_TYPE = "refresh_token"
 
 
-def _handle_error_response(response_body):
+def _handle_error_response(response_status, response_data):
     """"Translates an error response into an exception.
 
     Args:
-        response_body (str): The decoded response data.
+        response_data (str): The decoded response data.
 
     Raises:
         google.auth.exceptions.RefreshError
     """
+    if response_status == http_client.OK:
+        return
     try:
-        error_data = json.loads(response_body)
         error_details = "{}: {}".format(
-            error_data["error"], error_data.get("error_description")
+            response_data["error"], response_data.get("error_description")
         )
     # If no details could be extracted, use the response data.
     except (KeyError, ValueError):
-        error_details = response_body
+        error_details = json.dumps(response_data)
 
-    raise exceptions.RefreshError(error_details, response_body)
+    raise exceptions.RefreshError(error_details, response_data)
 
 
 def _parse_expiry(response_data):
@@ -78,7 +79,7 @@ def _parse_expiry(response_data):
         return None
 
 
-def _token_endpoint_request(request, token_uri, body):
+def _token_endpoint_request_no_throw(request, token_uri, body, access_token=None):
     """Makes a request to the OAuth 2.0 authorization server's token endpoint.
 
     Args:
@@ -89,14 +90,13 @@ def _token_endpoint_request(request, token_uri, body):
         body (Mapping[str, str]): The parameters to send in the request body.
 
     Returns:
-        Mapping[str, str]: The JSON-decoded response data.
-
-    Raises:
-        google.auth.exceptions.RefreshError: If the token endpoint returned
-            an error.
+        str: The JSON-decoded response data.
     """
     body = urllib.parse.urlencode(body).encode("utf-8")
     headers = {"content-type": _URLENCODED_CONTENT_TYPE}
+
+    if access_token:
+        headers["Authorization"] = f"Bearer {access_token}"
 
     retry = 0
     # retry to fetch token for maximum of two times if any internal failure
@@ -121,8 +121,29 @@ def _token_endpoint_request(request, token_uri, body):
             ):
                 retry += 1
                 continue
-            _handle_error_response(response_body)
+            return response.status, response_data
 
+    return response.status, response_data
+
+def _token_endpoint_request(request, token_uri, body, access_token=None):
+    """Makes a request to the OAuth 2.0 authorization server's token endpoint.
+
+    Args:
+        request (google.auth.transport.Request): A callable used to make
+            HTTP requests.
+        token_uri (str): The OAuth 2.0 authorizations server's token endpoint
+            URI.
+        body (Mapping[str, str]): The parameters to send in the request body.
+
+    Returns:
+        Mapping[str, str]: The JSON-decoded response data.
+
+    Raises:
+        google.auth.exceptions.RefreshError: If the token endpoint returned
+            an error.
+    """
+    response_status, response_data = _token_endpoint_request_no_throw(request, token_uri, body, access_token)
+    _handle_error_response(response_status, response_data)
     return response_data
 
 
@@ -204,8 +225,8 @@ def id_token_jwt_grant(request, token_uri, assertion):
     return id_token, expiry, response_data
 
 
-def refresh_grant(
-    request, token_uri, refresh_token, client_id, client_secret, scopes=None
+def _make_refresh_grant_request_no_throw(
+    request, token_uri, refresh_token, client_id, client_secret, scopes=None, rapt_token=None
 ):
     """Implements the OAuth 2.0 refresh token grant.
 
@@ -236,6 +257,7 @@ def refresh_grant(
 
     .. _rfc6748 section 6: https://tools.ietf.org/html/rfc6749#section-6
     """
+    headers = {"content-type": _URLENCODED_CONTENT_TYPE}
     body = {
         "grant_type": _REFRESH_GRANT_TYPE,
         "client_id": client_id,
@@ -244,9 +266,19 @@ def refresh_grant(
     }
     if scopes:
         body["scope"] = " ".join(scopes)
+    if rapt_token:
+        parameters['rapt'] = rapt_token
 
-    response_data = _token_endpoint_request(request, token_uri, body)
+    response = request(method="POST", url=token_uri, headers=headers, body=body)
+    response_body = (
+        response.data.decode("utf-8")
+        if hasattr(response.data, "decode")
+        else response.data
+    )
+    return response.status, response_body
 
+
+def _handle_refresh_grant_response(response_data):
     try:
         access_token = response_data["access_token"]
     except KeyError as caught_exc:
@@ -257,3 +289,40 @@ def refresh_grant(
     expiry = _parse_expiry(response_data)
 
     return access_token, refresh_token, expiry, response_data
+
+
+def refresh_grant(
+    request, token_uri, refresh_token, client_id, client_secret, scopes=None, rapt_token=None
+):
+    """Implements the OAuth 2.0 refresh token grant.
+
+    For more details, see `rfc678 section 6`_.
+
+    Args:
+        request (google.auth.transport.Request): A callable used to make
+            HTTP requests.
+        token_uri (str): The OAuth 2.0 authorizations server's token endpoint
+            URI.
+        refresh_token (str): The refresh token to use to get a new access
+            token.
+        client_id (str): The OAuth 2.0 application's client ID.
+        client_secret (str): The Oauth 2.0 appliaction's client secret.
+        scopes (Optional(Sequence[str])): Scopes to request. If present, all
+            scopes must be authorized for the refresh token. Useful if refresh
+            token has a wild card scope (e.g.
+            'https://www.googleapis.com/auth/any-api').
+
+    Returns:
+        Tuple[str, Optional[str], Optional[datetime], Mapping[str, str]]: The
+            access token, new refresh token, expiration, and additional data
+            returned by the token endpoint.
+
+    Raises:
+        google.auth.exceptions.RefreshError: If the token endpoint returned
+            an error.
+
+    .. _rfc6748 section 6: https://tools.ietf.org/html/rfc6749#section-6
+    """
+    response_status, response_data = _make_refresh_grant_request_no_throw(request, token_uri, refresh_token, client_id, scopes, rapt_token)
+    _handle_error_response(response_status, response_data)
+    return _handle_refresh_grant_response(response_data)
