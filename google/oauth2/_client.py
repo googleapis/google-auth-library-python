@@ -40,7 +40,7 @@ _REFRESH_GRANT_TYPE = "refresh_token"
 
 
 def _handle_error_response(response_status, response_data):
-    """"Translates an error response into an exception.
+    """ "Translates an error response into an exception.
 
     Args:
         response_data (str): The decoded response data.
@@ -79,7 +79,9 @@ def _parse_expiry(response_data):
         return None
 
 
-def _token_endpoint_request_no_throw(request, token_uri, body, access_token=None):
+def _token_endpoint_request(
+    request, token_uri, body, access_token=None, use_json=False
+):
     """Makes a request to the OAuth 2.0 authorization server's token endpoint.
 
     Args:
@@ -90,10 +92,20 @@ def _token_endpoint_request_no_throw(request, token_uri, body, access_token=None
         body (Mapping[str, str]): The parameters to send in the request body.
 
     Returns:
-        str: The JSON-decoded response data.
+        Mapping[str, str]: The JSON-decoded response data.
+
+    Raises:
+        google.auth.exceptions.RefreshError: If the token endpoint returned
+            an error.
     """
-    body = urllib.parse.urlencode(body).encode("utf-8")
-    headers = {"content-type": _URLENCODED_CONTENT_TYPE}
+    if use_json:
+        headers = {"Content-Type": "application/json"}
+        json_body = body
+        body = None
+    else:
+        headers = {"content-type": _URLENCODED_CONTENT_TYPE}
+        json_body = None
+        body = urllib.parse.urlencode(body).encode("utf-8")
 
     if access_token:
         headers["Authorization"] = f"Bearer {access_token}"
@@ -102,7 +114,9 @@ def _token_endpoint_request_no_throw(request, token_uri, body, access_token=None
     # retry to fetch token for maximum of two times if any internal failure
     # occurs.
     while True:
-        response = request(method="POST", url=token_uri, headers=headers, body=body)
+        response = request(
+            method="POST", url=token_uri, headers=headers, body=body, json=json_body
+        )
         response_body = (
             response.data.decode("utf-8")
             if hasattr(response.data, "decode")
@@ -121,32 +135,8 @@ def _token_endpoint_request_no_throw(request, token_uri, body, access_token=None
             ):
                 retry += 1
                 continue
-            return response.status, response_data
+            _handle_error_response(response.status, response_data)
 
-    return response.status, response_data
-
-
-def _token_endpoint_request(request, token_uri, body, access_token=None):
-    """Makes a request to the OAuth 2.0 authorization server's token endpoint.
-
-    Args:
-        request (google.auth.transport.Request): A callable used to make
-            HTTP requests.
-        token_uri (str): The OAuth 2.0 authorizations server's token endpoint
-            URI.
-        body (Mapping[str, str]): The parameters to send in the request body.
-
-    Returns:
-        Mapping[str, str]: The JSON-decoded response data.
-
-    Raises:
-        google.auth.exceptions.RefreshError: If the token endpoint returned
-            an error.
-    """
-    response_status, response_data = _token_endpoint_request_no_throw(
-        request, token_uri, body, access_token
-    )
-    _handle_error_response(response_status, response_data)
     return response_data
 
 
@@ -276,7 +266,7 @@ def _make_refresh_grant_request_no_throw(
     if scopes:
         body["scope"] = " ".join(scopes)
     if rapt_token:
-        parameters["rapt"] = rapt_token
+        body["rapt"] = rapt_token
 
     response = request(method="POST", url=token_uri, headers=headers, body=body)
     response_body = (
@@ -284,10 +274,11 @@ def _make_refresh_grant_request_no_throw(
         if hasattr(response.data, "decode")
         else response.data
     )
-    return response.status, response_body
+    response_data = json.loads(response_body)
+    return response.status, response_data
 
 
-def _handle_refresh_grant_response(response_data):
+def _handle_refresh_grant_response(response_data, refresh_token):
     try:
         access_token = response_data["access_token"]
     except KeyError as caught_exc:
@@ -339,7 +330,7 @@ def refresh_grant(
     .. _rfc6748 section 6: https://tools.ietf.org/html/rfc6749#section-6
     """
     response_status, response_data = _make_refresh_grant_request_no_throw(
-        request, token_uri, refresh_token, client_id, scopes, rapt_token
+        request, token_uri, refresh_token, client_id, client_secret, scopes, rapt_token
     )
     _handle_error_response(response_status, response_data)
-    return _handle_refresh_grant_response(response_data)
+    return _handle_refresh_grant_response(response_data, refresh_token)

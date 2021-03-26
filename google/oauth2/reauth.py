@@ -79,7 +79,7 @@ def _get_challenges(
         body["oauthScopesForDomainPolicyLookup"] = requested_scopes
 
     return _client._token_endpoint_request(
-        request, _REAUTH_API + ":start", body, access_token=access_token
+        request, _REAUTH_API + ":start", body, access_token=access_token, use_json=True
     )
 
 
@@ -112,6 +112,7 @@ def _send_challenge_result(
         _REAUTH_API + f"/{session_id}:continue",
         body,
         access_token=access_token,
+        use_json=True,
     )
 
 
@@ -246,7 +247,7 @@ def get_rapt_token(
         client_secret=client_secret,
         refresh_token=refresh_token,
         token_uri=token_uri,
-        scopes=_REAUTH_SCOPE,
+        scopes=[_REAUTH_SCOPE],
     )
 
     # Get rapt token from reauth API.
@@ -294,7 +295,7 @@ def refresh_grant(
     .. _rfc6748 section 6: https://tools.ietf.org/html/rfc6749#section-6
     """
     response_status, response_data = _client._make_refresh_grant_request_no_throw(
-        request, token_uri, refresh_token, client_id, scopes, rapt_token
+        request, token_uri, refresh_token, client_id, client_secret, scopes, rapt_token
     )
     if (
         response_status != http_client.OK
@@ -308,8 +309,14 @@ def refresh_grant(
             request, client_id, client_secret, refresh_token, token_uri, scopes=scopes
         )
         response_status, response_data = _client._make_refresh_grant_request_no_throw(
-            request, token_uri, refresh_token, client_id, scopes, rapt_token
+            request,
+            token_uri,
+            refresh_token,
+            client_id,
+            client_secret,
+            scopes,
+            rapt_token,
         )
 
     _client._handle_error_response(response_status, response_data)
-    return _client._handle_refresh_grant_response(response_data)
+    return _client._handle_refresh_grant_response(response_data, refresh_token)

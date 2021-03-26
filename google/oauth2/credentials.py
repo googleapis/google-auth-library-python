@@ -41,7 +41,7 @@ from google.auth import _cloud_sdk
 from google.auth import _helpers
 from google.auth import credentials
 from google.auth import exceptions
-from google.oauth2 import _client
+from google.oauth2 import reauth
 
 
 # The Google OAuth 2.0 token endpoint. Used for authorized user credentials.
@@ -216,7 +216,7 @@ class Credentials(credentials.ReadOnlyScoped, credentials.CredentialsWithQuotaPr
 
         scopes = self._scopes if self._scopes is not None else self._default_scopes
 
-        access_token, refresh_token, expiry, grant_response = _client.refresh_grant(
+        access_token, refresh_token, expiry, grant_response = reauth.refresh_grant(
             request,
             self._token_uri,
             self._refresh_token,
