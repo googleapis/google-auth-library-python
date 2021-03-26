@@ -216,23 +216,31 @@ class Credentials(credentials.ReadOnlyScoped, credentials.CredentialsWithQuotaPr
 
         scopes = self._scopes if self._scopes is not None else self._default_scopes
 
-        access_token, refresh_token, expiry, grant_response = reauth.refresh_grant(
+        (
+            access_token,
+            refresh_token,
+            expiry,
+            grant_response,
+            rapt_token,
+        ) = reauth.refresh_grant(
             request,
             self._token_uri,
             self._refresh_token,
             self._client_id,
             self._client_secret,
-            scopes,
+            scopes=scopes,
+            rapt_token=self._rapt_token,
         )
 
         self.token = access_token
         self.expiry = expiry
         self._refresh_token = refresh_token
         self._id_token = grant_response.get("id_token")
+        self._rapt_token = rapt_token
 
-        if scopes and "scopes" in grant_response:
+        if scopes and "scope" in grant_response:
             requested_scopes = frozenset(scopes)
-            granted_scopes = frozenset(grant_response["scopes"].split())
+            granted_scopes = frozenset(grant_response["scope"].split())
             scopes_requested_but_not_granted = requested_scopes - granted_scopes
             if scopes_requested_but_not_granted:
                 raise exceptions.RefreshError(

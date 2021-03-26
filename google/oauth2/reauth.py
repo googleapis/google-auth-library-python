@@ -319,4 +319,6 @@ def refresh_grant(
         )
 
     _client._handle_error_response(response_status, response_data)
-    return _client._handle_refresh_grant_response(response_data, refresh_token)
+    return _client._handle_refresh_grant_response(response_data, refresh_token) + (
+        rapt_token,
+    )
