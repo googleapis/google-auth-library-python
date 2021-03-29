@@ -143,7 +143,7 @@ def test_file_based_external_account(
 
 # This test makes sure that setting up an http server to provide credentials
 # works to allow access to Google resources.
-def test_url_based_byoid(dns_access, oidc_credentials, service_account_info):
+def test_url_based_external_account(dns_access, oidc_credentials, service_account_info):
     class TestResponseHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         def do_GET(self):
             if self.headers["my-header"] != "expected-value":
