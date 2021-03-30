@@ -98,7 +98,7 @@ class Credentials(credentials.ReadOnlyScoped, credentials.CredentialsWithQuotaPr
             quota_project_id (Optional[str]): The project ID used for quota and billing.
                 This project may be different from the project used to
                 create the credentials.
-            rapt_token (Optional[str]): The rapt token.
+            rapt_token (Optional[str]): The reauth Proof Token.
         """
         super(Credentials, self).__init__()
         self.token = token
@@ -180,8 +180,7 @@ class Credentials(credentials.ReadOnlyScoped, credentials.CredentialsWithQuotaPr
 
     @property
     def rapt_token(self):
-        """Optional[str]: The OAuth 2.0 authorization server's token endpoint
-        URI."""
+        """Optional[str]: The reauth Proof Token."""
         return self._rapt_token
 
     @_helpers.copy_docstring(credentials.CredentialsWithQuotaProject)

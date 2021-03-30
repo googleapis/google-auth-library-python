@@ -57,12 +57,12 @@ def test__handle_error_response():
 
 
 def test__handle_error_response_non_json():
-    response_data = "Help, I'm alive"
+    response_data = {"foo": "bar"}
 
     with pytest.raises(exceptions.RefreshError) as excinfo:
         _client._handle_error_response(response_data)
 
-    assert excinfo.match(r"Help, I\'m alive")
+    assert excinfo.match(r"{\"foo\": \"bar\"}")
 
 
 @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)

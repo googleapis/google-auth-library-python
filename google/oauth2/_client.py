@@ -45,18 +45,14 @@ _REFRESH_GRANT_TYPE = "refresh_token"
 
 
 def _handle_error_response(response_data):
-    """ "Translates an error response into an exception.
+    """Translates an error response into an exception.
 
     Args:
         response_data (Mapping): The decoded response data.
 
     Raises:
-        google.auth.exceptions.RefreshError
+        google.auth.exceptions.RefreshError: The errors contained in response_data.
     """
-    if not isinstance(response_data, Mapping):
-        raise exceptions.RefreshError(
-            f"response_data is a mapping object: '{response_data}'"
-        )
     try:
         error_details = "{}: {}".format(
             response_data["error"], response_data.get("error_description")
@@ -86,10 +82,11 @@ def _parse_expiry(response_data):
         return None
 
 
-def _token_endpoint_request_no_error_check(
+def _token_endpoint_request_no_throw(
     request, token_uri, body, access_token=None, use_json=False
 ):
     """Makes a request to the OAuth 2.0 authorization server's token endpoint.
+    This function doesn't throw on response errors.
 
     Args:
         request (google.auth.transport.Request): A callable used to make
@@ -97,13 +94,13 @@ def _token_endpoint_request_no_error_check(
         token_uri (str): The OAuth 2.0 authorizations server's token endpoint
             URI.
         body (Mapping[str, str]): The parameters to send in the request body.
+        access_token (Optional(str)): The access token needed to make the request.
+        use_json (Optional(bool)): Use urlencoded format or json format for the
+            content type. The default value is False.
 
     Returns:
-        Mapping[str, str]: The JSON-decoded response data.
-
-    Raises:
-        google.auth.exceptions.RefreshError: If the token endpoint returned
-            an error.
+        Tuple(bool, Mapping[str, str]): A boolean indicating if the request is
+            successful, and a mapping for the JSON-decoded response data.
     """
     if use_json:
         headers = {"Content-Type": "application/json"}
@@ -158,6 +155,9 @@ def _token_endpoint_request(
         token_uri (str): The OAuth 2.0 authorizations server's token endpoint
             URI.
         body (Mapping[str, str]): The parameters to send in the request body.
+        access_token (Optional(str)): The access token needed to make the request.
+        use_json (Optional(bool)): Use urlencoded format or json format for the
+            content type. The default value is False.
 
     Returns:
         Mapping[str, str]: The JSON-decoded response data.
@@ -166,7 +166,7 @@ def _token_endpoint_request(
         google.auth.exceptions.RefreshError: If the token endpoint returned
             an error.
     """
-    response_status_ok, response_data = _token_endpoint_request_no_error_check(
+    response_status_ok, response_data = _token_endpoint_request_no_throw(
         request, token_uri, body, access_token=access_token, use_json=use_json
     )
     if not response_status_ok:
@@ -253,6 +253,22 @@ def id_token_jwt_grant(request, token_uri, assertion):
 
 
 def _handle_refresh_grant_response(response_data, refresh_token):
+    """Extract tokens from refresh grant response.
+
+    Args:
+        response_data (Mapping[str, str]): Refresh grant response data.
+        refresh_token (str): Current refresh token.
+
+    Returns:
+        Tuple[str, str, Optional[datetime], Mapping[str, str]]: The access token,
+            refresh token, expiration, and additional data returned by the token
+            endpoint. If response_data doesn't have refresh token, then the current
+            refresh token will be returned.
+
+    Raises:
+        google.auth.exceptions.RefreshError: If the token endpoint returned
+            an error.
+    """
     try:
         access_token = response_data["access_token"]
     except KeyError as caught_exc:
@@ -291,10 +307,11 @@ def refresh_grant(
             scopes must be authorized for the refresh token. Useful if refresh
             token has a wild card scope (e.g.
             'https://www.googleapis.com/auth/any-api').
+        rapt_token (Optional(str)): The reauth Proof Token.
 
     Returns:
-        Tuple[str, Optional[str], Optional[datetime], Mapping[str, str]]: The
-            access token, new refresh token, expiration, and additional data
+        Tuple[str, str, Optional[datetime], Mapping[str, str]]: The access
+            token, new or current refresh token, expiration, and additional data
             returned by the token endpoint.
 
     Raises:

@@ -1,4 +1,4 @@
-# Copyright 2017 Google Inc. All rights reserved.
+# Copyright 2021 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@ Credentials that use the Reauth flow must have the reauth scope,
 ``https://www.googleapis.com/auth/accounts.reauth``.
 
 This module provides a high-level function for executing the Reauth process,
-:func:`refresh_access_token`, and lower-level helpers for doing the individual
+:func:`refresh_grant`, and lower-level helpers for doing the individual
 steps of the reauth process.
 
 Those steps are:
@@ -32,17 +32,12 @@ Those steps are:
 3. Refreshing the access token using the returned rapt token.
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import json
 import sys
 
 from google.auth import exceptions
 from google.oauth2 import challenges
 from google.oauth2 import _client
-from six.moves import http_client
 from six.moves import range
 
 
@@ -64,8 +59,8 @@ def _get_challenges(
     """Does initial request to reauth API to get the challenges.
 
     Args:
-        request (Callable): callable to run http requests. Accepts uri,
-            method, body and headers. Returns a tuple: (response, content)
+        request (google.auth.transport.Request): A callable used to make
+            HTTP requests.
         supported_challenge_types (Sequence[str]): list of challenge names
             supported by the manager.
         access_token (str): Access token with reauth scopes.
@@ -89,8 +84,8 @@ def _send_challenge_result(
     """Attempt to refresh access token by sending next challenge result.
 
     Args:
-        request (Callable): callable to run http requests. Accepts uri,
-            method, body and headers. Returns a tuple: (response, content)
+        request (google.auth.transport.Request): A callable used to make
+            HTTP requests.
         session_id (str): session id returned by the initial reauth call.
         challenge_id (str): challenge id returned by the initial reauth call.
         client_input: dict with a challenge-specific client input. For example:
@@ -124,13 +119,15 @@ def _run_next_challenge(msg, request, access_token):
             https://reauth.googleapis.com/v2/sessions:start or from sending the
             previous challenge response to
             https://reauth.googleapis.com/v2/sessions/id:continue)
-        request: callable to run http requests. Accepts uri, method, body
-            and headers. Returns a tuple: (response, content)
+        request (google.auth.transport.Request): A callable used to make
+            HTTP requests.
         access_token: reauth access token
 
-    Returns: rapt token.
+    Returns:
+        dict: The response from the reauth API.
+
     Raises:
-        google.auth.exceptions.ReauthError if reauth failed
+        google.auth.exceptions.ReauthError: if reauth failed.
     """
     for challenge in msg["challenges"]:
         if challenge["status"] != "READY":
@@ -167,8 +164,8 @@ def _obtain_rapt(request, access_token, requested_scopes, rounds_num=5):
     """Given an http request method and reauth access token, get rapt token.
 
     Args:
-        request: callable to run http requests. Accepts uri, method, body
-            and headers. Returns a tuple: (response, content)
+        request (google.auth.transport.Request): A callable used to make
+            HTTP requests.
         access_token: reauth access token
         requested_scopes: scopes required by the client application
         rounds_num: max number of attempts to get a rapt after the next
@@ -176,9 +173,11 @@ def _obtain_rapt(request, access_token, requested_scopes, rounds_num=5):
             challenges + number of additional retries if the chalenge input
             wasn't accepted.
 
-    Returns: rapt token.
+    Returns:
+        str: The rapt token.
+
     Raises:
-        google.auth.exceptions.ReauthError if reauth failed
+        google.auth.exceptions.ReauthError: if reauth failed
     """
     msg = None
 
@@ -226,8 +225,8 @@ def get_rapt_token(
     """Given an http request method and refresh_token, get rapt token.
 
     Args:
-        request: callable to run http requests. Accepts uri, method, body
-            and headers. Returns a tuple: (response, content)
+        request (google.auth.transport.Request): A callable used to make
+            HTTP requests.
         client_id: client id to get access token for reauth scope.
         client_secret: client secret for the client_id
         refresh_token: refresh token to refresh access token
@@ -240,20 +239,24 @@ def get_rapt_token(
     """
     sys.stderr.write("Reauthentication required.\n")
 
-    # Get access token for reauth.
-    access_token, _, _, _ = _client.refresh_grant(
-        request=request,
-        client_id=client_id,
-        client_secret=client_secret,
-        refresh_token=refresh_token,
-        token_uri=token_uri,
-        scopes=[_REAUTH_SCOPE],
-    )
+    try:
+        # Get access token for reauth.
+        access_token, _, _, _ = _client.refresh_grant(
+            request=request,
+            client_id=client_id,
+            client_secret=client_secret,
+            refresh_token=refresh_token,
+            token_uri=token_uri,
+            scopes=[_REAUTH_SCOPE],
+        )
 
-    # Get rapt token from reauth API.
-    rapt_token = _obtain_rapt(request, access_token, requested_scopes=scopes)
+        # Get rapt token from reauth API.
+        rapt_token = _obtain_rapt(request, access_token, requested_scopes=scopes)
 
-    return rapt_token
+        return rapt_token
+    except exceptions.RefreshError as e:
+        # TODO: convert refresh error to reauth error?
+        raise e
 
 
 def refresh_grant(
@@ -305,28 +308,38 @@ def refresh_grant(
     if rapt_token:
         body["rapt"] = rapt_token
 
-    response_status_ok, response_data = _client._token_endpoint_request_no_error_check(
-        request, token_uri, body
-    )
-    if (
-        not response_status_ok
-        and response_data.get("error") == _REAUTH_NEEDED_ERROR
-        and (
-            response_data.get("error_subtype") == _REAUTH_NEEDED_ERROR_INVALID_RAPT
-            or response_data.get("error_subtype") == _REAUTH_NEEDED_ERROR_RAPT_REQUIRED
+    try:
+        response_status_ok, response_data = _client._token_endpoint_request_no_throw(
+            request, token_uri, body
         )
-    ):
-        rapt_token = get_rapt_token(
-            request, client_id, client_secret, refresh_token, token_uri, scopes=scopes
-        )
-        body["rapt"] = rapt_token
-        (
-            response_status_ok,
-            response_data,
-        ) = _client._token_endpoint_request_no_error_check(request, token_uri, body)
+        if (
+            not response_status_ok
+            and response_data.get("error") == _REAUTH_NEEDED_ERROR
+            and (
+                response_data.get("error_subtype") == _REAUTH_NEEDED_ERROR_INVALID_RAPT
+                or response_data.get("error_subtype")
+                == _REAUTH_NEEDED_ERROR_RAPT_REQUIRED
+            )
+        ):
+            rapt_token = get_rapt_token(
+                request,
+                client_id,
+                client_secret,
+                refresh_token,
+                token_uri,
+                scopes=scopes,
+            )
+            body["rapt"] = rapt_token
+            (
+                response_status_ok,
+                response_data,
+            ) = _client._token_endpoint_request_no_throw(request, token_uri, body)
 
-    if not response_status_ok:
-        _client._handle_error_response(response_data)
-    return _client._handle_refresh_grant_response(response_data, refresh_token) + (
-        rapt_token,
-    )
+        if not response_status_ok:
+            _client._handle_error_response(response_data)
+        return _client._handle_refresh_grant_response(response_data, refresh_token) + (
+            rapt_token,
+        )
+    except exceptions.RefreshError as e:
+        # TODO: convert to reauth error
+        raise e
