@@ -32,13 +32,13 @@ Those steps are:
 3. Refreshing the access token using the returned rapt token.
 """
 
-import json
 import sys
 
-from google.auth import exceptions
-from google.oauth2 import challenges
-from google.oauth2 import _client
 from six.moves import range
+
+from google.auth import exceptions
+from google.oauth2 import _client
+from google.oauth2 import challenges
 
 
 _REAUTH_SCOPE = "https://www.googleapis.com/auth/accounts.reauth"
@@ -104,7 +104,7 @@ def _send_challenge_result(
 
     return _client._token_endpoint_request(
         request,
-        _REAUTH_API + f"/{session_id}:continue",
+        _REAUTH_API + "/{}:continue".format(session_id),
         body,
         access_token=access_token,
         use_json=True,
@@ -198,7 +198,7 @@ def _obtain_rapt(request, access_token, requested_scopes, rounds_num=5):
             msg["status"] == _CHALLENGE_REQUIRED or msg["status"] == _CHALLENGE_PENDING
         ):
             raise exceptions.ReauthFailError(
-                f"Reauthentication challenge failed due to API error: {0}".format(
+                "Reauthentication challenge failed due to API error: {}".format(
                     msg["status"]
                 )
             )

@@ -23,11 +23,6 @@ For more information about the token endpoint, see
 .. _Section 3.1 of rfc6749: https://tools.ietf.org/html/rfc6749#section-3.2
 """
 
-try:
-    from collections.abc import Mapping
-# Python 2.7 compatibility
-except ImportError:  # pragma: NO COVER
-    from collections import Mapping
 import datetime
 import json
 
@@ -112,7 +107,7 @@ def _token_endpoint_request_no_throw(
         body = urllib.parse.urlencode(body).encode("utf-8")
 
     if access_token:
-        headers["Authorization"] = f"Bearer {access_token}"
+        headers["Authorization"] = "Bearer {}".format(access_token)
 
     retry = 0
     # retry to fetch token for maximum of two times if any internal failure

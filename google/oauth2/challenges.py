@@ -19,7 +19,6 @@ import abc
 import base64
 import getpass
 import sys
-import warnings
 
 import six
 
@@ -97,7 +96,7 @@ class SecurityKeyChallenge(ReauthChallenge):
             import pyu2f.convenience.authenticator
             import pyu2f.errors
             import pyu2f.model
-        except ImportError as e:
+        except ImportError:
             sys.stderr.write(
                 "pyu2f is missing. Please install pyu2f to use Security key reauth feature."
             )
