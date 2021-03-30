@@ -50,67 +50,10 @@ class OAuthError(GoogleAuthError):
     request."""
 
 
-class ReauthError(GoogleAuthError):
-    """Base exception for reauthentication."""
-
-    pass
-
-
-class HttpAccessTokenRefreshError(GoogleAuthError):
-    """Error (with HTTP status) trying to refresh an expired access token."""
-
-    def __init__(self, message, status=None):
-        super(HttpAccessTokenRefreshError, self).__init__(message)
-        self.status = status
-
-
-class ReauthUnattendedError(ReauthError):
-    """An exception for when reauth cannot be answered."""
-
-    def __init__(self):
-        super(ReauthUnattendedError, self).__init__(
-            "Reauthentication challenge could not be answered because you are "
-            "not in an interactive session."
-        )
-
-
-class ReauthFailError(ReauthError):
+class ReauthFailError(RefreshError):
     """An exception for when reauth failed."""
 
     def __init__(self, message=None):
         super(ReauthFailError, self).__init__(
             "Reauthentication challenge failed. {0}".format(message)
-        )
-
-
-class ReauthAPIError(ReauthError):
-    """An exception for when reauth API returned something we can't handle."""
-
-    def __init__(self, api_error):
-        super(ReauthAPIError, self).__init__(
-            "Reauthentication challenge failed due to API error: {0}.".format(api_error)
-        )
-
-
-class ReauthAccessTokenRefreshError(ReauthError):
-    """An exception for when we can't get an access token for reauth."""
-
-    def __init__(self, message=None, status=None):
-        super(ReauthAccessTokenRefreshError, self).__init__(
-            "Failed to get an access token for reauthentication. {0}".format(message)
-        )
-        self.status = status
-
-
-class ReauthSamlLoginRequiredError(ReauthError):
-    """An exception for when web login is required to complete reauth.
-
-    This applies to SAML users who are required to login through their IDP to
-    complete reauth.
-    """
-
-    def __init__(self):
-        super(ReauthSamlLoginRequiredError, self).__init__(
-            "SAML login is required for the current account to complete "
-            "reauthentication."
         )

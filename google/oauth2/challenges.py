@@ -16,6 +16,7 @@ import abc
 import base64
 import getpass
 import sys
+import warnings
 
 import six
 
@@ -94,6 +95,9 @@ class SecurityKeyChallenge(ReauthChallenge):
             import pyu2f.errors
             import pyu2f.model
         except ImportError as e:
+            warnings.warn(
+                "pyu2f is missing. Please install pyu2f to use Security key reauth feature."
+            )
             return None
         sk = metadata["securityKey"]
         challenges = sk["challenges"]
@@ -142,7 +146,9 @@ class SamlChallenge(ReauthChallenge):
         # Magic Arch has not fully supported returning a proper dedirect URL
         # for programmatic SAML users today. So we error our here and request
         # users to complete a web login.
-        raise exceptions.ReauthSamlLoginRequiredError()
+        raise exceptions.ReauthFailError(
+            "SAML login is required for the current account to complete reauthentication."
+        )
 
 
 AVAILABLE_CHALLENGES = {

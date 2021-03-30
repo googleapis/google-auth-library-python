@@ -198,21 +198,21 @@ def _obtain_rapt(request, access_token, requested_scopes, rounds_num=5):
         if not (
             msg["status"] == _CHALLENGE_REQUIRED or msg["status"] == _CHALLENGE_PENDING
         ):
-            raise exceptions.ReauthAPIError(
-                "Challenge status {0}".format(msg["status"])
+            raise exceptions.ReauthFailError(
+                f"Reauthentication challenge failed due to API error: {0}".format(
+                    msg["status"]
+                )
             )
 
         """Check if we are in an interractive environment.
 
         If the rapt token needs refreshing, the user needs to answer the
         challenges.
-        If the user is not in an interractive environment, the challenges can not
-        be answered and we just wait for timeout for no reason.
-
-        Returns: True if is interactive environment, False otherwise.
         """
         if not sys.stdin.isatty():
-            raise exceptions.ReauthUnattendedError()
+            raise exceptions.ReauthFailError(
+                "Reauthentication challenge could not be answered because you are not in an interactive session."
+            )
 
         msg = _run_next_challenge(msg, request, access_token)
 
