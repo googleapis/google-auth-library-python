@@ -233,30 +233,27 @@ def get_rapt_token(
         token_uri: uri to refresh access token
         scopes: scopes required by the client application
 
-    Returns: rapt token.
+    Returns:
+        str: The rapt token.
     Raises:
-        google.auth.exceptions.ReauthError if reauth failed
+        google.auth.exceptions.RefreshError: If reauth failed.
     """
     sys.stderr.write("Reauthentication required.\n")
 
-    try:
-        # Get access token for reauth.
-        access_token, _, _, _ = _client.refresh_grant(
-            request=request,
-            client_id=client_id,
-            client_secret=client_secret,
-            refresh_token=refresh_token,
-            token_uri=token_uri,
-            scopes=[_REAUTH_SCOPE],
-        )
+    # Get access token for reauth.
+    access_token, _, _, _ = _client.refresh_grant(
+        request=request,
+        client_id=client_id,
+        client_secret=client_secret,
+        refresh_token=refresh_token,
+        token_uri=token_uri,
+        scopes=[_REAUTH_SCOPE],
+    )
 
-        # Get rapt token from reauth API.
-        rapt_token = _obtain_rapt(request, access_token, requested_scopes=scopes)
+    # Get rapt token from reauth API.
+    rapt_token = _obtain_rapt(request, access_token, requested_scopes=scopes)
 
-        return rapt_token
-    except exceptions.RefreshError as e:
-        # TODO: convert refresh error to reauth error?
-        raise e
+    return rapt_token
 
 
 def refresh_grant(
@@ -268,9 +265,7 @@ def refresh_grant(
     scopes=None,
     rapt_token=None,
 ):
-    """Implements the OAuth 2.0 refresh token grant.
-
-    For more details, see `rfc678 section 6`_.
+    """Implements the reauthentication flow.
 
     Args:
         request (google.auth.transport.Request): A callable used to make
@@ -294,8 +289,6 @@ def refresh_grant(
     Raises:
         google.auth.exceptions.RefreshError: If the token endpoint returned
             an error.
-
-    .. _rfc6748 section 6: https://tools.ietf.org/html/rfc6749#section-6
     """
     body = {
         "grant_type": _client._REFRESH_GRANT_TYPE,
@@ -308,38 +301,27 @@ def refresh_grant(
     if rapt_token:
         body["rapt"] = rapt_token
 
-    try:
-        response_status_ok, response_data = _client._token_endpoint_request_no_throw(
+    response_status_ok, response_data = _client._token_endpoint_request_no_throw(
+        request, token_uri, body
+    )
+    if (
+        not response_status_ok
+        and response_data.get("error") == _REAUTH_NEEDED_ERROR
+        and (
+            response_data.get("error_subtype") == _REAUTH_NEEDED_ERROR_INVALID_RAPT
+            or response_data.get("error_subtype") == _REAUTH_NEEDED_ERROR_RAPT_REQUIRED
+        )
+    ):
+        rapt_token = get_rapt_token(
+            request, client_id, client_secret, refresh_token, token_uri, scopes=scopes
+        )
+        body["rapt"] = rapt_token
+        (response_status_ok, response_data) = _client._token_endpoint_request_no_throw(
             request, token_uri, body
         )
-        if (
-            not response_status_ok
-            and response_data.get("error") == _REAUTH_NEEDED_ERROR
-            and (
-                response_data.get("error_subtype") == _REAUTH_NEEDED_ERROR_INVALID_RAPT
-                or response_data.get("error_subtype")
-                == _REAUTH_NEEDED_ERROR_RAPT_REQUIRED
-            )
-        ):
-            rapt_token = get_rapt_token(
-                request,
-                client_id,
-                client_secret,
-                refresh_token,
-                token_uri,
-                scopes=scopes,
-            )
-            body["rapt"] = rapt_token
-            (
-                response_status_ok,
-                response_data,
-            ) = _client._token_endpoint_request_no_throw(request, token_uri, body)
 
-        if not response_status_ok:
-            _client._handle_error_response(response_data)
-        return _client._handle_refresh_grant_response(response_data, refresh_token) + (
-            rapt_token,
-        )
-    except exceptions.RefreshError as e:
-        # TODO: convert to reauth error
-        raise e
+    if not response_status_ok:
+        _client._handle_error_response(response_data)
+    return _client._handle_refresh_grant_response(response_data, refresh_token) + (
+        rapt_token,
+    )
