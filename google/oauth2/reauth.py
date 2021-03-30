@@ -294,11 +294,22 @@ def refresh_grant(
 
     .. _rfc6748 section 6: https://tools.ietf.org/html/rfc6749#section-6
     """
-    response_status, response_data = _client._make_refresh_grant_request_no_throw(
-        request, token_uri, refresh_token, client_id, client_secret, scopes, rapt_token
+    body = {
+        "grant_type": _client._REFRESH_GRANT_TYPE,
+        "client_id": client_id,
+        "client_secret": client_secret,
+        "refresh_token": refresh_token,
+    }
+    if scopes:
+        body["scope"] = " ".join(scopes)
+    if rapt_token:
+        body["rapt"] = rapt_token
+
+    response_status_ok, response_data = _client._token_endpoint_request_no_error_check(
+        request, token_uri, body
     )
     if (
-        response_status != http_client.OK
+        not response_status_ok
         and response_data.get("error") == _REAUTH_NEEDED_ERROR
         and (
             response_data.get("error_subtype") == _REAUTH_NEEDED_ERROR_INVALID_RAPT
@@ -308,17 +319,14 @@ def refresh_grant(
         rapt_token = get_rapt_token(
             request, client_id, client_secret, refresh_token, token_uri, scopes=scopes
         )
-        response_status, response_data = _client._make_refresh_grant_request_no_throw(
-            request,
-            token_uri,
-            refresh_token,
-            client_id,
-            client_secret,
-            scopes,
-            rapt_token,
-        )
+        body["rapt"] = rapt_token
+        (
+            response_status_ok,
+            response_data,
+        ) = _client._token_endpoint_request_no_error_check(request, token_uri, body)
 
-    _client._handle_error_response(response_status, response_data)
+    if not response_status_ok:
+        _client._handle_error_response(response_data)
     return _client._handle_refresh_grant_response(response_data, refresh_token) + (
         rapt_token,
     )

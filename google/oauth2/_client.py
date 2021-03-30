@@ -23,6 +23,11 @@ For more information about the token endpoint, see
 .. _Section 3.1 of rfc6749: https://tools.ietf.org/html/rfc6749#section-3.2
 """
 
+try:
+    from collections.abc import Mapping
+# Python 2.7 compatibility
+except ImportError:  # pragma: NO COVER
+    from collections import Mapping
 import datetime
 import json
 
@@ -39,17 +44,19 @@ _JWT_GRANT_TYPE = "urn:ietf:params:oauth:grant-type:jwt-bearer"
 _REFRESH_GRANT_TYPE = "refresh_token"
 
 
-def _handle_error_response(response_status, response_data):
+def _handle_error_response(response_data):
     """ "Translates an error response into an exception.
 
     Args:
-        response_data (str): The decoded response data.
+        response_data (Mapping): The decoded response data.
 
     Raises:
         google.auth.exceptions.RefreshError
     """
-    if response_status == http_client.OK:
-        return
+    if not isinstance(response_data, Mapping):
+        raise exceptions.RefreshError(
+            f"response_data is a mapping object: '{response_data}'"
+        )
     try:
         error_details = "{}: {}".format(
             response_data["error"], response_data.get("error_description")
@@ -79,7 +86,7 @@ def _parse_expiry(response_data):
         return None
 
 
-def _token_endpoint_request(
+def _token_endpoint_request_no_error_check(
     request, token_uri, body, access_token=None, use_json=False
 ):
     """Makes a request to the OAuth 2.0 authorization server's token endpoint.
@@ -135,8 +142,35 @@ def _token_endpoint_request(
             ):
                 retry += 1
                 continue
-            _handle_error_response(response.status, response_data)
+            return response.status == http_client.OK, response_data
 
+    return response.status == http_client.OK, response_data
+
+
+def _token_endpoint_request(
+    request, token_uri, body, access_token=None, use_json=False
+):
+    """Makes a request to the OAuth 2.0 authorization server's token endpoint.
+
+    Args:
+        request (google.auth.transport.Request): A callable used to make
+            HTTP requests.
+        token_uri (str): The OAuth 2.0 authorizations server's token endpoint
+            URI.
+        body (Mapping[str, str]): The parameters to send in the request body.
+
+    Returns:
+        Mapping[str, str]: The JSON-decoded response data.
+
+    Raises:
+        google.auth.exceptions.RefreshError: If the token endpoint returned
+            an error.
+    """
+    response_status_ok, response_data = _token_endpoint_request_no_error_check(
+        request, token_uri, body, access_token=access_token, use_json=use_json
+    )
+    if not response_status_ok:
+        _handle_error_response(response_data)
     return response_data
 
 
@@ -218,66 +252,6 @@ def id_token_jwt_grant(request, token_uri, assertion):
     return id_token, expiry, response_data
 
 
-def _make_refresh_grant_request_no_throw(
-    request,
-    token_uri,
-    refresh_token,
-    client_id,
-    client_secret,
-    scopes=None,
-    rapt_token=None,
-):
-    """Implements the OAuth 2.0 refresh token grant.
-
-    For more details, see `rfc678 section 6`_.
-
-    Args:
-        request (google.auth.transport.Request): A callable used to make
-            HTTP requests.
-        token_uri (str): The OAuth 2.0 authorizations server's token endpoint
-            URI.
-        refresh_token (str): The refresh token to use to get a new access
-            token.
-        client_id (str): The OAuth 2.0 application's client ID.
-        client_secret (str): The Oauth 2.0 appliaction's client secret.
-        scopes (Optional(Sequence[str])): Scopes to request. If present, all
-            scopes must be authorized for the refresh token. Useful if refresh
-            token has a wild card scope (e.g.
-            'https://www.googleapis.com/auth/any-api').
-
-    Returns:
-        Tuple[str, Optional[str], Optional[datetime], Mapping[str, str]]: The
-            access token, new refresh token, expiration, and additional data
-            returned by the token endpoint.
-
-    Raises:
-        google.auth.exceptions.RefreshError: If the token endpoint returned
-            an error.
-
-    .. _rfc6748 section 6: https://tools.ietf.org/html/rfc6749#section-6
-    """
-    headers = {"content-type": _URLENCODED_CONTENT_TYPE}
-    body = {
-        "grant_type": _REFRESH_GRANT_TYPE,
-        "client_id": client_id,
-        "client_secret": client_secret,
-        "refresh_token": refresh_token,
-    }
-    if scopes:
-        body["scope"] = " ".join(scopes)
-    if rapt_token:
-        body["rapt"] = rapt_token
-
-    response = request(method="POST", url=token_uri, headers=headers, body=body)
-    response_body = (
-        response.data.decode("utf-8")
-        if hasattr(response.data, "decode")
-        else response.data
-    )
-    response_data = json.loads(response_body)
-    return response.status, response_data
-
-
 def _handle_refresh_grant_response(response_data, refresh_token):
     try:
         access_token = response_data["access_token"]
@@ -329,8 +303,16 @@ def refresh_grant(
 
     .. _rfc6748 section 6: https://tools.ietf.org/html/rfc6749#section-6
     """
-    response_status, response_data = _make_refresh_grant_request_no_throw(
-        request, token_uri, refresh_token, client_id, client_secret, scopes, rapt_token
-    )
-    _handle_error_response(response_status, response_data)
+    body = {
+        "grant_type": _REFRESH_GRANT_TYPE,
+        "client_id": client_id,
+        "client_secret": client_secret,
+        "refresh_token": refresh_token,
+    }
+    if scopes:
+        body["scope"] = " ".join(scopes)
+    if rapt_token:
+        body["rapt"] = rapt_token
+
+    response_data = _token_endpoint_request(request, token_uri, body)
     return _handle_refresh_grant_response(response_data, refresh_token)

@@ -48,7 +48,7 @@ SCOPES_AS_STRING = (
 
 
 def test__handle_error_response():
-    response_data = json.dumps({"error": "help", "error_description": "I'm alive"})
+    response_data = {"error": "help", "error_description": "I'm alive"}
 
     with pytest.raises(exceptions.RefreshError) as excinfo:
         _client._handle_error_response(response_data)
@@ -97,6 +97,7 @@ def test__token_endpoint_request():
         url="http://example.com",
         headers={"content-type": "application/x-www-form-urlencoded"},
         body="test=params".encode("utf-8"),
+        json=None,
     )
 
     # Check result
