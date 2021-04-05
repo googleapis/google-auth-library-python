@@ -36,6 +36,7 @@ import sys
 
 from six.moves import range
 
+from google.auth import _helpers
 from google.auth import exceptions
 from google.oauth2 import _client
 from google.oauth2 import challenges
@@ -208,7 +209,7 @@ def _obtain_rapt(request, access_token, requested_scopes, rounds_num=5):
         If the rapt token needs refreshing, the user needs to answer the
         challenges.
         """
-        if not sys.stdin.isatty():
+        if not _helpers.is_interactive():
             raise exceptions.ReauthFailError(
                 "Reauthentication challenge could not be answered because you are not in an interactive session."
             )

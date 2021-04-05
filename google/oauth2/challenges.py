@@ -17,11 +17,11 @@
 
 import abc
 import base64
-import getpass
 import sys
 
 import six
 
+from google.auth import _helpers
 from google.auth import exceptions
 
 
@@ -74,7 +74,7 @@ class PasswordChallenge(ReauthChallenge):
         return True
 
     def obtain_challenge_input(self, unused_metadata):
-        passwd = getpass.getpass("Please enter your password:")
+        passwd = _helpers.get_user_password("Please enter your password:")
         if not passwd:
             passwd = " "  # avoid the server crashing in case of no password :D
         return {"credential": passwd}
