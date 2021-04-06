@@ -34,18 +34,18 @@ class ReauthChallenge(object):
 
     @property
     @abc.abstractmethod
-    def name(self):
+    def name(self):  # pragma: NO COVER
         """Returns the name of the challenge."""
         pass
 
     @property
     @abc.abstractmethod
-    def is_locally_eligible(self):
+    def is_locally_eligible(self):  # pragma: NO COVER
         """Returns true if a challenge is supported locally on this machine."""
         pass
 
     @abc.abstractmethod
-    def obtain_challenge_input(self, metadata):
+    def obtain_challenge_input(self, metadata):  # pragma: NO COVER
         """Performs logic required to obtain credentials and returns it.
 
         Args:

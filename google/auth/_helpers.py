@@ -252,8 +252,10 @@ def get_user_password(text):
 def is_interactive():
     """Check if we are in an interractive environment.
 
-    If the rapt token needs refreshing, the user needs to answer the
-    challenges.
+    Override this function with a different logic if you are using this library
+    outside a CLI.
+
+    If the rapt token needs refreshing, the user needs to answer the challenges.
     If the user is not in an interractive environment, the challenges can not
     be answered and we just wait for timeout for no reason.
 
