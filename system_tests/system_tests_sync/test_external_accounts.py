@@ -153,9 +153,16 @@ def test_url_based_external_account(dns_access, oidc_credentials, service_accoun
                 self.wfile.write(
                     json.dumps({"error": "missing header"}).encode("utf-8")
                 )
+            elif self.path != "/token":
+                self.send_response(400)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(
+                    json.dumps({"error": "incorrect token path"}).encode("utf-8")
+                )
             else:
                 self.send_response(200)
-                self.send_header("Content-Type", "text/plain")
+                self.send_header("Content-Type", "application/json")
                 self.end_headers()
                 self.wfile.write(
                     json.dumps({"access_token": oidc_credentials.token}).encode("utf-8")
@@ -190,7 +197,7 @@ def test_url_based_external_account(dns_access, oidc_credentials, service_accoun
                 "type": "external_account",
                 "audience": _AUDIENCE_OIDC,
                 "subject_token_type": "urn:ietf:params:oauth:token-type:jwt",
-                "token_url": "https://sts.googleapis.com/v1beta/token",
+                "token_url": "https://sts.googleapis.com/v1/token",
                 "service_account_impersonation_url": "https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/{}:generateAccessToken".format(
                     oidc_credentials.service_account_email
                 ),
