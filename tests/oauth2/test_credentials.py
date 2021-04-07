@@ -139,7 +139,7 @@ class TestCredentials(object):
         token = "token"
         new_rapt_token = "new_rapt_token"
         expiry = _helpers.utcnow() + datetime.timedelta(seconds=500)
-        grant_response = {"id_token": mock.sentinel.id_token}
+        grant_response = {"id_token": mock.sentinel.id_token, "scope": "email profile"}
         refresh_grant.return_value = (
             # Access token
             token,

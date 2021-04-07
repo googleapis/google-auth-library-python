@@ -289,13 +289,7 @@ def test_refresh_grant_success():
             "google.oauth2.reauth.get_rapt_token", return_value="new_rapt_token"
         ):
             assert reauth.refresh_grant(
-                MOCK_REQUEST,
-                "token_uri",
-                "refresh_token",
-                "client_id",
-                "client_secret",
-                scopes=["foo", "bar"],
-                rapt_token="rapt_token",
+                MOCK_REQUEST, "token_uri", "refresh_token", "client_id", "client_secret"
             ) == (
                 "access_token",
                 "refresh_token",
