@@ -65,7 +65,7 @@ def _get_challenges(
         supported_challenge_types (Sequence[str]): list of challenge names
             supported by the manager.
         access_token (str): Access token with reauth scopes.
-        requested_scopes (list[str]): Authorized scopes for the credentials.
+        requested_scopes (Optional(Sequence[str])): Authorized scopes for the credentials.
 
     Returns:
         dict: The response from the reauth API.
@@ -116,13 +116,13 @@ def _run_next_challenge(msg, request, access_token):
     """Get the next challenge from msg and run it.
 
     Args:
-        msg: Reauth API response body (either from the initial request to
+        msg (dict): Reauth API response body (either from the initial request to
             https://reauth.googleapis.com/v2/sessions:start or from sending the
             previous challenge response to
             https://reauth.googleapis.com/v2/sessions/id:continue)
         request (google.auth.transport.Request): A callable used to make
             HTTP requests.
-        access_token: reauth access token
+        access_token (str): reauth access token
 
     Returns:
         dict: The response from the reauth API.
@@ -132,7 +132,7 @@ def _run_next_challenge(msg, request, access_token):
     """
     for challenge in msg["challenges"]:
         if challenge["status"] != "READY":
-            # Skip non-activated challneges.
+            # Skip non-activated challenges.
             continue
         c = challenges.AVAILABLE_CHALLENGES.get(challenge["challengeType"], None)
         if not c:
@@ -167,9 +167,9 @@ def _obtain_rapt(request, access_token, requested_scopes, rounds_num=5):
     Args:
         request (google.auth.transport.Request): A callable used to make
             HTTP requests.
-        access_token: reauth access token
-        requested_scopes: scopes required by the client application
-        rounds_num: max number of attempts to get a rapt after the next
+        access_token (str): reauth access token
+        requested_scopes (Sequence[str]): scopes required by the client application
+        rounds_num (Optional(int)): max number of attempts to get a rapt after the next
             challenge, before failing the reauth. This defines total number of
             challenges + number of additional retries if the chalenge input
             wasn't accepted.
@@ -228,11 +228,11 @@ def get_rapt_token(
     Args:
         request (google.auth.transport.Request): A callable used to make
             HTTP requests.
-        client_id: client id to get access token for reauth scope.
-        client_secret: client secret for the client_id
-        refresh_token: refresh token to refresh access token
-        token_uri: uri to refresh access token
-        scopes: scopes required by the client application
+        client_id (str): client id to get access token for reauth scope.
+        client_secret (str): client secret for the client_id
+        refresh_token (str): refresh token to refresh access token
+        token_uri (str): uri to refresh access token
+        scopes (Optional(Sequence[str])): scopes required by the client application
 
     Returns:
         str: The rapt token.
@@ -281,6 +281,7 @@ def refresh_grant(
             scopes must be authorized for the refresh token. Useful if refresh
             token has a wild card scope (e.g.
             'https://www.googleapis.com/auth/any-api').
+        rapt_token (Optional(str)): The rapt token for reauth.
 
     Returns:
         Tuple[str, Optional[str], Optional[datetime], Mapping[str, str]]: The

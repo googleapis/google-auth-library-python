@@ -104,6 +104,33 @@ def test__token_endpoint_request():
     assert result == {"test": "response"}
 
 
+def test__token_endpoint_request_use_json():
+    request = make_request({"test": "response"})
+
+    result = _client._token_endpoint_request(
+        request,
+        "http://example.com",
+        {"test": "params"},
+        access_token="access_token",
+        use_json=True,
+    )
+
+    # Check request call
+    request.assert_called_with(
+        method="POST",
+        url="http://example.com",
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": "Bearer access_token",
+        },
+        body=None,
+        json={"test": "params"},
+    )
+
+    # Check result
+    assert result == {"test": "response"}
+
+
 def test__token_endpoint_request_error():
     request = make_request({}, status=http_client.BAD_REQUEST)
 
@@ -221,7 +248,12 @@ def test_refresh_grant(unused_utcnow):
     )
 
     token, refresh_token, expiry, extra_data = _client.refresh_grant(
-        request, "http://example.com", "refresh_token", "client_id", "client_secret"
+        request,
+        "http://example.com",
+        "refresh_token",
+        "client_id",
+        "client_secret",
+        rapt_token="rapt_token",
     )
 
     # Check request call
@@ -232,6 +264,7 @@ def test_refresh_grant(unused_utcnow):
             "refresh_token": "refresh_token",
             "client_id": "client_id",
             "client_secret": "client_secret",
+            "rapt": "rapt_token",
         },
     )
 

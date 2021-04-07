@@ -15,8 +15,6 @@
 """Tests for the reauth module."""
 
 import base64
-import json
-import os
 import sys
 
 import mock
@@ -73,7 +71,7 @@ def test_security_key():
             mock_authenticate.side_effect = pyu2f.errors.U2FError(
                 pyu2f.errors.U2FError.DEVICE_INELIGIBLE
             )
-            assert challenge.obtain_challenge_input(metadata) == None
+            assert challenge.obtain_challenge_input(metadata) is None
 
         with mock.patch(
             "pyu2f.convenience.authenticator.CompositeAuthenticator.Authenticate"
@@ -81,7 +79,7 @@ def test_security_key():
             mock_authenticate.side_effect = pyu2f.errors.U2FError(
                 pyu2f.errors.U2FError.TIMEOUT
             )
-            assert challenge.obtain_challenge_input(metadata) == None
+            assert challenge.obtain_challenge_input(metadata) is None
 
         with mock.patch(
             "pyu2f.convenience.authenticator.CompositeAuthenticator.Authenticate"
@@ -96,7 +94,7 @@ def test_security_key():
             "pyu2f.convenience.authenticator.CompositeAuthenticator.Authenticate"
         ) as mock_authenticate:
             mock_authenticate.side_effect = pyu2f.errors.NoDeviceFoundError()
-            assert challenge.obtain_challenge_input(metadata) == None
+            assert challenge.obtain_challenge_input(metadata) is None
 
         with mock.patch(
             "pyu2f.convenience.authenticator.CompositeAuthenticator.Authenticate"
@@ -107,7 +105,7 @@ def test_security_key():
 
         with mock.patch.dict("sys.modules"):
             sys.modules["pyu2f"] = None
-            assert challenge.obtain_challenge_input(metadata) == None
+            assert challenge.obtain_challenge_input(metadata) is None
 
 
 @mock.patch("getpass.getpass", return_value="foo")
