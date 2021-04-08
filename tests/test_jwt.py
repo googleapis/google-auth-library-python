@@ -76,11 +76,7 @@ def test_encode_extra_headers(signer):
 def test_encode_custom_alg_in_headers(signer):
     encoded = jwt.encode(signer, {}, header={"alg": "foo"})
     header = jwt.decode_header(encoded)
-    assert header == {
-        "typ": "JWT",
-        "alg": "foo",
-        "kid": signer.key_id,
-    }
+    assert header == {"typ": "JWT", "alg": "foo", "kid": signer.key_id}
 
 
 @pytest.fixture
