@@ -103,7 +103,7 @@ def service_account_info(service_account_file):
 
 
 @pytest.fixture
-def aws_credentials(service_account_file, service_account_info, authenticated_request):
+def aws_oidc_credentials(service_account_file, service_account_info, authenticated_request):
     credentials = service_account.Credentials.from_service_account_file(
         service_account_file, scopes=["https://www.googleapis.com/auth/cloud-platform"]
     )
@@ -112,7 +112,7 @@ def aws_credentials(service_account_file, service_account_info, authenticated_re
             service_account_info["client_email"]
         ),
         method="POST",
-        body=json.dumps({"audience": "104692443208068386138", "includeEmail": True}),
+        body=json.dumps({"audience": service_account_info["client_id"], "includeEmail": True}),
     )
     assert result.status == 200
 
@@ -132,6 +132,14 @@ def get_project_dns(dns_access, credential_data):
             # If our setup and credential file are correct,
             # discovery.build should be able to establish these as the default credentials.
             return dns_access()
+
+
+def get_xml_value_by_tagname(data, tagname):
+    startIndex = data.index("<{}>".format(tagname))
+    if startIndex >= 0:
+        endIndex = data.index("</{}>".format(tagname), startIndex)
+        if endIndex > startIndex:
+            return data[startIndex + len(tagname) + 2 : endIndex]
 
 
 # This test makes sure that setting an accesible credential file
@@ -231,9 +239,21 @@ def test_url_based_external_account(dns_access, oidc_credentials, service_accoun
             },
         )
 
-
+# AWS provider tests for AWS credentials
+# The test suite will also run tests for AWS credentials. This works as
+# follows. (Note prequisite setup is needed. This is documented in
+# setup_external_accounts.sh).
+# - iamcredentials:generateIdToken is used to generate a Google ID token using
+#   the service account access token. The service account client_id is used as
+#   audience.
+# - AWS STS AssumeRoleWithWebIdentity API is used to exchange this token for
+#   temporary AWS security credentials for a specified AWS ARN role.
+# - AWS_REGION, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY and AWS_SESSION_TOKEN
+#   environment variables are set using these credentials before the test is
+#   run simulating an AWS VM.
+# - The test can now be run.
 def test_aws_based_external_account(
-    aws_credentials, service_account_info, dns_access, http_request
+    aws_oidc_credentials, service_account_info, dns_access, http_request
 ):
 
     response = http_request(
@@ -245,7 +265,7 @@ def test_aws_based_external_account(
             "&RoleSessionName=python-test"
             "&RoleArn={}"
             "&WebIdentityToken={}"
-        ).format(_ROLE_AWS, aws_credentials)
+        ).format(_ROLE_AWS, aws_oidc_credentials)
     )
     assert response.status == 200
 
@@ -253,31 +273,25 @@ def test_aws_based_external_account(
     # Searching the return text manually for the start and finish tag.
     data = response.data.decode("utf-8")
 
-    def get_xml_value_by_tagname(tagname):
-        startIndex = data.index("<{}>".format(tagname))
-        if startIndex >= 0:
-            endIndex = data.index("</{}>".format(tagname), startIndex)
-            if endIndex > startIndex:
-                return data[startIndex + len(tagname) + 2 : endIndex]
-
-    os.environ["AWS_REGION"] = "us-east-2"
-    os.environ["AWS_ACCESS_KEY_ID"] = get_xml_value_by_tagname("AccessKeyId")
-    os.environ["AWS_SECRET_ACCESS_KEY"] = get_xml_value_by_tagname("SecretAccessKey")
-    os.environ["AWS_SESSION_TOKEN"] = get_xml_value_by_tagname("SessionToken")
-
-    assert get_project_dns(
-        dns_access,
-        {
-            "type": "external_account",
-            "audience": _AUDIENCE_AWS,
-            "subject_token_type": "urn:ietf:params:aws:token-type:aws4_request",
-            "token_url": "https://sts.googleapis.com/v1/token",
-            "service_account_impersonation_url": "https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/{}:generateAccessToken".format(
-                service_account_info["client_email"]
-            ),
-            "credential_source": {
-                "environment_id": "aws1",
-                "regional_cred_verification_url": "https://sts.{region}.amazonaws.com?Action=GetCallerIdentity&Version=2011-06-15",
+    with patch.dict(os.environ, {
+        "AWS_REGION": "us-east-2",
+        "AWS_ACCESS_KEY_ID": get_xml_value_by_tagname(data, "AccessKeyId"),
+        "AWS_SECRET_ACCESS_KEY": get_xml_value_by_tagname(data, "SecretAccessKey"),
+        "AWS_SESSION_TOKEN": get_xml_value_by_tagname(data, "SessionToken"),
+    }):
+        assert get_project_dns(
+            dns_access,
+            {
+                "type": "external_account",
+                "audience": _AUDIENCE_AWS,
+                "subject_token_type": "urn:ietf:params:aws:token-type:aws4_request",
+                "token_url": "https://sts.googleapis.com/v1/token",
+                "service_account_impersonation_url": "https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/{}:generateAccessToken".format(
+                    service_account_info["client_email"]
+                ),
+                "credential_source": {
+                    "environment_id": "aws1",
+                    "regional_cred_verification_url": "https://sts.{region}.amazonaws.com?Action=GetCallerIdentity&Version=2011-06-15",
+                },
             },
-        },
-    )
+        )
