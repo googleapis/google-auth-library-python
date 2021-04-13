@@ -103,7 +103,9 @@ def service_account_info(service_account_file):
 
 
 @pytest.fixture
-def aws_oidc_credentials(service_account_file, service_account_info, authenticated_request):
+def aws_oidc_credentials(
+    service_account_file, service_account_info, authenticated_request
+):
     credentials = service_account.Credentials.from_service_account_file(
         service_account_file, scopes=["https://www.googleapis.com/auth/cloud-platform"]
     )
@@ -112,7 +114,9 @@ def aws_oidc_credentials(service_account_file, service_account_info, authenticat
             service_account_info["client_email"]
         ),
         method="POST",
-        body=json.dumps({"audience": service_account_info["client_id"], "includeEmail": True}),
+        body=json.dumps(
+            {"audience": service_account_info["client_id"], "includeEmail": True}
+        ),
     )
     assert result.status == 200
 
@@ -239,6 +243,7 @@ def test_url_based_external_account(dns_access, oidc_credentials, service_accoun
             },
         )
 
+
 # AWS provider tests for AWS credentials
 # The test suite will also run tests for AWS credentials. This works as
 # follows. (Note prequisite setup is needed. This is documented in
@@ -273,12 +278,15 @@ def test_aws_based_external_account(
     # Searching the return text manually for the start and finish tag.
     data = response.data.decode("utf-8")
 
-    with patch.dict(os.environ, {
-        "AWS_REGION": "us-east-2",
-        "AWS_ACCESS_KEY_ID": get_xml_value_by_tagname(data, "AccessKeyId"),
-        "AWS_SECRET_ACCESS_KEY": get_xml_value_by_tagname(data, "SecretAccessKey"),
-        "AWS_SESSION_TOKEN": get_xml_value_by_tagname(data, "SessionToken"),
-    }):
+    with patch.dict(
+        os.environ,
+        {
+            "AWS_REGION": "us-east-2",
+            "AWS_ACCESS_KEY_ID": get_xml_value_by_tagname(data, "AccessKeyId"),
+            "AWS_SECRET_ACCESS_KEY": get_xml_value_by_tagname(data, "SecretAccessKey"),
+            "AWS_SESSION_TOKEN": get_xml_value_by_tagname(data, "SessionToken"),
+        },
+    ):
         assert get_project_dns(
             dns_access,
             {
