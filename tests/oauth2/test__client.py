@@ -95,7 +95,7 @@ def test__token_endpoint_request():
     request.assert_called_with(
         method="POST",
         url="http://example.com",
-        headers={"content-type": "application/x-www-form-urlencoded"},
+        headers={"Content-Type": "application/x-www-form-urlencoded"},
         body="test=params".encode("utf-8"),
     )
 

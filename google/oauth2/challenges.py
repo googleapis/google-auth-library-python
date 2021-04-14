@@ -17,6 +17,7 @@
 
 import abc
 import base64
+import getpass
 import sys
 
 import six
@@ -28,6 +29,21 @@ from google.auth import exceptions
 REAUTH_ORIGIN = "https://accounts.google.com"
 
 
+def get_user_password(text):
+    """Get password from user.
+
+    Override this function with a different logic if you are using this library
+    outside a CLI.
+
+    Args:
+        text (str): message for the password prompt.
+
+    Returns:
+        str: password string.
+    """
+    return getpass.getpass(text)
+
+
 @six.add_metaclass(abc.ABCMeta)
 class ReauthChallenge(object):
     """Base class for reauth challenges."""
@@ -36,20 +52,20 @@ class ReauthChallenge(object):
     @abc.abstractmethod
     def name(self):  # pragma: NO COVER
         """Returns the name of the challenge."""
-        pass
+        raise NotImplementedError("name property must be implemented")
 
     @property
     @abc.abstractmethod
     def is_locally_eligible(self):  # pragma: NO COVER
         """Returns true if a challenge is supported locally on this machine."""
-        pass
+        raise NotImplementedError("is_locally_eligible property must be implemented")
 
     @abc.abstractmethod
     def obtain_challenge_input(self, metadata):  # pragma: NO COVER
         """Performs logic required to obtain credentials and returns it.
 
         Args:
-            metadata: challenge metadata returned in the 'challenges' field in
+            metadata (Mapping): challenge metadata returned in the 'challenges' field in
                 the initial reauth request. Includes the 'challengeType' field
                 and other challenge-specific fields.
 
@@ -57,9 +73,9 @@ class ReauthChallenge(object):
             response that will be send to the reauth service as the content of
             the 'proposalResponse' field in the request body. Usually a dict
             with the keys specific to the challenge. For example,
-            {'credential': password} for password challenge.
+            ``{'credential': password}`` for password challenge.
         """
-        pass
+        raise NotImplementedError("obtain_challenge_input method must be implemented")
 
 
 class PasswordChallenge(ReauthChallenge):
@@ -73,8 +89,9 @@ class PasswordChallenge(ReauthChallenge):
     def is_locally_eligible(self):
         return True
 
+    @_helpers.copy_docstring(ReauthChallenge)
     def obtain_challenge_input(self, unused_metadata):
-        passwd = _helpers.get_user_password("Please enter your password:")
+        passwd = get_user_password("Please enter your password:")
         if not passwd:
             passwd = " "  # avoid the server crashing in case of no password :D
         return {"credential": passwd}
@@ -91,6 +108,7 @@ class SecurityKeyChallenge(ReauthChallenge):
     def is_locally_eligible(self):
         return True
 
+    @_helpers.copy_docstring(ReauthChallenge)
     def obtain_challenge_input(self, metadata):
         try:
             import pyu2f.convenience.authenticator

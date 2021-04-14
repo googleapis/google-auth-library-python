@@ -14,7 +14,6 @@
 
 import datetime
 
-import mock
 import pytest
 from six.moves import urllib
 
@@ -169,13 +168,3 @@ def test_unpadded_urlsafe_b64encode():
 
     for case, expected in cases:
         assert _helpers.unpadded_urlsafe_b64encode(case) == expected
-
-
-def test_get_user_password():
-    with mock.patch("getpass.getpass", return_value="foo"):
-        assert _helpers.get_user_password("") == "foo"
-
-
-def test_is_interactive():
-    with mock.patch("sys.stdin.isatty", return_value=True):
-        assert _helpers.is_interactive()

@@ -102,7 +102,7 @@ def _token_endpoint_request_no_throw(
         headers = {"Content-Type": _JSON_CONTENT_TYPE}
         body = json.dumps(body).encode("utf-8")
     else:
-        headers = {"content-type": _URLENCODED_CONTENT_TYPE}
+        headers = {"Content-Type": _URLENCODED_CONTENT_TYPE}
         body = urllib.parse.urlencode(body).encode("utf-8")
 
     if access_token:

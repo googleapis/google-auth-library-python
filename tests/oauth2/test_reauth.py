@@ -51,6 +51,11 @@ class MockChallenge(object):
         return self.challenge_input
 
 
+def test_is_interactive():
+    with mock.patch("sys.stdin.isatty", return_value=True):
+        assert reauth.is_interactive()
+
+
 def test__get_challenges():
     with mock.patch(
         "google.oauth2._client._token_endpoint_request"
@@ -182,7 +187,7 @@ def test__obtain_rapt_authenticated_after_run_next_challenge():
                 CHALLENGES_RESPONSE_AUTHENTICATED,
             ],
         ):
-            with mock.patch("google.auth._helpers.is_interactive", return_value=True):
+            with mock.patch("google.oauth2.reauth.is_interactive", return_value=True):
                 assert (
                     reauth._obtain_rapt(MOCK_REQUEST, "token", None) == "new_rapt_token"
                 )
@@ -204,7 +209,7 @@ def test__obtain_rapt_not_interactive():
         "google.oauth2.reauth._get_challenges",
         return_value=CHALLENGES_RESPONSE_TEMPLATE,
     ):
-        with mock.patch("google.auth._helpers.is_interactive", return_value=False):
+        with mock.patch("google.oauth2.reauth.is_interactive", return_value=False):
             with pytest.raises(exceptions.ReauthFailError) as excinfo:
                 reauth._obtain_rapt(MOCK_REQUEST, "token", None)
             assert excinfo.match(r"not in an interactive session")

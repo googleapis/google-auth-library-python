@@ -36,7 +36,6 @@ import sys
 
 from six.moves import range
 
-from google.auth import _helpers
 from google.auth import exceptions
 from google.oauth2 import _client
 from google.oauth2 import challenges
@@ -57,6 +56,23 @@ _CHALLENGE_PENDING = "CHALLENGE_PENDING"
 # Override this global variable to set custom max number of rounds of reauth
 # challenges should be run.
 RUN_CHALLENGE_RETRY_LIMIT = 5
+
+
+def is_interactive():
+    """Check if we are in an interractive environment.
+
+    Override this function with a different logic if you are using this library
+    outside a CLI.
+
+    If the rapt token needs refreshing, the user needs to answer the challenges.
+    If the user is not in an interractive environment, the challenges can not
+    be answered and we just wait for timeout for no reason.
+
+    Returns:
+        bool: True if is interactive environment, False otherwise.
+    """
+
+    return sys.stdin.isatty()
 
 
 def _get_challenges(
@@ -201,7 +217,7 @@ def _obtain_rapt(request, access_token, requested_scopes):
                 )
             )
 
-        if not _helpers.is_interactive():
+        if not is_interactive():
             raise exceptions.ReauthFailError(
                 "Reauthentication challenge could not be answered because you are not"
                 " in an interactive session."
@@ -213,7 +229,7 @@ def _obtain_rapt(request, access_token, requested_scopes):
             return msg["encodedProofOfReauthToken"]
 
     # If we got here it means we didn't get authenticated.
-    raise exceptions.ReauthFailError()
+    raise exceptions.ReauthFailError("Failed to obtain rapt token.")
 
 
 def get_rapt_token(

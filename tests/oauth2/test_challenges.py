@@ -25,6 +25,11 @@ from google.auth import exceptions
 from google.oauth2 import challenges
 
 
+def test_get_user_password():
+    with mock.patch("getpass.getpass", return_value="foo"):
+        assert challenges.get_user_password("") == "foo"
+
+
 def test_security_key():
     metadata = {
         "status": "READY",
