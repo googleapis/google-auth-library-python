@@ -48,7 +48,7 @@ version = version["__version__"]
 
 setup(
     name="google-auth",
-    version=version,
+    version=setuptools.sic(version),
     author="Google Cloud Platform",
     author_email="googleapis-packages@google.com",
     description="Google Authentication Library",
