@@ -15,8 +15,7 @@
 import io
 import os
 
-from setuptools import find_packages
-from setuptools import setup
+import setuptools
 
 
 DEPENDENCIES = (
@@ -26,7 +25,7 @@ DEPENDENCIES = (
     # https://github.com/sybrenstuvel/python-rsa/issues/152#issuecomment-643470233
     'rsa<4.6; python_version < "3.6"',
     'rsa>=3.1.4,<5; python_version >= "3.6"',
-    "setuptools>=40.3.0",
+    "setuptools>=46.1.0",
     "six>=1.9.0",
 )
 
@@ -46,7 +45,7 @@ with open(os.path.join(package_root, "google/auth/version.py")) as fp:
     exec(fp.read(), version)
 version = version["__version__"]
 
-setup(
+setuptools.setup(
     name="google-auth",
     version=setuptools.sic(version),
     author="Google Cloud Platform",
@@ -54,7 +53,7 @@ setup(
     description="Google Authentication Library",
     long_description=long_description,
     url="https://github.com/googleapis/google-auth-library-python",
-    packages=find_packages(exclude=("tests*", "system_tests*")),
+    packages=setuptools.find_packages(exclude=("tests*", "system_tests*")),
     namespace_packages=("google",),
     install_requires=DEPENDENCIES,
     extras_require=extras,
