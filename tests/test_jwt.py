@@ -146,7 +146,9 @@ def test_decode_valid_with_audience(token_factory):
 
 def test_decode_valid_with_audience_list(token_factory):
     payload = jwt.decode(
-        token_factory(), certs=PUBLIC_CERT_BYTES, audience=["audience@example.com", "another_audience@example.com"]
+        token_factory(),
+        certs=PUBLIC_CERT_BYTES,
+        audience=["audience@example.com", "another_audience@example.com"],
     )
     assert payload["aud"] == "audience@example.com"
     assert payload["user"] == "billy bob"
