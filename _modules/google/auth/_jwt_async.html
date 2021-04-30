@@ -1,0 +1,286 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>google.auth._jwt_async &#8212; google-auth 1.30.0 documentation</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script src="../../../_static/jquery.js"></script>
+    <script src="../../../_static/underscore.js"></script>
+    <script src="../../../_static/doctools.js"></script>
+    <script src="../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for google.auth._jwt_async</h1><div class="highlight"><pre>
+<span></span><span class="c1"># Copyright 2020 Google LLC</span>
+<span class="c1">#</span>
+<span class="c1"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c1"># you may not use this file except in compliance with the License.</span>
+<span class="c1"># You may obtain a copy of the License at</span>
+<span class="c1">#</span>
+<span class="c1">#      http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c1">#</span>
+<span class="c1"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c1"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c1"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c1"># See the License for the specific language governing permissions and</span>
+<span class="c1"># limitations under the License.</span>
+
+<span class="sd">&quot;&quot;&quot;JSON Web Tokens</span>
+
+<span class="sd">Provides support for creating (encoding) and verifying (decoding) JWTs,</span>
+<span class="sd">especially JWTs generated and consumed by Google infrastructure.</span>
+
+<span class="sd">See `rfc7519`_ for more details on JWTs.</span>
+
+<span class="sd">To encode a JWT use :func:`encode`::</span>
+
+<span class="sd">    from google.auth import crypt</span>
+<span class="sd">    from google.auth import jwt_async</span>
+
+<span class="sd">    signer = crypt.Signer(private_key)</span>
+<span class="sd">    payload = {&#39;some&#39;: &#39;payload&#39;}</span>
+<span class="sd">    encoded = jwt_async.encode(signer, payload)</span>
+
+<span class="sd">To decode a JWT and verify claims use :func:`decode`::</span>
+
+<span class="sd">    claims = jwt_async.decode(encoded, certs=public_certs)</span>
+
+<span class="sd">You can also skip verification::</span>
+
+<span class="sd">    claims = jwt_async.decode(encoded, verify=False)</span>
+
+<span class="sd">.. _rfc7519: https://tools.ietf.org/html/rfc7519</span>
+
+
+<span class="sd">NOTE: This async support is experimental and marked internal. This surface may</span>
+<span class="sd">change in minor releases.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">google.auth</span>
+<span class="kn">from</span> <span class="nn">google.auth</span> <span class="kn">import</span> <span class="n">jwt</span>
+
+
+<div class="viewcode-block" id="encode"><a class="viewcode-back" href="../../../reference/google.auth._jwt_async.html#google.auth._jwt_async.encode">[docs]</a><span class="k">def</span> <span class="nf">encode</span><span class="p">(</span><span class="n">signer</span><span class="p">,</span> <span class="n">payload</span><span class="p">,</span> <span class="n">header</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">key_id</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Make a signed JWT.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        signer (google.auth.crypt.Signer): The signer used to sign the JWT.</span>
+<span class="sd">        payload (Mapping[str, str]): The JWT payload.</span>
+<span class="sd">        header (Mapping[str, str]): Additional JWT header payload.</span>
+<span class="sd">        key_id (str): The key id to add to the JWT header. If the</span>
+<span class="sd">            signer has a key id it will be used as the default. If this is</span>
+<span class="sd">            specified it will override the signer&#39;s key id.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        bytes: The encoded JWT.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">jwt</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="n">signer</span><span class="p">,</span> <span class="n">payload</span><span class="p">,</span> <span class="n">header</span><span class="p">,</span> <span class="n">key_id</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="decode"><a class="viewcode-back" href="../../../reference/google.auth._jwt_async.html#google.auth._jwt_async.decode">[docs]</a><span class="k">def</span> <span class="nf">decode</span><span class="p">(</span><span class="n">token</span><span class="p">,</span> <span class="n">certs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">verify</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">audience</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Decode and verify a JWT.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        token (str): The encoded JWT.</span>
+<span class="sd">        certs (Union[str, bytes, Mapping[str, Union[str, bytes]]]): The</span>
+<span class="sd">            certificate used to validate the JWT signature. If bytes or string,</span>
+<span class="sd">            it must the the public key certificate in PEM format. If a mapping,</span>
+<span class="sd">            it must be a mapping of key IDs to public key certificates in PEM</span>
+<span class="sd">            format. The mapping must contain the same key ID that&#39;s specified</span>
+<span class="sd">            in the token&#39;s header.</span>
+<span class="sd">        verify (bool): Whether to perform signature and claim validation.</span>
+<span class="sd">            Verification is done by default.</span>
+<span class="sd">        audience (str): The audience claim, &#39;aud&#39;, that this JWT should</span>
+<span class="sd">            contain. If None then the JWT&#39;s &#39;aud&#39; parameter is not verified.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Mapping[str, str]: The deserialized JSON payload in the JWT.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        ValueError: if any verification checks failed.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">return</span> <span class="n">jwt</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="n">token</span><span class="p">,</span> <span class="n">certs</span><span class="p">,</span> <span class="n">verify</span><span class="p">,</span> <span class="n">audience</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Credentials"><a class="viewcode-back" href="../../../reference/google.auth._jwt_async.html#google.auth._jwt_async.Credentials">[docs]</a><span class="k">class</span> <span class="nc">Credentials</span><span class="p">(</span>
+    <span class="n">jwt</span><span class="o">.</span><span class="n">Credentials</span><span class="p">,</span>
+    <span class="n">google</span><span class="o">.</span><span class="n">auth</span><span class="o">.</span><span class="n">_credentials_async</span><span class="o">.</span><span class="n">Signing</span><span class="p">,</span>
+    <span class="n">google</span><span class="o">.</span><span class="n">auth</span><span class="o">.</span><span class="n">_credentials_async</span><span class="o">.</span><span class="n">Credentials</span><span class="p">,</span>
+<span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Credentials that use a JWT as the bearer token.</span>
+
+<span class="sd">    These credentials require an &quot;audience&quot; claim. This claim identifies the</span>
+<span class="sd">    intended recipient of the bearer token.</span>
+
+<span class="sd">    The constructor arguments determine the claims for the JWT that is</span>
+<span class="sd">    sent with requests. Usually, you&#39;ll construct these credentials with</span>
+<span class="sd">    one of the helper constructors as shown in the next section.</span>
+
+<span class="sd">    To create JWT credentials using a Google service account private key</span>
+<span class="sd">    JSON file::</span>
+
+<span class="sd">        audience = &#39;https://pubsub.googleapis.com/google.pubsub.v1.Publisher&#39;</span>
+<span class="sd">        credentials = jwt_async.Credentials.from_service_account_file(</span>
+<span class="sd">            &#39;service-account.json&#39;,</span>
+<span class="sd">            audience=audience)</span>
+
+<span class="sd">    If you already have the service account file loaded and parsed::</span>
+
+<span class="sd">        service_account_info = json.load(open(&#39;service_account.json&#39;))</span>
+<span class="sd">        credentials = jwt_async.Credentials.from_service_account_info(</span>
+<span class="sd">            service_account_info,</span>
+<span class="sd">            audience=audience)</span>
+
+<span class="sd">    Both helper methods pass on arguments to the constructor, so you can</span>
+<span class="sd">    specify the JWT claims::</span>
+
+<span class="sd">        credentials = jwt_async.Credentials.from_service_account_file(</span>
+<span class="sd">            &#39;service-account.json&#39;,</span>
+<span class="sd">            audience=audience,</span>
+<span class="sd">            additional_claims={&#39;meta&#39;: &#39;data&#39;})</span>
+
+<span class="sd">    You can also construct the credentials directly if you have a</span>
+<span class="sd">    :class:`~google.auth.crypt.Signer` instance::</span>
+
+<span class="sd">        credentials = jwt_async.Credentials(</span>
+<span class="sd">            signer,</span>
+<span class="sd">            issuer=&#39;your-issuer&#39;,</span>
+<span class="sd">            subject=&#39;your-subject&#39;,</span>
+<span class="sd">            audience=audience)</span>
+
+<span class="sd">    The claims are considered immutable. If you want to modify the claims,</span>
+<span class="sd">    you can easily create another instance using :meth:`with_claims`::</span>
+
+<span class="sd">        new_audience = (</span>
+<span class="sd">            &#39;https://pubsub.googleapis.com/google.pubsub.v1.Subscriber&#39;)</span>
+<span class="sd">        new_credentials = credentials.with_claims(audience=new_audience)</span>
+<span class="sd">    &quot;&quot;&quot;</span></div>
+
+
+<div class="viewcode-block" id="OnDemandCredentials"><a class="viewcode-back" href="../../../reference/google.auth._jwt_async.html#google.auth._jwt_async.OnDemandCredentials">[docs]</a><span class="k">class</span> <span class="nc">OnDemandCredentials</span><span class="p">(</span>
+    <span class="n">jwt</span><span class="o">.</span><span class="n">OnDemandCredentials</span><span class="p">,</span>
+    <span class="n">google</span><span class="o">.</span><span class="n">auth</span><span class="o">.</span><span class="n">_credentials_async</span><span class="o">.</span><span class="n">Signing</span><span class="p">,</span>
+    <span class="n">google</span><span class="o">.</span><span class="n">auth</span><span class="o">.</span><span class="n">_credentials_async</span><span class="o">.</span><span class="n">Credentials</span><span class="p">,</span>
+<span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;On-demand JWT credentials.</span>
+
+<span class="sd">    Like :class:`Credentials`, this class uses a JWT as the bearer token for</span>
+<span class="sd">    authentication. However, this class does not require the audience at</span>
+<span class="sd">    construction time. Instead, it will generate a new token on-demand for</span>
+<span class="sd">    each request using the request URI as the audience. It caches tokens</span>
+<span class="sd">    so that multiple requests to the same URI do not incur the overhead</span>
+<span class="sd">    of generating a new token every time.</span>
+
+<span class="sd">    This behavior is especially useful for `gRPC`_ clients. A gRPC service may</span>
+<span class="sd">    have multiple audience and gRPC clients may not know all of the audiences</span>
+<span class="sd">    required for accessing a particular service. With these credentials,</span>
+<span class="sd">    no knowledge of the audiences is required ahead of time.</span>
+
+<span class="sd">    .. _grpc: http://www.grpc.io/</span>
+<span class="sd">    &quot;&quot;&quot;</span></div>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../../index.html">google-auth</a></h1>
+
+
+
+<p class="blurb">Google Auth Library for Python</p>
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=GoogleCloudPlatform&repo=google-auth-library-python&type=watch&count=true&size=large&v=2"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+
+    
+
+<p>
+<a class="badge" href="https://travis-ci.org/GoogleCloudPlatform/google-auth-library-python">
+    <img
+        alt="https://secure.travis-ci.org/GoogleCloudPlatform/google-auth-library-python.svg?branch=master"
+        src="https://secure.travis-ci.org/GoogleCloudPlatform/google-auth-library-python.svg?branch=master"
+    />
+</a>
+</p>
+
+
+<h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../user-guide.html">User Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../reference/modules.html">Reference</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2016, Google, Inc..
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.4.4</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+    <a href="https://github.com/GoogleCloudPlatform/google-auth-library-python" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

@@ -1,0 +1,966 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>google.auth.jwt &#8212; google-auth 1.30.0 documentation</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script src="../../../_static/jquery.js"></script>
+    <script src="../../../_static/underscore.js"></script>
+    <script src="../../../_static/doctools.js"></script>
+    <script src="../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for google.auth.jwt</h1><div class="highlight"><pre>
+<span></span><span class="c1"># Copyright 2016 Google LLC</span>
+<span class="c1">#</span>
+<span class="c1"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c1"># you may not use this file except in compliance with the License.</span>
+<span class="c1"># You may obtain a copy of the License at</span>
+<span class="c1">#</span>
+<span class="c1">#      http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c1">#</span>
+<span class="c1"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c1"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c1"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c1"># See the License for the specific language governing permissions and</span>
+<span class="c1"># limitations under the License.</span>
+
+<span class="sd">&quot;&quot;&quot;JSON Web Tokens</span>
+
+<span class="sd">Provides support for creating (encoding) and verifying (decoding) JWTs,</span>
+<span class="sd">especially JWTs generated and consumed by Google infrastructure.</span>
+
+<span class="sd">See `rfc7519`_ for more details on JWTs.</span>
+
+<span class="sd">To encode a JWT use :func:`encode`::</span>
+
+<span class="sd">    from google.auth import crypt</span>
+<span class="sd">    from google.auth import jwt</span>
+
+<span class="sd">    signer = crypt.Signer(private_key)</span>
+<span class="sd">    payload = {&#39;some&#39;: &#39;payload&#39;}</span>
+<span class="sd">    encoded = jwt.encode(signer, payload)</span>
+
+<span class="sd">To decode a JWT and verify claims use :func:`decode`::</span>
+
+<span class="sd">    claims = jwt.decode(encoded, certs=public_certs)</span>
+
+<span class="sd">You can also skip verification::</span>
+
+<span class="sd">    claims = jwt.decode(encoded, verify=False)</span>
+
+<span class="sd">.. _rfc7519: https://tools.ietf.org/html/rfc7519</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">collections.abc</span> <span class="kn">import</span> <span class="n">Mapping</span>
+<span class="c1"># Python 2.7 compatibility</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>  <span class="c1"># pragma: NO COVER</span>
+    <span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">Mapping</span>
+<span class="kn">import</span> <span class="nn">copy</span>
+<span class="kn">import</span> <span class="nn">datetime</span>
+<span class="kn">import</span> <span class="nn">json</span>
+
+<span class="kn">import</span> <span class="nn">cachetools</span>
+<span class="kn">import</span> <span class="nn">six</span>
+<span class="kn">from</span> <span class="nn">six.moves</span> <span class="kn">import</span> <span class="n">urllib</span>
+
+<span class="kn">from</span> <span class="nn">google.auth</span> <span class="kn">import</span> <span class="n">_helpers</span>
+<span class="kn">from</span> <span class="nn">google.auth</span> <span class="kn">import</span> <span class="n">_service_account_info</span>
+<span class="kn">from</span> <span class="nn">google.auth</span> <span class="kn">import</span> <span class="n">crypt</span>
+<span class="kn">from</span> <span class="nn">google.auth</span> <span class="kn">import</span> <span class="n">exceptions</span>
+<span class="kn">import</span> <span class="nn">google.auth.credentials</span>
+
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">google.auth.crypt</span> <span class="kn">import</span> <span class="n">es256</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>  <span class="c1"># pragma: NO COVER</span>
+    <span class="n">es256</span> <span class="o">=</span> <span class="kc">None</span>
+
+<span class="n">_DEFAULT_TOKEN_LIFETIME_SECS</span> <span class="o">=</span> <span class="mi">3600</span>  <span class="c1"># 1 hour in seconds</span>
+<span class="n">_DEFAULT_MAX_CACHE_SIZE</span> <span class="o">=</span> <span class="mi">10</span>
+<span class="n">_ALGORITHM_TO_VERIFIER_CLASS</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;RS256&quot;</span><span class="p">:</span> <span class="n">crypt</span><span class="o">.</span><span class="n">RSAVerifier</span><span class="p">}</span>
+<span class="n">_CRYPTOGRAPHY_BASED_ALGORITHMS</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">([</span><span class="s2">&quot;ES256&quot;</span><span class="p">])</span>
+
+<span class="k">if</span> <span class="n">es256</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># pragma: NO COVER</span>
+    <span class="n">_ALGORITHM_TO_VERIFIER_CLASS</span><span class="p">[</span><span class="s2">&quot;ES256&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">es256</span><span class="o">.</span><span class="n">ES256Verifier</span>
+
+
+<div class="viewcode-block" id="encode"><a class="viewcode-back" href="../../../reference/google.auth.jwt.html#google.auth._jwt_async.encode">[docs]</a><span class="k">def</span> <span class="nf">encode</span><span class="p">(</span><span class="n">signer</span><span class="p">,</span> <span class="n">payload</span><span class="p">,</span> <span class="n">header</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">key_id</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Make a signed JWT.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        signer (google.auth.crypt.Signer): The signer used to sign the JWT.</span>
+<span class="sd">        payload (Mapping[str, str]): The JWT payload.</span>
+<span class="sd">        header (Mapping[str, str]): Additional JWT header payload.</span>
+<span class="sd">        key_id (str): The key id to add to the JWT header. If the</span>
+<span class="sd">            signer has a key id it will be used as the default. If this is</span>
+<span class="sd">            specified it will override the signer&#39;s key id.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        bytes: The encoded JWT.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">header</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">header</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="k">if</span> <span class="n">key_id</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">key_id</span> <span class="o">=</span> <span class="n">signer</span><span class="o">.</span><span class="n">key_id</span>
+
+    <span class="n">header</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="s2">&quot;typ&quot;</span><span class="p">:</span> <span class="s2">&quot;JWT&quot;</span><span class="p">})</span>
+
+    <span class="k">if</span> <span class="s2">&quot;alg&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">header</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">es256</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">signer</span><span class="p">,</span> <span class="n">es256</span><span class="o">.</span><span class="n">ES256Signer</span><span class="p">):</span>
+            <span class="n">header</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="s2">&quot;alg&quot;</span><span class="p">:</span> <span class="s2">&quot;ES256&quot;</span><span class="p">})</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">header</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="s2">&quot;alg&quot;</span><span class="p">:</span> <span class="s2">&quot;RS256&quot;</span><span class="p">})</span>
+
+    <span class="k">if</span> <span class="n">key_id</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">header</span><span class="p">[</span><span class="s2">&quot;kid&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">key_id</span>
+
+    <span class="n">segments</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">_helpers</span><span class="o">.</span><span class="n">unpadded_urlsafe_b64encode</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">header</span><span class="p">)</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)),</span>
+        <span class="n">_helpers</span><span class="o">.</span><span class="n">unpadded_urlsafe_b64encode</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">payload</span><span class="p">)</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)),</span>
+    <span class="p">]</span>
+
+    <span class="n">signing_input</span> <span class="o">=</span> <span class="sa">b</span><span class="s2">&quot;.&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">segments</span><span class="p">)</span>
+    <span class="n">signature</span> <span class="o">=</span> <span class="n">signer</span><span class="o">.</span><span class="n">sign</span><span class="p">(</span><span class="n">signing_input</span><span class="p">)</span>
+    <span class="n">segments</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">_helpers</span><span class="o">.</span><span class="n">unpadded_urlsafe_b64encode</span><span class="p">(</span><span class="n">signature</span><span class="p">))</span>
+
+    <span class="k">return</span> <span class="sa">b</span><span class="s2">&quot;.&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">segments</span><span class="p">)</span></div>
+
+
+<span class="k">def</span> <span class="nf">_decode_jwt_segment</span><span class="p">(</span><span class="n">encoded_section</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Decodes a single JWT segment.&quot;&quot;&quot;</span>
+    <span class="n">section_bytes</span> <span class="o">=</span> <span class="n">_helpers</span><span class="o">.</span><span class="n">padded_urlsafe_b64decode</span><span class="p">(</span><span class="n">encoded_section</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">section_bytes</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s2">&quot;utf-8&quot;</span><span class="p">))</span>
+    <span class="k">except</span> <span class="ne">ValueError</span> <span class="k">as</span> <span class="n">caught_exc</span><span class="p">:</span>
+        <span class="n">new_exc</span> <span class="o">=</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Can&#39;t parse segment: </span><span class="si">{0}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">section_bytes</span><span class="p">))</span>
+        <span class="n">six</span><span class="o">.</span><span class="n">raise_from</span><span class="p">(</span><span class="n">new_exc</span><span class="p">,</span> <span class="n">caught_exc</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_unverified_decode</span><span class="p">(</span><span class="n">token</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Decodes a token and does no verification.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        token (Union[str, bytes]): The encoded JWT.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Tuple[str, str, str, str]: header, payload, signed_section, and</span>
+<span class="sd">            signature.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        ValueError: if there are an incorrect amount of segments in the token.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">token</span> <span class="o">=</span> <span class="n">_helpers</span><span class="o">.</span><span class="n">to_bytes</span><span class="p">(</span><span class="n">token</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">token</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="sa">b</span><span class="s2">&quot;.&quot;</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Wrong number of segments in token: </span><span class="si">{0}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">token</span><span class="p">))</span>
+
+    <span class="n">encoded_header</span><span class="p">,</span> <span class="n">encoded_payload</span><span class="p">,</span> <span class="n">signature</span> <span class="o">=</span> <span class="n">token</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="sa">b</span><span class="s2">&quot;.&quot;</span><span class="p">)</span>
+    <span class="n">signed_section</span> <span class="o">=</span> <span class="n">encoded_header</span> <span class="o">+</span> <span class="sa">b</span><span class="s2">&quot;.&quot;</span> <span class="o">+</span> <span class="n">encoded_payload</span>
+    <span class="n">signature</span> <span class="o">=</span> <span class="n">_helpers</span><span class="o">.</span><span class="n">padded_urlsafe_b64decode</span><span class="p">(</span><span class="n">signature</span><span class="p">)</span>
+
+    <span class="c1"># Parse segments</span>
+    <span class="n">header</span> <span class="o">=</span> <span class="n">_decode_jwt_segment</span><span class="p">(</span><span class="n">encoded_header</span><span class="p">)</span>
+    <span class="n">payload</span> <span class="o">=</span> <span class="n">_decode_jwt_segment</span><span class="p">(</span><span class="n">encoded_payload</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">header</span><span class="p">,</span> <span class="n">payload</span><span class="p">,</span> <span class="n">signed_section</span><span class="p">,</span> <span class="n">signature</span>
+
+
+<div class="viewcode-block" id="decode_header"><a class="viewcode-back" href="../../../reference/google.auth.jwt.html#google.auth._jwt_async.decode_header">[docs]</a><span class="k">def</span> <span class="nf">decode_header</span><span class="p">(</span><span class="n">token</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Return the decoded header of a token.</span>
+
+<span class="sd">    No verification is done. This is useful to extract the key id from</span>
+<span class="sd">    the header in order to acquire the appropriate certificate to verify</span>
+<span class="sd">    the token.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        token (Union[str, bytes]): the encoded JWT.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Mapping: The decoded JWT header.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">header</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">_unverified_decode</span><span class="p">(</span><span class="n">token</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">header</span></div>
+
+
+<span class="k">def</span> <span class="nf">_verify_iat_and_exp</span><span class="p">(</span><span class="n">payload</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Verifies the ``iat`` (Issued At) and ``exp`` (Expires) claims in a token</span>
+<span class="sd">    payload.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        payload (Mapping[str, str]): The JWT payload.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        ValueError: if any checks failed.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">now</span> <span class="o">=</span> <span class="n">_helpers</span><span class="o">.</span><span class="n">datetime_to_secs</span><span class="p">(</span><span class="n">_helpers</span><span class="o">.</span><span class="n">utcnow</span><span class="p">())</span>
+
+    <span class="c1"># Make sure the iat and exp claims are present.</span>
+    <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;iat&quot;</span><span class="p">,</span> <span class="s2">&quot;exp&quot;</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">payload</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Token does not contain required claim </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">key</span><span class="p">))</span>
+
+    <span class="c1"># Make sure the token wasn&#39;t issued in the future.</span>
+    <span class="n">iat</span> <span class="o">=</span> <span class="n">payload</span><span class="p">[</span><span class="s2">&quot;iat&quot;</span><span class="p">]</span>
+    <span class="c1"># Err on the side of accepting a token that is slightly early to account</span>
+    <span class="c1"># for clock skew.</span>
+    <span class="n">earliest</span> <span class="o">=</span> <span class="n">iat</span> <span class="o">-</span> <span class="n">_helpers</span><span class="o">.</span><span class="n">CLOCK_SKEW_SECS</span>
+    <span class="k">if</span> <span class="n">now</span> <span class="o">&lt;</span> <span class="n">earliest</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Token used too early, </span><span class="si">{}</span><span class="s2"> &lt; </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">now</span><span class="p">,</span> <span class="n">iat</span><span class="p">))</span>
+
+    <span class="c1"># Make sure the token wasn&#39;t issued in the past.</span>
+    <span class="n">exp</span> <span class="o">=</span> <span class="n">payload</span><span class="p">[</span><span class="s2">&quot;exp&quot;</span><span class="p">]</span>
+    <span class="c1"># Err on the side of accepting a token that is slightly out of date</span>
+    <span class="c1"># to account for clow skew.</span>
+    <span class="n">latest</span> <span class="o">=</span> <span class="n">exp</span> <span class="o">+</span> <span class="n">_helpers</span><span class="o">.</span><span class="n">CLOCK_SKEW_SECS</span>
+    <span class="k">if</span> <span class="n">latest</span> <span class="o">&lt;</span> <span class="n">now</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Token expired, </span><span class="si">{}</span><span class="s2"> &lt; </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">latest</span><span class="p">,</span> <span class="n">now</span><span class="p">))</span>
+
+
+<div class="viewcode-block" id="decode"><a class="viewcode-back" href="../../../reference/google.auth.jwt.html#google.auth._jwt_async.decode">[docs]</a><span class="k">def</span> <span class="nf">decode</span><span class="p">(</span><span class="n">token</span><span class="p">,</span> <span class="n">certs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">verify</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">audience</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Decode and verify a JWT.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        token (str): The encoded JWT.</span>
+<span class="sd">        certs (Union[str, bytes, Mapping[str, Union[str, bytes]]]): The</span>
+<span class="sd">            certificate used to validate the JWT signature. If bytes or string,</span>
+<span class="sd">            it must the the public key certificate in PEM format. If a mapping,</span>
+<span class="sd">            it must be a mapping of key IDs to public key certificates in PEM</span>
+<span class="sd">            format. The mapping must contain the same key ID that&#39;s specified</span>
+<span class="sd">            in the token&#39;s header.</span>
+<span class="sd">        verify (bool): Whether to perform signature and claim validation.</span>
+<span class="sd">            Verification is done by default.</span>
+<span class="sd">        audience (str or list): The audience claim, &#39;aud&#39;, that this JWT should</span>
+<span class="sd">            contain. Or a list of audience claims. If None then the JWT&#39;s &#39;aud&#39;</span>
+<span class="sd">            parameter is not verified.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Mapping[str, str]: The deserialized JSON payload in the JWT.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        ValueError: if any verification checks failed.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">header</span><span class="p">,</span> <span class="n">payload</span><span class="p">,</span> <span class="n">signed_section</span><span class="p">,</span> <span class="n">signature</span> <span class="o">=</span> <span class="n">_unverified_decode</span><span class="p">(</span><span class="n">token</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">verify</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">payload</span>
+
+    <span class="c1"># Pluck the key id and algorithm from the header and make sure we have</span>
+    <span class="c1"># a verifier that can support it.</span>
+    <span class="n">key_alg</span> <span class="o">=</span> <span class="n">header</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;alg&quot;</span><span class="p">)</span>
+    <span class="n">key_id</span> <span class="o">=</span> <span class="n">header</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;kid&quot;</span><span class="p">)</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">verifier_cls</span> <span class="o">=</span> <span class="n">_ALGORITHM_TO_VERIFIER_CLASS</span><span class="p">[</span><span class="n">key_alg</span><span class="p">]</span>
+    <span class="k">except</span> <span class="ne">KeyError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">key_alg</span> <span class="ow">in</span> <span class="n">_CRYPTOGRAPHY_BASED_ALGORITHMS</span><span class="p">:</span>
+            <span class="n">six</span><span class="o">.</span><span class="n">raise_from</span><span class="p">(</span>
+                <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="s2">&quot;The key algorithm </span><span class="si">{}</span><span class="s2"> requires the cryptography package &quot;</span>
+                    <span class="s2">&quot;to be installed.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">key_alg</span><span class="p">)</span>
+                <span class="p">),</span>
+                <span class="n">exc</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">six</span><span class="o">.</span><span class="n">raise_from</span><span class="p">(</span>
+                <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Unsupported signature algorithm </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">key_alg</span><span class="p">)),</span> <span class="n">exc</span>
+            <span class="p">)</span>
+
+    <span class="c1"># If certs is specified as a dictionary of key IDs to certificates, then</span>
+    <span class="c1"># use the certificate identified by the key ID in the token header.</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">certs</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">key_id</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">key_id</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">certs</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Certificate for key id </span><span class="si">{}</span><span class="s2"> not found.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">key_id</span><span class="p">))</span>
+            <span class="n">certs_to_check</span> <span class="o">=</span> <span class="p">[</span><span class="n">certs</span><span class="p">[</span><span class="n">key_id</span><span class="p">]]</span>
+        <span class="c1"># If there&#39;s no key id in the header, check against all of the certs.</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">certs_to_check</span> <span class="o">=</span> <span class="n">certs</span><span class="o">.</span><span class="n">values</span><span class="p">()</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">certs_to_check</span> <span class="o">=</span> <span class="n">certs</span>
+
+    <span class="c1"># Verify that the signature matches the message.</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">crypt</span><span class="o">.</span><span class="n">verify_signature</span><span class="p">(</span>
+        <span class="n">signed_section</span><span class="p">,</span> <span class="n">signature</span><span class="p">,</span> <span class="n">certs_to_check</span><span class="p">,</span> <span class="n">verifier_cls</span>
+    <span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Could not verify token signature.&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Verify the issued at and created times in the payload.</span>
+    <span class="n">_verify_iat_and_exp</span><span class="p">(</span><span class="n">payload</span><span class="p">)</span>
+
+    <span class="c1"># Check audience.</span>
+    <span class="k">if</span> <span class="n">audience</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">claim_audience</span> <span class="o">=</span> <span class="n">payload</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;aud&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">audience</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="n">audience</span> <span class="o">=</span> <span class="p">[</span><span class="n">audience</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">claim_audience</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">audience</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;Token has wrong audience </span><span class="si">{}</span><span class="s2">, expected one of </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                    <span class="n">claim_audience</span><span class="p">,</span> <span class="n">audience</span>
+                <span class="p">)</span>
+            <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">payload</span></div>
+
+
+<div class="viewcode-block" id="Credentials"><a class="viewcode-back" href="../../../reference/google.auth.jwt.html#google.auth._jwt_async.Credentials">[docs]</a><span class="k">class</span> <span class="nc">Credentials</span><span class="p">(</span>
+    <span class="n">google</span><span class="o">.</span><span class="n">auth</span><span class="o">.</span><span class="n">credentials</span><span class="o">.</span><span class="n">Signing</span><span class="p">,</span> <span class="n">google</span><span class="o">.</span><span class="n">auth</span><span class="o">.</span><span class="n">credentials</span><span class="o">.</span><span class="n">CredentialsWithQuotaProject</span>
+<span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Credentials that use a JWT as the bearer token.</span>
+
+<span class="sd">    These credentials require an &quot;audience&quot; claim. This claim identifies the</span>
+<span class="sd">    intended recipient of the bearer token.</span>
+
+<span class="sd">    The constructor arguments determine the claims for the JWT that is</span>
+<span class="sd">    sent with requests. Usually, you&#39;ll construct these credentials with</span>
+<span class="sd">    one of the helper constructors as shown in the next section.</span>
+
+<span class="sd">    To create JWT credentials using a Google service account private key</span>
+<span class="sd">    JSON file::</span>
+
+<span class="sd">        audience = &#39;https://pubsub.googleapis.com/google.pubsub.v1.Publisher&#39;</span>
+<span class="sd">        credentials = jwt.Credentials.from_service_account_file(</span>
+<span class="sd">            &#39;service-account.json&#39;,</span>
+<span class="sd">            audience=audience)</span>
+
+<span class="sd">    If you already have the service account file loaded and parsed::</span>
+
+<span class="sd">        service_account_info = json.load(open(&#39;service_account.json&#39;))</span>
+<span class="sd">        credentials = jwt.Credentials.from_service_account_info(</span>
+<span class="sd">            service_account_info,</span>
+<span class="sd">            audience=audience)</span>
+
+<span class="sd">    Both helper methods pass on arguments to the constructor, so you can</span>
+<span class="sd">    specify the JWT claims::</span>
+
+<span class="sd">        credentials = jwt.Credentials.from_service_account_file(</span>
+<span class="sd">            &#39;service-account.json&#39;,</span>
+<span class="sd">            audience=audience,</span>
+<span class="sd">            additional_claims={&#39;meta&#39;: &#39;data&#39;})</span>
+
+<span class="sd">    You can also construct the credentials directly if you have a</span>
+<span class="sd">    :class:`~google.auth.crypt.Signer` instance::</span>
+
+<span class="sd">        credentials = jwt.Credentials(</span>
+<span class="sd">            signer,</span>
+<span class="sd">            issuer=&#39;your-issuer&#39;,</span>
+<span class="sd">            subject=&#39;your-subject&#39;,</span>
+<span class="sd">            audience=audience)</span>
+
+<span class="sd">    The claims are considered immutable. If you want to modify the claims,</span>
+<span class="sd">    you can easily create another instance using :meth:`with_claims`::</span>
+
+<span class="sd">        new_audience = (</span>
+<span class="sd">            &#39;https://pubsub.googleapis.com/google.pubsub.v1.Subscriber&#39;)</span>
+<span class="sd">        new_credentials = credentials.with_claims(audience=new_audience)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">signer</span><span class="p">,</span>
+        <span class="n">issuer</span><span class="p">,</span>
+        <span class="n">subject</span><span class="p">,</span>
+        <span class="n">audience</span><span class="p">,</span>
+        <span class="n">additional_claims</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">token_lifetime</span><span class="o">=</span><span class="n">_DEFAULT_TOKEN_LIFETIME_SECS</span><span class="p">,</span>
+        <span class="n">quota_project_id</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Args:</span>
+<span class="sd">            signer (google.auth.crypt.Signer): The signer used to sign JWTs.</span>
+<span class="sd">            issuer (str): The `iss` claim.</span>
+<span class="sd">            subject (str): The `sub` claim.</span>
+<span class="sd">            audience (str): the `aud` claim. The intended audience for the</span>
+<span class="sd">                credentials.</span>
+<span class="sd">            additional_claims (Mapping[str, str]): Any additional claims for</span>
+<span class="sd">                the JWT payload.</span>
+<span class="sd">            token_lifetime (int): The amount of time in seconds for</span>
+<span class="sd">                which the token is valid. Defaults to 1 hour.</span>
+<span class="sd">            quota_project_id (Optional[str]): The project ID used for quota</span>
+<span class="sd">                and billing.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">Credentials</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_signer</span> <span class="o">=</span> <span class="n">signer</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_issuer</span> <span class="o">=</span> <span class="n">issuer</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_subject</span> <span class="o">=</span> <span class="n">subject</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_audience</span> <span class="o">=</span> <span class="n">audience</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_token_lifetime</span> <span class="o">=</span> <span class="n">token_lifetime</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_quota_project_id</span> <span class="o">=</span> <span class="n">quota_project_id</span>
+
+        <span class="k">if</span> <span class="n">additional_claims</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">additional_claims</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_additional_claims</span> <span class="o">=</span> <span class="n">additional_claims</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">_from_signer_and_info</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">signer</span><span class="p">,</span> <span class="n">info</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Creates a Credentials instance from a signer and service account</span>
+<span class="sd">        info.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            signer (google.auth.crypt.Signer): The signer used to sign JWTs.</span>
+<span class="sd">            info (Mapping[str, str]): The service account info.</span>
+<span class="sd">            kwargs: Additional arguments to pass to the constructor.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            google.auth.jwt.Credentials: The constructed credentials.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            ValueError: If the info is not in the expected format.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">kwargs</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s2">&quot;subject&quot;</span><span class="p">,</span> <span class="n">info</span><span class="p">[</span><span class="s2">&quot;client_email&quot;</span><span class="p">])</span>
+        <span class="n">kwargs</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s2">&quot;issuer&quot;</span><span class="p">,</span> <span class="n">info</span><span class="p">[</span><span class="s2">&quot;client_email&quot;</span><span class="p">])</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span><span class="n">signer</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Credentials.from_service_account_info"><a class="viewcode-back" href="../../../reference/google.auth.jwt.html#google.auth._jwt_async.Credentials.from_service_account_info">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">from_service_account_info</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">info</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Creates an Credentials instance from a dictionary.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            info (Mapping[str, str]): The service account info in Google</span>
+<span class="sd">                format.</span>
+<span class="sd">            kwargs: Additional arguments to pass to the constructor.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            google.auth.jwt.Credentials: The constructed credentials.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            ValueError: If the info is not in the expected format.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">signer</span> <span class="o">=</span> <span class="n">_service_account_info</span><span class="o">.</span><span class="n">from_dict</span><span class="p">(</span><span class="n">info</span><span class="p">,</span> <span class="n">require</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;client_email&quot;</span><span class="p">])</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_from_signer_and_info</span><span class="p">(</span><span class="n">signer</span><span class="p">,</span> <span class="n">info</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Credentials.from_service_account_file"><a class="viewcode-back" href="../../../reference/google.auth.jwt.html#google.auth._jwt_async.Credentials.from_service_account_file">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">from_service_account_file</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">filename</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Creates a Credentials instance from a service account .json file</span>
+<span class="sd">        in Google format.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            filename (str): The path to the service account .json file.</span>
+<span class="sd">            kwargs: Additional arguments to pass to the constructor.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            google.auth.jwt.Credentials: The constructed credentials.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">info</span><span class="p">,</span> <span class="n">signer</span> <span class="o">=</span> <span class="n">_service_account_info</span><span class="o">.</span><span class="n">from_filename</span><span class="p">(</span>
+            <span class="n">filename</span><span class="p">,</span> <span class="n">require</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;client_email&quot;</span><span class="p">]</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_from_signer_and_info</span><span class="p">(</span><span class="n">signer</span><span class="p">,</span> <span class="n">info</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Credentials.from_signing_credentials"><a class="viewcode-back" href="../../../reference/google.auth.jwt.html#google.auth._jwt_async.Credentials.from_signing_credentials">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">from_signing_credentials</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">credentials</span><span class="p">,</span> <span class="n">audience</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Creates a new :class:`google.auth.jwt.Credentials` instance from an</span>
+<span class="sd">        existing :class:`google.auth.credentials.Signing` instance.</span>
+
+<span class="sd">        The new instance will use the same signer as the existing instance and</span>
+<span class="sd">        will use the existing instance&#39;s signer email as the issuer and</span>
+<span class="sd">        subject by default.</span>
+
+<span class="sd">        Example::</span>
+
+<span class="sd">            svc_creds = service_account.Credentials.from_service_account_file(</span>
+<span class="sd">                &#39;service_account.json&#39;)</span>
+<span class="sd">            audience = (</span>
+<span class="sd">                &#39;https://pubsub.googleapis.com/google.pubsub.v1.Publisher&#39;)</span>
+<span class="sd">            jwt_creds = jwt.Credentials.from_signing_credentials(</span>
+<span class="sd">                svc_creds, audience=audience)</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            credentials (google.auth.credentials.Signing): The credentials to</span>
+<span class="sd">                use to construct the new credentials.</span>
+<span class="sd">            audience (str): the `aud` claim. The intended audience for the</span>
+<span class="sd">                credentials.</span>
+<span class="sd">            kwargs: Additional arguments to pass to the constructor.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            google.auth.jwt.Credentials: A new Credentials instance.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">kwargs</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s2">&quot;issuer&quot;</span><span class="p">,</span> <span class="n">credentials</span><span class="o">.</span><span class="n">signer_email</span><span class="p">)</span>
+        <span class="n">kwargs</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s2">&quot;subject&quot;</span><span class="p">,</span> <span class="n">credentials</span><span class="o">.</span><span class="n">signer_email</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span><span class="n">credentials</span><span class="o">.</span><span class="n">signer</span><span class="p">,</span> <span class="n">audience</span><span class="o">=</span><span class="n">audience</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Credentials.with_claims"><a class="viewcode-back" href="../../../reference/google.auth.jwt.html#google.auth._jwt_async.Credentials.with_claims">[docs]</a>    <span class="k">def</span> <span class="nf">with_claims</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">issuer</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">subject</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">audience</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">additional_claims</span><span class="o">=</span><span class="kc">None</span>
+    <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Returns a copy of these credentials with modified claims.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            issuer (str): The `iss` claim. If unspecified the current issuer</span>
+<span class="sd">                claim will be used.</span>
+<span class="sd">            subject (str): The `sub` claim. If unspecified the current subject</span>
+<span class="sd">                claim will be used.</span>
+<span class="sd">            audience (str): the `aud` claim. If unspecified the current</span>
+<span class="sd">                audience claim will be used.</span>
+<span class="sd">            additional_claims (Mapping[str, str]): Any additional claims for</span>
+<span class="sd">                the JWT payload. This will be merged with the current</span>
+<span class="sd">                additional claims.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            google.auth.jwt.Credentials: A new credentials instance.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">new_additional_claims</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_additional_claims</span><span class="p">)</span>
+        <span class="n">new_additional_claims</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">additional_claims</span> <span class="ow">or</span> <span class="p">{})</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_signer</span><span class="p">,</span>
+            <span class="n">issuer</span><span class="o">=</span><span class="n">issuer</span> <span class="k">if</span> <span class="n">issuer</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">_issuer</span><span class="p">,</span>
+            <span class="n">subject</span><span class="o">=</span><span class="n">subject</span> <span class="k">if</span> <span class="n">subject</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">_subject</span><span class="p">,</span>
+            <span class="n">audience</span><span class="o">=</span><span class="n">audience</span> <span class="k">if</span> <span class="n">audience</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">_audience</span><span class="p">,</span>
+            <span class="n">additional_claims</span><span class="o">=</span><span class="n">new_additional_claims</span><span class="p">,</span>
+            <span class="n">quota_project_id</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_quota_project_id</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+<div class="viewcode-block" id="Credentials.with_quota_project"><a class="viewcode-back" href="../../../reference/google.auth.jwt.html#google.auth._jwt_async.Credentials.with_quota_project">[docs]</a>    <span class="nd">@_helpers</span><span class="o">.</span><span class="n">copy_docstring</span><span class="p">(</span><span class="n">google</span><span class="o">.</span><span class="n">auth</span><span class="o">.</span><span class="n">credentials</span><span class="o">.</span><span class="n">CredentialsWithQuotaProject</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">with_quota_project</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">quota_project_id</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_signer</span><span class="p">,</span>
+            <span class="n">issuer</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_issuer</span><span class="p">,</span>
+            <span class="n">subject</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_subject</span><span class="p">,</span>
+            <span class="n">audience</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_audience</span><span class="p">,</span>
+            <span class="n">additional_claims</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_additional_claims</span><span class="p">,</span>
+            <span class="n">quota_project_id</span><span class="o">=</span><span class="n">quota_project_id</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="nf">_make_jwt</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Make a signed JWT.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Tuple[bytes, datetime]: The encoded JWT and the expiration.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">now</span> <span class="o">=</span> <span class="n">_helpers</span><span class="o">.</span><span class="n">utcnow</span><span class="p">()</span>
+        <span class="n">lifetime</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">timedelta</span><span class="p">(</span><span class="n">seconds</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_token_lifetime</span><span class="p">)</span>
+        <span class="n">expiry</span> <span class="o">=</span> <span class="n">now</span> <span class="o">+</span> <span class="n">lifetime</span>
+
+        <span class="n">payload</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;iss&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_issuer</span><span class="p">,</span>
+            <span class="s2">&quot;sub&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_subject</span><span class="p">,</span>
+            <span class="s2">&quot;iat&quot;</span><span class="p">:</span> <span class="n">_helpers</span><span class="o">.</span><span class="n">datetime_to_secs</span><span class="p">(</span><span class="n">now</span><span class="p">),</span>
+            <span class="s2">&quot;exp&quot;</span><span class="p">:</span> <span class="n">_helpers</span><span class="o">.</span><span class="n">datetime_to_secs</span><span class="p">(</span><span class="n">expiry</span><span class="p">),</span>
+            <span class="s2">&quot;aud&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_audience</span><span class="p">,</span>
+        <span class="p">}</span>
+
+        <span class="n">payload</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_additional_claims</span><span class="p">)</span>
+
+        <span class="n">jwt</span> <span class="o">=</span> <span class="n">encode</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_signer</span><span class="p">,</span> <span class="n">payload</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">jwt</span><span class="p">,</span> <span class="n">expiry</span>
+
+<div class="viewcode-block" id="Credentials.refresh"><a class="viewcode-back" href="../../../reference/google.auth.jwt.html#google.auth._jwt_async.Credentials.refresh">[docs]</a>    <span class="k">def</span> <span class="nf">refresh</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Refreshes the access token.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            request (Any): Unused.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># pylint: disable=unused-argument</span>
+        <span class="c1"># (pylint doesn&#39;t correctly recognize overridden methods.)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">token</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">expiry</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_make_jwt</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Credentials.sign_bytes"><a class="viewcode-back" href="../../../reference/google.auth.jwt.html#google.auth._jwt_async.Credentials.sign_bytes">[docs]</a>    <span class="nd">@_helpers</span><span class="o">.</span><span class="n">copy_docstring</span><span class="p">(</span><span class="n">google</span><span class="o">.</span><span class="n">auth</span><span class="o">.</span><span class="n">credentials</span><span class="o">.</span><span class="n">Signing</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">sign_bytes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_signer</span><span class="o">.</span><span class="n">sign</span><span class="p">(</span><span class="n">message</span><span class="p">)</span></div>
+
+    <span class="nd">@property</span>
+    <span class="nd">@_helpers</span><span class="o">.</span><span class="n">copy_docstring</span><span class="p">(</span><span class="n">google</span><span class="o">.</span><span class="n">auth</span><span class="o">.</span><span class="n">credentials</span><span class="o">.</span><span class="n">Signing</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">signer_email</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_issuer</span>
+
+    <span class="nd">@property</span>
+    <span class="nd">@_helpers</span><span class="o">.</span><span class="n">copy_docstring</span><span class="p">(</span><span class="n">google</span><span class="o">.</span><span class="n">auth</span><span class="o">.</span><span class="n">credentials</span><span class="o">.</span><span class="n">Signing</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">signer</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_signer</span></div>
+
+
+<div class="viewcode-block" id="OnDemandCredentials"><a class="viewcode-back" href="../../../reference/google.auth.jwt.html#google.auth._jwt_async.OnDemandCredentials">[docs]</a><span class="k">class</span> <span class="nc">OnDemandCredentials</span><span class="p">(</span>
+    <span class="n">google</span><span class="o">.</span><span class="n">auth</span><span class="o">.</span><span class="n">credentials</span><span class="o">.</span><span class="n">Signing</span><span class="p">,</span> <span class="n">google</span><span class="o">.</span><span class="n">auth</span><span class="o">.</span><span class="n">credentials</span><span class="o">.</span><span class="n">CredentialsWithQuotaProject</span>
+<span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;On-demand JWT credentials.</span>
+
+<span class="sd">    Like :class:`Credentials`, this class uses a JWT as the bearer token for</span>
+<span class="sd">    authentication. However, this class does not require the audience at</span>
+<span class="sd">    construction time. Instead, it will generate a new token on-demand for</span>
+<span class="sd">    each request using the request URI as the audience. It caches tokens</span>
+<span class="sd">    so that multiple requests to the same URI do not incur the overhead</span>
+<span class="sd">    of generating a new token every time.</span>
+
+<span class="sd">    This behavior is especially useful for `gRPC`_ clients. A gRPC service may</span>
+<span class="sd">    have multiple audience and gRPC clients may not know all of the audiences</span>
+<span class="sd">    required for accessing a particular service. With these credentials,</span>
+<span class="sd">    no knowledge of the audiences is required ahead of time.</span>
+
+<span class="sd">    .. _grpc: http://www.grpc.io/</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">signer</span><span class="p">,</span>
+        <span class="n">issuer</span><span class="p">,</span>
+        <span class="n">subject</span><span class="p">,</span>
+        <span class="n">additional_claims</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">token_lifetime</span><span class="o">=</span><span class="n">_DEFAULT_TOKEN_LIFETIME_SECS</span><span class="p">,</span>
+        <span class="n">max_cache_size</span><span class="o">=</span><span class="n">_DEFAULT_MAX_CACHE_SIZE</span><span class="p">,</span>
+        <span class="n">quota_project_id</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Args:</span>
+<span class="sd">            signer (google.auth.crypt.Signer): The signer used to sign JWTs.</span>
+<span class="sd">            issuer (str): The `iss` claim.</span>
+<span class="sd">            subject (str): The `sub` claim.</span>
+<span class="sd">            additional_claims (Mapping[str, str]): Any additional claims for</span>
+<span class="sd">                the JWT payload.</span>
+<span class="sd">            token_lifetime (int): The amount of time in seconds for</span>
+<span class="sd">                which the token is valid. Defaults to 1 hour.</span>
+<span class="sd">            max_cache_size (int): The maximum number of JWT tokens to keep in</span>
+<span class="sd">                cache. Tokens are cached using :class:`cachetools.LRUCache`.</span>
+<span class="sd">            quota_project_id (Optional[str]): The project ID used for quota</span>
+<span class="sd">                and billing.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">OnDemandCredentials</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_signer</span> <span class="o">=</span> <span class="n">signer</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_issuer</span> <span class="o">=</span> <span class="n">issuer</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_subject</span> <span class="o">=</span> <span class="n">subject</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_token_lifetime</span> <span class="o">=</span> <span class="n">token_lifetime</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_quota_project_id</span> <span class="o">=</span> <span class="n">quota_project_id</span>
+
+        <span class="k">if</span> <span class="n">additional_claims</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">additional_claims</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_additional_claims</span> <span class="o">=</span> <span class="n">additional_claims</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_cache</span> <span class="o">=</span> <span class="n">cachetools</span><span class="o">.</span><span class="n">LRUCache</span><span class="p">(</span><span class="n">maxsize</span><span class="o">=</span><span class="n">max_cache_size</span><span class="p">)</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">_from_signer_and_info</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">signer</span><span class="p">,</span> <span class="n">info</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Creates an OnDemandCredentials instance from a signer and service</span>
+<span class="sd">        account info.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            signer (google.auth.crypt.Signer): The signer used to sign JWTs.</span>
+<span class="sd">            info (Mapping[str, str]): The service account info.</span>
+<span class="sd">            kwargs: Additional arguments to pass to the constructor.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            google.auth.jwt.OnDemandCredentials: The constructed credentials.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            ValueError: If the info is not in the expected format.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">kwargs</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s2">&quot;subject&quot;</span><span class="p">,</span> <span class="n">info</span><span class="p">[</span><span class="s2">&quot;client_email&quot;</span><span class="p">])</span>
+        <span class="n">kwargs</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s2">&quot;issuer&quot;</span><span class="p">,</span> <span class="n">info</span><span class="p">[</span><span class="s2">&quot;client_email&quot;</span><span class="p">])</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span><span class="n">signer</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+<div class="viewcode-block" id="OnDemandCredentials.from_service_account_info"><a class="viewcode-back" href="../../../reference/google.auth.jwt.html#google.auth._jwt_async.OnDemandCredentials.from_service_account_info">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">from_service_account_info</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">info</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Creates an OnDemandCredentials instance from a dictionary.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            info (Mapping[str, str]): The service account info in Google</span>
+<span class="sd">                format.</span>
+<span class="sd">            kwargs: Additional arguments to pass to the constructor.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            google.auth.jwt.OnDemandCredentials: The constructed credentials.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            ValueError: If the info is not in the expected format.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">signer</span> <span class="o">=</span> <span class="n">_service_account_info</span><span class="o">.</span><span class="n">from_dict</span><span class="p">(</span><span class="n">info</span><span class="p">,</span> <span class="n">require</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;client_email&quot;</span><span class="p">])</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_from_signer_and_info</span><span class="p">(</span><span class="n">signer</span><span class="p">,</span> <span class="n">info</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="OnDemandCredentials.from_service_account_file"><a class="viewcode-back" href="../../../reference/google.auth.jwt.html#google.auth._jwt_async.OnDemandCredentials.from_service_account_file">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">from_service_account_file</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">filename</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Creates an OnDemandCredentials instance from a service account .json</span>
+<span class="sd">        file in Google format.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            filename (str): The path to the service account .json file.</span>
+<span class="sd">            kwargs: Additional arguments to pass to the constructor.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            google.auth.jwt.OnDemandCredentials: The constructed credentials.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">info</span><span class="p">,</span> <span class="n">signer</span> <span class="o">=</span> <span class="n">_service_account_info</span><span class="o">.</span><span class="n">from_filename</span><span class="p">(</span>
+            <span class="n">filename</span><span class="p">,</span> <span class="n">require</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;client_email&quot;</span><span class="p">]</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_from_signer_and_info</span><span class="p">(</span><span class="n">signer</span><span class="p">,</span> <span class="n">info</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="OnDemandCredentials.from_signing_credentials"><a class="viewcode-back" href="../../../reference/google.auth.jwt.html#google.auth._jwt_async.OnDemandCredentials.from_signing_credentials">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">from_signing_credentials</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">credentials</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Creates a new :class:`google.auth.jwt.OnDemandCredentials` instance</span>
+<span class="sd">        from an existing :class:`google.auth.credentials.Signing` instance.</span>
+
+<span class="sd">        The new instance will use the same signer as the existing instance and</span>
+<span class="sd">        will use the existing instance&#39;s signer email as the issuer and</span>
+<span class="sd">        subject by default.</span>
+
+<span class="sd">        Example::</span>
+
+<span class="sd">            svc_creds = service_account.Credentials.from_service_account_file(</span>
+<span class="sd">                &#39;service_account.json&#39;)</span>
+<span class="sd">            jwt_creds = jwt.OnDemandCredentials.from_signing_credentials(</span>
+<span class="sd">                svc_creds)</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            credentials (google.auth.credentials.Signing): The credentials to</span>
+<span class="sd">                use to construct the new credentials.</span>
+<span class="sd">            kwargs: Additional arguments to pass to the constructor.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            google.auth.jwt.Credentials: A new Credentials instance.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">kwargs</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s2">&quot;issuer&quot;</span><span class="p">,</span> <span class="n">credentials</span><span class="o">.</span><span class="n">signer_email</span><span class="p">)</span>
+        <span class="n">kwargs</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s2">&quot;subject&quot;</span><span class="p">,</span> <span class="n">credentials</span><span class="o">.</span><span class="n">signer_email</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span><span class="n">credentials</span><span class="o">.</span><span class="n">signer</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="OnDemandCredentials.with_claims"><a class="viewcode-back" href="../../../reference/google.auth.jwt.html#google.auth._jwt_async.OnDemandCredentials.with_claims">[docs]</a>    <span class="k">def</span> <span class="nf">with_claims</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">issuer</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">subject</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">additional_claims</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Returns a copy of these credentials with modified claims.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            issuer (str): The `iss` claim. If unspecified the current issuer</span>
+<span class="sd">                claim will be used.</span>
+<span class="sd">            subject (str): The `sub` claim. If unspecified the current subject</span>
+<span class="sd">                claim will be used.</span>
+<span class="sd">            additional_claims (Mapping[str, str]): Any additional claims for</span>
+<span class="sd">                the JWT payload. This will be merged with the current</span>
+<span class="sd">                additional claims.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            google.auth.jwt.OnDemandCredentials: A new credentials instance.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">new_additional_claims</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_additional_claims</span><span class="p">)</span>
+        <span class="n">new_additional_claims</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">additional_claims</span> <span class="ow">or</span> <span class="p">{})</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_signer</span><span class="p">,</span>
+            <span class="n">issuer</span><span class="o">=</span><span class="n">issuer</span> <span class="k">if</span> <span class="n">issuer</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">_issuer</span><span class="p">,</span>
+            <span class="n">subject</span><span class="o">=</span><span class="n">subject</span> <span class="k">if</span> <span class="n">subject</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">_subject</span><span class="p">,</span>
+            <span class="n">additional_claims</span><span class="o">=</span><span class="n">new_additional_claims</span><span class="p">,</span>
+            <span class="n">max_cache_size</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_cache</span><span class="o">.</span><span class="n">maxsize</span><span class="p">,</span>
+            <span class="n">quota_project_id</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_quota_project_id</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+<div class="viewcode-block" id="OnDemandCredentials.with_quota_project"><a class="viewcode-back" href="../../../reference/google.auth.jwt.html#google.auth._jwt_async.OnDemandCredentials.with_quota_project">[docs]</a>    <span class="nd">@_helpers</span><span class="o">.</span><span class="n">copy_docstring</span><span class="p">(</span><span class="n">google</span><span class="o">.</span><span class="n">auth</span><span class="o">.</span><span class="n">credentials</span><span class="o">.</span><span class="n">CredentialsWithQuotaProject</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">with_quota_project</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">quota_project_id</span><span class="p">):</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_signer</span><span class="p">,</span>
+            <span class="n">issuer</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_issuer</span><span class="p">,</span>
+            <span class="n">subject</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_subject</span><span class="p">,</span>
+            <span class="n">additional_claims</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_additional_claims</span><span class="p">,</span>
+            <span class="n">max_cache_size</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_cache</span><span class="o">.</span><span class="n">maxsize</span><span class="p">,</span>
+            <span class="n">quota_project_id</span><span class="o">=</span><span class="n">quota_project_id</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">valid</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Checks the validity of the credentials.</span>
+
+<span class="sd">        These credentials are always valid because it generates tokens on</span>
+<span class="sd">        demand.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="kc">True</span>
+
+    <span class="k">def</span> <span class="nf">_make_jwt_for_audience</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">audience</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Make a new JWT for the given audience.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            audience (str): The intended audience.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Tuple[bytes, datetime]: The encoded JWT and the expiration.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">now</span> <span class="o">=</span> <span class="n">_helpers</span><span class="o">.</span><span class="n">utcnow</span><span class="p">()</span>
+        <span class="n">lifetime</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">timedelta</span><span class="p">(</span><span class="n">seconds</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_token_lifetime</span><span class="p">)</span>
+        <span class="n">expiry</span> <span class="o">=</span> <span class="n">now</span> <span class="o">+</span> <span class="n">lifetime</span>
+
+        <span class="n">payload</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;iss&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_issuer</span><span class="p">,</span>
+            <span class="s2">&quot;sub&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_subject</span><span class="p">,</span>
+            <span class="s2">&quot;iat&quot;</span><span class="p">:</span> <span class="n">_helpers</span><span class="o">.</span><span class="n">datetime_to_secs</span><span class="p">(</span><span class="n">now</span><span class="p">),</span>
+            <span class="s2">&quot;exp&quot;</span><span class="p">:</span> <span class="n">_helpers</span><span class="o">.</span><span class="n">datetime_to_secs</span><span class="p">(</span><span class="n">expiry</span><span class="p">),</span>
+            <span class="s2">&quot;aud&quot;</span><span class="p">:</span> <span class="n">audience</span><span class="p">,</span>
+        <span class="p">}</span>
+
+        <span class="n">payload</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_additional_claims</span><span class="p">)</span>
+
+        <span class="n">jwt</span> <span class="o">=</span> <span class="n">encode</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_signer</span><span class="p">,</span> <span class="n">payload</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">jwt</span><span class="p">,</span> <span class="n">expiry</span>
+
+    <span class="k">def</span> <span class="nf">_get_jwt_for_audience</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">audience</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Get a JWT For a given audience.</span>
+
+<span class="sd">        If there is already an existing, non-expired token in the cache for</span>
+<span class="sd">        the audience, that token is used. Otherwise, a new token will be</span>
+<span class="sd">        created.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            audience (str): The intended audience.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            bytes: The encoded JWT.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">token</span><span class="p">,</span> <span class="n">expiry</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cache</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">audience</span><span class="p">,</span> <span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">))</span>
+
+        <span class="k">if</span> <span class="n">token</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">expiry</span> <span class="o">&lt;</span> <span class="n">_helpers</span><span class="o">.</span><span class="n">utcnow</span><span class="p">():</span>
+            <span class="n">token</span><span class="p">,</span> <span class="n">expiry</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_make_jwt_for_audience</span><span class="p">(</span><span class="n">audience</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_cache</span><span class="p">[</span><span class="n">audience</span><span class="p">]</span> <span class="o">=</span> <span class="n">token</span><span class="p">,</span> <span class="n">expiry</span>
+
+        <span class="k">return</span> <span class="n">token</span>
+
+<div class="viewcode-block" id="OnDemandCredentials.refresh"><a class="viewcode-back" href="../../../reference/google.auth.jwt.html#google.auth._jwt_async.OnDemandCredentials.refresh">[docs]</a>    <span class="k">def</span> <span class="nf">refresh</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Raises an exception, these credentials can not be directly</span>
+<span class="sd">        refreshed.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            request (Any): Unused.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            google.auth.RefreshError</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># pylint: disable=unused-argument</span>
+        <span class="c1"># (pylint doesn&#39;t correctly recognize overridden methods.)</span>
+        <span class="k">raise</span> <span class="n">exceptions</span><span class="o">.</span><span class="n">RefreshError</span><span class="p">(</span>
+            <span class="s2">&quot;OnDemandCredentials can not be directly refreshed.&quot;</span>
+        <span class="p">)</span></div>
+
+<div class="viewcode-block" id="OnDemandCredentials.before_request"><a class="viewcode-back" href="../../../reference/google.auth.jwt.html#google.auth._jwt_async.OnDemandCredentials.before_request">[docs]</a>    <span class="k">def</span> <span class="nf">before_request</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="n">method</span><span class="p">,</span> <span class="n">url</span><span class="p">,</span> <span class="n">headers</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Performs credential-specific before request logic.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            request (Any): Unused. JWT credentials do not need to make an</span>
+<span class="sd">                HTTP request to refresh.</span>
+<span class="sd">            method (str): The request&#39;s HTTP method.</span>
+<span class="sd">            url (str): The request&#39;s URI. This is used as the audience claim</span>
+<span class="sd">                when generating the JWT.</span>
+<span class="sd">            headers (Mapping): The request&#39;s headers.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># pylint: disable=unused-argument</span>
+        <span class="c1"># (pylint doesn&#39;t correctly recognize overridden methods.)</span>
+        <span class="n">parts</span> <span class="o">=</span> <span class="n">urllib</span><span class="o">.</span><span class="n">parse</span><span class="o">.</span><span class="n">urlsplit</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+        <span class="c1"># Strip query string and fragment</span>
+        <span class="n">audience</span> <span class="o">=</span> <span class="n">urllib</span><span class="o">.</span><span class="n">parse</span><span class="o">.</span><span class="n">urlunsplit</span><span class="p">(</span>
+            <span class="p">(</span><span class="n">parts</span><span class="o">.</span><span class="n">scheme</span><span class="p">,</span> <span class="n">parts</span><span class="o">.</span><span class="n">netloc</span><span class="p">,</span> <span class="n">parts</span><span class="o">.</span><span class="n">path</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="n">token</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_jwt_for_audience</span><span class="p">(</span><span class="n">audience</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">headers</span><span class="p">,</span> <span class="n">token</span><span class="o">=</span><span class="n">token</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="OnDemandCredentials.sign_bytes"><a class="viewcode-back" href="../../../reference/google.auth.jwt.html#google.auth._jwt_async.OnDemandCredentials.sign_bytes">[docs]</a>    <span class="nd">@_helpers</span><span class="o">.</span><span class="n">copy_docstring</span><span class="p">(</span><span class="n">google</span><span class="o">.</span><span class="n">auth</span><span class="o">.</span><span class="n">credentials</span><span class="o">.</span><span class="n">Signing</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">sign_bytes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_signer</span><span class="o">.</span><span class="n">sign</span><span class="p">(</span><span class="n">message</span><span class="p">)</span></div>
+
+    <span class="nd">@property</span>
+    <span class="nd">@_helpers</span><span class="o">.</span><span class="n">copy_docstring</span><span class="p">(</span><span class="n">google</span><span class="o">.</span><span class="n">auth</span><span class="o">.</span><span class="n">credentials</span><span class="o">.</span><span class="n">Signing</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">signer_email</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_issuer</span>
+
+    <span class="nd">@property</span>
+    <span class="nd">@_helpers</span><span class="o">.</span><span class="n">copy_docstring</span><span class="p">(</span><span class="n">google</span><span class="o">.</span><span class="n">auth</span><span class="o">.</span><span class="n">credentials</span><span class="o">.</span><span class="n">Signing</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">signer</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_signer</span></div>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../../index.html">google-auth</a></h1>
+
+
+
+<p class="blurb">Google Auth Library for Python</p>
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=GoogleCloudPlatform&repo=google-auth-library-python&type=watch&count=true&size=large&v=2"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+
+    
+
+<p>
+<a class="badge" href="https://travis-ci.org/GoogleCloudPlatform/google-auth-library-python">
+    <img
+        alt="https://secure.travis-ci.org/GoogleCloudPlatform/google-auth-library-python.svg?branch=master"
+        src="https://secure.travis-ci.org/GoogleCloudPlatform/google-auth-library-python.svg?branch=master"
+    />
+</a>
+</p>
+
+
+<h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../user-guide.html">User Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../reference/modules.html">Reference</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2016, Google, Inc..
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.4.4</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+    <a href="https://github.com/GoogleCloudPlatform/google-auth-library-python" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

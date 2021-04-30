@@ -1,0 +1,215 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>google.auth.transport &#8212; google-auth 1.30.0 documentation</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script src="../../../_static/jquery.js"></script>
+    <script src="../../../_static/underscore.js"></script>
+    <script src="../../../_static/doctools.js"></script>
+    <script src="../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for google.auth.transport</h1><div class="highlight"><pre>
+<span></span><span class="c1"># Copyright 2016 Google LLC</span>
+<span class="c1">#</span>
+<span class="c1"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c1"># you may not use this file except in compliance with the License.</span>
+<span class="c1"># You may obtain a copy of the License at</span>
+<span class="c1">#</span>
+<span class="c1">#      http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c1">#</span>
+<span class="c1"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c1"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c1"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c1"># See the License for the specific language governing permissions and</span>
+<span class="c1"># limitations under the License.</span>
+
+<span class="sd">&quot;&quot;&quot;Transport - HTTP client library support.</span>
+
+<span class="sd">:mod:`google.auth` is designed to work with various HTTP client libraries such</span>
+<span class="sd">as urllib3 and requests. In order to work across these libraries with different</span>
+<span class="sd">interfaces some abstraction is needed.</span>
+
+<span class="sd">This module provides two interfaces that are implemented by transport adapters</span>
+<span class="sd">to support HTTP libraries. :class:`Request` defines the interface expected by</span>
+<span class="sd">:mod:`google.auth` to make requests. :class:`Response` defines the interface</span>
+<span class="sd">for the return value of :class:`Request`.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">abc</span>
+
+<span class="kn">import</span> <span class="nn">six</span>
+<span class="kn">from</span> <span class="nn">six.moves</span> <span class="kn">import</span> <span class="n">http_client</span>
+
+<span class="n">DEFAULT_REFRESH_STATUS_CODES</span> <span class="o">=</span> <span class="p">(</span><span class="n">http_client</span><span class="o">.</span><span class="n">UNAUTHORIZED</span><span class="p">,)</span>
+<span class="sd">&quot;&quot;&quot;Sequence[int]:  Which HTTP status code indicate that credentials should be</span>
+<span class="sd">refreshed and a request should be retried.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="n">DEFAULT_MAX_REFRESH_ATTEMPTS</span> <span class="o">=</span> <span class="mi">2</span>
+<span class="sd">&quot;&quot;&quot;int: How many times to refresh the credentials and retry a request.&quot;&quot;&quot;</span>
+
+
+<div class="viewcode-block" id="Response"><a class="viewcode-back" href="../../../reference/google.auth.transport.html#google.auth.transport.Response">[docs]</a><span class="nd">@six</span><span class="o">.</span><span class="n">add_metaclass</span><span class="p">(</span><span class="n">abc</span><span class="o">.</span><span class="n">ABCMeta</span><span class="p">)</span>
+<span class="k">class</span> <span class="nc">Response</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;HTTP Response data.&quot;&quot;&quot;</span>
+
+    <span class="nd">@abc</span><span class="o">.</span><span class="n">abstractproperty</span>
+    <span class="k">def</span> <span class="nf">status</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;int: The HTTP status code.&quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;status must be implemented.&quot;</span><span class="p">)</span>
+
+    <span class="nd">@abc</span><span class="o">.</span><span class="n">abstractproperty</span>
+    <span class="k">def</span> <span class="nf">headers</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Mapping[str, str]: The HTTP response headers.&quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;headers must be implemented.&quot;</span><span class="p">)</span>
+
+    <span class="nd">@abc</span><span class="o">.</span><span class="n">abstractproperty</span>
+    <span class="k">def</span> <span class="nf">data</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;bytes: The response body.&quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;data must be implemented.&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Request"><a class="viewcode-back" href="../../../reference/google.auth.transport.html#google.auth.transport.Request">[docs]</a><span class="nd">@six</span><span class="o">.</span><span class="n">add_metaclass</span><span class="p">(</span><span class="n">abc</span><span class="o">.</span><span class="n">ABCMeta</span><span class="p">)</span>
+<span class="k">class</span> <span class="nc">Request</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Interface for a callable that makes HTTP requests.</span>
+
+<span class="sd">    Specific transport implementations should provide an implementation of</span>
+<span class="sd">    this that adapts their specific request / response API.</span>
+
+<span class="sd">    .. automethod:: __call__</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="Request.__call__"><a class="viewcode-back" href="../../../reference/google.auth.transport.html#google.auth.transport.Request.__call__">[docs]</a>    <span class="nd">@abc</span><span class="o">.</span><span class="n">abstractmethod</span>
+    <span class="k">def</span> <span class="fm">__call__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">url</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s2">&quot;GET&quot;</span><span class="p">,</span> <span class="n">body</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">headers</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span>
+    <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Make an HTTP request.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            url (str): The URI to be requested.</span>
+<span class="sd">            method (str): The HTTP method to use for the request. Defaults</span>
+<span class="sd">                to &#39;GET&#39;.</span>
+<span class="sd">            body (bytes): The payload / body in HTTP request.</span>
+<span class="sd">            headers (Mapping[str, str]): Request headers.</span>
+<span class="sd">            timeout (Optional[int]): The number of seconds to wait for a</span>
+<span class="sd">                response from the server. If not specified or if None, the</span>
+<span class="sd">                transport-specific default timeout will be used.</span>
+<span class="sd">            kwargs: Additionally arguments passed on to the transport&#39;s</span>
+<span class="sd">                request method.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Response: The HTTP response.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            google.auth.exceptions.TransportError: If any exception occurred.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># pylint: disable=redundant-returns-doc, missing-raises-doc</span>
+        <span class="c1"># (pylint doesn&#39;t play well with abstract docstrings.)</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;__call__ must be implemented.&quot;</span><span class="p">)</span></div></div>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../../index.html">google-auth</a></h1>
+
+
+
+<p class="blurb">Google Auth Library for Python</p>
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=GoogleCloudPlatform&repo=google-auth-library-python&type=watch&count=true&size=large&v=2"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+
+    
+
+<p>
+<a class="badge" href="https://travis-ci.org/GoogleCloudPlatform/google-auth-library-python">
+    <img
+        alt="https://secure.travis-ci.org/GoogleCloudPlatform/google-auth-library-python.svg?branch=master"
+        src="https://secure.travis-ci.org/GoogleCloudPlatform/google-auth-library-python.svg?branch=master"
+    />
+</a>
+</p>
+
+
+<h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../user-guide.html">User Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../reference/modules.html">Reference</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2016, Google, Inc..
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.4.4</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+    <a href="https://github.com/GoogleCloudPlatform/google-auth-library-python" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

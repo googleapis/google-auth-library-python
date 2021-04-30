@@ -1,0 +1,836 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>google.auth.aws &#8212; google-auth 1.30.0 documentation</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script src="../../../_static/jquery.js"></script>
+    <script src="../../../_static/underscore.js"></script>
+    <script src="../../../_static/doctools.js"></script>
+    <script src="../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for google.auth.aws</h1><div class="highlight"><pre>
+<span></span><span class="c1"># Copyright 2020 Google LLC</span>
+<span class="c1">#</span>
+<span class="c1"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c1"># you may not use this file except in compliance with the License.</span>
+<span class="c1"># You may obtain a copy of the License at</span>
+<span class="c1">#</span>
+<span class="c1">#      http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c1">#</span>
+<span class="c1"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c1"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c1"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c1"># See the License for the specific language governing permissions and</span>
+<span class="c1"># limitations under the License.</span>
+
+<span class="sd">&quot;&quot;&quot;AWS Credentials and AWS Signature V4 Request Signer.</span>
+
+<span class="sd">This module provides credentials to access Google Cloud resources from Amazon</span>
+<span class="sd">Web Services (AWS) workloads. These credentials are recommended over the</span>
+<span class="sd">use of service account credentials in AWS as they do not involve the management</span>
+<span class="sd">of long-live service account private keys.</span>
+
+<span class="sd">AWS Credentials are initialized using external_account arguments which are</span>
+<span class="sd">typically loaded from the external credentials JSON file.</span>
+<span class="sd">Unlike other Credentials that can be initialized with a list of explicit</span>
+<span class="sd">arguments, secrets or credentials, external account clients use the</span>
+<span class="sd">environment and hints/guidelines provided by the external_account JSON</span>
+<span class="sd">file to retrieve credentials and exchange them for Google access tokens.</span>
+
+<span class="sd">This module also provides a basic implementation of the</span>
+<span class="sd">`AWS Signature Version 4`_ request signing algorithm.</span>
+
+<span class="sd">AWS Credentials use serialized signed requests to the</span>
+<span class="sd">`AWS STS GetCallerIdentity`_ API that can be exchanged for Google access tokens</span>
+<span class="sd">via the GCP STS endpoint.</span>
+
+<span class="sd">.. _AWS Signature Version 4: https://docs.aws.amazon.com/general/latest/gr/signature-version-4.html</span>
+<span class="sd">.. _AWS STS GetCallerIdentity: https://docs.aws.amazon.com/STS/latest/APIReference/API_GetCallerIdentity.html</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">hashlib</span>
+<span class="kn">import</span> <span class="nn">hmac</span>
+<span class="kn">import</span> <span class="nn">io</span>
+<span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">re</span>
+
+<span class="kn">from</span> <span class="nn">six.moves</span> <span class="kn">import</span> <span class="n">http_client</span>
+<span class="kn">from</span> <span class="nn">six.moves</span> <span class="kn">import</span> <span class="n">urllib</span>
+
+<span class="kn">from</span> <span class="nn">google.auth</span> <span class="kn">import</span> <span class="n">_helpers</span>
+<span class="kn">from</span> <span class="nn">google.auth</span> <span class="kn">import</span> <span class="n">environment_vars</span>
+<span class="kn">from</span> <span class="nn">google.auth</span> <span class="kn">import</span> <span class="n">exceptions</span>
+<span class="kn">from</span> <span class="nn">google.auth</span> <span class="kn">import</span> <span class="n">external_account</span>
+
+<span class="c1"># AWS Signature Version 4 signing algorithm identifier.</span>
+<span class="n">_AWS_ALGORITHM</span> <span class="o">=</span> <span class="s2">&quot;AWS4-HMAC-SHA256&quot;</span>
+<span class="c1"># The termination string for the AWS credential scope value as defined in</span>
+<span class="c1"># https://docs.aws.amazon.com/general/latest/gr/sigv4-create-string-to-sign.html</span>
+<span class="n">_AWS_REQUEST_TYPE</span> <span class="o">=</span> <span class="s2">&quot;aws4_request&quot;</span>
+<span class="c1"># The AWS authorization header name for the security session token if available.</span>
+<span class="n">_AWS_SECURITY_TOKEN_HEADER</span> <span class="o">=</span> <span class="s2">&quot;x-amz-security-token&quot;</span>
+<span class="c1"># The AWS authorization header name for the auto-generated date.</span>
+<span class="n">_AWS_DATE_HEADER</span> <span class="o">=</span> <span class="s2">&quot;x-amz-date&quot;</span>
+
+
+<div class="viewcode-block" id="RequestSigner"><a class="viewcode-back" href="../../../reference/google.auth.aws.html#google.auth.aws.RequestSigner">[docs]</a><span class="k">class</span> <span class="nc">RequestSigner</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Implements an AWS request signer based on the AWS Signature Version 4 signing</span>
+<span class="sd">    process.</span>
+<span class="sd">    https://docs.aws.amazon.com/general/latest/gr/signature-version-4.html</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">region_name</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Instantiates an AWS request signer used to compute authenticated signed</span>
+<span class="sd">        requests to AWS APIs based on the AWS Signature Version 4 signing process.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            region_name (str): The AWS region to use.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_region_name</span> <span class="o">=</span> <span class="n">region_name</span>
+
+<div class="viewcode-block" id="RequestSigner.get_request_options"><a class="viewcode-back" href="../../../reference/google.auth.aws.html#google.auth.aws.RequestSigner.get_request_options">[docs]</a>    <span class="k">def</span> <span class="nf">get_request_options</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">aws_security_credentials</span><span class="p">,</span>
+        <span class="n">url</span><span class="p">,</span>
+        <span class="n">method</span><span class="p">,</span>
+        <span class="n">request_payload</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span>
+        <span class="n">additional_headers</span><span class="o">=</span><span class="p">{},</span>
+    <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Generates the signed request for the provided HTTP request for calling</span>
+<span class="sd">        an AWS API. This follows the steps described at:</span>
+<span class="sd">        https://docs.aws.amazon.com/general/latest/gr/sigv4_signing.html</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            aws_security_credentials (Mapping[str, str]): A dictionary containing</span>
+<span class="sd">                the AWS security credentials.</span>
+<span class="sd">            url (str): The AWS service URL containing the canonical URI and</span>
+<span class="sd">                query string.</span>
+<span class="sd">            method (str): The HTTP method used to call this API.</span>
+<span class="sd">            request_payload (Optional[str]): The optional request payload if</span>
+<span class="sd">                available.</span>
+<span class="sd">            additional_headers (Optional[Mapping[str, str]]): The optional</span>
+<span class="sd">                additional headers needed for the requested AWS API.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Mapping[str, str]: The AWS signed request dictionary object.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Get AWS credentials.</span>
+        <span class="n">access_key</span> <span class="o">=</span> <span class="n">aws_security_credentials</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;access_key_id&quot;</span><span class="p">)</span>
+        <span class="n">secret_key</span> <span class="o">=</span> <span class="n">aws_security_credentials</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;secret_access_key&quot;</span><span class="p">)</span>
+        <span class="n">security_token</span> <span class="o">=</span> <span class="n">aws_security_credentials</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;security_token&quot;</span><span class="p">)</span>
+
+        <span class="n">additional_headers</span> <span class="o">=</span> <span class="n">additional_headers</span> <span class="ow">or</span> <span class="p">{}</span>
+
+        <span class="n">uri</span> <span class="o">=</span> <span class="n">urllib</span><span class="o">.</span><span class="n">parse</span><span class="o">.</span><span class="n">urlparse</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+        <span class="c1"># Validate provided URL.</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">uri</span><span class="o">.</span><span class="n">hostname</span> <span class="ow">or</span> <span class="n">uri</span><span class="o">.</span><span class="n">scheme</span> <span class="o">!=</span> <span class="s2">&quot;https&quot;</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Invalid AWS service URL&quot;</span><span class="p">)</span>
+
+        <span class="n">header_map</span> <span class="o">=</span> <span class="n">_generate_authentication_header_map</span><span class="p">(</span>
+            <span class="n">host</span><span class="o">=</span><span class="n">uri</span><span class="o">.</span><span class="n">hostname</span><span class="p">,</span>
+            <span class="n">canonical_uri</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">normpath</span><span class="p">(</span><span class="n">uri</span><span class="o">.</span><span class="n">path</span> <span class="ow">or</span> <span class="s2">&quot;/&quot;</span><span class="p">),</span>
+            <span class="n">canonical_querystring</span><span class="o">=</span><span class="n">_get_canonical_querystring</span><span class="p">(</span><span class="n">uri</span><span class="o">.</span><span class="n">query</span><span class="p">),</span>
+            <span class="n">method</span><span class="o">=</span><span class="n">method</span><span class="p">,</span>
+            <span class="n">region</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_region_name</span><span class="p">,</span>
+            <span class="n">access_key</span><span class="o">=</span><span class="n">access_key</span><span class="p">,</span>
+            <span class="n">secret_key</span><span class="o">=</span><span class="n">secret_key</span><span class="p">,</span>
+            <span class="n">security_token</span><span class="o">=</span><span class="n">security_token</span><span class="p">,</span>
+            <span class="n">request_payload</span><span class="o">=</span><span class="n">request_payload</span><span class="p">,</span>
+            <span class="n">additional_headers</span><span class="o">=</span><span class="n">additional_headers</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">headers</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;Authorization&quot;</span><span class="p">:</span> <span class="n">header_map</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;authorization_header&quot;</span><span class="p">),</span>
+            <span class="s2">&quot;host&quot;</span><span class="p">:</span> <span class="n">uri</span><span class="o">.</span><span class="n">hostname</span><span class="p">,</span>
+        <span class="p">}</span>
+        <span class="c1"># Add x-amz-date if available.</span>
+        <span class="k">if</span> <span class="s2">&quot;amz_date&quot;</span> <span class="ow">in</span> <span class="n">header_map</span><span class="p">:</span>
+            <span class="n">headers</span><span class="p">[</span><span class="n">_AWS_DATE_HEADER</span><span class="p">]</span> <span class="o">=</span> <span class="n">header_map</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;amz_date&quot;</span><span class="p">)</span>
+        <span class="c1"># Append additional optional headers, eg. X-Amz-Target, Content-Type, etc.</span>
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">additional_headers</span><span class="p">:</span>
+            <span class="n">headers</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">additional_headers</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+
+        <span class="c1"># Add session token if available.</span>
+        <span class="k">if</span> <span class="n">security_token</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">headers</span><span class="p">[</span><span class="n">_AWS_SECURITY_TOKEN_HEADER</span><span class="p">]</span> <span class="o">=</span> <span class="n">security_token</span>
+
+        <span class="n">signed_request</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;url&quot;</span><span class="p">:</span> <span class="n">url</span><span class="p">,</span> <span class="s2">&quot;method&quot;</span><span class="p">:</span> <span class="n">method</span><span class="p">,</span> <span class="s2">&quot;headers&quot;</span><span class="p">:</span> <span class="n">headers</span><span class="p">}</span>
+        <span class="k">if</span> <span class="n">request_payload</span><span class="p">:</span>
+            <span class="n">signed_request</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">request_payload</span>
+        <span class="k">return</span> <span class="n">signed_request</span></div></div>
+
+
+<span class="k">def</span> <span class="nf">_get_canonical_querystring</span><span class="p">(</span><span class="n">query</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Generates the canonical query string given a raw query string.</span>
+<span class="sd">    Logic is based on</span>
+<span class="sd">    https://docs.aws.amazon.com/general/latest/gr/sigv4-create-canonical-request.html</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        query (str): The raw query string.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        str: The canonical query string.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Parse raw query string.</span>
+    <span class="n">querystring</span> <span class="o">=</span> <span class="n">urllib</span><span class="o">.</span><span class="n">parse</span><span class="o">.</span><span class="n">parse_qs</span><span class="p">(</span><span class="n">query</span><span class="p">)</span>
+    <span class="n">querystring_encoded_map</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">querystring</span><span class="p">:</span>
+        <span class="n">quote_key</span> <span class="o">=</span> <span class="n">urllib</span><span class="o">.</span><span class="n">parse</span><span class="o">.</span><span class="n">quote</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">safe</span><span class="o">=</span><span class="s2">&quot;-_.~&quot;</span><span class="p">)</span>
+        <span class="c1"># URI encode key.</span>
+        <span class="n">querystring_encoded_map</span><span class="p">[</span><span class="n">quote_key</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">querystring</span><span class="p">[</span><span class="n">key</span><span class="p">]:</span>
+            <span class="c1"># For each key, URI encode all values for that key.</span>
+            <span class="n">querystring_encoded_map</span><span class="p">[</span><span class="n">quote_key</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                <span class="n">urllib</span><span class="o">.</span><span class="n">parse</span><span class="o">.</span><span class="n">quote</span><span class="p">(</span><span class="n">item</span><span class="p">,</span> <span class="n">safe</span><span class="o">=</span><span class="s2">&quot;-_.~&quot;</span><span class="p">)</span>
+            <span class="p">)</span>
+        <span class="c1"># Sort values for each key.</span>
+        <span class="n">querystring_encoded_map</span><span class="p">[</span><span class="n">quote_key</span><span class="p">]</span><span class="o">.</span><span class="n">sort</span><span class="p">()</span>
+    <span class="c1"># Sort keys.</span>
+    <span class="n">sorted_keys</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">querystring_encoded_map</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+    <span class="n">sorted_keys</span><span class="o">.</span><span class="n">sort</span><span class="p">()</span>
+    <span class="c1"># Reconstruct the query string. Preserve keys with multiple values.</span>
+    <span class="n">querystring_encoded_pairs</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">sorted_keys</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">querystring_encoded_map</span><span class="p">[</span><span class="n">key</span><span class="p">]:</span>
+            <span class="n">querystring_encoded_pairs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">{}</span><span class="s2">=</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">item</span><span class="p">))</span>
+    <span class="k">return</span> <span class="s2">&quot;&amp;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">querystring_encoded_pairs</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_sign</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">msg</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Creates the HMAC-SHA256 hash of the provided message using the provided</span>
+<span class="sd">    key.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        key (str): The HMAC-SHA256 key to use.</span>
+<span class="sd">        msg (str): The message to hash.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        str: The computed hash bytes.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">hmac</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">msg</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s2">&quot;utf-8&quot;</span><span class="p">),</span> <span class="n">hashlib</span><span class="o">.</span><span class="n">sha256</span><span class="p">)</span><span class="o">.</span><span class="n">digest</span><span class="p">()</span>
+
+
+<span class="k">def</span> <span class="nf">_get_signing_key</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">date_stamp</span><span class="p">,</span> <span class="n">region_name</span><span class="p">,</span> <span class="n">service_name</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Calculates the signing key used to calculate the signature for</span>
+<span class="sd">    AWS Signature Version 4 based on:</span>
+<span class="sd">    https://docs.aws.amazon.com/general/latest/gr/sigv4-calculate-signature.html</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        key (str): The AWS secret access key.</span>
+<span class="sd">        date_stamp (str): The &#39;%Y%m%d&#39; date format.</span>
+<span class="sd">        region_name (str): The AWS region.</span>
+<span class="sd">        service_name (str): The AWS service name, eg. sts.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        str: The signing key bytes.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">k_date</span> <span class="o">=</span> <span class="n">_sign</span><span class="p">((</span><span class="s2">&quot;AWS4&quot;</span> <span class="o">+</span> <span class="n">key</span><span class="p">)</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s2">&quot;utf-8&quot;</span><span class="p">),</span> <span class="n">date_stamp</span><span class="p">)</span>
+    <span class="n">k_region</span> <span class="o">=</span> <span class="n">_sign</span><span class="p">(</span><span class="n">k_date</span><span class="p">,</span> <span class="n">region_name</span><span class="p">)</span>
+    <span class="n">k_service</span> <span class="o">=</span> <span class="n">_sign</span><span class="p">(</span><span class="n">k_region</span><span class="p">,</span> <span class="n">service_name</span><span class="p">)</span>
+    <span class="n">k_signing</span> <span class="o">=</span> <span class="n">_sign</span><span class="p">(</span><span class="n">k_service</span><span class="p">,</span> <span class="s2">&quot;aws4_request&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">k_signing</span>
+
+
+<span class="k">def</span> <span class="nf">_generate_authentication_header_map</span><span class="p">(</span>
+    <span class="n">host</span><span class="p">,</span>
+    <span class="n">canonical_uri</span><span class="p">,</span>
+    <span class="n">canonical_querystring</span><span class="p">,</span>
+    <span class="n">method</span><span class="p">,</span>
+    <span class="n">region</span><span class="p">,</span>
+    <span class="n">access_key</span><span class="p">,</span>
+    <span class="n">secret_key</span><span class="p">,</span>
+    <span class="n">security_token</span><span class="p">,</span>
+    <span class="n">request_payload</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span>
+    <span class="n">additional_headers</span><span class="o">=</span><span class="p">{},</span>
+<span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Generates the authentication header map needed for generating the AWS</span>
+<span class="sd">    Signature Version 4 signed request.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        host (str): The AWS service URL hostname.</span>
+<span class="sd">        canonical_uri (str): The AWS service URL path name.</span>
+<span class="sd">        canonical_querystring (str): The AWS service URL query string.</span>
+<span class="sd">        method (str): The HTTP method used to call this API.</span>
+<span class="sd">        region (str): The AWS region.</span>
+<span class="sd">        access_key (str): The AWS access key ID.</span>
+<span class="sd">        secret_key (str): The AWS secret access key.</span>
+<span class="sd">        security_token (Optional[str]): The AWS security session token. This is</span>
+<span class="sd">            available for temporary sessions.</span>
+<span class="sd">        request_payload (Optional[str]): The optional request payload if</span>
+<span class="sd">            available.</span>
+<span class="sd">        additional_headers (Optional[Mapping[str, str]]): The optional</span>
+<span class="sd">            additional headers needed for the requested AWS API.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Mapping[str, str]: The AWS authentication header dictionary object.</span>
+<span class="sd">            This contains the x-amz-date and authorization header information.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># iam.amazonaws.com host =&gt; iam service.</span>
+    <span class="c1"># sts.us-east-2.amazonaws.com host =&gt; sts service.</span>
+    <span class="n">service_name</span> <span class="o">=</span> <span class="n">host</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+
+    <span class="n">current_time</span> <span class="o">=</span> <span class="n">_helpers</span><span class="o">.</span><span class="n">utcnow</span><span class="p">()</span>
+    <span class="n">amz_date</span> <span class="o">=</span> <span class="n">current_time</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%Y%m</span><span class="si">%d</span><span class="s2">T%H%M%SZ&quot;</span><span class="p">)</span>
+    <span class="n">date_stamp</span> <span class="o">=</span> <span class="n">current_time</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%Y%m</span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Change all additional headers to be lower case.</span>
+    <span class="n">full_headers</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">additional_headers</span><span class="p">:</span>
+        <span class="n">full_headers</span><span class="p">[</span><span class="n">key</span><span class="o">.</span><span class="n">lower</span><span class="p">()]</span> <span class="o">=</span> <span class="n">additional_headers</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+    <span class="c1"># Add AWS session token if available.</span>
+    <span class="k">if</span> <span class="n">security_token</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">full_headers</span><span class="p">[</span><span class="n">_AWS_SECURITY_TOKEN_HEADER</span><span class="p">]</span> <span class="o">=</span> <span class="n">security_token</span>
+
+    <span class="c1"># Required headers</span>
+    <span class="n">full_headers</span><span class="p">[</span><span class="s2">&quot;host&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">host</span>
+    <span class="c1"># Do not use generated x-amz-date if the date header is provided.</span>
+    <span class="c1"># Previously the date was not fixed with x-amz- and could be provided</span>
+    <span class="c1"># manually.</span>
+    <span class="c1"># https://github.com/boto/botocore/blob/879f8440a4e9ace5d3cf145ce8b3d5e5ffb892ef/tests/unit/auth/aws4_testsuite/get-header-value-trim.req</span>
+    <span class="k">if</span> <span class="s2">&quot;date&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">full_headers</span><span class="p">:</span>
+        <span class="n">full_headers</span><span class="p">[</span><span class="n">_AWS_DATE_HEADER</span><span class="p">]</span> <span class="o">=</span> <span class="n">amz_date</span>
+
+    <span class="c1"># Header keys need to be sorted alphabetically.</span>
+    <span class="n">canonical_headers</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+    <span class="n">header_keys</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">full_headers</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+    <span class="n">header_keys</span><span class="o">.</span><span class="n">sort</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">header_keys</span><span class="p">:</span>
+        <span class="n">canonical_headers</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{}{}</span><span class="s2">:</span><span class="si">{}</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+            <span class="n">canonical_headers</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">full_headers</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+        <span class="p">)</span>
+    <span class="n">signed_headers</span> <span class="o">=</span> <span class="s2">&quot;;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">header_keys</span><span class="p">)</span>
+
+    <span class="n">payload_hash</span> <span class="o">=</span> <span class="n">hashlib</span><span class="o">.</span><span class="n">sha256</span><span class="p">((</span><span class="n">request_payload</span> <span class="ow">or</span> <span class="s2">&quot;&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s2">&quot;utf-8&quot;</span><span class="p">))</span><span class="o">.</span><span class="n">hexdigest</span><span class="p">()</span>
+
+    <span class="c1"># https://docs.aws.amazon.com/general/latest/gr/sigv4-create-canonical-request.html</span>
+    <span class="n">canonical_request</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="se">\n</span><span class="si">{}</span><span class="se">\n</span><span class="si">{}</span><span class="se">\n</span><span class="si">{}</span><span class="se">\n</span><span class="si">{}</span><span class="se">\n</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+        <span class="n">method</span><span class="p">,</span>
+        <span class="n">canonical_uri</span><span class="p">,</span>
+        <span class="n">canonical_querystring</span><span class="p">,</span>
+        <span class="n">canonical_headers</span><span class="p">,</span>
+        <span class="n">signed_headers</span><span class="p">,</span>
+        <span class="n">payload_hash</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="n">credential_scope</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">/</span><span class="si">{}</span><span class="s2">/</span><span class="si">{}</span><span class="s2">/</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+        <span class="n">date_stamp</span><span class="p">,</span> <span class="n">region</span><span class="p">,</span> <span class="n">service_name</span><span class="p">,</span> <span class="n">_AWS_REQUEST_TYPE</span>
+    <span class="p">)</span>
+
+    <span class="c1"># https://docs.aws.amazon.com/general/latest/gr/sigv4-create-string-to-sign.html</span>
+    <span class="n">string_to_sign</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="se">\n</span><span class="si">{}</span><span class="se">\n</span><span class="si">{}</span><span class="se">\n</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+        <span class="n">_AWS_ALGORITHM</span><span class="p">,</span>
+        <span class="n">amz_date</span><span class="p">,</span>
+        <span class="n">credential_scope</span><span class="p">,</span>
+        <span class="n">hashlib</span><span class="o">.</span><span class="n">sha256</span><span class="p">(</span><span class="n">canonical_request</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s2">&quot;utf-8&quot;</span><span class="p">))</span><span class="o">.</span><span class="n">hexdigest</span><span class="p">(),</span>
+    <span class="p">)</span>
+
+    <span class="c1"># https://docs.aws.amazon.com/general/latest/gr/sigv4-calculate-signature.html</span>
+    <span class="n">signing_key</span> <span class="o">=</span> <span class="n">_get_signing_key</span><span class="p">(</span><span class="n">secret_key</span><span class="p">,</span> <span class="n">date_stamp</span><span class="p">,</span> <span class="n">region</span><span class="p">,</span> <span class="n">service_name</span><span class="p">)</span>
+    <span class="n">signature</span> <span class="o">=</span> <span class="n">hmac</span><span class="o">.</span><span class="n">new</span><span class="p">(</span>
+        <span class="n">signing_key</span><span class="p">,</span> <span class="n">string_to_sign</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s2">&quot;utf-8&quot;</span><span class="p">),</span> <span class="n">hashlib</span><span class="o">.</span><span class="n">sha256</span>
+    <span class="p">)</span><span class="o">.</span><span class="n">hexdigest</span><span class="p">()</span>
+
+    <span class="c1"># https://docs.aws.amazon.com/general/latest/gr/sigv4-add-signature-to-request.html</span>
+    <span class="n">authorization_header</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2"> Credential=</span><span class="si">{}</span><span class="s2">/</span><span class="si">{}</span><span class="s2">, SignedHeaders=</span><span class="si">{}</span><span class="s2">, Signature=</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+        <span class="n">_AWS_ALGORITHM</span><span class="p">,</span> <span class="n">access_key</span><span class="p">,</span> <span class="n">credential_scope</span><span class="p">,</span> <span class="n">signed_headers</span><span class="p">,</span> <span class="n">signature</span>
+    <span class="p">)</span>
+
+    <span class="n">authentication_header</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;authorization_header&quot;</span><span class="p">:</span> <span class="n">authorization_header</span><span class="p">}</span>
+    <span class="c1"># Do not use generated x-amz-date if the date header is provided.</span>
+    <span class="k">if</span> <span class="s2">&quot;date&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">full_headers</span><span class="p">:</span>
+        <span class="n">authentication_header</span><span class="p">[</span><span class="s2">&quot;amz_date&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">amz_date</span>
+    <span class="k">return</span> <span class="n">authentication_header</span>
+
+
+<div class="viewcode-block" id="Credentials"><a class="viewcode-back" href="../../../reference/google.auth.aws.html#google.auth.aws.Credentials">[docs]</a><span class="k">class</span> <span class="nc">Credentials</span><span class="p">(</span><span class="n">external_account</span><span class="o">.</span><span class="n">Credentials</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;AWS external account credentials.</span>
+<span class="sd">    This is used to exchange serialized AWS signature v4 signed requests to</span>
+<span class="sd">    AWS STS GetCallerIdentity service for Google access tokens.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">audience</span><span class="p">,</span>
+        <span class="n">subject_token_type</span><span class="p">,</span>
+        <span class="n">token_url</span><span class="p">,</span>
+        <span class="n">credential_source</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">service_account_impersonation_url</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">client_id</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">client_secret</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">quota_project_id</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">scopes</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">default_scopes</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Instantiates an AWS workload external account credentials object.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            audience (str): The STS audience field.</span>
+<span class="sd">            subject_token_type (str): The subject token type.</span>
+<span class="sd">            token_url (str): The STS endpoint URL.</span>
+<span class="sd">            credential_source (Mapping): The credential source dictionary used</span>
+<span class="sd">                to provide instructions on how to retrieve external credential</span>
+<span class="sd">                to be exchanged for Google access tokens.</span>
+<span class="sd">            service_account_impersonation_url (Optional[str]): The optional</span>
+<span class="sd">                service account impersonation getAccessToken URL.</span>
+<span class="sd">            client_id (Optional[str]): The optional client ID.</span>
+<span class="sd">            client_secret (Optional[str]): The optional client secret.</span>
+<span class="sd">            quota_project_id (Optional[str]): The optional quota project ID.</span>
+<span class="sd">            scopes (Optional[Sequence[str]]): Optional scopes to request during</span>
+<span class="sd">                the authorization grant.</span>
+<span class="sd">            default_scopes (Optional[Sequence[str]]): Default scopes passed by a</span>
+<span class="sd">                Google client library. Use &#39;scopes&#39; for user-defined scopes.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            google.auth.exceptions.RefreshError: If an error is encountered during</span>
+<span class="sd">                access token retrieval logic.</span>
+<span class="sd">            ValueError: For invalid parameters.</span>
+
+<span class="sd">        .. note:: Typically one of the helper constructors</span>
+<span class="sd">            :meth:`from_file` or</span>
+<span class="sd">            :meth:`from_info` are used instead of calling the constructor directly.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">Credentials</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="n">audience</span><span class="o">=</span><span class="n">audience</span><span class="p">,</span>
+            <span class="n">subject_token_type</span><span class="o">=</span><span class="n">subject_token_type</span><span class="p">,</span>
+            <span class="n">token_url</span><span class="o">=</span><span class="n">token_url</span><span class="p">,</span>
+            <span class="n">credential_source</span><span class="o">=</span><span class="n">credential_source</span><span class="p">,</span>
+            <span class="n">service_account_impersonation_url</span><span class="o">=</span><span class="n">service_account_impersonation_url</span><span class="p">,</span>
+            <span class="n">client_id</span><span class="o">=</span><span class="n">client_id</span><span class="p">,</span>
+            <span class="n">client_secret</span><span class="o">=</span><span class="n">client_secret</span><span class="p">,</span>
+            <span class="n">quota_project_id</span><span class="o">=</span><span class="n">quota_project_id</span><span class="p">,</span>
+            <span class="n">scopes</span><span class="o">=</span><span class="n">scopes</span><span class="p">,</span>
+            <span class="n">default_scopes</span><span class="o">=</span><span class="n">default_scopes</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">credential_source</span> <span class="o">=</span> <span class="n">credential_source</span> <span class="ow">or</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_environment_id</span> <span class="o">=</span> <span class="n">credential_source</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;environment_id&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_region_url</span> <span class="o">=</span> <span class="n">credential_source</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;region_url&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_security_credentials_url</span> <span class="o">=</span> <span class="n">credential_source</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;url&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_cred_verification_url</span> <span class="o">=</span> <span class="n">credential_source</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
+            <span class="s2">&quot;regional_cred_verification_url&quot;</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_region</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_request_signer</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_target_resource</span> <span class="o">=</span> <span class="n">audience</span>
+
+        <span class="c1"># Get the environment ID. Currently, only one version supported (v1).</span>
+        <span class="n">matches</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;^(aws)([\d]+)$&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_environment_id</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">matches</span><span class="p">:</span>
+            <span class="n">env_id</span><span class="p">,</span> <span class="n">env_version</span> <span class="o">=</span> <span class="n">matches</span><span class="o">.</span><span class="n">groups</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">env_id</span><span class="p">,</span> <span class="n">env_version</span> <span class="o">=</span> <span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">env_id</span> <span class="o">!=</span> <span class="s2">&quot;aws&quot;</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cred_verification_url</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;No valid AWS &#39;credential_source&#39; provided&quot;</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">int</span><span class="p">(</span><span class="n">env_version</span> <span class="ow">or</span> <span class="s2">&quot;&quot;</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;aws version &#39;</span><span class="si">{}</span><span class="s2">&#39; is not supported in the current build.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                    <span class="n">env_version</span>
+                <span class="p">)</span>
+            <span class="p">)</span>
+
+<div class="viewcode-block" id="Credentials.retrieve_subject_token"><a class="viewcode-back" href="../../../reference/google.auth.aws.html#google.auth.aws.Credentials.retrieve_subject_token">[docs]</a>    <span class="k">def</span> <span class="nf">retrieve_subject_token</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Retrieves the subject token using the credential_source object.</span>
+<span class="sd">        The subject token is a serialized `AWS GetCallerIdentity signed request`_.</span>
+
+<span class="sd">        The logic is summarized as:</span>
+
+<span class="sd">        Retrieve the AWS region from the AWS_REGION or AWS_DEFAULT_REGION</span>
+<span class="sd">        environment variable or from the AWS metadata server availability-zone</span>
+<span class="sd">        if not found in the environment variable.</span>
+
+<span class="sd">        Check AWS credentials in environment variables. If not found, retrieve</span>
+<span class="sd">        from the AWS metadata server security-credentials endpoint.</span>
+
+<span class="sd">        When retrieving AWS credentials from the metadata server</span>
+<span class="sd">        security-credentials endpoint, the AWS role needs to be determined by</span>
+<span class="sd">        calling the security-credentials endpoint without any argument. Then the</span>
+<span class="sd">        credentials can be retrieved via: security-credentials/role_name</span>
+
+<span class="sd">        Generate the signed request to AWS STS GetCallerIdentity action.</span>
+
+<span class="sd">        Inject x-goog-cloud-target-resource into header and serialize the</span>
+<span class="sd">        signed request. This will be the subject-token to pass to GCP STS.</span>
+
+<span class="sd">        .. _AWS GetCallerIdentity signed request:</span>
+<span class="sd">            https://cloud.google.com/iam/docs/access-resources-aws#exchange-token</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            request (google.auth.transport.Request): A callable used to make</span>
+<span class="sd">                HTTP requests.</span>
+<span class="sd">        Returns:</span>
+<span class="sd">            str: The retrieved subject token.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Initialize the request signer if not yet initialized after determining</span>
+        <span class="c1"># the current AWS region.</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_request_signer</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_region</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_region</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_region_url</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_request_signer</span> <span class="o">=</span> <span class="n">RequestSigner</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_region</span><span class="p">)</span>
+
+        <span class="c1"># Retrieve the AWS security credentials needed to generate the signed</span>
+        <span class="c1"># request.</span>
+        <span class="n">aws_security_credentials</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_security_credentials</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+        <span class="c1"># Generate the signed request to AWS STS GetCallerIdentity API.</span>
+        <span class="c1"># Use the required regional endpoint. Otherwise, the request will fail.</span>
+        <span class="n">request_options</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_request_signer</span><span class="o">.</span><span class="n">get_request_options</span><span class="p">(</span>
+            <span class="n">aws_security_credentials</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_cred_verification_url</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">{region}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_region</span><span class="p">),</span>
+            <span class="s2">&quot;POST&quot;</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="c1"># The GCP STS endpoint expects the headers to be formatted as:</span>
+        <span class="c1"># [</span>
+        <span class="c1">#   {key: &#39;x-amz-date&#39;, value: &#39;...&#39;},</span>
+        <span class="c1">#   {key: &#39;Authorization&#39;, value: &#39;...&#39;},</span>
+        <span class="c1">#   ...</span>
+        <span class="c1"># ]</span>
+        <span class="c1"># And then serialized as:</span>
+        <span class="c1"># quote(json.dumps({</span>
+        <span class="c1">#   url: &#39;...&#39;,</span>
+        <span class="c1">#   method: &#39;POST&#39;,</span>
+        <span class="c1">#   headers: [{key: &#39;x-amz-date&#39;, value: &#39;...&#39;}, ...]</span>
+        <span class="c1"># }))</span>
+        <span class="n">request_headers</span> <span class="o">=</span> <span class="n">request_options</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;headers&quot;</span><span class="p">)</span>
+        <span class="c1"># The full, canonical resource name of the workload identity pool</span>
+        <span class="c1"># provider, with or without the HTTPS prefix.</span>
+        <span class="c1"># Including this header as part of the signature is recommended to</span>
+        <span class="c1"># ensure data integrity.</span>
+        <span class="n">request_headers</span><span class="p">[</span><span class="s2">&quot;x-goog-cloud-target-resource&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_target_resource</span>
+
+        <span class="c1"># Serialize AWS signed request.</span>
+        <span class="c1"># Keeping inner keys in sorted order makes testing easier for Python</span>
+        <span class="c1"># versions &lt;=3.5 as the stringified JSON string would have a predictable</span>
+        <span class="c1"># key order.</span>
+        <span class="n">aws_signed_req</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">aws_signed_req</span><span class="p">[</span><span class="s2">&quot;url&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">request_options</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;url&quot;</span><span class="p">)</span>
+        <span class="n">aws_signed_req</span><span class="p">[</span><span class="s2">&quot;method&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">request_options</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;method&quot;</span><span class="p">)</span>
+        <span class="n">aws_signed_req</span><span class="p">[</span><span class="s2">&quot;headers&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="c1"># Reformat header to GCP STS expected format.</span>
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">request_headers</span><span class="o">.</span><span class="n">keys</span><span class="p">()):</span>
+            <span class="n">aws_signed_req</span><span class="p">[</span><span class="s2">&quot;headers&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                <span class="p">{</span><span class="s2">&quot;key&quot;</span><span class="p">:</span> <span class="n">key</span><span class="p">,</span> <span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">request_headers</span><span class="p">[</span><span class="n">key</span><span class="p">]}</span>
+            <span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">urllib</span><span class="o">.</span><span class="n">parse</span><span class="o">.</span><span class="n">quote</span><span class="p">(</span>
+            <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">aws_signed_req</span><span class="p">,</span> <span class="n">separators</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;,&quot;</span><span class="p">,</span> <span class="s2">&quot;:&quot;</span><span class="p">),</span> <span class="n">sort_keys</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="nf">_get_region</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="n">url</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Retrieves the current AWS region from either the AWS_REGION or</span>
+<span class="sd">        AWS_DEFAULT_REGION environment variable or from the AWS metadata server.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            request (google.auth.transport.Request): A callable used to make</span>
+<span class="sd">                HTTP requests.</span>
+<span class="sd">            url (str): The AWS metadata server region URL.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            str: The current AWS region.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            google.auth.exceptions.RefreshError: If an error occurs while</span>
+<span class="sd">                retrieving the AWS region.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># The AWS metadata server is not available in some AWS environments</span>
+        <span class="c1"># such as AWS lambda. Instead, it is available via environment</span>
+        <span class="c1"># variable.</span>
+        <span class="n">env_aws_region</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">environment_vars</span><span class="o">.</span><span class="n">AWS_REGION</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">env_aws_region</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">env_aws_region</span>
+
+        <span class="n">env_aws_region</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">environment_vars</span><span class="o">.</span><span class="n">AWS_DEFAULT_REGION</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">env_aws_region</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">env_aws_region</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_region_url</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">exceptions</span><span class="o">.</span><span class="n">RefreshError</span><span class="p">(</span><span class="s2">&quot;Unable to determine AWS region&quot;</span><span class="p">)</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="n">request</span><span class="p">(</span><span class="n">url</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_region_url</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s2">&quot;GET&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Support both string and bytes type response.data.</span>
+        <span class="n">response_body</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">response</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="s2">&quot;decode&quot;</span><span class="p">)</span>
+            <span class="k">else</span> <span class="n">response</span><span class="o">.</span><span class="n">data</span>
+        <span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">response</span><span class="o">.</span><span class="n">status</span> <span class="o">!=</span> <span class="mi">200</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">exceptions</span><span class="o">.</span><span class="n">RefreshError</span><span class="p">(</span>
+                <span class="s2">&quot;Unable to retrieve AWS region&quot;</span><span class="p">,</span> <span class="n">response_body</span>
+            <span class="p">)</span>
+
+        <span class="c1"># This endpoint will return the region in format: us-east-2b.</span>
+        <span class="c1"># Only the us-east-2 part should be used.</span>
+        <span class="k">return</span> <span class="n">response_body</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">_get_security_credentials</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Retrieves the AWS security credentials required for signing AWS</span>
+<span class="sd">        requests from either the AWS security credentials environment variables</span>
+<span class="sd">        or from the AWS metadata server.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            request (google.auth.transport.Request): A callable used to make</span>
+<span class="sd">                HTTP requests.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Mapping[str, str]: The AWS security credentials dictionary object.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            google.auth.exceptions.RefreshError: If an error occurs while</span>
+<span class="sd">                retrieving the AWS security credentials.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># Check environment variables for permanent credentials first.</span>
+        <span class="c1"># https://docs.aws.amazon.com/general/latest/gr/aws-sec-cred-types.html</span>
+        <span class="n">env_aws_access_key_id</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">environment_vars</span><span class="o">.</span><span class="n">AWS_ACCESS_KEY_ID</span><span class="p">)</span>
+        <span class="n">env_aws_secret_access_key</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
+            <span class="n">environment_vars</span><span class="o">.</span><span class="n">AWS_SECRET_ACCESS_KEY</span>
+        <span class="p">)</span>
+        <span class="c1"># This is normally not available for permanent credentials.</span>
+        <span class="n">env_aws_session_token</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">environment_vars</span><span class="o">.</span><span class="n">AWS_SESSION_TOKEN</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">env_aws_access_key_id</span> <span class="ow">and</span> <span class="n">env_aws_secret_access_key</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">{</span>
+                <span class="s2">&quot;access_key_id&quot;</span><span class="p">:</span> <span class="n">env_aws_access_key_id</span><span class="p">,</span>
+                <span class="s2">&quot;secret_access_key&quot;</span><span class="p">:</span> <span class="n">env_aws_secret_access_key</span><span class="p">,</span>
+                <span class="s2">&quot;security_token&quot;</span><span class="p">:</span> <span class="n">env_aws_session_token</span><span class="p">,</span>
+            <span class="p">}</span>
+
+        <span class="c1"># Get role name.</span>
+        <span class="n">role_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_metadata_role_name</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+
+        <span class="c1"># Get security credentials.</span>
+        <span class="n">credentials</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_metadata_security_credentials</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">role_name</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s2">&quot;access_key_id&quot;</span><span class="p">:</span> <span class="n">credentials</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;AccessKeyId&quot;</span><span class="p">),</span>
+            <span class="s2">&quot;secret_access_key&quot;</span><span class="p">:</span> <span class="n">credentials</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;SecretAccessKey&quot;</span><span class="p">),</span>
+            <span class="s2">&quot;security_token&quot;</span><span class="p">:</span> <span class="n">credentials</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;Token&quot;</span><span class="p">),</span>
+        <span class="p">}</span>
+
+    <span class="k">def</span> <span class="nf">_get_metadata_security_credentials</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="n">role_name</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Retrieves the AWS security credentials required for signing AWS</span>
+<span class="sd">        requests from the AWS metadata server.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            request (google.auth.transport.Request): A callable used to make</span>
+<span class="sd">                HTTP requests.</span>
+<span class="sd">            role_name (str): The AWS role name required by the AWS metadata</span>
+<span class="sd">                server security_credentials endpoint in order to return the</span>
+<span class="sd">                credentials.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Mapping[str, str]: The AWS metadata server security credentials</span>
+<span class="sd">                response.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            google.auth.exceptions.RefreshError: If an error occurs while</span>
+<span class="sd">                retrieving the AWS security credentials.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">headers</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;Content-Type&quot;</span><span class="p">:</span> <span class="s2">&quot;application/json&quot;</span><span class="p">}</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="n">request</span><span class="p">(</span>
+            <span class="n">url</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">{}</span><span class="s2">/</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_security_credentials_url</span><span class="p">,</span> <span class="n">role_name</span><span class="p">),</span>
+            <span class="n">method</span><span class="o">=</span><span class="s2">&quot;GET&quot;</span><span class="p">,</span>
+            <span class="n">headers</span><span class="o">=</span><span class="n">headers</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="c1"># support both string and bytes type response.data</span>
+        <span class="n">response_body</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">response</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="s2">&quot;decode&quot;</span><span class="p">)</span>
+            <span class="k">else</span> <span class="n">response</span><span class="o">.</span><span class="n">data</span>
+        <span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">response</span><span class="o">.</span><span class="n">status</span> <span class="o">!=</span> <span class="n">http_client</span><span class="o">.</span><span class="n">OK</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">exceptions</span><span class="o">.</span><span class="n">RefreshError</span><span class="p">(</span>
+                <span class="s2">&quot;Unable to retrieve AWS security credentials&quot;</span><span class="p">,</span> <span class="n">response_body</span>
+            <span class="p">)</span>
+
+        <span class="n">credentials_response</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">response_body</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">credentials_response</span>
+
+    <span class="k">def</span> <span class="nf">_get_metadata_role_name</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Retrieves the AWS role currently attached to the current AWS</span>
+<span class="sd">        workload by querying the AWS metadata server. This is needed for the</span>
+<span class="sd">        AWS metadata server security credentials endpoint in order to retrieve</span>
+<span class="sd">        the AWS security credentials needed to sign requests to AWS APIs.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            request (google.auth.transport.Request): A callable used to make</span>
+<span class="sd">                HTTP requests.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            str: The AWS role name.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            google.auth.exceptions.RefreshError: If an error occurs while</span>
+<span class="sd">                retrieving the AWS role name.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_security_credentials_url</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">exceptions</span><span class="o">.</span><span class="n">RefreshError</span><span class="p">(</span>
+                <span class="s2">&quot;Unable to determine the AWS metadata server security credentials endpoint&quot;</span>
+            <span class="p">)</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="n">request</span><span class="p">(</span><span class="n">url</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_security_credentials_url</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s2">&quot;GET&quot;</span><span class="p">)</span>
+
+        <span class="c1"># support both string and bytes type response.data</span>
+        <span class="n">response_body</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">response</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="s2">&quot;decode&quot;</span><span class="p">)</span>
+            <span class="k">else</span> <span class="n">response</span><span class="o">.</span><span class="n">data</span>
+        <span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">response</span><span class="o">.</span><span class="n">status</span> <span class="o">!=</span> <span class="n">http_client</span><span class="o">.</span><span class="n">OK</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">exceptions</span><span class="o">.</span><span class="n">RefreshError</span><span class="p">(</span>
+                <span class="s2">&quot;Unable to retrieve AWS role name&quot;</span><span class="p">,</span> <span class="n">response_body</span>
+            <span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">response_body</span>
+
+<div class="viewcode-block" id="Credentials.from_info"><a class="viewcode-back" href="../../../reference/google.auth.aws.html#google.auth.aws.Credentials.from_info">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">from_info</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">info</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Creates an AWS Credentials instance from parsed external account info.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            info (Mapping[str, str]): The AWS external account info in Google</span>
+<span class="sd">                format.</span>
+<span class="sd">            kwargs: Additional arguments to pass to the constructor.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            google.auth.aws.Credentials: The constructed credentials.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            ValueError: For invalid parameters.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span>
+            <span class="n">audience</span><span class="o">=</span><span class="n">info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;audience&quot;</span><span class="p">),</span>
+            <span class="n">subject_token_type</span><span class="o">=</span><span class="n">info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;subject_token_type&quot;</span><span class="p">),</span>
+            <span class="n">token_url</span><span class="o">=</span><span class="n">info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;token_url&quot;</span><span class="p">),</span>
+            <span class="n">service_account_impersonation_url</span><span class="o">=</span><span class="n">info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
+                <span class="s2">&quot;service_account_impersonation_url&quot;</span>
+            <span class="p">),</span>
+            <span class="n">client_id</span><span class="o">=</span><span class="n">info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;client_id&quot;</span><span class="p">),</span>
+            <span class="n">client_secret</span><span class="o">=</span><span class="n">info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;client_secret&quot;</span><span class="p">),</span>
+            <span class="n">credential_source</span><span class="o">=</span><span class="n">info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;credential_source&quot;</span><span class="p">),</span>
+            <span class="n">quota_project_id</span><span class="o">=</span><span class="n">info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;quota_project_id&quot;</span><span class="p">),</span>
+            <span class="o">**</span><span class="n">kwargs</span>
+        <span class="p">)</span></div>
+
+<div class="viewcode-block" id="Credentials.from_file"><a class="viewcode-back" href="../../../reference/google.auth.aws.html#google.auth.aws.Credentials.from_file">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">from_file</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">filename</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Creates an AWS Credentials instance from an external account json file.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            filename (str): The path to the AWS external account json file.</span>
+<span class="sd">            kwargs: Additional arguments to pass to the constructor.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            google.auth.aws.Credentials: The constructed credentials.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">with</span> <span class="n">io</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">json_file</span><span class="p">:</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">json_file</span><span class="p">)</span>
+            <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">from_info</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div></div>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../../index.html">google-auth</a></h1>
+
+
+
+<p class="blurb">Google Auth Library for Python</p>
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=GoogleCloudPlatform&repo=google-auth-library-python&type=watch&count=true&size=large&v=2"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+
+    
+
+<p>
+<a class="badge" href="https://travis-ci.org/GoogleCloudPlatform/google-auth-library-python">
+    <img
+        alt="https://secure.travis-ci.org/GoogleCloudPlatform/google-auth-library-python.svg?branch=master"
+        src="https://secure.travis-ci.org/GoogleCloudPlatform/google-auth-library-python.svg?branch=master"
+    />
+</a>
+</p>
+
+
+<h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../user-guide.html">User Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../reference/modules.html">Reference</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2016, Google, Inc..
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.4.4</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+    <a href="https://github.com/GoogleCloudPlatform/google-auth-library-python" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

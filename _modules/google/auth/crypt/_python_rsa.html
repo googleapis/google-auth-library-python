@@ -1,0 +1,291 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>google.auth.crypt._python_rsa &#8212; google-auth 1.30.0 documentation</title>
+    <link rel="stylesheet" href="../../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../../../../" src="../../../../_static/documentation_options.js"></script>
+    <script src="../../../../_static/jquery.js"></script>
+    <script src="../../../../_static/underscore.js"></script>
+    <script src="../../../../_static/doctools.js"></script>
+    <script src="../../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for google.auth.crypt._python_rsa</h1><div class="highlight"><pre>
+<span></span><span class="c1"># Copyright 2016 Google LLC</span>
+<span class="c1">#</span>
+<span class="c1"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c1"># you may not use this file except in compliance with the License.</span>
+<span class="c1"># You may obtain a copy of the License at</span>
+<span class="c1">#</span>
+<span class="c1">#      http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c1">#</span>
+<span class="c1"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c1"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c1"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c1"># See the License for the specific language governing permissions and</span>
+<span class="c1"># limitations under the License.</span>
+
+<span class="sd">&quot;&quot;&quot;Pure-Python RSA cryptography implementation.</span>
+
+<span class="sd">Uses the ``rsa``, ``pyasn1`` and ``pyasn1_modules`` packages</span>
+<span class="sd">to parse PEM files storing PKCS#1 or PKCS#8 keys as well as</span>
+<span class="sd">certificates. There is no support for p12 files.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">absolute_import</span>
+
+<span class="kn">from</span> <span class="nn">pyasn1.codec.der</span> <span class="kn">import</span> <span class="n">decoder</span>
+<span class="kn">from</span> <span class="nn">pyasn1_modules</span> <span class="kn">import</span> <span class="n">pem</span>
+<span class="kn">from</span> <span class="nn">pyasn1_modules.rfc2459</span> <span class="kn">import</span> <span class="n">Certificate</span>
+<span class="kn">from</span> <span class="nn">pyasn1_modules.rfc5208</span> <span class="kn">import</span> <span class="n">PrivateKeyInfo</span>
+<span class="kn">import</span> <span class="nn">rsa</span>
+<span class="kn">import</span> <span class="nn">six</span>
+
+<span class="kn">from</span> <span class="nn">google.auth</span> <span class="kn">import</span> <span class="n">_helpers</span>
+<span class="kn">from</span> <span class="nn">google.auth.crypt</span> <span class="kn">import</span> <span class="n">base</span>
+
+<span class="n">_POW2</span> <span class="o">=</span> <span class="p">(</span><span class="mi">128</span><span class="p">,</span> <span class="mi">64</span><span class="p">,</span> <span class="mi">32</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+<span class="n">_CERTIFICATE_MARKER</span> <span class="o">=</span> <span class="sa">b</span><span class="s2">&quot;-----BEGIN CERTIFICATE-----&quot;</span>
+<span class="n">_PKCS1_MARKER</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;-----BEGIN RSA PRIVATE KEY-----&quot;</span><span class="p">,</span> <span class="s2">&quot;-----END RSA PRIVATE KEY-----&quot;</span><span class="p">)</span>
+<span class="n">_PKCS8_MARKER</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;-----BEGIN PRIVATE KEY-----&quot;</span><span class="p">,</span> <span class="s2">&quot;-----END PRIVATE KEY-----&quot;</span><span class="p">)</span>
+<span class="n">_PKCS8_SPEC</span> <span class="o">=</span> <span class="n">PrivateKeyInfo</span><span class="p">()</span>
+
+
+<span class="k">def</span> <span class="nf">_bit_list_to_bytes</span><span class="p">(</span><span class="n">bit_list</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Converts an iterable of 1s and 0s to bytes.</span>
+
+<span class="sd">    Combines the list 8 at a time, treating each group of 8 bits</span>
+<span class="sd">    as a single byte.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        bit_list (Sequence): Sequence of 1s and 0s.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        bytes: The decoded bytes.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">num_bits</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">bit_list</span><span class="p">)</span>
+    <span class="n">byte_vals</span> <span class="o">=</span> <span class="nb">bytearray</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">start</span> <span class="ow">in</span> <span class="n">six</span><span class="o">.</span><span class="n">moves</span><span class="o">.</span><span class="n">xrange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">num_bits</span><span class="p">,</span> <span class="mi">8</span><span class="p">):</span>
+        <span class="n">curr_bits</span> <span class="o">=</span> <span class="n">bit_list</span><span class="p">[</span><span class="n">start</span> <span class="p">:</span> <span class="n">start</span> <span class="o">+</span> <span class="mi">8</span><span class="p">]</span>
+        <span class="n">char_val</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">val</span> <span class="o">*</span> <span class="n">digit</span> <span class="k">for</span> <span class="n">val</span><span class="p">,</span> <span class="n">digit</span> <span class="ow">in</span> <span class="n">six</span><span class="o">.</span><span class="n">moves</span><span class="o">.</span><span class="n">zip</span><span class="p">(</span><span class="n">_POW2</span><span class="p">,</span> <span class="n">curr_bits</span><span class="p">))</span>
+        <span class="n">byte_vals</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">char_val</span><span class="p">)</span>
+    <span class="k">return</span> <span class="nb">bytes</span><span class="p">(</span><span class="n">byte_vals</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="RSAVerifier"><a class="viewcode-back" href="../../../../reference/google.auth.crypt.html#google.auth.crypt.RSAVerifier">[docs]</a><span class="k">class</span> <span class="nc">RSAVerifier</span><span class="p">(</span><span class="n">base</span><span class="o">.</span><span class="n">Verifier</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Verifies RSA cryptographic signatures using public keys.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        public_key (rsa.key.PublicKey): The public key used to verify</span>
+<span class="sd">            signatures.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">public_key</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_pubkey</span> <span class="o">=</span> <span class="n">public_key</span>
+
+<div class="viewcode-block" id="RSAVerifier.verify"><a class="viewcode-back" href="../../../../reference/google.auth.crypt.html#google.auth.crypt.RSAVerifier.verify">[docs]</a>    <span class="nd">@_helpers</span><span class="o">.</span><span class="n">copy_docstring</span><span class="p">(</span><span class="n">base</span><span class="o">.</span><span class="n">Verifier</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">verify</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">,</span> <span class="n">signature</span><span class="p">):</span>
+        <span class="n">message</span> <span class="o">=</span> <span class="n">_helpers</span><span class="o">.</span><span class="n">to_bytes</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">rsa</span><span class="o">.</span><span class="n">pkcs1</span><span class="o">.</span><span class="n">verify</span><span class="p">(</span><span class="n">message</span><span class="p">,</span> <span class="n">signature</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pubkey</span><span class="p">)</span>
+        <span class="k">except</span> <span class="p">(</span><span class="ne">ValueError</span><span class="p">,</span> <span class="n">rsa</span><span class="o">.</span><span class="n">pkcs1</span><span class="o">.</span><span class="n">VerificationError</span><span class="p">):</span>
+            <span class="k">return</span> <span class="kc">False</span></div>
+
+<div class="viewcode-block" id="RSAVerifier.from_string"><a class="viewcode-back" href="../../../../reference/google.auth.crypt.html#google.auth.crypt.RSAVerifier.from_string">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">from_string</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">public_key</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Construct an Verifier instance from a public key or public</span>
+<span class="sd">        certificate string.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            public_key (Union[str, bytes]): The public key in PEM format or the</span>
+<span class="sd">                x509 public key certificate.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            google.auth.crypt._python_rsa.RSAVerifier: The constructed verifier.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            ValueError: If the public_key can&#39;t be parsed.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">public_key</span> <span class="o">=</span> <span class="n">_helpers</span><span class="o">.</span><span class="n">to_bytes</span><span class="p">(</span><span class="n">public_key</span><span class="p">)</span>
+        <span class="n">is_x509_cert</span> <span class="o">=</span> <span class="n">_CERTIFICATE_MARKER</span> <span class="ow">in</span> <span class="n">public_key</span>
+
+        <span class="c1"># If this is a certificate, extract the public key info.</span>
+        <span class="k">if</span> <span class="n">is_x509_cert</span><span class="p">:</span>
+            <span class="n">der</span> <span class="o">=</span> <span class="n">rsa</span><span class="o">.</span><span class="n">pem</span><span class="o">.</span><span class="n">load_pem</span><span class="p">(</span><span class="n">public_key</span><span class="p">,</span> <span class="s2">&quot;CERTIFICATE&quot;</span><span class="p">)</span>
+            <span class="n">asn1_cert</span><span class="p">,</span> <span class="n">remaining</span> <span class="o">=</span> <span class="n">decoder</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="n">der</span><span class="p">,</span> <span class="n">asn1Spec</span><span class="o">=</span><span class="n">Certificate</span><span class="p">())</span>
+            <span class="k">if</span> <span class="n">remaining</span> <span class="o">!=</span> <span class="sa">b</span><span class="s2">&quot;&quot;</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Unused bytes&quot;</span><span class="p">,</span> <span class="n">remaining</span><span class="p">)</span>
+
+            <span class="n">cert_info</span> <span class="o">=</span> <span class="n">asn1_cert</span><span class="p">[</span><span class="s2">&quot;tbsCertificate&quot;</span><span class="p">][</span><span class="s2">&quot;subjectPublicKeyInfo&quot;</span><span class="p">]</span>
+            <span class="n">key_bytes</span> <span class="o">=</span> <span class="n">_bit_list_to_bytes</span><span class="p">(</span><span class="n">cert_info</span><span class="p">[</span><span class="s2">&quot;subjectPublicKey&quot;</span><span class="p">])</span>
+            <span class="n">pubkey</span> <span class="o">=</span> <span class="n">rsa</span><span class="o">.</span><span class="n">PublicKey</span><span class="o">.</span><span class="n">load_pkcs1</span><span class="p">(</span><span class="n">key_bytes</span><span class="p">,</span> <span class="s2">&quot;DER&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">pubkey</span> <span class="o">=</span> <span class="n">rsa</span><span class="o">.</span><span class="n">PublicKey</span><span class="o">.</span><span class="n">load_pkcs1</span><span class="p">(</span><span class="n">public_key</span><span class="p">,</span> <span class="s2">&quot;PEM&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span><span class="n">pubkey</span><span class="p">)</span></div></div>
+
+
+<div class="viewcode-block" id="RSASigner"><a class="viewcode-back" href="../../../../reference/google.auth.crypt.html#google.auth.crypt.RSASigner">[docs]</a><span class="k">class</span> <span class="nc">RSASigner</span><span class="p">(</span><span class="n">base</span><span class="o">.</span><span class="n">Signer</span><span class="p">,</span> <span class="n">base</span><span class="o">.</span><span class="n">FromServiceAccountMixin</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Signs messages with an RSA private key.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        private_key (rsa.key.PrivateKey): The private key to sign with.</span>
+<span class="sd">        key_id (str): Optional key ID used to identify this private key. This</span>
+<span class="sd">            can be useful to associate the private key with its associated</span>
+<span class="sd">            public key or certificate.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">private_key</span><span class="p">,</span> <span class="n">key_id</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_key</span> <span class="o">=</span> <span class="n">private_key</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_key_id</span> <span class="o">=</span> <span class="n">key_id</span>
+
+    <span class="nd">@property</span>
+    <span class="nd">@_helpers</span><span class="o">.</span><span class="n">copy_docstring</span><span class="p">(</span><span class="n">base</span><span class="o">.</span><span class="n">Signer</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">key_id</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_key_id</span>
+
+<div class="viewcode-block" id="RSASigner.sign"><a class="viewcode-back" href="../../../../reference/google.auth.crypt.html#google.auth.crypt.RSASigner.sign">[docs]</a>    <span class="nd">@_helpers</span><span class="o">.</span><span class="n">copy_docstring</span><span class="p">(</span><span class="n">base</span><span class="o">.</span><span class="n">Signer</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">sign</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">):</span>
+        <span class="n">message</span> <span class="o">=</span> <span class="n">_helpers</span><span class="o">.</span><span class="n">to_bytes</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">rsa</span><span class="o">.</span><span class="n">pkcs1</span><span class="o">.</span><span class="n">sign</span><span class="p">(</span><span class="n">message</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_key</span><span class="p">,</span> <span class="s2">&quot;SHA-256&quot;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="RSASigner.from_string"><a class="viewcode-back" href="../../../../reference/google.auth.crypt.html#google.auth.crypt.RSASigner.from_string">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">from_string</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">key_id</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Construct an Signer instance from a private key in PEM format.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            key (str): Private key in PEM format.</span>
+<span class="sd">            key_id (str): An optional key id used to identify the private key.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            google.auth.crypt.Signer: The constructed signer.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            ValueError: If the key cannot be parsed as PKCS#1 or PKCS#8 in</span>
+<span class="sd">                PEM format.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">key</span> <span class="o">=</span> <span class="n">_helpers</span><span class="o">.</span><span class="n">from_bytes</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>  <span class="c1"># PEM expects str in Python 3</span>
+        <span class="n">marker_id</span><span class="p">,</span> <span class="n">key_bytes</span> <span class="o">=</span> <span class="n">pem</span><span class="o">.</span><span class="n">readPemBlocksFromFile</span><span class="p">(</span>
+            <span class="n">six</span><span class="o">.</span><span class="n">StringIO</span><span class="p">(</span><span class="n">key</span><span class="p">),</span> <span class="n">_PKCS1_MARKER</span><span class="p">,</span> <span class="n">_PKCS8_MARKER</span>
+        <span class="p">)</span>
+
+        <span class="c1"># Key is in pkcs1 format.</span>
+        <span class="k">if</span> <span class="n">marker_id</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">private_key</span> <span class="o">=</span> <span class="n">rsa</span><span class="o">.</span><span class="n">key</span><span class="o">.</span><span class="n">PrivateKey</span><span class="o">.</span><span class="n">load_pkcs1</span><span class="p">(</span><span class="n">key_bytes</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s2">&quot;DER&quot;</span><span class="p">)</span>
+        <span class="c1"># Key is in pkcs8.</span>
+        <span class="k">elif</span> <span class="n">marker_id</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">key_info</span><span class="p">,</span> <span class="n">remaining</span> <span class="o">=</span> <span class="n">decoder</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="n">key_bytes</span><span class="p">,</span> <span class="n">asn1Spec</span><span class="o">=</span><span class="n">_PKCS8_SPEC</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">remaining</span> <span class="o">!=</span> <span class="sa">b</span><span class="s2">&quot;&quot;</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Unused bytes&quot;</span><span class="p">,</span> <span class="n">remaining</span><span class="p">)</span>
+            <span class="n">private_key_info</span> <span class="o">=</span> <span class="n">key_info</span><span class="o">.</span><span class="n">getComponentByName</span><span class="p">(</span><span class="s2">&quot;privateKey&quot;</span><span class="p">)</span>
+            <span class="n">private_key</span> <span class="o">=</span> <span class="n">rsa</span><span class="o">.</span><span class="n">key</span><span class="o">.</span><span class="n">PrivateKey</span><span class="o">.</span><span class="n">load_pkcs1</span><span class="p">(</span>
+                <span class="n">private_key_info</span><span class="o">.</span><span class="n">asOctets</span><span class="p">(),</span> <span class="nb">format</span><span class="o">=</span><span class="s2">&quot;DER&quot;</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;No key could be detected.&quot;</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span><span class="n">private_key</span><span class="p">,</span> <span class="n">key_id</span><span class="o">=</span><span class="n">key_id</span><span class="p">)</span></div></div>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../../../index.html">google-auth</a></h1>
+
+
+
+<p class="blurb">Google Auth Library for Python</p>
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=GoogleCloudPlatform&repo=google-auth-library-python&type=watch&count=true&size=large&v=2"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+
+    
+
+<p>
+<a class="badge" href="https://travis-ci.org/GoogleCloudPlatform/google-auth-library-python">
+    <img
+        alt="https://secure.travis-ci.org/GoogleCloudPlatform/google-auth-library-python.svg?branch=master"
+        src="https://secure.travis-ci.org/GoogleCloudPlatform/google-auth-library-python.svg?branch=master"
+    />
+</a>
+</p>
+
+
+<h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../user-guide.html">User Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../reference/modules.html">Reference</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2016, Google, Inc..
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.4.4</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+    <a href="https://github.com/GoogleCloudPlatform/google-auth-library-python" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

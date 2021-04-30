@@ -1,0 +1,231 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>google.oauth2.utils module &#8212; google-auth 1.30.0 documentation</title>
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="prev" title="google.oauth2.sts module" href="google.oauth2.sts.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="module-google.oauth2.utils">
+<span id="google-oauth2-utils-module"></span><h1>google.oauth2.utils module<a class="headerlink" href="#module-google.oauth2.utils" title="Permalink to this headline">¶</a></h1>
+<p>OAuth 2.0 Utilities.</p>
+<p>This module provides implementations for various OAuth 2.0 utilities.
+This includes <a class="reference internal" href="#oauth-error-handling">OAuth error handling</a> and
+<a class="reference internal" href="#client-authentication-for-oauth-flows">Client authentication for OAuth flows</a>.</p>
+<section id="oauth-error-handling">
+<h2>OAuth error handling<a class="headerlink" href="#oauth-error-handling" title="Permalink to this headline">¶</a></h2>
+<p>This will define interfaces for handling OAuth related error responses as
+stated in <a class="reference external" href="https://tools.ietf.org/html/rfc6749#section-5.2">RFC 6749 section 5.2</a>.
+This will include a common function to convert these HTTP error responses to a
+<a class="reference internal" href="google.auth.exceptions.html#google.auth.exceptions.OAuthError" title="google.auth.exceptions.OAuthError"><code class="xref py py-class docutils literal notranslate"><span class="pre">google.auth.exceptions.OAuthError</span></code></a> exception.</p>
+</section>
+<section id="client-authentication-for-oauth-flows">
+<h2>Client authentication for OAuth flows<a class="headerlink" href="#client-authentication-for-oauth-flows" title="Permalink to this headline">¶</a></h2>
+<p>We introduce an interface for defining client authentication credentials based
+on <a class="reference external" href="https://tools.ietf.org/html/rfc6749#section-2.3.1">RFC 6749 section 2.3.1</a>. This will expose the following
+capabilities:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Ability to support basic authentication via request header.</p></li>
+<li><p>Ability to support bearer token authentication via request header.</p></li>
+<li><p>Ability to support client ID / secret authentication via request body.</p></li>
+</ul>
+</div></blockquote>
+<dl class="class">
+<dt id="google.oauth2.utils.ClientAuthType">
+<em class="property">class </em><code class="sig-name descname">ClientAuthType</code><a class="reference internal" href="../_modules/google/oauth2/utils.html#ClientAuthType"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.oauth2.utils.ClientAuthType" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3.5/library/enum.html#enum.Enum" title="(in Python v3.5)"><code class="xref py py-class docutils literal notranslate"><span class="pre">enum.Enum</span></code></a></p>
+<p>An enumeration.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="google.oauth2.utils.ClientAuthentication">
+<em class="property">class </em><code class="sig-name descname">ClientAuthentication</code><span class="sig-paren">(</span><em class="sig-param">client_auth_type</em>, <em class="sig-param">client_id</em>, <em class="sig-param">client_secret=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/google/oauth2/utils.html#ClientAuthentication"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.oauth2.utils.ClientAuthentication" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3.5/library/functions.html#object" title="(in Python v3.5)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<p>Defines the client authentication credentials for basic and request-body
+types based on <a class="reference external" href="https://tools.ietf.org/html/rfc6749#section-2.3.1">https://tools.ietf.org/html/rfc6749#section-2.3.1</a>.</p>
+<p>Instantiates a client authentication object containing the client ID
+and secret credentials for basic and response-body auth.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>client_auth_type</strong> (<em>google.oauth2.oauth_utils.ClientAuthType</em>) – The
+client authentication type.</p></li>
+<li><p><strong>client_id</strong> (<a class="reference external" href="https://docs.python.org/3.5/library/stdtypes.html#str" title="(in Python v3.5)"><em>str</em></a>) – The client ID.</p></li>
+<li><p><strong>client_secret</strong> (<a class="reference external" href="https://docs.python.org/3.5/library/typing.html#typing.Optional" title="(in Python v3.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Optional</span></code></a> [ <a class="reference external" href="https://docs.python.org/3.5/library/stdtypes.html#str" title="(in Python v3.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">str</span></code></a> ]) – The client secret.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="class">
+<dt id="google.oauth2.utils.OAuthClientAuthHandler">
+<em class="property">class </em><code class="sig-name descname">OAuthClientAuthHandler</code><span class="sig-paren">(</span><em class="sig-param">client_authentication=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/google/oauth2/utils.html#OAuthClientAuthHandler"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.oauth2.utils.OAuthClientAuthHandler" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3.5/library/functions.html#object" title="(in Python v3.5)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<p>Abstract class for handling client authentication in OAuth-based
+operations.</p>
+<p>Instantiates an OAuth client authentication handler.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>client_authentication</strong> (<a class="reference external" href="https://docs.python.org/3.5/library/typing.html#typing.Optional" title="(in Python v3.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Optional</span></code></a> [ <a class="reference internal" href="#google.oauth2.utils.ClientAuthentication" title="google.oauth2.utils.ClientAuthentication"><code class="xref py py-obj docutils literal notranslate"><span class="pre">google.oauth2.utils.ClientAuthentication</span></code></a> ]) – The OAuth client authentication credentials if available.</p>
+</dd>
+</dl>
+<dl class="method">
+<dt id="google.oauth2.utils.OAuthClientAuthHandler.apply_client_authentication_options">
+<code class="sig-name descname">apply_client_authentication_options</code><span class="sig-paren">(</span><em class="sig-param">headers</em>, <em class="sig-param">request_body=None</em>, <em class="sig-param">bearer_token=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/google/oauth2/utils.html#OAuthClientAuthHandler.apply_client_authentication_options"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.oauth2.utils.OAuthClientAuthHandler.apply_client_authentication_options" title="Permalink to this definition">¶</a></dt>
+<dd><p>Applies client authentication on the OAuth request’s headers or POST
+body.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>headers</strong> (<a class="reference external" href="https://docs.python.org/3.5/library/typing.html#typing.Mapping" title="(in Python v3.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Mapping</span></code></a> [ <a class="reference external" href="https://docs.python.org/3.5/library/stdtypes.html#str" title="(in Python v3.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">str</span></code></a>, <a class="reference external" href="https://docs.python.org/3.5/library/stdtypes.html#str" title="(in Python v3.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">str</span></code></a> ]) – The HTTP request header.</p></li>
+<li><p><strong>request_body</strong> (<a class="reference external" href="https://docs.python.org/3.5/library/typing.html#typing.Optional" title="(in Python v3.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Optional</span></code></a> [ <a class="reference external" href="https://docs.python.org/3.5/library/typing.html#typing.Mapping" title="(in Python v3.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Mapping</span></code></a> [ <a class="reference external" href="https://docs.python.org/3.5/library/stdtypes.html#str" title="(in Python v3.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">str</span></code></a>, <a class="reference external" href="https://docs.python.org/3.5/library/stdtypes.html#str" title="(in Python v3.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">str</span></code></a> ]  ]) – The HTTP request body
+dictionary. For requests that do not support request body, this
+is None and will be ignored.</p></li>
+<li><p><strong>bearer_token</strong> (<a class="reference external" href="https://docs.python.org/3.5/library/typing.html#typing.Optional" title="(in Python v3.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Optional</span></code></a> [ <a class="reference external" href="https://docs.python.org/3.5/library/stdtypes.html#str" title="(in Python v3.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">str</span></code></a> ]) – The optional bearer token.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="google.oauth2.utils.handle_error_response">
+<code class="sig-name descname">handle_error_response</code><span class="sig-paren">(</span><em class="sig-param">response_body</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/google/oauth2/utils.html#handle_error_response"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.oauth2.utils.handle_error_response" title="Permalink to this definition">¶</a></dt>
+<dd><p>Translates an error response from an OAuth operation into an
+OAuthError exception.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>response_body</strong> (<a class="reference external" href="https://docs.python.org/3.5/library/stdtypes.html#str" title="(in Python v3.5)"><em>str</em></a>) – The decoded response data.</p>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><p><a class="reference internal" href="google.auth.exceptions.html#google.auth.exceptions.OAuthError" title="google.auth.exceptions.OAuthError"><strong>google.auth.exceptions.OAuthError</strong></a> – </p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">google-auth</a></h1>
+
+
+
+<p class="blurb">Google Auth Library for Python</p>
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=GoogleCloudPlatform&repo=google-auth-library-python&type=watch&count=true&size=large&v=2"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+
+    
+
+<p>
+<a class="badge" href="https://travis-ci.org/GoogleCloudPlatform/google-auth-library-python">
+    <img
+        alt="https://secure.travis-ci.org/GoogleCloudPlatform/google-auth-library-python.svg?branch=master"
+        src="https://secure.travis-ci.org/GoogleCloudPlatform/google-auth-library-python.svg?branch=master"
+    />
+</a>
+</p>
+
+
+<h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../user-guide.html">User Guide</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="modules.html">Reference</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="google.html">google package</a></li>
+</ul>
+</li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="modules.html">google</a><ul>
+  <li><a href="google.html">google package</a><ul>
+  <li><a href="google.oauth2.html">google.oauth2 package</a><ul>
+      <li>Previous: <a href="google.oauth2.sts.html" title="previous chapter">google.oauth2.sts module</a></li>
+  </ul></li>
+  </ul></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2016, Google, Inc..
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.4.4</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/reference/google.oauth2.utils.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+    <a href="https://github.com/GoogleCloudPlatform/google-auth-library-python" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

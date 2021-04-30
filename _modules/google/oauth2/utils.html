@@ -1,0 +1,289 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>google.oauth2.utils &#8212; google-auth 1.30.0 documentation</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script src="../../../_static/jquery.js"></script>
+    <script src="../../../_static/underscore.js"></script>
+    <script src="../../../_static/doctools.js"></script>
+    <script src="../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for google.oauth2.utils</h1><div class="highlight"><pre>
+<span></span><span class="c1"># Copyright 2020 Google LLC</span>
+<span class="c1">#</span>
+<span class="c1"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c1"># you may not use this file except in compliance with the License.</span>
+<span class="c1"># You may obtain a copy of the License at</span>
+<span class="c1">#</span>
+<span class="c1">#      http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c1">#</span>
+<span class="c1"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c1"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c1"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c1"># See the License for the specific language governing permissions and</span>
+<span class="c1"># limitations under the License.</span>
+
+<span class="sd">&quot;&quot;&quot;OAuth 2.0 Utilities.</span>
+
+<span class="sd">This module provides implementations for various OAuth 2.0 utilities.</span>
+<span class="sd">This includes `OAuth error handling`_ and</span>
+<span class="sd">`Client authentication for OAuth flows`_.</span>
+
+<span class="sd">OAuth error handling</span>
+<span class="sd">--------------------</span>
+<span class="sd">This will define interfaces for handling OAuth related error responses as</span>
+<span class="sd">stated in `RFC 6749 section 5.2`_.</span>
+<span class="sd">This will include a common function to convert these HTTP error responses to a</span>
+<span class="sd">:class:`google.auth.exceptions.OAuthError` exception.</span>
+
+
+<span class="sd">Client authentication for OAuth flows</span>
+<span class="sd">-------------------------------------</span>
+<span class="sd">We introduce an interface for defining client authentication credentials based</span>
+<span class="sd">on `RFC 6749 section 2.3.1`_. This will expose the following</span>
+<span class="sd">capabilities:</span>
+
+<span class="sd">    * Ability to support basic authentication via request header.</span>
+<span class="sd">    * Ability to support bearer token authentication via request header.</span>
+<span class="sd">    * Ability to support client ID / secret authentication via request body.</span>
+
+<span class="sd">.. _RFC 6749 section 2.3.1: https://tools.ietf.org/html/rfc6749#section-2.3.1</span>
+<span class="sd">.. _RFC 6749 section 5.2: https://tools.ietf.org/html/rfc6749#section-5.2</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">abc</span>
+<span class="kn">import</span> <span class="nn">base64</span>
+<span class="kn">import</span> <span class="nn">enum</span>
+<span class="kn">import</span> <span class="nn">json</span>
+
+<span class="kn">import</span> <span class="nn">six</span>
+
+<span class="kn">from</span> <span class="nn">google.auth</span> <span class="kn">import</span> <span class="n">exceptions</span>
+
+
+<span class="c1"># OAuth client authentication based on</span>
+<span class="c1"># https://tools.ietf.org/html/rfc6749#section-2.3.</span>
+<div class="viewcode-block" id="ClientAuthType"><a class="viewcode-back" href="../../../reference/google.oauth2.utils.html#google.oauth2.sts.ClientAuthType">[docs]</a><span class="k">class</span> <span class="nc">ClientAuthType</span><span class="p">(</span><span class="n">enum</span><span class="o">.</span><span class="n">Enum</span><span class="p">):</span>
+    <span class="n">basic</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="n">request_body</span> <span class="o">=</span> <span class="mi">2</span></div>
+
+
+<div class="viewcode-block" id="ClientAuthentication"><a class="viewcode-back" href="../../../reference/google.oauth2.utils.html#google.oauth2.sts.ClientAuthentication">[docs]</a><span class="k">class</span> <span class="nc">ClientAuthentication</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Defines the client authentication credentials for basic and request-body</span>
+<span class="sd">    types based on https://tools.ietf.org/html/rfc6749#section-2.3.1.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">client_auth_type</span><span class="p">,</span> <span class="n">client_id</span><span class="p">,</span> <span class="n">client_secret</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Instantiates a client authentication object containing the client ID</span>
+<span class="sd">        and secret credentials for basic and response-body auth.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            client_auth_type (google.oauth2.oauth_utils.ClientAuthType): The</span>
+<span class="sd">                client authentication type.</span>
+<span class="sd">            client_id (str): The client ID.</span>
+<span class="sd">            client_secret (Optional[str]): The client secret.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">client_auth_type</span> <span class="o">=</span> <span class="n">client_auth_type</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">client_id</span> <span class="o">=</span> <span class="n">client_id</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">client_secret</span> <span class="o">=</span> <span class="n">client_secret</span></div>
+
+
+<div class="viewcode-block" id="OAuthClientAuthHandler"><a class="viewcode-back" href="../../../reference/google.oauth2.utils.html#google.oauth2.sts.OAuthClientAuthHandler">[docs]</a><span class="nd">@six</span><span class="o">.</span><span class="n">add_metaclass</span><span class="p">(</span><span class="n">abc</span><span class="o">.</span><span class="n">ABCMeta</span><span class="p">)</span>
+<span class="k">class</span> <span class="nc">OAuthClientAuthHandler</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Abstract class for handling client authentication in OAuth-based</span>
+<span class="sd">    operations.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">client_authentication</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Instantiates an OAuth client authentication handler.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            client_authentication (Optional[google.oauth2.utils.ClientAuthentication]):</span>
+<span class="sd">                The OAuth client authentication credentials if available.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">OAuthClientAuthHandler</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_client_authentication</span> <span class="o">=</span> <span class="n">client_authentication</span>
+
+<div class="viewcode-block" id="OAuthClientAuthHandler.apply_client_authentication_options"><a class="viewcode-back" href="../../../reference/google.oauth2.utils.html#google.oauth2.sts.OAuthClientAuthHandler.apply_client_authentication_options">[docs]</a>    <span class="k">def</span> <span class="nf">apply_client_authentication_options</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">headers</span><span class="p">,</span> <span class="n">request_body</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">bearer_token</span><span class="o">=</span><span class="kc">None</span>
+    <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Applies client authentication on the OAuth request&#39;s headers or POST</span>
+<span class="sd">        body.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            headers (Mapping[str, str]): The HTTP request header.</span>
+<span class="sd">            request_body (Optional[Mapping[str, str]]): The HTTP request body</span>
+<span class="sd">                dictionary. For requests that do not support request body, this</span>
+<span class="sd">                is None and will be ignored.</span>
+<span class="sd">            bearer_token (Optional[str]): The optional bearer token.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Inject authenticated header.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_inject_authenticated_headers</span><span class="p">(</span><span class="n">headers</span><span class="p">,</span> <span class="n">bearer_token</span><span class="p">)</span>
+        <span class="c1"># Inject authenticated request body.</span>
+        <span class="k">if</span> <span class="n">bearer_token</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_inject_authenticated_request_body</span><span class="p">(</span><span class="n">request_body</span><span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="nf">_inject_authenticated_headers</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">headers</span><span class="p">,</span> <span class="n">bearer_token</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">bearer_token</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">headers</span><span class="p">[</span><span class="s2">&quot;Authorization&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;Bearer </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">bearer_token</span>
+        <span class="k">elif</span> <span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_client_authentication</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+            <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client_authentication</span><span class="o">.</span><span class="n">client_auth_type</span> <span class="ow">is</span> <span class="n">ClientAuthType</span><span class="o">.</span><span class="n">basic</span>
+        <span class="p">):</span>
+            <span class="n">username</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client_authentication</span><span class="o">.</span><span class="n">client_id</span>
+            <span class="n">password</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client_authentication</span><span class="o">.</span><span class="n">client_secret</span> <span class="ow">or</span> <span class="s2">&quot;&quot;</span>
+
+            <span class="n">credentials</span> <span class="o">=</span> <span class="n">base64</span><span class="o">.</span><span class="n">b64encode</span><span class="p">(</span>
+                <span class="p">(</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2">:</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">username</span><span class="p">,</span> <span class="n">password</span><span class="p">))</span><span class="o">.</span><span class="n">encode</span><span class="p">()</span>
+            <span class="p">)</span><span class="o">.</span><span class="n">decode</span><span class="p">()</span>
+            <span class="n">headers</span><span class="p">[</span><span class="s2">&quot;Authorization&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;Basic </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">credentials</span>
+
+    <span class="k">def</span> <span class="nf">_inject_authenticated_request_body</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request_body</span><span class="p">):</span>
+        <span class="k">if</span> <span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_client_authentication</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+            <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client_authentication</span><span class="o">.</span><span class="n">client_auth_type</span>
+            <span class="ow">is</span> <span class="n">ClientAuthType</span><span class="o">.</span><span class="n">request_body</span>
+        <span class="p">):</span>
+            <span class="k">if</span> <span class="n">request_body</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">exceptions</span><span class="o">.</span><span class="n">OAuthError</span><span class="p">(</span>
+                    <span class="s2">&quot;HTTP request does not support request-body&quot;</span>
+                <span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">request_body</span><span class="p">[</span><span class="s2">&quot;client_id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client_authentication</span><span class="o">.</span><span class="n">client_id</span>
+                <span class="n">request_body</span><span class="p">[</span><span class="s2">&quot;client_secret&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_client_authentication</span><span class="o">.</span><span class="n">client_secret</span> <span class="ow">or</span> <span class="s2">&quot;&quot;</span>
+                <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="handle_error_response"><a class="viewcode-back" href="../../../reference/google.oauth2.utils.html#google.oauth2.sts.handle_error_response">[docs]</a><span class="k">def</span> <span class="nf">handle_error_response</span><span class="p">(</span><span class="n">response_body</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Translates an error response from an OAuth operation into an</span>
+<span class="sd">    OAuthError exception.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        response_body (str): The decoded response data.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        google.auth.exceptions.OAuthError</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">error_components</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">error_data</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">response_body</span><span class="p">)</span>
+
+        <span class="n">error_components</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;Error code </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">error_data</span><span class="p">[</span><span class="s2">&quot;error&quot;</span><span class="p">]))</span>
+        <span class="k">if</span> <span class="s2">&quot;error_description&quot;</span> <span class="ow">in</span> <span class="n">error_data</span><span class="p">:</span>
+            <span class="n">error_components</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">error_data</span><span class="p">[</span><span class="s2">&quot;error_description&quot;</span><span class="p">]))</span>
+        <span class="k">if</span> <span class="s2">&quot;error_uri&quot;</span> <span class="ow">in</span> <span class="n">error_data</span><span class="p">:</span>
+            <span class="n">error_components</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot; - </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">error_data</span><span class="p">[</span><span class="s2">&quot;error_uri&quot;</span><span class="p">]))</span>
+        <span class="n">error_details</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">error_components</span><span class="p">)</span>
+    <span class="c1"># If no details could be extracted, use the response data.</span>
+    <span class="k">except</span> <span class="p">(</span><span class="ne">KeyError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">):</span>
+        <span class="n">error_details</span> <span class="o">=</span> <span class="n">response_body</span>
+
+    <span class="k">raise</span> <span class="n">exceptions</span><span class="o">.</span><span class="n">OAuthError</span><span class="p">(</span><span class="n">error_details</span><span class="p">,</span> <span class="n">response_body</span><span class="p">)</span></div>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../../index.html">google-auth</a></h1>
+
+
+
+<p class="blurb">Google Auth Library for Python</p>
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=GoogleCloudPlatform&repo=google-auth-library-python&type=watch&count=true&size=large&v=2"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+
+    
+
+<p>
+<a class="badge" href="https://travis-ci.org/GoogleCloudPlatform/google-auth-library-python">
+    <img
+        alt="https://secure.travis-ci.org/GoogleCloudPlatform/google-auth-library-python.svg?branch=master"
+        src="https://secure.travis-ci.org/GoogleCloudPlatform/google-auth-library-python.svg?branch=master"
+    />
+</a>
+</p>
+
+
+<h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../user-guide.html">User Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../reference/modules.html">Reference</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2016, Google, Inc..
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.4.4</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+    <a href="https://github.com/GoogleCloudPlatform/google-auth-library-python" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

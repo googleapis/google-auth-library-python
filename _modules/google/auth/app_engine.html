@@ -1,0 +1,297 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>google.auth.app_engine &#8212; google-auth 1.30.0 documentation</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script src="../../../_static/jquery.js"></script>
+    <script src="../../../_static/underscore.js"></script>
+    <script src="../../../_static/doctools.js"></script>
+    <script src="../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for google.auth.app_engine</h1><div class="highlight"><pre>
+<span></span><span class="c1"># Copyright 2016 Google LLC</span>
+<span class="c1">#</span>
+<span class="c1"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c1"># you may not use this file except in compliance with the License.</span>
+<span class="c1"># You may obtain a copy of the License at</span>
+<span class="c1">#</span>
+<span class="c1">#      http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c1">#</span>
+<span class="c1"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c1"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c1"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c1"># See the License for the specific language governing permissions and</span>
+<span class="c1"># limitations under the License.</span>
+
+<span class="sd">&quot;&quot;&quot;Google App Engine standard environment support.</span>
+
+<span class="sd">This module provides authentication and signing for applications running on App</span>
+<span class="sd">Engine in the standard environment using the `App Identity API`_.</span>
+
+
+<span class="sd">.. _App Identity API:</span>
+<span class="sd">    https://cloud.google.com/appengine/docs/python/appidentity/</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">datetime</span>
+
+<span class="kn">from</span> <span class="nn">google.auth</span> <span class="kn">import</span> <span class="n">_helpers</span>
+<span class="kn">from</span> <span class="nn">google.auth</span> <span class="kn">import</span> <span class="n">credentials</span>
+<span class="kn">from</span> <span class="nn">google.auth</span> <span class="kn">import</span> <span class="n">crypt</span>
+
+<span class="c1"># pytype: disable=import-error</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">google.appengine.api</span> <span class="kn">import</span> <span class="n">app_identity</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="n">app_identity</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="c1"># pytype: enable=import-error</span>
+
+
+<div class="viewcode-block" id="Signer"><a class="viewcode-back" href="../../../reference/google.auth.app_engine.html#google.auth.app_engine.Signer">[docs]</a><span class="k">class</span> <span class="nc">Signer</span><span class="p">(</span><span class="n">crypt</span><span class="o">.</span><span class="n">Signer</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Signs messages using the App Engine App Identity service.</span>
+
+<span class="sd">    This can be used in place of :class:`google.auth.crypt.Signer` when</span>
+<span class="sd">    running in the App Engine standard environment.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">key_id</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Optional[str]: The key ID used to identify this private key.</span>
+
+<span class="sd">        .. warning::</span>
+<span class="sd">           This is always ``None``. The key ID used by App Engine can not</span>
+<span class="sd">           be reliably determined ahead of time.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+<div class="viewcode-block" id="Signer.sign"><a class="viewcode-back" href="../../../reference/google.auth.app_engine.html#google.auth.app_engine.Signer.sign">[docs]</a>    <span class="nd">@_helpers</span><span class="o">.</span><span class="n">copy_docstring</span><span class="p">(</span><span class="n">crypt</span><span class="o">.</span><span class="n">Signer</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">sign</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">):</span>
+        <span class="n">message</span> <span class="o">=</span> <span class="n">_helpers</span><span class="o">.</span><span class="n">to_bytes</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+        <span class="n">_</span><span class="p">,</span> <span class="n">signature</span> <span class="o">=</span> <span class="n">app_identity</span><span class="o">.</span><span class="n">sign_blob</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">signature</span></div></div>
+
+
+<div class="viewcode-block" id="get_project_id"><a class="viewcode-back" href="../../../reference/google.auth.app_engine.html#google.auth.app_engine.get_project_id">[docs]</a><span class="k">def</span> <span class="nf">get_project_id</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;Gets the project ID for the current App Engine application.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        str: The project ID</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        EnvironmentError: If the App Engine APIs are unavailable.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># pylint: disable=missing-raises-doc</span>
+    <span class="c1"># Pylint rightfully thinks EnvironmentError is OSError, but doesn&#39;t</span>
+    <span class="c1"># realize it&#39;s a valid alias.</span>
+    <span class="k">if</span> <span class="n">app_identity</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">EnvironmentError</span><span class="p">(</span><span class="s2">&quot;The App Engine APIs are not available.&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">app_identity</span><span class="o">.</span><span class="n">get_application_id</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="Credentials"><a class="viewcode-back" href="../../../reference/google.auth.app_engine.html#google.auth.app_engine.Credentials">[docs]</a><span class="k">class</span> <span class="nc">Credentials</span><span class="p">(</span>
+    <span class="n">credentials</span><span class="o">.</span><span class="n">Scoped</span><span class="p">,</span> <span class="n">credentials</span><span class="o">.</span><span class="n">Signing</span><span class="p">,</span> <span class="n">credentials</span><span class="o">.</span><span class="n">CredentialsWithQuotaProject</span>
+<span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;App Engine standard environment credentials.</span>
+
+<span class="sd">    These credentials use the App Engine App Identity API to obtain access</span>
+<span class="sd">    tokens.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">scopes</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">default_scopes</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">service_account_id</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">quota_project_id</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Args:</span>
+<span class="sd">            scopes (Sequence[str]): Scopes to request from the App Identity</span>
+<span class="sd">                API.</span>
+<span class="sd">            default_scopes (Sequence[str]): Default scopes passed by a</span>
+<span class="sd">                Google client library. Use &#39;scopes&#39; for user-defined scopes.</span>
+<span class="sd">            service_account_id (str): The service account ID passed into</span>
+<span class="sd">                :func:`google.appengine.api.app_identity.get_access_token`.</span>
+<span class="sd">                If not specified, the default application service account</span>
+<span class="sd">                ID will be used.</span>
+<span class="sd">            quota_project_id (Optional[str]): The project ID used for quota</span>
+<span class="sd">                and billing.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            EnvironmentError: If the App Engine APIs are unavailable.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># pylint: disable=missing-raises-doc</span>
+        <span class="c1"># Pylint rightfully thinks EnvironmentError is OSError, but doesn&#39;t</span>
+        <span class="c1"># realize it&#39;s a valid alias.</span>
+        <span class="k">if</span> <span class="n">app_identity</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">EnvironmentError</span><span class="p">(</span><span class="s2">&quot;The App Engine APIs are not available.&quot;</span><span class="p">)</span>
+
+        <span class="nb">super</span><span class="p">(</span><span class="n">Credentials</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_scopes</span> <span class="o">=</span> <span class="n">scopes</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_default_scopes</span> <span class="o">=</span> <span class="n">default_scopes</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_service_account_id</span> <span class="o">=</span> <span class="n">service_account_id</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_signer</span> <span class="o">=</span> <span class="n">Signer</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_quota_project_id</span> <span class="o">=</span> <span class="n">quota_project_id</span>
+
+<div class="viewcode-block" id="Credentials.refresh"><a class="viewcode-back" href="../../../reference/google.auth.app_engine.html#google.auth.app_engine.Credentials.refresh">[docs]</a>    <span class="nd">@_helpers</span><span class="o">.</span><span class="n">copy_docstring</span><span class="p">(</span><span class="n">credentials</span><span class="o">.</span><span class="n">Credentials</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">refresh</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">):</span>
+        <span class="n">scopes</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_scopes</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_scopes</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">_default_scopes</span>
+        <span class="c1"># pylint: disable=unused-argument</span>
+        <span class="n">token</span><span class="p">,</span> <span class="n">ttl</span> <span class="o">=</span> <span class="n">app_identity</span><span class="o">.</span><span class="n">get_access_token</span><span class="p">(</span><span class="n">scopes</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_service_account_id</span><span class="p">)</span>
+        <span class="n">expiry</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">utcfromtimestamp</span><span class="p">(</span><span class="n">ttl</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">token</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">expiry</span> <span class="o">=</span> <span class="n">token</span><span class="p">,</span> <span class="n">expiry</span></div>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">service_account_email</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;The service account email.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_service_account_id</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_service_account_id</span> <span class="o">=</span> <span class="n">app_identity</span><span class="o">.</span><span class="n">get_service_account_name</span><span class="p">()</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_service_account_id</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">requires_scopes</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Checks if the credentials requires scopes.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            bool: True if there are no scopes set otherwise False.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_scopes</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_default_scopes</span>
+
+<div class="viewcode-block" id="Credentials.with_scopes"><a class="viewcode-back" href="../../../reference/google.auth.app_engine.html#google.auth.app_engine.Credentials.with_scopes">[docs]</a>    <span class="nd">@_helpers</span><span class="o">.</span><span class="n">copy_docstring</span><span class="p">(</span><span class="n">credentials</span><span class="o">.</span><span class="n">Scoped</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">with_scopes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">scopes</span><span class="p">,</span> <span class="n">default_scopes</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="p">(</span>
+            <span class="n">scopes</span><span class="o">=</span><span class="n">scopes</span><span class="p">,</span>
+            <span class="n">default_scopes</span><span class="o">=</span><span class="n">default_scopes</span><span class="p">,</span>
+            <span class="n">service_account_id</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_service_account_id</span><span class="p">,</span>
+            <span class="n">quota_project_id</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">quota_project_id</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+<div class="viewcode-block" id="Credentials.with_quota_project"><a class="viewcode-back" href="../../../reference/google.auth.app_engine.html#google.auth.app_engine.Credentials.with_quota_project">[docs]</a>    <span class="nd">@_helpers</span><span class="o">.</span><span class="n">copy_docstring</span><span class="p">(</span><span class="n">credentials</span><span class="o">.</span><span class="n">CredentialsWithQuotaProject</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">with_quota_project</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">quota_project_id</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="p">(</span>
+            <span class="n">scopes</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_scopes</span><span class="p">,</span>
+            <span class="n">service_account_id</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_service_account_id</span><span class="p">,</span>
+            <span class="n">quota_project_id</span><span class="o">=</span><span class="n">quota_project_id</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+<div class="viewcode-block" id="Credentials.sign_bytes"><a class="viewcode-back" href="../../../reference/google.auth.app_engine.html#google.auth.app_engine.Credentials.sign_bytes">[docs]</a>    <span class="nd">@_helpers</span><span class="o">.</span><span class="n">copy_docstring</span><span class="p">(</span><span class="n">credentials</span><span class="o">.</span><span class="n">Signing</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">sign_bytes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_signer</span><span class="o">.</span><span class="n">sign</span><span class="p">(</span><span class="n">message</span><span class="p">)</span></div>
+
+    <span class="nd">@property</span>
+    <span class="nd">@_helpers</span><span class="o">.</span><span class="n">copy_docstring</span><span class="p">(</span><span class="n">credentials</span><span class="o">.</span><span class="n">Signing</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">signer_email</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">service_account_email</span>
+
+    <span class="nd">@property</span>
+    <span class="nd">@_helpers</span><span class="o">.</span><span class="n">copy_docstring</span><span class="p">(</span><span class="n">credentials</span><span class="o">.</span><span class="n">Signing</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">signer</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_signer</span></div>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../../index.html">google-auth</a></h1>
+
+
+
+<p class="blurb">Google Auth Library for Python</p>
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=GoogleCloudPlatform&repo=google-auth-library-python&type=watch&count=true&size=large&v=2"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+
+    
+
+<p>
+<a class="badge" href="https://travis-ci.org/GoogleCloudPlatform/google-auth-library-python">
+    <img
+        alt="https://secure.travis-ci.org/GoogleCloudPlatform/google-auth-library-python.svg?branch=master"
+        src="https://secure.travis-ci.org/GoogleCloudPlatform/google-auth-library-python.svg?branch=master"
+    />
+</a>
+</p>
+
+
+<h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../user-guide.html">User Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../reference/modules.html">Reference</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2016, Google, Inc..
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.4.4</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+    <a href="https://github.com/GoogleCloudPlatform/google-auth-library-python" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

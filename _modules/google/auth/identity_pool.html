@@ -1,0 +1,397 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>google.auth.identity_pool &#8212; google-auth 1.30.0 documentation</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script src="../../../_static/jquery.js"></script>
+    <script src="../../../_static/underscore.js"></script>
+    <script src="../../../_static/doctools.js"></script>
+    <script src="../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for google.auth.identity_pool</h1><div class="highlight"><pre>
+<span></span><span class="c1"># Copyright 2020 Google LLC</span>
+<span class="c1">#</span>
+<span class="c1"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c1"># you may not use this file except in compliance with the License.</span>
+<span class="c1"># You may obtain a copy of the License at</span>
+<span class="c1">#</span>
+<span class="c1">#      http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c1">#</span>
+<span class="c1"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c1"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c1"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c1"># See the License for the specific language governing permissions and</span>
+<span class="c1"># limitations under the License.</span>
+
+<span class="sd">&quot;&quot;&quot;Identity Pool Credentials.</span>
+
+<span class="sd">This module provides credentials to access Google Cloud resources from on-prem</span>
+<span class="sd">or non-Google Cloud platforms which support external credentials (e.g. OIDC ID</span>
+<span class="sd">tokens) retrieved from local file locations or local servers. This includes</span>
+<span class="sd">Microsoft Azure and OIDC identity providers (e.g. K8s workloads registered with</span>
+<span class="sd">Hub with Hub workload identity enabled).</span>
+
+<span class="sd">These credentials are recommended over the use of service account credentials</span>
+<span class="sd">in on-prem/non-Google Cloud platforms as they do not involve the management of</span>
+<span class="sd">long-live service account private keys.</span>
+
+<span class="sd">Identity Pool Credentials are initialized using external_account</span>
+<span class="sd">arguments which are typically loaded from an external credentials file or</span>
+<span class="sd">an external credentials URL. Unlike other Credentials that can be initialized</span>
+<span class="sd">with a list of explicit arguments, secrets or credentials, external account</span>
+<span class="sd">clients use the environment and hints/guidelines provided by the</span>
+<span class="sd">external_account JSON file to retrieve credentials and exchange them for Google</span>
+<span class="sd">access tokens.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">collections.abc</span> <span class="kn">import</span> <span class="n">Mapping</span>
+<span class="c1"># Python 2.7 compatibility</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>  <span class="c1"># pragma: NO COVER</span>
+    <span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">Mapping</span>
+<span class="kn">import</span> <span class="nn">io</span>
+<span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">import</span> <span class="nn">os</span>
+
+<span class="kn">from</span> <span class="nn">google.auth</span> <span class="kn">import</span> <span class="n">_helpers</span>
+<span class="kn">from</span> <span class="nn">google.auth</span> <span class="kn">import</span> <span class="n">exceptions</span>
+<span class="kn">from</span> <span class="nn">google.auth</span> <span class="kn">import</span> <span class="n">external_account</span>
+
+
+<div class="viewcode-block" id="Credentials"><a class="viewcode-back" href="../../../reference/google.auth.identity_pool.html#google.auth.identity_pool.Credentials">[docs]</a><span class="k">class</span> <span class="nc">Credentials</span><span class="p">(</span><span class="n">external_account</span><span class="o">.</span><span class="n">Credentials</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;External account credentials sourced from files and URLs.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">audience</span><span class="p">,</span>
+        <span class="n">subject_token_type</span><span class="p">,</span>
+        <span class="n">token_url</span><span class="p">,</span>
+        <span class="n">credential_source</span><span class="p">,</span>
+        <span class="n">service_account_impersonation_url</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">client_id</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">client_secret</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">quota_project_id</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">scopes</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">default_scopes</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Instantiates an external account credentials object from a file/URL.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            audience (str): The STS audience field.</span>
+<span class="sd">            subject_token_type (str): The subject token type.</span>
+<span class="sd">            token_url (str): The STS endpoint URL.</span>
+<span class="sd">            credential_source (Mapping): The credential source dictionary used to</span>
+<span class="sd">                provide instructions on how to retrieve external credential to be</span>
+<span class="sd">                exchanged for Google access tokens.</span>
+
+<span class="sd">                Example credential_source for url-sourced credential::</span>
+
+<span class="sd">                    {</span>
+<span class="sd">                        &quot;url&quot;: &quot;http://www.example.com&quot;,</span>
+<span class="sd">                        &quot;format&quot;: {</span>
+<span class="sd">                            &quot;type&quot;: &quot;json&quot;,</span>
+<span class="sd">                            &quot;subject_token_field_name&quot;: &quot;access_token&quot;,</span>
+<span class="sd">                        },</span>
+<span class="sd">                        &quot;headers&quot;: {&quot;foo&quot;: &quot;bar&quot;},</span>
+<span class="sd">                    }</span>
+
+<span class="sd">                Example credential_source for file-sourced credential::</span>
+
+<span class="sd">                    {</span>
+<span class="sd">                        &quot;file&quot;: &quot;/path/to/token/file.txt&quot;</span>
+<span class="sd">                    }</span>
+
+<span class="sd">            service_account_impersonation_url (Optional[str]): The optional service account</span>
+<span class="sd">                impersonation getAccessToken URL.</span>
+<span class="sd">            client_id (Optional[str]): The optional client ID.</span>
+<span class="sd">            client_secret (Optional[str]): The optional client secret.</span>
+<span class="sd">            quota_project_id (Optional[str]): The optional quota project ID.</span>
+<span class="sd">            scopes (Optional[Sequence[str]]): Optional scopes to request during the</span>
+<span class="sd">                authorization grant.</span>
+<span class="sd">            default_scopes (Optional[Sequence[str]]): Default scopes passed by a</span>
+<span class="sd">                Google client library. Use &#39;scopes&#39; for user-defined scopes.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            google.auth.exceptions.RefreshError: If an error is encountered during</span>
+<span class="sd">                access token retrieval logic.</span>
+<span class="sd">            ValueError: For invalid parameters.</span>
+
+<span class="sd">        .. note:: Typically one of the helper constructors</span>
+<span class="sd">            :meth:`from_file` or</span>
+<span class="sd">            :meth:`from_info` are used instead of calling the constructor directly.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="nb">super</span><span class="p">(</span><span class="n">Credentials</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="n">audience</span><span class="o">=</span><span class="n">audience</span><span class="p">,</span>
+            <span class="n">subject_token_type</span><span class="o">=</span><span class="n">subject_token_type</span><span class="p">,</span>
+            <span class="n">token_url</span><span class="o">=</span><span class="n">token_url</span><span class="p">,</span>
+            <span class="n">credential_source</span><span class="o">=</span><span class="n">credential_source</span><span class="p">,</span>
+            <span class="n">service_account_impersonation_url</span><span class="o">=</span><span class="n">service_account_impersonation_url</span><span class="p">,</span>
+            <span class="n">client_id</span><span class="o">=</span><span class="n">client_id</span><span class="p">,</span>
+            <span class="n">client_secret</span><span class="o">=</span><span class="n">client_secret</span><span class="p">,</span>
+            <span class="n">quota_project_id</span><span class="o">=</span><span class="n">quota_project_id</span><span class="p">,</span>
+            <span class="n">scopes</span><span class="o">=</span><span class="n">scopes</span><span class="p">,</span>
+            <span class="n">default_scopes</span><span class="o">=</span><span class="n">default_scopes</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">credential_source</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_credential_source_file</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_credential_source_url</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_credential_source_file</span> <span class="o">=</span> <span class="n">credential_source</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;file&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_credential_source_url</span> <span class="o">=</span> <span class="n">credential_source</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;url&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_credential_source_headers</span> <span class="o">=</span> <span class="n">credential_source</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;headers&quot;</span><span class="p">)</span>
+            <span class="n">credential_source_format</span> <span class="o">=</span> <span class="n">credential_source</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;format&quot;</span><span class="p">,</span> <span class="p">{})</span>
+            <span class="c1"># Get credential_source format type. When not provided, this</span>
+            <span class="c1"># defaults to text.</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_credential_source_format_type</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="n">credential_source_format</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;type&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">&quot;text&quot;</span>
+            <span class="p">)</span>
+            <span class="c1"># environment_id is only supported in AWS or dedicated future external</span>
+            <span class="c1"># account credentials.</span>
+            <span class="k">if</span> <span class="s2">&quot;environment_id&quot;</span> <span class="ow">in</span> <span class="n">credential_source</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="s2">&quot;Invalid Identity Pool credential_source field &#39;environment_id&#39;&quot;</span>
+                <span class="p">)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_credential_source_format_type</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;text&quot;</span><span class="p">,</span> <span class="s2">&quot;json&quot;</span><span class="p">]:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="s2">&quot;Invalid credential_source format &#39;</span><span class="si">{}</span><span class="s2">&#39;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">_credential_source_format_type</span>
+                    <span class="p">)</span>
+                <span class="p">)</span>
+            <span class="c1"># For JSON types, get the required subject_token field name.</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_credential_source_format_type</span> <span class="o">==</span> <span class="s2">&quot;json&quot;</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_credential_source_field_name</span> <span class="o">=</span> <span class="n">credential_source_format</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
+                    <span class="s2">&quot;subject_token_field_name&quot;</span>
+                <span class="p">)</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_credential_source_field_name</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                        <span class="s2">&quot;Missing subject_token_field_name for JSON credential_source format&quot;</span>
+                    <span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_credential_source_field_name</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_credential_source_file</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_credential_source_url</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;Ambiguous credential_source. &#39;file&#39; is mutually exclusive with &#39;url&#39;.&quot;</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_credential_source_file</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_credential_source_url</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;Missing credential_source. A &#39;file&#39; or &#39;url&#39; must be provided.&quot;</span>
+            <span class="p">)</span>
+
+<div class="viewcode-block" id="Credentials.retrieve_subject_token"><a class="viewcode-back" href="../../../reference/google.auth.identity_pool.html#google.auth.identity_pool.Credentials.retrieve_subject_token">[docs]</a>    <span class="nd">@_helpers</span><span class="o">.</span><span class="n">copy_docstring</span><span class="p">(</span><span class="n">external_account</span><span class="o">.</span><span class="n">Credentials</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">retrieve_subject_token</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parse_token_data</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_get_token_data</span><span class="p">(</span><span class="n">request</span><span class="p">),</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_credential_source_format_type</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_credential_source_field_name</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="nf">_get_token_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_credential_source_file</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_file_data</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_credential_source_file</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_url_data</span><span class="p">(</span>
+                <span class="n">request</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_credential_source_url</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_credential_source_headers</span>
+            <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_get_file_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filename</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">filename</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="n">exceptions</span><span class="o">.</span><span class="n">RefreshError</span><span class="p">(</span><span class="s2">&quot;File &#39;</span><span class="si">{}</span><span class="s2">&#39; was not found.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">filename</span><span class="p">))</span>
+
+        <span class="k">with</span> <span class="n">io</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">file_obj</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">file_obj</span><span class="o">.</span><span class="n">read</span><span class="p">(),</span> <span class="n">filename</span>
+
+    <span class="k">def</span> <span class="nf">_get_url_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="n">url</span><span class="p">,</span> <span class="n">headers</span><span class="p">):</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="n">request</span><span class="p">(</span><span class="n">url</span><span class="o">=</span><span class="n">url</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s2">&quot;GET&quot;</span><span class="p">,</span> <span class="n">headers</span><span class="o">=</span><span class="n">headers</span><span class="p">)</span>
+
+        <span class="c1"># support both string and bytes type response.data</span>
+        <span class="n">response_body</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">response</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="s2">&quot;decode&quot;</span><span class="p">)</span>
+            <span class="k">else</span> <span class="n">response</span><span class="o">.</span><span class="n">data</span>
+        <span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">response</span><span class="o">.</span><span class="n">status</span> <span class="o">!=</span> <span class="mi">200</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">exceptions</span><span class="o">.</span><span class="n">RefreshError</span><span class="p">(</span>
+                <span class="s2">&quot;Unable to retrieve Identity Pool subject token&quot;</span><span class="p">,</span> <span class="n">response_body</span>
+            <span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">response_body</span><span class="p">,</span> <span class="n">url</span>
+
+    <span class="k">def</span> <span class="nf">_parse_token_data</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">token_content</span><span class="p">,</span> <span class="n">format_type</span><span class="o">=</span><span class="s2">&quot;text&quot;</span><span class="p">,</span> <span class="n">subject_token_field_name</span><span class="o">=</span><span class="kc">None</span>
+    <span class="p">):</span>
+        <span class="n">content</span><span class="p">,</span> <span class="n">filename</span> <span class="o">=</span> <span class="n">token_content</span>
+        <span class="k">if</span> <span class="n">format_type</span> <span class="o">==</span> <span class="s2">&quot;text&quot;</span><span class="p">:</span>
+            <span class="n">token</span> <span class="o">=</span> <span class="n">content</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="c1"># Parse file content as JSON.</span>
+                <span class="n">response_data</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">content</span><span class="p">)</span>
+                <span class="c1"># Get the subject_token.</span>
+                <span class="n">token</span> <span class="o">=</span> <span class="n">response_data</span><span class="p">[</span><span class="n">subject_token_field_name</span><span class="p">]</span>
+            <span class="k">except</span> <span class="p">(</span><span class="ne">KeyError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="n">exceptions</span><span class="o">.</span><span class="n">RefreshError</span><span class="p">(</span>
+                    <span class="s2">&quot;Unable to parse subject_token from JSON file &#39;</span><span class="si">{}</span><span class="s2">&#39; using key &#39;</span><span class="si">{}</span><span class="s2">&#39;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                        <span class="n">filename</span><span class="p">,</span> <span class="n">subject_token_field_name</span>
+                    <span class="p">)</span>
+                <span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">token</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">exceptions</span><span class="o">.</span><span class="n">RefreshError</span><span class="p">(</span>
+                <span class="s2">&quot;Missing subject_token in the credential_source file&quot;</span>
+            <span class="p">)</span>
+        <span class="k">return</span> <span class="n">token</span>
+
+<div class="viewcode-block" id="Credentials.from_info"><a class="viewcode-back" href="../../../reference/google.auth.identity_pool.html#google.auth.identity_pool.Credentials.from_info">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">from_info</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">info</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Creates an Identity Pool Credentials instance from parsed external account info.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            info (Mapping[str, str]): The Identity Pool external account info in Google</span>
+<span class="sd">                format.</span>
+<span class="sd">            kwargs: Additional arguments to pass to the constructor.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            google.auth.identity_pool.Credentials: The constructed</span>
+<span class="sd">                credentials.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            ValueError: For invalid parameters.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span>
+            <span class="n">audience</span><span class="o">=</span><span class="n">info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;audience&quot;</span><span class="p">),</span>
+            <span class="n">subject_token_type</span><span class="o">=</span><span class="n">info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;subject_token_type&quot;</span><span class="p">),</span>
+            <span class="n">token_url</span><span class="o">=</span><span class="n">info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;token_url&quot;</span><span class="p">),</span>
+            <span class="n">service_account_impersonation_url</span><span class="o">=</span><span class="n">info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
+                <span class="s2">&quot;service_account_impersonation_url&quot;</span>
+            <span class="p">),</span>
+            <span class="n">client_id</span><span class="o">=</span><span class="n">info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;client_id&quot;</span><span class="p">),</span>
+            <span class="n">client_secret</span><span class="o">=</span><span class="n">info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;client_secret&quot;</span><span class="p">),</span>
+            <span class="n">credential_source</span><span class="o">=</span><span class="n">info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;credential_source&quot;</span><span class="p">),</span>
+            <span class="n">quota_project_id</span><span class="o">=</span><span class="n">info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;quota_project_id&quot;</span><span class="p">),</span>
+            <span class="o">**</span><span class="n">kwargs</span>
+        <span class="p">)</span></div>
+
+<div class="viewcode-block" id="Credentials.from_file"><a class="viewcode-back" href="../../../reference/google.auth.identity_pool.html#google.auth.identity_pool.Credentials.from_file">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">from_file</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">filename</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Creates an IdentityPool Credentials instance from an external account json file.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            filename (str): The path to the IdentityPool external account json file.</span>
+<span class="sd">            kwargs: Additional arguments to pass to the constructor.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            google.auth.identity_pool.Credentials: The constructed</span>
+<span class="sd">                credentials.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">with</span> <span class="n">io</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">json_file</span><span class="p">:</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">json_file</span><span class="p">)</span>
+            <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">from_info</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div></div>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../../index.html">google-auth</a></h1>
+
+
+
+<p class="blurb">Google Auth Library for Python</p>
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=GoogleCloudPlatform&repo=google-auth-library-python&type=watch&count=true&size=large&v=2"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+
+    
+
+<p>
+<a class="badge" href="https://travis-ci.org/GoogleCloudPlatform/google-auth-library-python">
+    <img
+        alt="https://secure.travis-ci.org/GoogleCloudPlatform/google-auth-library-python.svg?branch=master"
+        src="https://secure.travis-ci.org/GoogleCloudPlatform/google-auth-library-python.svg?branch=master"
+    />
+</a>
+</p>
+
+
+<h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../user-guide.html">User Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../reference/modules.html">Reference</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2016, Google, Inc..
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.4.4</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+    <a href="https://github.com/GoogleCloudPlatform/google-auth-library-python" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

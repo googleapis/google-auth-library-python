@@ -1,0 +1,206 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>google.auth.transport.mtls module &#8212; google-auth 1.30.0 documentation</title>
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="google.auth.transport.requests module" href="google.auth.transport.requests.html" />
+    <link rel="prev" title="google.auth.transport.grpc module" href="google.auth.transport.grpc.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="module-google.auth.transport.mtls">
+<span id="google-auth-transport-mtls-module"></span><h1>google.auth.transport.mtls module<a class="headerlink" href="#module-google.auth.transport.mtls" title="Permalink to this headline">¶</a></h1>
+<p>Utilites for mutual TLS.</p>
+<dl class="function">
+<dt id="google.auth.transport.mtls.has_default_client_cert_source">
+<code class="sig-name descname">has_default_client_cert_source</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/google/auth/transport/mtls.html#has_default_client_cert_source"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.auth.transport.mtls.has_default_client_cert_source" title="Permalink to this definition">¶</a></dt>
+<dd><p>Check if default client SSL credentials exists on the device.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>indicating if the default client cert source exists.</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3.5/library/functions.html#bool" title="(in Python v3.5)">bool</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="google.auth.transport.mtls.default_client_cert_source">
+<code class="sig-name descname">default_client_cert_source</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/google/auth/transport/mtls.html#default_client_cert_source"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.auth.transport.mtls.default_client_cert_source" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get a callback which returns the default client SSL credentials.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p><dl class="simple">
+<dt>A callback which returns the default</dt><dd><p>client certificate bytes and private key bytes, both in PEM format.</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3.5/library/typing.html#typing.Callable" title="(in Python v3.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Callable</span></code></a> [ , <a class="reference external" href="https://docs.python.org/3.5/library/functions.html#bytes" title="(in Python v3.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">bytes</span></code></a><a class="reference external" href="https://docs.python.org/3.5/library/functions.html#bytes" title="(in Python v3.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">bytes</span></code></a> ]</p>
+</dd>
+<dt class="field-odd">Raises</dt>
+<dd class="field-odd"><p><strong>google.auth.exceptions.DefaultClientCertSourceError</strong> – If the default
+    client SSL credentials don’t exist or are malformed.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="google.auth.transport.mtls.default_client_encrypted_cert_source">
+<code class="sig-name descname">default_client_encrypted_cert_source</code><span class="sig-paren">(</span><em class="sig-param">cert_path</em>, <em class="sig-param">key_path</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/google/auth/transport/mtls.html#default_client_encrypted_cert_source"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.auth.transport.mtls.default_client_encrypted_cert_source" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get a callback which returns the default encrpyted client SSL credentials.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>cert_path</strong> (<a class="reference external" href="https://docs.python.org/3.5/library/stdtypes.html#str" title="(in Python v3.5)"><em>str</em></a>) – The cert file path. The default client certificate will
+be written to this file when the returned callback is called.</p></li>
+<li><p><strong>key_path</strong> (<a class="reference external" href="https://docs.python.org/3.5/library/stdtypes.html#str" title="(in Python v3.5)"><em>str</em></a>) – The key file path. The default encrypted client key will
+be written to this file when the returned callback is called.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>A callback which generates the default</dt><dd><p>client certificate, encrpyted private key and passphrase. It writes
+the certificate and private key into the cert_path and key_path, and
+returns the cert_path, key_path and passphrase bytes.</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3.5/library/typing.html#typing.Callable" title="(in Python v3.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Callable</span></code></a> [ , <a class="reference external" href="https://docs.python.org/3.5/library/stdtypes.html#str" title="(in Python v3.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">str</span></code></a><a class="reference external" href="https://docs.python.org/3.5/library/stdtypes.html#str" title="(in Python v3.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">str</span></code></a><a class="reference external" href="https://docs.python.org/3.5/library/functions.html#bytes" title="(in Python v3.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">bytes</span></code></a> ]</p>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><p><strong>google.auth.exceptions.DefaultClientCertSourceError</strong> – If any problem
+    occurs when loading or saving the client certificate and key.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">google-auth</a></h1>
+
+
+
+<p class="blurb">Google Auth Library for Python</p>
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=GoogleCloudPlatform&repo=google-auth-library-python&type=watch&count=true&size=large&v=2"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+
+    
+
+<p>
+<a class="badge" href="https://travis-ci.org/GoogleCloudPlatform/google-auth-library-python">
+    <img
+        alt="https://secure.travis-ci.org/GoogleCloudPlatform/google-auth-library-python.svg?branch=master"
+        src="https://secure.travis-ci.org/GoogleCloudPlatform/google-auth-library-python.svg?branch=master"
+    />
+</a>
+</p>
+
+
+<h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../user-guide.html">User Guide</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="modules.html">Reference</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="google.html">google package</a></li>
+</ul>
+</li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="modules.html">google</a><ul>
+  <li><a href="google.html">google package</a><ul>
+  <li><a href="google.auth.html">google.auth package</a><ul>
+  <li><a href="google.auth.transport.html">google.auth.transport package</a><ul>
+      <li>Previous: <a href="google.auth.transport.grpc.html" title="previous chapter">google.auth.transport.grpc module</a></li>
+      <li>Next: <a href="google.auth.transport.requests.html" title="next chapter">google.auth.transport.requests module</a></li>
+  </ul></li>
+  </ul></li>
+  </ul></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2016, Google, Inc..
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.4.4</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/reference/google.auth.transport.mtls.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+    <a href="https://github.com/GoogleCloudPlatform/google-auth-library-python" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

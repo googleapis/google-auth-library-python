@@ -1,0 +1,175 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>google-auth &#8212; google-auth 1.30.0 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/language_data.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="User Guide" href="user-guide.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="google-auth">
+<h1>google-auth<a class="headerlink" href="#google-auth" title="Permalink to this headline">¶</a></h1>
+<div class="toctree-wrapper compound">
+</div>
+<p>google-auth is the Google authentication library for Python. This library
+provides the ability to authenticate to Google APIs using various methods. It
+also provides integration with several HTTP libraries.</p>
+<ul class="simple">
+<li><p>Support for Google <a class="reference internal" href="reference/google.auth.html#google.auth.default" title="google.auth.default"><code class="xref py py-func docutils literal notranslate"><span class="pre">Application</span> <span class="pre">Default</span> <span class="pre">Credentials</span></code></a>.</p></li>
+<li><p>Support for signing and verifying <a class="reference internal" href="reference/google.auth.jwt.html#module-google.auth.jwt" title="google.auth.jwt"><code class="xref py py-mod docutils literal notranslate"><span class="pre">JWTs</span></code></a>.</p></li>
+<li><p>Support for creating <a class="reference external" href="user-guide.html#identity-tokens">Google ID Tokens</a>.</p></li>
+<li><p>Support for verifying and decoding <a class="reference internal" href="reference/google.oauth2.id_token.html#module-google.oauth2.id_token" title="google.oauth2.id_token"><code class="xref py py-mod docutils literal notranslate"><span class="pre">ID</span> <span class="pre">Tokens</span></code></a>.</p></li>
+<li><p>Support for Google <a class="reference internal" href="reference/google.oauth2.service_account.html#module-google.oauth2.service_account" title="google.oauth2.service_account"><code class="xref py py-mod docutils literal notranslate"><span class="pre">Service</span> <span class="pre">Account</span> <span class="pre">credentials</span></code></a>.</p></li>
+<li><p>Support for Google <a class="reference internal" href="reference/google.auth.impersonated_credentials.html#module-google.auth.impersonated_credentials" title="google.auth.impersonated_credentials"><code class="xref py py-mod docutils literal notranslate"><span class="pre">Impersonated</span> <span class="pre">Credentials</span></code></a>.</p></li>
+<li><p>Support for <a class="reference internal" href="reference/google.auth.compute_engine.html#module-google.auth.compute_engine" title="google.auth.compute_engine"><code class="xref py py-mod docutils literal notranslate"><span class="pre">Google</span> <span class="pre">Compute</span> <span class="pre">Engine</span> <span class="pre">credentials</span></code></a>.</p></li>
+<li><p>Support for <a class="reference internal" href="reference/google.auth.app_engine.html#module-google.auth.app_engine" title="google.auth.app_engine"><code class="xref py py-mod docutils literal notranslate"><span class="pre">Google</span> <span class="pre">App</span> <span class="pre">Engine</span> <span class="pre">standard</span> <span class="pre">credentials</span></code></a>.</p></li>
+<li><p>Support for <a class="reference internal" href="reference/google.auth.identity_pool.html#module-google.auth.identity_pool" title="google.auth.identity_pool"><code class="xref py py-mod docutils literal notranslate"><span class="pre">Identity</span> <span class="pre">Pool</span> <span class="pre">credentials</span></code></a>.</p></li>
+<li><p>Support for <a class="reference internal" href="reference/google.auth.aws.html#module-google.auth.aws" title="google.auth.aws"><code class="xref py py-mod docutils literal notranslate"><span class="pre">AWS</span> <span class="pre">credentials</span></code></a>.</p></li>
+<li><p>Support for various transports, including
+<a class="reference internal" href="reference/google.auth.transport.requests.html#module-google.auth.transport.requests" title="google.auth.transport.requests"><code class="xref py py-mod docutils literal notranslate"><span class="pre">Requests</span></code></a>,
+<a class="reference internal" href="reference/google.auth.transport.urllib3.html#module-google.auth.transport.urllib3" title="google.auth.transport.urllib3"><code class="xref py py-mod docutils literal notranslate"><span class="pre">urllib3</span></code></a>, and
+<a class="reference internal" href="reference/google.auth.transport.grpc.html#module-google.auth.transport.grpc" title="google.auth.transport.grpc"><code class="xref py py-mod docutils literal notranslate"><span class="pre">gRPC</span></code></a>.</p></li>
+</ul>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p><code class="docutils literal notranslate"><span class="pre">oauth2client</span></code> was recently deprecated in favor of this library. For more details on the deprecation, see <a class="reference internal" href="oauth2client-deprecation.html"><span class="doc">oauth2client deprecation</span></a>.</p>
+</div>
+<section id="installing">
+<h2>Installing<a class="headerlink" href="#installing" title="Permalink to this headline">¶</a></h2>
+<p>google-auth can be installed with <a class="reference external" href="https://pip.pypa.io">pip</a>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ pip install --upgrade google-auth
+</pre></div>
+</div>
+<p>google-auth is open-source, so you can alternatively grab the source code from
+<a class="reference external" href="https://github.com/GoogleCloudPlatform/google-auth-library-python">GitHub</a> and install from source.</p>
+<p>For more information on setting up your Python development environment, please refer to <a class="reference external" href="https://cloud.google.com/python/setup">Python Development Environment Setup Guide</a> for Google Cloud Platform.</p>
+</section>
+<section id="usage">
+<h2>Usage<a class="headerlink" href="#usage" title="Permalink to this headline">¶</a></h2>
+<p>The <a class="reference internal" href="user-guide.html"><span class="doc">User Guide</span></a> is the place to go to learn how to use the library and
+accomplish common tasks.</p>
+<p>The <a class="reference internal" href="reference/modules.html"><span class="doc">Module Reference</span></a> documentation provides API-level documentation.</p>
+</section>
+<section id="license">
+<h2>License<a class="headerlink" href="#license" title="Permalink to this headline">¶</a></h2>
+<p>google-auth is made available under the Apache License, Version 2.0. For more
+details, see <a class="reference external" href="https://github.com/GoogleCloudPlatform/google-auth-library-python/blob/master/LICENSE">LICENSE</a></p>
+</section>
+<section id="contributing">
+<h2>Contributing<a class="headerlink" href="#contributing" title="Permalink to this headline">¶</a></h2>
+<p>We happily welcome contributions, please see our <a class="reference external" href="https://github.com/GoogleCloudPlatform/google-auth-library-python/blob/master/CONTRIBUTING.rst">contributing</a> documentation
+for details.</p>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="#">google-auth</a></h1>
+
+
+
+<p class="blurb">Google Auth Library for Python</p>
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=GoogleCloudPlatform&repo=google-auth-library-python&type=watch&count=true&size=large&v=2"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+
+    
+
+<p>
+<a class="badge" href="https://travis-ci.org/GoogleCloudPlatform/google-auth-library-python">
+    <img
+        alt="https://secure.travis-ci.org/GoogleCloudPlatform/google-auth-library-python.svg?branch=master"
+        src="https://secure.travis-ci.org/GoogleCloudPlatform/google-auth-library-python.svg?branch=master"
+    />
+</a>
+</p>
+
+
+<h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="user-guide.html">User Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reference/modules.html">Reference</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="#">Documentation overview</a><ul>
+      <li>Next: <a href="user-guide.html" title="next chapter">User Guide</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2016, Google, Inc..
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.4.4</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/index.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+    <a href="https://github.com/GoogleCloudPlatform/google-auth-library-python" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

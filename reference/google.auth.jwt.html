@@ -1,0 +1,799 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>google.auth.jwt module &#8212; google-auth 1.30.0 documentation</title>
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="google.auth.jwt_async module" href="google.auth._jwt_async.html" />
+    <link rel="prev" title="google.auth.impersonated_credentials module" href="google.auth.impersonated_credentials.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="module-google.auth.jwt">
+<span id="google-auth-jwt-module"></span><h1>google.auth.jwt module<a class="headerlink" href="#module-google.auth.jwt" title="Permalink to this headline">¶</a></h1>
+<p>JSON Web Tokens</p>
+<p>Provides support for creating (encoding) and verifying (decoding) JWTs,
+especially JWTs generated and consumed by Google infrastructure.</p>
+<p>See <a class="reference external" href="https://tools.ietf.org/html/rfc7519">rfc7519</a> for more details on JWTs.</p>
+<p>To encode a JWT use <a class="reference internal" href="#google.auth.jwt.encode" title="google.auth.jwt.encode"><code class="xref py py-func docutils literal notranslate"><span class="pre">encode()</span></code></a>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">google.auth</span> <span class="kn">import</span> <span class="n">crypt</span>
+<span class="kn">from</span> <span class="nn">google.auth</span> <span class="kn">import</span> <span class="n">jwt</span>
+
+<span class="n">signer</span> <span class="o">=</span> <span class="n">crypt</span><span class="o">.</span><span class="n">Signer</span><span class="p">(</span><span class="n">private_key</span><span class="p">)</span>
+<span class="n">payload</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;some&#39;</span><span class="p">:</span> <span class="s1">&#39;payload&#39;</span><span class="p">}</span>
+<span class="n">encoded</span> <span class="o">=</span> <span class="n">jwt</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="n">signer</span><span class="p">,</span> <span class="n">payload</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>To decode a JWT and verify claims use <a class="reference internal" href="#google.auth.jwt.decode" title="google.auth.jwt.decode"><code class="xref py py-func docutils literal notranslate"><span class="pre">decode()</span></code></a>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">claims</span> <span class="o">=</span> <span class="n">jwt</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="n">encoded</span><span class="p">,</span> <span class="n">certs</span><span class="o">=</span><span class="n">public_certs</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>You can also skip verification:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">claims</span> <span class="o">=</span> <span class="n">jwt</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="n">encoded</span><span class="p">,</span> <span class="n">verify</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+</pre></div>
+</div>
+<dl class="function">
+<dt id="google.auth.jwt.encode">
+<code class="sig-name descname">encode</code><span class="sig-paren">(</span><em class="sig-param">signer</em>, <em class="sig-param">payload</em>, <em class="sig-param">header=None</em>, <em class="sig-param">key_id=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/google/auth/jwt.html#encode"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.auth.jwt.encode" title="Permalink to this definition">¶</a></dt>
+<dd><p>Make a signed JWT.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>signer</strong> (<a class="reference internal" href="google.auth.crypt.html#google.auth.crypt.Signer" title="google.auth.crypt.Signer"><em>google.auth.crypt.Signer</em></a>) – The signer used to sign the JWT.</p></li>
+<li><p><strong>payload</strong> (<a class="reference external" href="https://docs.python.org/3.5/library/typing.html#typing.Mapping" title="(in Python v3.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Mapping</span></code></a> [ <a class="reference external" href="https://docs.python.org/3.5/library/stdtypes.html#str" title="(in Python v3.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">str</span></code></a>, <a class="reference external" href="https://docs.python.org/3.5/library/stdtypes.html#str" title="(in Python v3.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">str</span></code></a> ]) – The JWT payload.</p></li>
+<li><p><strong>header</strong> (<a class="reference external" href="https://docs.python.org/3.5/library/typing.html#typing.Mapping" title="(in Python v3.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Mapping</span></code></a> [ <a class="reference external" href="https://docs.python.org/3.5/library/stdtypes.html#str" title="(in Python v3.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">str</span></code></a>, <a class="reference external" href="https://docs.python.org/3.5/library/stdtypes.html#str" title="(in Python v3.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">str</span></code></a> ]) – Additional JWT header payload.</p></li>
+<li><p><strong>key_id</strong> (<a class="reference external" href="https://docs.python.org/3.5/library/stdtypes.html#str" title="(in Python v3.5)"><em>str</em></a>) – The key id to add to the JWT header. If the
+signer has a key id it will be used as the default. If this is
+specified it will override the signer’s key id.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The encoded JWT.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3.5/library/functions.html#bytes" title="(in Python v3.5)">bytes</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="google.auth.jwt.decode_header">
+<code class="sig-name descname">decode_header</code><span class="sig-paren">(</span><em class="sig-param">token</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/google/auth/jwt.html#decode_header"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.auth.jwt.decode_header" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the decoded header of a token.</p>
+<p>No verification is done. This is useful to extract the key id from
+the header in order to acquire the appropriate certificate to verify
+the token.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>token</strong> (<a class="reference external" href="https://docs.python.org/3.5/library/typing.html#typing.Union" title="(in Python v3.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Union</span></code></a> [ <a class="reference external" href="https://docs.python.org/3.5/library/stdtypes.html#str" title="(in Python v3.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">str</span></code></a>, <a class="reference external" href="https://docs.python.org/3.5/library/functions.html#bytes" title="(in Python v3.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">bytes</span></code></a> ]) – the encoded JWT.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The decoded JWT header.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>Mapping</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="google.auth.jwt.decode">
+<code class="sig-name descname">decode</code><span class="sig-paren">(</span><em class="sig-param">token</em>, <em class="sig-param">certs=None</em>, <em class="sig-param">verify=True</em>, <em class="sig-param">audience=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/google/auth/jwt.html#decode"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.auth.jwt.decode" title="Permalink to this definition">¶</a></dt>
+<dd><p>Decode and verify a JWT.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>token</strong> (<a class="reference external" href="https://docs.python.org/3.5/library/stdtypes.html#str" title="(in Python v3.5)"><em>str</em></a>) – The encoded JWT.</p></li>
+<li><p><strong>certs</strong> (<a class="reference external" href="https://docs.python.org/3.5/library/typing.html#typing.Union" title="(in Python v3.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Union</span></code></a> [ <a class="reference external" href="https://docs.python.org/3.5/library/stdtypes.html#str" title="(in Python v3.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">str</span></code></a>, <a class="reference external" href="https://docs.python.org/3.5/library/functions.html#bytes" title="(in Python v3.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">bytes</span></code></a>, <a class="reference external" href="https://docs.python.org/3.5/library/typing.html#typing.Mapping" title="(in Python v3.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Mapping</span></code></a> [ <a class="reference external" href="https://docs.python.org/3.5/library/stdtypes.html#str" title="(in Python v3.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">str</span></code></a>, <a class="reference external" href="https://docs.python.org/3.5/library/typing.html#typing.Union" title="(in Python v3.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Union</span></code></a> [ <a class="reference external" href="https://docs.python.org/3.5/library/stdtypes.html#str" title="(in Python v3.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">str</span></code></a>, <a class="reference external" href="https://docs.python.org/3.5/library/functions.html#bytes" title="(in Python v3.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">bytes</span></code></a> ]  ]  ]) – The
+certificate used to validate the JWT signature. If bytes or string,
+it must the the public key certificate in PEM format. If a mapping,
+it must be a mapping of key IDs to public key certificates in PEM
+format. The mapping must contain the same key ID that’s specified
+in the token’s header.</p></li>
+<li><p><strong>verify</strong> (<a class="reference external" href="https://docs.python.org/3.5/library/functions.html#bool" title="(in Python v3.5)"><em>bool</em></a>) – Whether to perform signature and claim validation.
+Verification is done by default.</p></li>
+<li><p><strong>audience</strong> (<a class="reference external" href="https://docs.python.org/3.5/library/stdtypes.html#str" title="(in Python v3.5)"><em>str</em></a><em> or </em><a class="reference external" href="https://docs.python.org/3.5/library/stdtypes.html#list" title="(in Python v3.5)"><em>list</em></a>) – The audience claim, ‘aud’, that this JWT should
+contain. Or a list of audience claims. If None then the JWT’s ‘aud’
+parameter is not verified.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The deserialized JSON payload in the JWT.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3.5/library/typing.html#typing.Mapping" title="(in Python v3.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Mapping</span></code></a> [ <a class="reference external" href="https://docs.python.org/3.5/library/stdtypes.html#str" title="(in Python v3.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">str</span></code></a>, <a class="reference external" href="https://docs.python.org/3.5/library/stdtypes.html#str" title="(in Python v3.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">str</span></code></a> ]</p>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3.5/library/exceptions.html#ValueError" title="(in Python v3.5)"><strong>ValueError</strong></a> – if any verification checks failed.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="class">
+<dt id="google.auth.jwt.Credentials">
+<em class="property">class </em><code class="sig-name descname">Credentials</code><span class="sig-paren">(</span><em class="sig-param">signer</em>, <em class="sig-param">issuer</em>, <em class="sig-param">subject</em>, <em class="sig-param">audience</em>, <em class="sig-param">additional_claims=None</em>, <em class="sig-param">token_lifetime=3600</em>, <em class="sig-param">quota_project_id=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/google/auth/jwt.html#Credentials"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.auth.jwt.Credentials" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="google.auth.credentials.html#google.auth.credentials.Signing" title="google.auth.credentials.Signing"><code class="xref py py-class docutils literal notranslate"><span class="pre">google.auth.credentials.Signing</span></code></a>, <a class="reference internal" href="google.auth.credentials.html#google.auth.credentials.CredentialsWithQuotaProject" title="google.auth.credentials.CredentialsWithQuotaProject"><code class="xref py py-class docutils literal notranslate"><span class="pre">google.auth.credentials.CredentialsWithQuotaProject</span></code></a></p>
+<p>Credentials that use a JWT as the bearer token.</p>
+<p>These credentials require an “audience” claim. This claim identifies the
+intended recipient of the bearer token.</p>
+<p>The constructor arguments determine the claims for the JWT that is
+sent with requests. Usually, you’ll construct these credentials with
+one of the helper constructors as shown in the next section.</p>
+<p>To create JWT credentials using a Google service account private key
+JSON file:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">audience</span> <span class="o">=</span> <span class="s1">&#39;https://pubsub.googleapis.com/google.pubsub.v1.Publisher&#39;</span>
+<span class="n">credentials</span> <span class="o">=</span> <span class="n">jwt</span><span class="o">.</span><span class="n">Credentials</span><span class="o">.</span><span class="n">from_service_account_file</span><span class="p">(</span>
+    <span class="s1">&#39;service-account.json&#39;</span><span class="p">,</span>
+    <span class="n">audience</span><span class="o">=</span><span class="n">audience</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>If you already have the service account file loaded and parsed:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">service_account_info</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="nb">open</span><span class="p">(</span><span class="s1">&#39;service_account.json&#39;</span><span class="p">))</span>
+<span class="n">credentials</span> <span class="o">=</span> <span class="n">jwt</span><span class="o">.</span><span class="n">Credentials</span><span class="o">.</span><span class="n">from_service_account_info</span><span class="p">(</span>
+    <span class="n">service_account_info</span><span class="p">,</span>
+    <span class="n">audience</span><span class="o">=</span><span class="n">audience</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Both helper methods pass on arguments to the constructor, so you can
+specify the JWT claims:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">credentials</span> <span class="o">=</span> <span class="n">jwt</span><span class="o">.</span><span class="n">Credentials</span><span class="o">.</span><span class="n">from_service_account_file</span><span class="p">(</span>
+    <span class="s1">&#39;service-account.json&#39;</span><span class="p">,</span>
+    <span class="n">audience</span><span class="o">=</span><span class="n">audience</span><span class="p">,</span>
+    <span class="n">additional_claims</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;meta&#39;</span><span class="p">:</span> <span class="s1">&#39;data&#39;</span><span class="p">})</span>
+</pre></div>
+</div>
+<p>You can also construct the credentials directly if you have a
+<a class="reference internal" href="google.auth.crypt.html#google.auth.crypt.Signer" title="google.auth.crypt.Signer"><code class="xref py py-class docutils literal notranslate"><span class="pre">Signer</span></code></a> instance:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">credentials</span> <span class="o">=</span> <span class="n">jwt</span><span class="o">.</span><span class="n">Credentials</span><span class="p">(</span>
+    <span class="n">signer</span><span class="p">,</span>
+    <span class="n">issuer</span><span class="o">=</span><span class="s1">&#39;your-issuer&#39;</span><span class="p">,</span>
+    <span class="n">subject</span><span class="o">=</span><span class="s1">&#39;your-subject&#39;</span><span class="p">,</span>
+    <span class="n">audience</span><span class="o">=</span><span class="n">audience</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The claims are considered immutable. If you want to modify the claims,
+you can easily create another instance using <a class="reference internal" href="#google.auth.jwt.Credentials.with_claims" title="google.auth.jwt.Credentials.with_claims"><code class="xref py py-meth docutils literal notranslate"><span class="pre">with_claims()</span></code></a>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">new_audience</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="s1">&#39;https://pubsub.googleapis.com/google.pubsub.v1.Subscriber&#39;</span><span class="p">)</span>
+<span class="n">new_credentials</span> <span class="o">=</span> <span class="n">credentials</span><span class="o">.</span><span class="n">with_claims</span><span class="p">(</span><span class="n">audience</span><span class="o">=</span><span class="n">new_audience</span><span class="p">)</span>
+</pre></div>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>signer</strong> (<a class="reference internal" href="google.auth.crypt.html#google.auth.crypt.Signer" title="google.auth.crypt.Signer"><em>google.auth.crypt.Signer</em></a>) – The signer used to sign JWTs.</p></li>
+<li><p><strong>issuer</strong> (<a class="reference external" href="https://docs.python.org/3.5/library/stdtypes.html#str" title="(in Python v3.5)"><em>str</em></a>) – The <cite>iss</cite> claim.</p></li>
+<li><p><strong>subject</strong> (<a class="reference external" href="https://docs.python.org/3.5/library/stdtypes.html#str" title="(in Python v3.5)"><em>str</em></a>) – The <cite>sub</cite> claim.</p></li>
+<li><p><strong>audience</strong> (<a class="reference external" href="https://docs.python.org/3.5/library/stdtypes.html#str" title="(in Python v3.5)"><em>str</em></a>) – the <cite>aud</cite> claim. The intended audience for the
+credentials.</p></li>
+<li><p><strong>additional_claims</strong> (<a class="reference external" href="https://docs.python.org/3.5/library/typing.html#typing.Mapping" title="(in Python v3.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Mapping</span></code></a> [ <a class="reference external" href="https://docs.python.org/3.5/library/stdtypes.html#str" title="(in Python v3.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">str</span></code></a>, <a class="reference external" href="https://docs.python.org/3.5/library/stdtypes.html#str" title="(in Python v3.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">str</span></code></a> ]) – <a class="reference external" href="https://docs.python.org/3.5/library/typing.html#typing.Any" title="(in Python v3.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Any</span></code></a> additional claims for
+the JWT payload.</p></li>
+<li><p><strong>token_lifetime</strong> (<a class="reference external" href="https://docs.python.org/3.5/library/functions.html#int" title="(in Python v3.5)"><em>int</em></a>) – The amount of time in seconds for
+which the token is valid. Defaults to 1 hour.</p></li>
+<li><p><strong>quota_project_id</strong> (<a class="reference external" href="https://docs.python.org/3.5/library/typing.html#typing.Optional" title="(in Python v3.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Optional</span></code></a> [ <a class="reference external" href="https://docs.python.org/3.5/library/stdtypes.html#str" title="(in Python v3.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">str</span></code></a> ]) – The project ID used for quota
+and billing.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="method">
+<dt id="google.auth.jwt.Credentials.from_service_account_info">
+<em class="property">classmethod </em><code class="sig-name descname">from_service_account_info</code><span class="sig-paren">(</span><em class="sig-param">info</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/google/auth/jwt.html#Credentials.from_service_account_info"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.auth.jwt.Credentials.from_service_account_info" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates an Credentials instance from a dictionary.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>info</strong> (<a class="reference external" href="https://docs.python.org/3.5/library/typing.html#typing.Mapping" title="(in Python v3.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Mapping</span></code></a> [ <a class="reference external" href="https://docs.python.org/3.5/library/stdtypes.html#str" title="(in Python v3.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">str</span></code></a>, <a class="reference external" href="https://docs.python.org/3.5/library/stdtypes.html#str" title="(in Python v3.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">str</span></code></a> ]) – The service account info in Google
+format.</p></li>
+<li><p><strong>kwargs</strong> – Additional arguments to pass to the constructor.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The constructed credentials.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#google.auth.jwt.Credentials" title="google.auth.jwt.Credentials">google.auth.jwt.Credentials</a></p>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3.5/library/exceptions.html#ValueError" title="(in Python v3.5)"><strong>ValueError</strong></a> – If the info is not in the expected format.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="google.auth.jwt.Credentials.from_service_account_file">
+<em class="property">classmethod </em><code class="sig-name descname">from_service_account_file</code><span class="sig-paren">(</span><em class="sig-param">filename</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/google/auth/jwt.html#Credentials.from_service_account_file"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.auth.jwt.Credentials.from_service_account_file" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates a Credentials instance from a service account .json file
+in Google format.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>filename</strong> (<a class="reference external" href="https://docs.python.org/3.5/library/stdtypes.html#str" title="(in Python v3.5)"><em>str</em></a>) – The path to the service account .json file.</p></li>
+<li><p><strong>kwargs</strong> – Additional arguments to pass to the constructor.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The constructed credentials.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#google.auth.jwt.Credentials" title="google.auth.jwt.Credentials">google.auth.jwt.Credentials</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="google.auth.jwt.Credentials.from_signing_credentials">
+<em class="property">classmethod </em><code class="sig-name descname">from_signing_credentials</code><span class="sig-paren">(</span><em class="sig-param">credentials</em>, <em class="sig-param">audience</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/google/auth/jwt.html#Credentials.from_signing_credentials"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.auth.jwt.Credentials.from_signing_credentials" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates a new <a class="reference internal" href="#google.auth.jwt.Credentials" title="google.auth.jwt.Credentials"><code class="xref py py-class docutils literal notranslate"><span class="pre">google.auth.jwt.Credentials</span></code></a> instance from an
+existing <a class="reference internal" href="google.auth.credentials.html#google.auth.credentials.Signing" title="google.auth.credentials.Signing"><code class="xref py py-class docutils literal notranslate"><span class="pre">google.auth.credentials.Signing</span></code></a> instance.</p>
+<p>The new instance will use the same signer as the existing instance and
+will use the existing instance’s signer email as the issuer and
+subject by default.</p>
+<p>Example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">svc_creds</span> <span class="o">=</span> <span class="n">service_account</span><span class="o">.</span><span class="n">Credentials</span><span class="o">.</span><span class="n">from_service_account_file</span><span class="p">(</span>
+    <span class="s1">&#39;service_account.json&#39;</span><span class="p">)</span>
+<span class="n">audience</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="s1">&#39;https://pubsub.googleapis.com/google.pubsub.v1.Publisher&#39;</span><span class="p">)</span>
+<span class="n">jwt_creds</span> <span class="o">=</span> <span class="n">jwt</span><span class="o">.</span><span class="n">Credentials</span><span class="o">.</span><span class="n">from_signing_credentials</span><span class="p">(</span>
+    <span class="n">svc_creds</span><span class="p">,</span> <span class="n">audience</span><span class="o">=</span><span class="n">audience</span><span class="p">)</span>
+</pre></div>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>credentials</strong> (<a class="reference internal" href="google.auth.credentials.html#google.auth.credentials.Signing" title="google.auth.credentials.Signing"><em>google.auth.credentials.Signing</em></a>) – The credentials to
+use to construct the new credentials.</p></li>
+<li><p><strong>audience</strong> (<a class="reference external" href="https://docs.python.org/3.5/library/stdtypes.html#str" title="(in Python v3.5)"><em>str</em></a>) – the <cite>aud</cite> claim. The intended audience for the
+credentials.</p></li>
+<li><p><strong>kwargs</strong> – Additional arguments to pass to the constructor.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>A new Credentials instance.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#google.auth.jwt.Credentials" title="google.auth.jwt.Credentials">google.auth.jwt.Credentials</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="google.auth.jwt.Credentials.with_claims">
+<code class="sig-name descname">with_claims</code><span class="sig-paren">(</span><em class="sig-param">issuer=None</em>, <em class="sig-param">subject=None</em>, <em class="sig-param">audience=None</em>, <em class="sig-param">additional_claims=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/google/auth/jwt.html#Credentials.with_claims"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.auth.jwt.Credentials.with_claims" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a copy of these credentials with modified claims.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>issuer</strong> (<a class="reference external" href="https://docs.python.org/3.5/library/stdtypes.html#str" title="(in Python v3.5)"><em>str</em></a>) – The <cite>iss</cite> claim. If unspecified the current issuer
+claim will be used.</p></li>
+<li><p><strong>subject</strong> (<a class="reference external" href="https://docs.python.org/3.5/library/stdtypes.html#str" title="(in Python v3.5)"><em>str</em></a>) – The <cite>sub</cite> claim. If unspecified the current subject
+claim will be used.</p></li>
+<li><p><strong>audience</strong> (<a class="reference external" href="https://docs.python.org/3.5/library/stdtypes.html#str" title="(in Python v3.5)"><em>str</em></a>) – the <cite>aud</cite> claim. If unspecified the current
+audience claim will be used.</p></li>
+<li><p><strong>additional_claims</strong> (<a class="reference external" href="https://docs.python.org/3.5/library/typing.html#typing.Mapping" title="(in Python v3.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Mapping</span></code></a> [ <a class="reference external" href="https://docs.python.org/3.5/library/stdtypes.html#str" title="(in Python v3.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">str</span></code></a>, <a class="reference external" href="https://docs.python.org/3.5/library/stdtypes.html#str" title="(in Python v3.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">str</span></code></a> ]) – <a class="reference external" href="https://docs.python.org/3.5/library/typing.html#typing.Any" title="(in Python v3.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Any</span></code></a> additional claims for
+the JWT payload. This will be merged with the current
+additional claims.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>A new credentials instance.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#google.auth.jwt.Credentials" title="google.auth.jwt.Credentials">google.auth.jwt.Credentials</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="google.auth.jwt.Credentials.with_quota_project">
+<code class="sig-name descname">with_quota_project</code><span class="sig-paren">(</span><em class="sig-param">quota_project_id</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/google/auth/jwt.html#Credentials.with_quota_project"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.auth.jwt.Credentials.with_quota_project" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a copy of these credentials with a modified quota project.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>quota_project_id</strong> (<a class="reference external" href="https://docs.python.org/3.5/library/stdtypes.html#str" title="(in Python v3.5)"><em>str</em></a>) – The project to use for quota and
+billing purposes</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>A new credentials instance.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="google.oauth2.credentials.html#google.oauth2.credentials.Credentials" title="google.oauth2.credentials.Credentials">google.oauth2.credentials.Credentials</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="google.auth.jwt.Credentials.refresh">
+<code class="sig-name descname">refresh</code><span class="sig-paren">(</span><em class="sig-param">request</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/google/auth/jwt.html#Credentials.refresh"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.auth.jwt.Credentials.refresh" title="Permalink to this definition">¶</a></dt>
+<dd><p>Refreshes the access token.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>request</strong> (<a class="reference external" href="https://docs.python.org/3.5/library/typing.html#typing.Any" title="(in Python v3.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Any</span></code></a>) – Unused.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="google.auth.jwt.Credentials.sign_bytes">
+<code class="sig-name descname">sign_bytes</code><span class="sig-paren">(</span><em class="sig-param">message</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/google/auth/jwt.html#Credentials.sign_bytes"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.auth.jwt.Credentials.sign_bytes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Signs the given message.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>message</strong> (<a class="reference external" href="https://docs.python.org/3.5/library/functions.html#bytes" title="(in Python v3.5)"><em>bytes</em></a>) – The message to sign.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The message’s cryptographic signature.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3.5/library/functions.html#bytes" title="(in Python v3.5)">bytes</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="google.auth.jwt.Credentials.signer_email">
+<em class="property">property </em><code class="sig-name descname">signer_email</code><a class="headerlink" href="#google.auth.jwt.Credentials.signer_email" title="Permalink to this definition">¶</a></dt>
+<dd><p>An email address that identifies the signer.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3.5/library/typing.html#typing.Optional" title="(in Python v3.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Optional</span></code></a> [ <a class="reference external" href="https://docs.python.org/3.5/library/stdtypes.html#str" title="(in Python v3.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">str</span></code></a> ]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="google.auth.jwt.Credentials.signer">
+<em class="property">property </em><code class="sig-name descname">signer</code><a class="headerlink" href="#google.auth.jwt.Credentials.signer" title="Permalink to this definition">¶</a></dt>
+<dd><p>The signer used to sign bytes.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="google.auth.crypt.html#google.auth.crypt.Signer" title="google.auth.crypt.Signer">google.auth.crypt.Signer</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="google.auth.jwt.Credentials.apply">
+<code class="sig-name descname">apply</code><span class="sig-paren">(</span><em class="sig-param">headers</em>, <em class="sig-param">token=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/google/auth/credentials.html#Credentials.apply"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.auth.jwt.Credentials.apply" title="Permalink to this definition">¶</a></dt>
+<dd><p>Apply the token to the authentication header.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>headers</strong> (<em>Mapping</em>) – The HTTP request headers.</p></li>
+<li><p><strong>token</strong> (<a class="reference external" href="https://docs.python.org/3.5/library/typing.html#typing.Optional" title="(in Python v3.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Optional</span></code></a> [ <a class="reference external" href="https://docs.python.org/3.5/library/stdtypes.html#str" title="(in Python v3.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">str</span></code></a> ]) – If specified, overrides the current access
+token.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="google.auth.jwt.Credentials.before_request">
+<code class="sig-name descname">before_request</code><span class="sig-paren">(</span><em class="sig-param">request</em>, <em class="sig-param">method</em>, <em class="sig-param">url</em>, <em class="sig-param">headers</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/google/auth/credentials.html#Credentials.before_request"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.auth.jwt.Credentials.before_request" title="Permalink to this definition">¶</a></dt>
+<dd><p>Performs credential-specific before request logic.</p>
+<p>Refreshes the credentials if necessary, then calls <a class="reference internal" href="#google.auth.jwt.Credentials.apply" title="google.auth.jwt.Credentials.apply"><code class="xref py py-meth docutils literal notranslate"><span class="pre">apply()</span></code></a> to
+apply the token to the authentication header.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>request</strong> (<a class="reference internal" href="google.auth.transport.html#google.auth.transport.Request" title="google.auth.transport.Request"><em>google.auth.transport.Request</em></a>) – The object used to make
+HTTP requests.</p></li>
+<li><p><strong>method</strong> (<a class="reference external" href="https://docs.python.org/3.5/library/stdtypes.html#str" title="(in Python v3.5)"><em>str</em></a>) – The request’s HTTP method or the RPC method being
+invoked.</p></li>
+<li><p><strong>url</strong> (<a class="reference external" href="https://docs.python.org/3.5/library/stdtypes.html#str" title="(in Python v3.5)"><em>str</em></a>) – The request’s URI or the RPC service’s URI.</p></li>
+<li><p><strong>headers</strong> (<em>Mapping</em>) – The request’s headers.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="google.auth.jwt.Credentials.expired">
+<em class="property">property </em><code class="sig-name descname">expired</code><a class="headerlink" href="#google.auth.jwt.Credentials.expired" title="Permalink to this definition">¶</a></dt>
+<dd><p>Checks if the credentials are expired.</p>
+<p>Note that credentials can be invalid but not expired because
+Credentials with <code class="xref py py-attr docutils literal notranslate"><span class="pre">expiry</span></code> set to None is considered to never
+expire.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="google.auth.jwt.Credentials.quota_project_id">
+<em class="property">property </em><code class="sig-name descname">quota_project_id</code><a class="headerlink" href="#google.auth.jwt.Credentials.quota_project_id" title="Permalink to this definition">¶</a></dt>
+<dd><p>Project to use for quota and billing purposes.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="google.auth.jwt.Credentials.valid">
+<em class="property">property </em><code class="sig-name descname">valid</code><a class="headerlink" href="#google.auth.jwt.Credentials.valid" title="Permalink to this definition">¶</a></dt>
+<dd><p>Checks the validity of the credentials.</p>
+<p>This is True if the credentials have a <code class="xref py py-attr docutils literal notranslate"><span class="pre">token</span></code> and the token
+is not <a class="reference internal" href="#google.auth.jwt.Credentials.expired" title="google.auth.jwt.Credentials.expired"><code class="xref py py-attr docutils literal notranslate"><span class="pre">expired</span></code></a>.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="google.auth.jwt.OnDemandCredentials">
+<em class="property">class </em><code class="sig-name descname">OnDemandCredentials</code><span class="sig-paren">(</span><em class="sig-param">signer</em>, <em class="sig-param">issuer</em>, <em class="sig-param">subject</em>, <em class="sig-param">additional_claims=None</em>, <em class="sig-param">token_lifetime=3600</em>, <em class="sig-param">max_cache_size=10</em>, <em class="sig-param">quota_project_id=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/google/auth/jwt.html#OnDemandCredentials"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.auth.jwt.OnDemandCredentials" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="google.auth.credentials.html#google.auth.credentials.Signing" title="google.auth.credentials.Signing"><code class="xref py py-class docutils literal notranslate"><span class="pre">google.auth.credentials.Signing</span></code></a>, <a class="reference internal" href="google.auth.credentials.html#google.auth.credentials.CredentialsWithQuotaProject" title="google.auth.credentials.CredentialsWithQuotaProject"><code class="xref py py-class docutils literal notranslate"><span class="pre">google.auth.credentials.CredentialsWithQuotaProject</span></code></a></p>
+<p>On-demand JWT credentials.</p>
+<p>Like <a class="reference internal" href="#google.auth.jwt.Credentials" title="google.auth.jwt.Credentials"><code class="xref py py-class docutils literal notranslate"><span class="pre">Credentials</span></code></a>, this class uses a JWT as the bearer token for
+authentication. However, this class does not require the audience at
+construction time. Instead, it will generate a new token on-demand for
+each request using the request URI as the audience. It caches tokens
+so that multiple requests to the same URI do not incur the overhead
+of generating a new token every time.</p>
+<p>This behavior is especially useful for <a class="reference external" href="http://www.grpc.io/">gRPC</a> clients. A gRPC service may
+have multiple audience and gRPC clients may not know all of the audiences
+required for accessing a particular service. With these credentials,
+no knowledge of the audiences is required ahead of time.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>signer</strong> (<a class="reference internal" href="google.auth.crypt.html#google.auth.crypt.Signer" title="google.auth.crypt.Signer"><em>google.auth.crypt.Signer</em></a>) – The signer used to sign JWTs.</p></li>
+<li><p><strong>issuer</strong> (<a class="reference external" href="https://docs.python.org/3.5/library/stdtypes.html#str" title="(in Python v3.5)"><em>str</em></a>) – The <cite>iss</cite> claim.</p></li>
+<li><p><strong>subject</strong> (<a class="reference external" href="https://docs.python.org/3.5/library/stdtypes.html#str" title="(in Python v3.5)"><em>str</em></a>) – The <cite>sub</cite> claim.</p></li>
+<li><p><strong>additional_claims</strong> (<a class="reference external" href="https://docs.python.org/3.5/library/typing.html#typing.Mapping" title="(in Python v3.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Mapping</span></code></a> [ <a class="reference external" href="https://docs.python.org/3.5/library/stdtypes.html#str" title="(in Python v3.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">str</span></code></a>, <a class="reference external" href="https://docs.python.org/3.5/library/stdtypes.html#str" title="(in Python v3.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">str</span></code></a> ]) – <a class="reference external" href="https://docs.python.org/3.5/library/typing.html#typing.Any" title="(in Python v3.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Any</span></code></a> additional claims for
+the JWT payload.</p></li>
+<li><p><strong>token_lifetime</strong> (<a class="reference external" href="https://docs.python.org/3.5/library/functions.html#int" title="(in Python v3.5)"><em>int</em></a>) – The amount of time in seconds for
+which the token is valid. Defaults to 1 hour.</p></li>
+<li><p><strong>max_cache_size</strong> (<a class="reference external" href="https://docs.python.org/3.5/library/functions.html#int" title="(in Python v3.5)"><em>int</em></a>) – The maximum number of JWT tokens to keep in
+cache. Tokens are cached using <code class="xref py py-class docutils literal notranslate"><span class="pre">cachetools.LRUCache</span></code>.</p></li>
+<li><p><strong>quota_project_id</strong> (<a class="reference external" href="https://docs.python.org/3.5/library/typing.html#typing.Optional" title="(in Python v3.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Optional</span></code></a> [ <a class="reference external" href="https://docs.python.org/3.5/library/stdtypes.html#str" title="(in Python v3.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">str</span></code></a> ]) – The project ID used for quota
+and billing.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="method">
+<dt id="google.auth.jwt.OnDemandCredentials.from_service_account_info">
+<em class="property">classmethod </em><code class="sig-name descname">from_service_account_info</code><span class="sig-paren">(</span><em class="sig-param">info</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/google/auth/jwt.html#OnDemandCredentials.from_service_account_info"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.auth.jwt.OnDemandCredentials.from_service_account_info" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates an OnDemandCredentials instance from a dictionary.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>info</strong> (<a class="reference external" href="https://docs.python.org/3.5/library/typing.html#typing.Mapping" title="(in Python v3.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Mapping</span></code></a> [ <a class="reference external" href="https://docs.python.org/3.5/library/stdtypes.html#str" title="(in Python v3.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">str</span></code></a>, <a class="reference external" href="https://docs.python.org/3.5/library/stdtypes.html#str" title="(in Python v3.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">str</span></code></a> ]) – The service account info in Google
+format.</p></li>
+<li><p><strong>kwargs</strong> – Additional arguments to pass to the constructor.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The constructed credentials.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#google.auth.jwt.OnDemandCredentials" title="google.auth.jwt.OnDemandCredentials">google.auth.jwt.OnDemandCredentials</a></p>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3.5/library/exceptions.html#ValueError" title="(in Python v3.5)"><strong>ValueError</strong></a> – If the info is not in the expected format.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="google.auth.jwt.OnDemandCredentials.from_service_account_file">
+<em class="property">classmethod </em><code class="sig-name descname">from_service_account_file</code><span class="sig-paren">(</span><em class="sig-param">filename</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/google/auth/jwt.html#OnDemandCredentials.from_service_account_file"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.auth.jwt.OnDemandCredentials.from_service_account_file" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates an OnDemandCredentials instance from a service account .json
+file in Google format.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>filename</strong> (<a class="reference external" href="https://docs.python.org/3.5/library/stdtypes.html#str" title="(in Python v3.5)"><em>str</em></a>) – The path to the service account .json file.</p></li>
+<li><p><strong>kwargs</strong> – Additional arguments to pass to the constructor.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The constructed credentials.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#google.auth.jwt.OnDemandCredentials" title="google.auth.jwt.OnDemandCredentials">google.auth.jwt.OnDemandCredentials</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="google.auth.jwt.OnDemandCredentials.from_signing_credentials">
+<em class="property">classmethod </em><code class="sig-name descname">from_signing_credentials</code><span class="sig-paren">(</span><em class="sig-param">credentials</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/google/auth/jwt.html#OnDemandCredentials.from_signing_credentials"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.auth.jwt.OnDemandCredentials.from_signing_credentials" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates a new <a class="reference internal" href="#google.auth.jwt.OnDemandCredentials" title="google.auth.jwt.OnDemandCredentials"><code class="xref py py-class docutils literal notranslate"><span class="pre">google.auth.jwt.OnDemandCredentials</span></code></a> instance
+from an existing <a class="reference internal" href="google.auth.credentials.html#google.auth.credentials.Signing" title="google.auth.credentials.Signing"><code class="xref py py-class docutils literal notranslate"><span class="pre">google.auth.credentials.Signing</span></code></a> instance.</p>
+<p>The new instance will use the same signer as the existing instance and
+will use the existing instance’s signer email as the issuer and
+subject by default.</p>
+<p>Example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">svc_creds</span> <span class="o">=</span> <span class="n">service_account</span><span class="o">.</span><span class="n">Credentials</span><span class="o">.</span><span class="n">from_service_account_file</span><span class="p">(</span>
+    <span class="s1">&#39;service_account.json&#39;</span><span class="p">)</span>
+<span class="n">jwt_creds</span> <span class="o">=</span> <span class="n">jwt</span><span class="o">.</span><span class="n">OnDemandCredentials</span><span class="o">.</span><span class="n">from_signing_credentials</span><span class="p">(</span>
+    <span class="n">svc_creds</span><span class="p">)</span>
+</pre></div>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>credentials</strong> (<a class="reference internal" href="google.auth.credentials.html#google.auth.credentials.Signing" title="google.auth.credentials.Signing"><em>google.auth.credentials.Signing</em></a>) – The credentials to
+use to construct the new credentials.</p></li>
+<li><p><strong>kwargs</strong> – Additional arguments to pass to the constructor.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>A new Credentials instance.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#google.auth.jwt.Credentials" title="google.auth.jwt.Credentials">google.auth.jwt.Credentials</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="google.auth.jwt.OnDemandCredentials.with_claims">
+<code class="sig-name descname">with_claims</code><span class="sig-paren">(</span><em class="sig-param">issuer=None</em>, <em class="sig-param">subject=None</em>, <em class="sig-param">additional_claims=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/google/auth/jwt.html#OnDemandCredentials.with_claims"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.auth.jwt.OnDemandCredentials.with_claims" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a copy of these credentials with modified claims.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>issuer</strong> (<a class="reference external" href="https://docs.python.org/3.5/library/stdtypes.html#str" title="(in Python v3.5)"><em>str</em></a>) – The <cite>iss</cite> claim. If unspecified the current issuer
+claim will be used.</p></li>
+<li><p><strong>subject</strong> (<a class="reference external" href="https://docs.python.org/3.5/library/stdtypes.html#str" title="(in Python v3.5)"><em>str</em></a>) – The <cite>sub</cite> claim. If unspecified the current subject
+claim will be used.</p></li>
+<li><p><strong>additional_claims</strong> (<a class="reference external" href="https://docs.python.org/3.5/library/typing.html#typing.Mapping" title="(in Python v3.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Mapping</span></code></a> [ <a class="reference external" href="https://docs.python.org/3.5/library/stdtypes.html#str" title="(in Python v3.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">str</span></code></a>, <a class="reference external" href="https://docs.python.org/3.5/library/stdtypes.html#str" title="(in Python v3.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">str</span></code></a> ]) – <a class="reference external" href="https://docs.python.org/3.5/library/typing.html#typing.Any" title="(in Python v3.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Any</span></code></a> additional claims for
+the JWT payload. This will be merged with the current
+additional claims.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>A new credentials instance.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#google.auth.jwt.OnDemandCredentials" title="google.auth.jwt.OnDemandCredentials">google.auth.jwt.OnDemandCredentials</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="google.auth.jwt.OnDemandCredentials.with_quota_project">
+<code class="sig-name descname">with_quota_project</code><span class="sig-paren">(</span><em class="sig-param">quota_project_id</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/google/auth/jwt.html#OnDemandCredentials.with_quota_project"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.auth.jwt.OnDemandCredentials.with_quota_project" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a copy of these credentials with a modified quota project.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>quota_project_id</strong> (<a class="reference external" href="https://docs.python.org/3.5/library/stdtypes.html#str" title="(in Python v3.5)"><em>str</em></a>) – The project to use for quota and
+billing purposes</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>A new credentials instance.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="google.oauth2.credentials.html#google.oauth2.credentials.Credentials" title="google.oauth2.credentials.Credentials">google.oauth2.credentials.Credentials</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="google.auth.jwt.OnDemandCredentials.valid">
+<em class="property">property </em><code class="sig-name descname">valid</code><a class="headerlink" href="#google.auth.jwt.OnDemandCredentials.valid" title="Permalink to this definition">¶</a></dt>
+<dd><p>Checks the validity of the credentials.</p>
+<p>These credentials are always valid because it generates tokens on
+demand.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="google.auth.jwt.OnDemandCredentials.refresh">
+<code class="sig-name descname">refresh</code><span class="sig-paren">(</span><em class="sig-param">request</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/google/auth/jwt.html#OnDemandCredentials.refresh"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.auth.jwt.OnDemandCredentials.refresh" title="Permalink to this definition">¶</a></dt>
+<dd><p>Raises an exception, these credentials can not be directly
+refreshed.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>request</strong> (<a class="reference external" href="https://docs.python.org/3.5/library/typing.html#typing.Any" title="(in Python v3.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Any</span></code></a>) – Unused.</p>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><p><strong>google.auth.RefreshError</strong> – </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="google.auth.jwt.OnDemandCredentials.before_request">
+<code class="sig-name descname">before_request</code><span class="sig-paren">(</span><em class="sig-param">request</em>, <em class="sig-param">method</em>, <em class="sig-param">url</em>, <em class="sig-param">headers</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/google/auth/jwt.html#OnDemandCredentials.before_request"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.auth.jwt.OnDemandCredentials.before_request" title="Permalink to this definition">¶</a></dt>
+<dd><p>Performs credential-specific before request logic.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>request</strong> (<a class="reference external" href="https://docs.python.org/3.5/library/typing.html#typing.Any" title="(in Python v3.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Any</span></code></a>) – Unused. JWT credentials do not need to make an
+HTTP request to refresh.</p></li>
+<li><p><strong>method</strong> (<a class="reference external" href="https://docs.python.org/3.5/library/stdtypes.html#str" title="(in Python v3.5)"><em>str</em></a>) – The request’s HTTP method.</p></li>
+<li><p><strong>url</strong> (<a class="reference external" href="https://docs.python.org/3.5/library/stdtypes.html#str" title="(in Python v3.5)"><em>str</em></a>) – The request’s URI. This is used as the audience claim
+when generating the JWT.</p></li>
+<li><p><strong>headers</strong> (<em>Mapping</em>) – The request’s headers.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="google.auth.jwt.OnDemandCredentials.sign_bytes">
+<code class="sig-name descname">sign_bytes</code><span class="sig-paren">(</span><em class="sig-param">message</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/google/auth/jwt.html#OnDemandCredentials.sign_bytes"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.auth.jwt.OnDemandCredentials.sign_bytes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Signs the given message.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>message</strong> (<a class="reference external" href="https://docs.python.org/3.5/library/functions.html#bytes" title="(in Python v3.5)"><em>bytes</em></a>) – The message to sign.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The message’s cryptographic signature.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3.5/library/functions.html#bytes" title="(in Python v3.5)">bytes</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="google.auth.jwt.OnDemandCredentials.signer_email">
+<em class="property">property </em><code class="sig-name descname">signer_email</code><a class="headerlink" href="#google.auth.jwt.OnDemandCredentials.signer_email" title="Permalink to this definition">¶</a></dt>
+<dd><p>An email address that identifies the signer.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3.5/library/typing.html#typing.Optional" title="(in Python v3.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Optional</span></code></a> [ <a class="reference external" href="https://docs.python.org/3.5/library/stdtypes.html#str" title="(in Python v3.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">str</span></code></a> ]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="google.auth.jwt.OnDemandCredentials.signer">
+<em class="property">property </em><code class="sig-name descname">signer</code><a class="headerlink" href="#google.auth.jwt.OnDemandCredentials.signer" title="Permalink to this definition">¶</a></dt>
+<dd><p>The signer used to sign bytes.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="google.auth.crypt.html#google.auth.crypt.Signer" title="google.auth.crypt.Signer">google.auth.crypt.Signer</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="google.auth.jwt.OnDemandCredentials.apply">
+<code class="sig-name descname">apply</code><span class="sig-paren">(</span><em class="sig-param">headers</em>, <em class="sig-param">token=None</em><span class="sig-paren">)</span><a class="headerlink" href="#google.auth.jwt.OnDemandCredentials.apply" title="Permalink to this definition">¶</a></dt>
+<dd><p>Apply the token to the authentication header.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>headers</strong> (<em>Mapping</em>) – The HTTP request headers.</p></li>
+<li><p><strong>token</strong> (<a class="reference external" href="https://docs.python.org/3.5/library/typing.html#typing.Optional" title="(in Python v3.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Optional</span></code></a> [ <a class="reference external" href="https://docs.python.org/3.5/library/stdtypes.html#str" title="(in Python v3.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">str</span></code></a> ]) – If specified, overrides the current access
+token.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="google.auth.jwt.OnDemandCredentials.expired">
+<em class="property">property </em><code class="sig-name descname">expired</code><a class="headerlink" href="#google.auth.jwt.OnDemandCredentials.expired" title="Permalink to this definition">¶</a></dt>
+<dd><p>Checks if the credentials are expired.</p>
+<p>Note that credentials can be invalid but not expired because
+Credentials with <code class="xref py py-attr docutils literal notranslate"><span class="pre">expiry</span></code> set to None is considered to never
+expire.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="google.auth.jwt.OnDemandCredentials.quota_project_id">
+<em class="property">property </em><code class="sig-name descname">quota_project_id</code><a class="headerlink" href="#google.auth.jwt.OnDemandCredentials.quota_project_id" title="Permalink to this definition">¶</a></dt>
+<dd><p>Project to use for quota and billing purposes.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">google-auth</a></h1>
+
+
+
+<p class="blurb">Google Auth Library for Python</p>
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=GoogleCloudPlatform&repo=google-auth-library-python&type=watch&count=true&size=large&v=2"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+
+    
+
+<p>
+<a class="badge" href="https://travis-ci.org/GoogleCloudPlatform/google-auth-library-python">
+    <img
+        alt="https://secure.travis-ci.org/GoogleCloudPlatform/google-auth-library-python.svg?branch=master"
+        src="https://secure.travis-ci.org/GoogleCloudPlatform/google-auth-library-python.svg?branch=master"
+    />
+</a>
+</p>
+
+
+<h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../user-guide.html">User Guide</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="modules.html">Reference</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="google.html">google package</a></li>
+</ul>
+</li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="modules.html">google</a><ul>
+  <li><a href="google.html">google package</a><ul>
+  <li><a href="google.auth.html">google.auth package</a><ul>
+      <li>Previous: <a href="google.auth.impersonated_credentials.html" title="previous chapter">google.auth.impersonated_credentials module</a></li>
+      <li>Next: <a href="google.auth._jwt_async.html" title="next chapter">google.auth.jwt_async module</a></li>
+  </ul></li>
+  </ul></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2016, Google, Inc..
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.4.4</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/reference/google.auth.jwt.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+    <a href="https://github.com/GoogleCloudPlatform/google-auth-library-python" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

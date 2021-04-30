@@ -1,0 +1,201 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>google.auth.environment_vars module &#8212; google-auth 1.30.0 documentation</title>
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="google.auth.exceptions module" href="google.auth.exceptions.html" />
+    <link rel="prev" title="google.auth.credentials_async module" href="google.auth._credentials_async.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="module-google.auth.environment_vars">
+<span id="google-auth-environment-vars-module"></span><h1>google.auth.environment_vars module<a class="headerlink" href="#module-google.auth.environment_vars" title="Permalink to this headline">¶</a></h1>
+<p>Environment variables used by <a class="reference internal" href="google.auth.html#module-google.auth" title="google.auth"><code class="xref py py-mod docutils literal notranslate"><span class="pre">google.auth</span></code></a>.</p>
+<dl class="data">
+<dt id="google.auth.environment_vars.PROJECT">
+<code class="sig-name descname">PROJECT</code><em class="property"> = 'GOOGLE_CLOUD_PROJECT'</em><a class="headerlink" href="#google.auth.environment_vars.PROJECT" title="Permalink to this definition">¶</a></dt>
+<dd><p>Environment variable defining default project.</p>
+<p>This used by <a class="reference internal" href="google.auth.html#google.auth.default" title="google.auth.default"><code class="xref py py-func docutils literal notranslate"><span class="pre">google.auth.default()</span></code></a> to explicitly set a project ID. This
+environment variable is also used by the Google Cloud Python Library.</p>
+</dd></dl>
+
+<dl class="data">
+<dt id="google.auth.environment_vars.LEGACY_PROJECT">
+<code class="sig-name descname">LEGACY_PROJECT</code><em class="property"> = 'GCLOUD_PROJECT'</em><a class="headerlink" href="#google.auth.environment_vars.LEGACY_PROJECT" title="Permalink to this definition">¶</a></dt>
+<dd><p>Previously used environment variable defining the default project.</p>
+<p>This environment variable is used instead of the current one in some
+situations (such as Google App Engine).</p>
+</dd></dl>
+
+<dl class="data">
+<dt id="google.auth.environment_vars.CREDENTIALS">
+<code class="sig-name descname">CREDENTIALS</code><em class="property"> = 'GOOGLE_APPLICATION_CREDENTIALS'</em><a class="headerlink" href="#google.auth.environment_vars.CREDENTIALS" title="Permalink to this definition">¶</a></dt>
+<dd><p>Environment variable defining the location of Google application default
+credentials.</p>
+</dd></dl>
+
+<dl class="data">
+<dt id="google.auth.environment_vars.CLOUD_SDK_CONFIG_DIR">
+<code class="sig-name descname">CLOUD_SDK_CONFIG_DIR</code><em class="property"> = 'CLOUDSDK_CONFIG'</em><a class="headerlink" href="#google.auth.environment_vars.CLOUD_SDK_CONFIG_DIR" title="Permalink to this definition">¶</a></dt>
+<dd><p>Environment variable defines the location of Google Cloud SDK’s config
+files.</p>
+</dd></dl>
+
+<dl class="data">
+<dt id="google.auth.environment_vars.GCE_METADATA_ROOT">
+<code class="sig-name descname">GCE_METADATA_ROOT</code><em class="property"> = 'GCE_METADATA_ROOT'</em><a class="headerlink" href="#google.auth.environment_vars.GCE_METADATA_ROOT" title="Permalink to this definition">¶</a></dt>
+<dd><p>port to be
+used for GCE metadata requests.</p>
+<p>This environment variable is originally named GCE_METADATA_ROOT. System will
+check the new variable first; should there be no value present,
+the system falls back to the old variable.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>Environment variable providing an alternate hostname or host</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="data">
+<dt id="google.auth.environment_vars.GCE_METADATA_IP">
+<code class="sig-name descname">GCE_METADATA_IP</code><em class="property"> = 'GCE_METADATA_IP'</em><a class="headerlink" href="#google.auth.environment_vars.GCE_METADATA_IP" title="Permalink to this definition">¶</a></dt>
+<dd><p>port to be used for ip-only
+GCE metadata requests.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>Environment variable providing an alternate ip</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="data">
+<dt id="google.auth.environment_vars.GOOGLE_API_USE_CLIENT_CERTIFICATE">
+<code class="sig-name descname">GOOGLE_API_USE_CLIENT_CERTIFICATE</code><em class="property"> = 'GOOGLE_API_USE_CLIENT_CERTIFICATE'</em><a class="headerlink" href="#google.auth.environment_vars.GOOGLE_API_USE_CLIENT_CERTIFICATE" title="Permalink to this definition">¶</a></dt>
+<dd><p>Environment variable controlling whether to use client certificate or not.</p>
+<p>The default value is false. Users have to explicitly set this value to true
+in order to use client certificate to establish a mutual TLS channel.</p>
+</dd></dl>
+
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">google-auth</a></h1>
+
+
+
+<p class="blurb">Google Auth Library for Python</p>
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=GoogleCloudPlatform&repo=google-auth-library-python&type=watch&count=true&size=large&v=2"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+
+    
+
+<p>
+<a class="badge" href="https://travis-ci.org/GoogleCloudPlatform/google-auth-library-python">
+    <img
+        alt="https://secure.travis-ci.org/GoogleCloudPlatform/google-auth-library-python.svg?branch=master"
+        src="https://secure.travis-ci.org/GoogleCloudPlatform/google-auth-library-python.svg?branch=master"
+    />
+</a>
+</p>
+
+
+<h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../user-guide.html">User Guide</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="modules.html">Reference</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="google.html">google package</a></li>
+</ul>
+</li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="modules.html">google</a><ul>
+  <li><a href="google.html">google package</a><ul>
+  <li><a href="google.auth.html">google.auth package</a><ul>
+      <li>Previous: <a href="google.auth._credentials_async.html" title="previous chapter">google.auth.credentials_async module</a></li>
+      <li>Next: <a href="google.auth.exceptions.html" title="next chapter">google.auth.exceptions module</a></li>
+  </ul></li>
+  </ul></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2016, Google, Inc..
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.4.4</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/reference/google.auth.environment_vars.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+    <a href="https://github.com/GoogleCloudPlatform/google-auth-library-python" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

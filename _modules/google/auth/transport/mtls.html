@@ -1,0 +1,225 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>google.auth.transport.mtls &#8212; google-auth 1.30.0 documentation</title>
+    <link rel="stylesheet" href="../../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../../../../" src="../../../../_static/documentation_options.js"></script>
+    <script src="../../../../_static/jquery.js"></script>
+    <script src="../../../../_static/underscore.js"></script>
+    <script src="../../../../_static/doctools.js"></script>
+    <script src="../../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for google.auth.transport.mtls</h1><div class="highlight"><pre>
+<span></span><span class="c1"># Copyright 2020 Google LLC</span>
+<span class="c1">#</span>
+<span class="c1"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c1"># you may not use this file except in compliance with the License.</span>
+<span class="c1"># You may obtain a copy of the License at</span>
+<span class="c1">#</span>
+<span class="c1">#      http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c1">#</span>
+<span class="c1"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c1"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c1"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c1"># See the License for the specific language governing permissions and</span>
+<span class="c1"># limitations under the License.</span>
+
+<span class="sd">&quot;&quot;&quot;Utilites for mutual TLS.&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">six</span>
+
+<span class="kn">from</span> <span class="nn">google.auth</span> <span class="kn">import</span> <span class="n">exceptions</span>
+<span class="kn">from</span> <span class="nn">google.auth.transport</span> <span class="kn">import</span> <span class="n">_mtls_helper</span>
+
+
+<div class="viewcode-block" id="has_default_client_cert_source"><a class="viewcode-back" href="../../../../reference/google.auth.transport.mtls.html#google.auth.transport.mtls.has_default_client_cert_source">[docs]</a><span class="k">def</span> <span class="nf">has_default_client_cert_source</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;Check if default client SSL credentials exists on the device.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        bool: indicating if the default client cert source exists.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">metadata_path</span> <span class="o">=</span> <span class="n">_mtls_helper</span><span class="o">.</span><span class="n">_check_dca_metadata_path</span><span class="p">(</span>
+        <span class="n">_mtls_helper</span><span class="o">.</span><span class="n">CONTEXT_AWARE_METADATA_PATH</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">metadata_path</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span></div>
+
+
+<div class="viewcode-block" id="default_client_cert_source"><a class="viewcode-back" href="../../../../reference/google.auth.transport.mtls.html#google.auth.transport.mtls.default_client_cert_source">[docs]</a><span class="k">def</span> <span class="nf">default_client_cert_source</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;Get a callback which returns the default client SSL credentials.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Callable[[], [bytes, bytes]]: A callback which returns the default</span>
+<span class="sd">            client certificate bytes and private key bytes, both in PEM format.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        google.auth.exceptions.DefaultClientCertSourceError: If the default</span>
+<span class="sd">            client SSL credentials don&#39;t exist or are malformed.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">has_default_client_cert_source</span><span class="p">():</span>
+        <span class="k">raise</span> <span class="n">exceptions</span><span class="o">.</span><span class="n">MutualTLSChannelError</span><span class="p">(</span>
+            <span class="s2">&quot;Default client cert source doesn&#39;t exist&quot;</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">callback</span><span class="p">():</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">_</span><span class="p">,</span> <span class="n">cert_bytes</span><span class="p">,</span> <span class="n">key_bytes</span> <span class="o">=</span> <span class="n">_mtls_helper</span><span class="o">.</span><span class="n">get_client_cert_and_key</span><span class="p">()</span>
+        <span class="k">except</span> <span class="p">(</span><span class="ne">OSError</span><span class="p">,</span> <span class="ne">RuntimeError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">)</span> <span class="k">as</span> <span class="n">caught_exc</span><span class="p">:</span>
+            <span class="n">new_exc</span> <span class="o">=</span> <span class="n">exceptions</span><span class="o">.</span><span class="n">MutualTLSChannelError</span><span class="p">(</span><span class="n">caught_exc</span><span class="p">)</span>
+            <span class="n">six</span><span class="o">.</span><span class="n">raise_from</span><span class="p">(</span><span class="n">new_exc</span><span class="p">,</span> <span class="n">caught_exc</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">cert_bytes</span><span class="p">,</span> <span class="n">key_bytes</span>
+
+    <span class="k">return</span> <span class="n">callback</span></div>
+
+
+<div class="viewcode-block" id="default_client_encrypted_cert_source"><a class="viewcode-back" href="../../../../reference/google.auth.transport.mtls.html#google.auth.transport.mtls.default_client_encrypted_cert_source">[docs]</a><span class="k">def</span> <span class="nf">default_client_encrypted_cert_source</span><span class="p">(</span><span class="n">cert_path</span><span class="p">,</span> <span class="n">key_path</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Get a callback which returns the default encrpyted client SSL credentials.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        cert_path (str): The cert file path. The default client certificate will</span>
+<span class="sd">            be written to this file when the returned callback is called.</span>
+<span class="sd">        key_path (str): The key file path. The default encrypted client key will</span>
+<span class="sd">            be written to this file when the returned callback is called.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Callable[[], [str, str, bytes]]: A callback which generates the default</span>
+<span class="sd">            client certificate, encrpyted private key and passphrase. It writes</span>
+<span class="sd">            the certificate and private key into the cert_path and key_path, and</span>
+<span class="sd">            returns the cert_path, key_path and passphrase bytes.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        google.auth.exceptions.DefaultClientCertSourceError: If any problem</span>
+<span class="sd">            occurs when loading or saving the client certificate and key.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">has_default_client_cert_source</span><span class="p">():</span>
+        <span class="k">raise</span> <span class="n">exceptions</span><span class="o">.</span><span class="n">MutualTLSChannelError</span><span class="p">(</span>
+            <span class="s2">&quot;Default client encrypted cert source doesn&#39;t exist&quot;</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">callback</span><span class="p">():</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="p">(</span>
+                <span class="n">_</span><span class="p">,</span>
+                <span class="n">cert_bytes</span><span class="p">,</span>
+                <span class="n">key_bytes</span><span class="p">,</span>
+                <span class="n">passphrase_bytes</span><span class="p">,</span>
+            <span class="p">)</span> <span class="o">=</span> <span class="n">_mtls_helper</span><span class="o">.</span><span class="n">get_client_ssl_credentials</span><span class="p">(</span><span class="n">generate_encrypted_key</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">cert_path</span><span class="p">,</span> <span class="s2">&quot;wb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">cert_file</span><span class="p">:</span>
+                <span class="n">cert_file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">cert_bytes</span><span class="p">)</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">key_path</span><span class="p">,</span> <span class="s2">&quot;wb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">key_file</span><span class="p">:</span>
+                <span class="n">key_file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">key_bytes</span><span class="p">)</span>
+        <span class="k">except</span> <span class="p">(</span><span class="n">exceptions</span><span class="o">.</span><span class="n">ClientCertError</span><span class="p">,</span> <span class="ne">OSError</span><span class="p">)</span> <span class="k">as</span> <span class="n">caught_exc</span><span class="p">:</span>
+            <span class="n">new_exc</span> <span class="o">=</span> <span class="n">exceptions</span><span class="o">.</span><span class="n">MutualTLSChannelError</span><span class="p">(</span><span class="n">caught_exc</span><span class="p">)</span>
+            <span class="n">six</span><span class="o">.</span><span class="n">raise_from</span><span class="p">(</span><span class="n">new_exc</span><span class="p">,</span> <span class="n">caught_exc</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">cert_path</span><span class="p">,</span> <span class="n">key_path</span><span class="p">,</span> <span class="n">passphrase_bytes</span>
+
+    <span class="k">return</span> <span class="n">callback</span></div>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../../../index.html">google-auth</a></h1>
+
+
+
+<p class="blurb">Google Auth Library for Python</p>
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=GoogleCloudPlatform&repo=google-auth-library-python&type=watch&count=true&size=large&v=2"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+
+    
+
+<p>
+<a class="badge" href="https://travis-ci.org/GoogleCloudPlatform/google-auth-library-python">
+    <img
+        alt="https://secure.travis-ci.org/GoogleCloudPlatform/google-auth-library-python.svg?branch=master"
+        src="https://secure.travis-ci.org/GoogleCloudPlatform/google-auth-library-python.svg?branch=master"
+    />
+</a>
+</p>
+
+
+<h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../user-guide.html">User Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../reference/modules.html">Reference</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../../index.html">Module code</a><ul>
+  <li><a href="../transport.html">google.auth.transport</a><ul>
+  </ul></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2016, Google, Inc..
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.4.4</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+    <a href="https://github.com/GoogleCloudPlatform/google-auth-library-python" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

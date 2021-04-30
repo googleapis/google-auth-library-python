@@ -1,0 +1,377 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>google.auth.transport.urllib3 module &#8212; google-auth 1.30.0 documentation</title>
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="google.auth.app_engine module" href="google.auth.app_engine.html" />
+    <link rel="prev" title="google.auth.transport.requests module" href="google.auth.transport.requests.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="module-google.auth.transport.urllib3">
+<span id="google-auth-transport-urllib3-module"></span><h1>google.auth.transport.urllib3 module<a class="headerlink" href="#module-google.auth.transport.urllib3" title="Permalink to this headline">¶</a></h1>
+<p>Transport adapter for urllib3.</p>
+<dl class="class">
+<dt id="google.auth.transport.urllib3.Request">
+<em class="property">class </em><code class="sig-name descname">Request</code><span class="sig-paren">(</span><em class="sig-param">http</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/google/auth/transport/urllib3.html#Request"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.auth.transport.urllib3.Request" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="google.auth.transport.html#google.auth.transport.Request" title="google.auth.transport.Request"><code class="xref py py-class docutils literal notranslate"><span class="pre">google.auth.transport.Request</span></code></a></p>
+<p>urllib3 request adapter.</p>
+<p>This class is used internally for making requests using various transports
+in a consistent way. If you use <a class="reference internal" href="#google.auth.transport.urllib3.AuthorizedHttp" title="google.auth.transport.urllib3.AuthorizedHttp"><code class="xref py py-class docutils literal notranslate"><span class="pre">AuthorizedHttp</span></code></a> you do not need
+to construct or use this class directly.</p>
+<p>This class can be useful if you want to manually refresh a
+<a class="reference internal" href="google.auth.credentials.html#google.auth.credentials.Credentials" title="google.auth.credentials.Credentials"><code class="xref py py-class docutils literal notranslate"><span class="pre">Credentials</span></code></a> instance:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">google.auth.transport.urllib3</span>
+<span class="kn">import</span> <span class="nn">urllib3</span>
+
+<span class="n">http</span> <span class="o">=</span> <span class="n">urllib3</span><span class="o">.</span><span class="n">PoolManager</span><span class="p">()</span>
+<span class="n">request</span> <span class="o">=</span> <span class="n">google</span><span class="o">.</span><span class="n">auth</span><span class="o">.</span><span class="n">transport</span><span class="o">.</span><span class="n">urllib3</span><span class="o">.</span><span class="n">Request</span><span class="p">(</span><span class="n">http</span><span class="p">)</span>
+
+<span class="n">credentials</span><span class="o">.</span><span class="n">refresh</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+</pre></div>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>http</strong> (<a class="reference external" href="https://urllib3.readthedocs.io/en/stable/reference/urllib3.request.html#urllib3.request.RequestMethods" title="(in urllib3 v1.26.4)"><em>urllib3.request.RequestMethods</em></a>) – An instance of any urllib3
+class that implements <a class="reference external" href="https://urllib3.readthedocs.io/en/stable/reference/urllib3.request.html#urllib3.request.RequestMethods" title="(in urllib3 v1.26.4)"><code class="xref py py-class docutils literal notranslate"><span class="pre">RequestMethods</span></code></a>,
+usually <a class="reference external" href="https://urllib3.readthedocs.io/en/stable/reference/urllib3.poolmanager.html#urllib3.PoolManager" title="(in urllib3 v1.26.4)"><code class="xref py py-class docutils literal notranslate"><span class="pre">urllib3.PoolManager</span></code></a>.</p>
+</dd>
+</dl>
+<dl class="method">
+<dt id="google.auth.transport.urllib3.Request.__call__">
+<code class="sig-name descname">__call__</code><span class="sig-paren">(</span><em class="sig-param">url</em>, <em class="sig-param">method='GET'</em>, <em class="sig-param">body=None</em>, <em class="sig-param">headers=None</em>, <em class="sig-param">timeout=None</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/google/auth/transport/urllib3.html#Request.__call__"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.auth.transport.urllib3.Request.__call__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Make an HTTP request using urllib3.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>url</strong> (<a class="reference external" href="https://docs.python.org/3.5/library/stdtypes.html#str" title="(in Python v3.5)"><em>str</em></a>) – The URI to be requested.</p></li>
+<li><p><strong>method</strong> (<a class="reference external" href="https://docs.python.org/3.5/library/stdtypes.html#str" title="(in Python v3.5)"><em>str</em></a>) – The HTTP method to use for the request. Defaults
+to ‘GET’.</p></li>
+<li><p><strong>body</strong> (<a class="reference external" href="https://docs.python.org/3.5/library/functions.html#bytes" title="(in Python v3.5)"><em>bytes</em></a>) – The payload / body in HTTP request.</p></li>
+<li><p><strong>headers</strong> (<a class="reference external" href="https://docs.python.org/3.5/library/typing.html#typing.Mapping" title="(in Python v3.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Mapping</span></code></a> [ <a class="reference external" href="https://docs.python.org/3.5/library/stdtypes.html#str" title="(in Python v3.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">str</span></code></a>, <a class="reference external" href="https://docs.python.org/3.5/library/stdtypes.html#str" title="(in Python v3.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">str</span></code></a> ]) – Request headers.</p></li>
+<li><p><strong>timeout</strong> (<a class="reference external" href="https://docs.python.org/3.5/library/typing.html#typing.Optional" title="(in Python v3.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Optional</span></code></a> [ <a class="reference external" href="https://docs.python.org/3.5/library/functions.html#int" title="(in Python v3.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a> ]) – The number of seconds to wait for a
+response from the server. If not specified or if None, the
+urllib3 default timeout will be used.</p></li>
+<li><p><strong>kwargs</strong> – Additional arguments passed throught to the underlying
+urllib3 <code class="xref py py-meth docutils literal notranslate"><span class="pre">urlopen()</span></code> method.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The HTTP response.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="google.auth.transport.html#google.auth.transport.Response" title="google.auth.transport.Response">google.auth.transport.Response</a></p>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><p><a class="reference internal" href="google.auth.exceptions.html#google.auth.exceptions.TransportError" title="google.auth.exceptions.TransportError"><strong>google.auth.exceptions.TransportError</strong></a> – If any exception occurred.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="google.auth.transport.urllib3.AuthorizedHttp">
+<em class="property">class </em><code class="sig-name descname">AuthorizedHttp</code><span class="sig-paren">(</span><em class="sig-param">credentials</em>, <em class="sig-param">http=None</em>, <em class="sig-param">refresh_status_codes=(&lt;HTTPStatus.UNAUTHORIZED: 401&gt;</em>, <em class="sig-param">)</em>, <em class="sig-param">max_refresh_attempts=2</em>, <em class="sig-param">default_host=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/google/auth/transport/urllib3.html#AuthorizedHttp"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.auth.transport.urllib3.AuthorizedHttp" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://urllib3.readthedocs.io/en/stable/reference/urllib3.request.html#urllib3.request.RequestMethods" title="(in urllib3 v1.26.4)"><code class="xref py py-class docutils literal notranslate"><span class="pre">urllib3.request.RequestMethods</span></code></a></p>
+<p>A urllib3 HTTP class with credentials.</p>
+<p>This class is used to perform requests to API endpoints that require
+authorization:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">google.auth.transport.urllib3</span> <span class="kn">import</span> <span class="n">AuthorizedHttp</span>
+
+<span class="n">authed_http</span> <span class="o">=</span> <span class="n">AuthorizedHttp</span><span class="p">(</span><span class="n">credentials</span><span class="p">)</span>
+
+<span class="n">response</span> <span class="o">=</span> <span class="n">authed_http</span><span class="o">.</span><span class="n">request</span><span class="p">(</span>
+    <span class="s1">&#39;GET&#39;</span><span class="p">,</span> <span class="s1">&#39;https://www.googleapis.com/storage/v1/b&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>This class implements <a class="reference external" href="https://urllib3.readthedocs.io/en/stable/reference/urllib3.request.html#urllib3.request.RequestMethods" title="(in urllib3 v1.26.4)"><code class="xref py py-class docutils literal notranslate"><span class="pre">urllib3.request.RequestMethods</span></code></a> and can be
+used just like any other <a class="reference external" href="https://urllib3.readthedocs.io/en/stable/reference/urllib3.poolmanager.html#urllib3.PoolManager" title="(in urllib3 v1.26.4)"><code class="xref py py-class docutils literal notranslate"><span class="pre">urllib3.PoolManager</span></code></a>.</p>
+<p>The underlying <a class="reference internal" href="#google.auth.transport.urllib3.AuthorizedHttp.urlopen" title="google.auth.transport.urllib3.AuthorizedHttp.urlopen"><code class="xref py py-meth docutils literal notranslate"><span class="pre">urlopen()</span></code></a> implementation handles adding the
+credentials’ headers to the request and refreshing credentials as needed.</p>
+<p>This class also supports mutual TLS via <a class="reference internal" href="#google.auth.transport.urllib3.AuthorizedHttp.configure_mtls_channel" title="google.auth.transport.urllib3.AuthorizedHttp.configure_mtls_channel"><code class="xref py py-meth docutils literal notranslate"><span class="pre">configure_mtls_channel()</span></code></a>
+method. In order to use this method, the <cite>GOOGLE_API_USE_CLIENT_CERTIFICATE</cite>
+environment variable must be explicitly set to <cite>true</cite>, otherwise it does
+nothing. Assume the environment is set to <cite>true</cite>, the method behaves in the
+following manner:
+If client_cert_callback is provided, client certificate and private
+key are loaded using the callback; if client_cert_callback is None,
+application default SSL credentials will be used. Exceptions are raised if
+there are problems with the certificate, private key, or the loading process,
+so it should be called within a try/except block.</p>
+<p>First we set the environment variable to <cite>true</cite>, then create an <a class="reference internal" href="#google.auth.transport.urllib3.AuthorizedHttp" title="google.auth.transport.urllib3.AuthorizedHttp"><code class="xref py py-class docutils literal notranslate"><span class="pre">AuthorizedHttp</span></code></a>
+instance and specify the endpoints:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">regular_endpoint</span> <span class="o">=</span> <span class="s1">&#39;https://pubsub.googleapis.com/v1/projects/</span><span class="si">{my_project_id}</span><span class="s1">/topics&#39;</span>
+<span class="n">mtls_endpoint</span> <span class="o">=</span> <span class="s1">&#39;https://pubsub.mtls.googleapis.com/v1/projects/</span><span class="si">{my_project_id}</span><span class="s1">/topics&#39;</span>
+
+<span class="n">authed_http</span> <span class="o">=</span> <span class="n">AuthorizedHttp</span><span class="p">(</span><span class="n">credentials</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Now we can pass a callback to <a class="reference internal" href="#google.auth.transport.urllib3.AuthorizedHttp.configure_mtls_channel" title="google.auth.transport.urllib3.AuthorizedHttp.configure_mtls_channel"><code class="xref py py-meth docutils literal notranslate"><span class="pre">configure_mtls_channel()</span></code></a>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">my_cert_callback</span><span class="p">():</span>
+    <span class="c1"># some code to load client cert bytes and private key bytes, both in</span>
+    <span class="c1"># PEM format.</span>
+    <span class="n">some_code_to_load_client_cert_and_key</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">loaded</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">cert</span><span class="p">,</span> <span class="n">key</span>
+    <span class="k">raise</span> <span class="n">MyClientCertFailureException</span><span class="p">()</span>
+
+<span class="c1"># Always call configure_mtls_channel within a try/except block.</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="n">is_mtls</span> <span class="o">=</span> <span class="n">authed_http</span><span class="o">.</span><span class="n">configure_mtls_channel</span><span class="p">(</span><span class="n">my_cert_callback</span><span class="p">)</span>
+<span class="k">except</span><span class="p">:</span>
+    <span class="c1"># handle exceptions.</span>
+
+<span class="k">if</span> <span class="n">is_mtls</span><span class="p">:</span>
+    <span class="n">response</span> <span class="o">=</span> <span class="n">authed_http</span><span class="o">.</span><span class="n">request</span><span class="p">(</span><span class="s1">&#39;GET&#39;</span><span class="p">,</span> <span class="n">mtls_endpoint</span><span class="p">)</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="n">response</span> <span class="o">=</span> <span class="n">authed_http</span><span class="o">.</span><span class="n">request</span><span class="p">(</span><span class="s1">&#39;GET&#39;</span><span class="p">,</span> <span class="n">regular_endpoint</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>You can alternatively use application default SSL credentials like this:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="k">try</span><span class="p">:</span>
+    <span class="n">is_mtls</span> <span class="o">=</span> <span class="n">authed_http</span><span class="o">.</span><span class="n">configure_mtls_channel</span><span class="p">()</span>
+<span class="k">except</span><span class="p">:</span>
+    <span class="c1"># handle exceptions.</span>
+</pre></div>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>credentials</strong> (<a class="reference internal" href="google.auth.credentials.html#google.auth.credentials.Credentials" title="google.auth.credentials.Credentials"><em>google.auth.credentials.Credentials</em></a>) – The credentials to
+add to the request.</p></li>
+<li><p><strong>http</strong> (<a class="reference external" href="https://urllib3.readthedocs.io/en/stable/reference/urllib3.poolmanager.html#urllib3.PoolManager" title="(in urllib3 v1.26.4)"><em>urllib3.PoolManager</em></a>) – The underlying HTTP object to
+use to make requests. If not specified, a
+<a class="reference external" href="https://urllib3.readthedocs.io/en/stable/reference/urllib3.poolmanager.html#urllib3.PoolManager" title="(in urllib3 v1.26.4)"><code class="xref py py-class docutils literal notranslate"><span class="pre">urllib3.PoolManager</span></code></a> instance will be constructed with
+sane defaults.</p></li>
+<li><p><strong>refresh_status_codes</strong> (<a class="reference external" href="https://docs.python.org/3.5/library/typing.html#typing.Sequence" title="(in Python v3.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Sequence</span></code></a> [ <a class="reference external" href="https://docs.python.org/3.5/library/functions.html#int" title="(in Python v3.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a> ]) – Which HTTP status codes indicate
+that credentials should be refreshed and the request should be
+retried.</p></li>
+<li><p><strong>max_refresh_attempts</strong> (<a class="reference external" href="https://docs.python.org/3.5/library/functions.html#int" title="(in Python v3.5)"><em>int</em></a>) – The maximum number of times to attempt to
+refresh the credentials and retry the request.</p></li>
+<li><p><strong>default_host</strong> (<a class="reference external" href="https://docs.python.org/3.5/library/typing.html#typing.Optional" title="(in Python v3.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Optional</span></code></a> [ <a class="reference external" href="https://docs.python.org/3.5/library/stdtypes.html#str" title="(in Python v3.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">str</span></code></a> ]) – A host like “pubsub.googleapis.com”.
+This is used when a self-signed JWT is created from service
+account credentials.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="method">
+<dt id="google.auth.transport.urllib3.AuthorizedHttp.configure_mtls_channel">
+<code class="sig-name descname">configure_mtls_channel</code><span class="sig-paren">(</span><em class="sig-param">client_cert_callback=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/google/auth/transport/urllib3.html#AuthorizedHttp.configure_mtls_channel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.auth.transport.urllib3.AuthorizedHttp.configure_mtls_channel" title="Permalink to this definition">¶</a></dt>
+<dd><p>Configures mutual TLS channel using the given client_cert_callback or
+application default SSL credentials. The behavior is controlled by
+<cite>GOOGLE_API_USE_CLIENT_CERTIFICATE</cite> environment variable.
+(1) If the environment variable value is <cite>true</cite>, the function returns True
+if the channel is mutual TLS and False otherwise. The <cite>http</cite> provided
+in the constructor will be overwritten.
+(2) If the environment variable is not set or <cite>false</cite>, the function does
+nothing and it always return False.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>client_cert_callback</strong> (<a class="reference external" href="https://docs.python.org/3.5/library/typing.html#typing.Optional" title="(in Python v3.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Optional</span></code></a> [ <a class="reference external" href="https://docs.python.org/3.5/library/typing.html#typing.Callable" title="(in Python v3.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Callable</span></code></a> [ , <a class="reference external" href="https://docs.python.org/3.5/library/functions.html#bytes" title="(in Python v3.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">bytes</span></code></a>, <a class="reference external" href="https://docs.python.org/3.5/library/functions.html#bytes" title="(in Python v3.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">bytes</span></code></a> ]  ]) – The optional callback returns the client certificate and private
+key bytes both in PEM format.
+If the callback is None, application default SSL credentials
+will be used.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>True if the channel is mutual TLS and False otherwise.</p>
+</dd>
+<dt class="field-odd">Raises</dt>
+<dd class="field-odd"><p><a class="reference internal" href="google.auth.exceptions.html#google.auth.exceptions.MutualTLSChannelError" title="google.auth.exceptions.MutualTLSChannelError"><strong>google.auth.exceptions.MutualTLSChannelError</strong></a> – If mutual TLS channel
+    creation failed for any reason.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="google.auth.transport.urllib3.AuthorizedHttp.urlopen">
+<code class="sig-name descname">urlopen</code><span class="sig-paren">(</span><em class="sig-param">method</em>, <em class="sig-param">url</em>, <em class="sig-param">body=None</em>, <em class="sig-param">headers=None</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/google/auth/transport/urllib3.html#AuthorizedHttp.urlopen"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#google.auth.transport.urllib3.AuthorizedHttp.urlopen" title="Permalink to this definition">¶</a></dt>
+<dd><p>Implementation of urllib3’s urlopen.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="google.auth.transport.urllib3.AuthorizedHttp.request">
+<code class="sig-name descname">request</code><span class="sig-paren">(</span><em class="sig-param">method</em>, <em class="sig-param">url</em>, <em class="sig-param">fields=None</em>, <em class="sig-param">headers=None</em>, <em class="sig-param">**urlopen_kw</em><span class="sig-paren">)</span><a class="headerlink" href="#google.auth.transport.urllib3.AuthorizedHttp.request" title="Permalink to this definition">¶</a></dt>
+<dd><p>Make a request using <a class="reference internal" href="#google.auth.transport.urllib3.AuthorizedHttp.urlopen" title="google.auth.transport.urllib3.AuthorizedHttp.urlopen"><code class="xref py py-meth docutils literal notranslate"><span class="pre">urlopen()</span></code></a> with the appropriate encoding of
+<code class="docutils literal notranslate"><span class="pre">fields</span></code> based on the <code class="docutils literal notranslate"><span class="pre">method</span></code> used.</p>
+<p>This is a convenience method that requires the least amount of manual
+effort. It can be used in most situations, while still having the
+option to drop down to more specific methods when necessary, such as
+<a class="reference internal" href="#google.auth.transport.urllib3.AuthorizedHttp.request_encode_url" title="google.auth.transport.urllib3.AuthorizedHttp.request_encode_url"><code class="xref py py-meth docutils literal notranslate"><span class="pre">request_encode_url()</span></code></a>, <a class="reference internal" href="#google.auth.transport.urllib3.AuthorizedHttp.request_encode_body" title="google.auth.transport.urllib3.AuthorizedHttp.request_encode_body"><code class="xref py py-meth docutils literal notranslate"><span class="pre">request_encode_body()</span></code></a>,
+or even the lowest level <a class="reference internal" href="#google.auth.transport.urllib3.AuthorizedHttp.urlopen" title="google.auth.transport.urllib3.AuthorizedHttp.urlopen"><code class="xref py py-meth docutils literal notranslate"><span class="pre">urlopen()</span></code></a>.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="google.auth.transport.urllib3.AuthorizedHttp.request_encode_body">
+<code class="sig-name descname">request_encode_body</code><span class="sig-paren">(</span><em class="sig-param">method</em>, <em class="sig-param">url</em>, <em class="sig-param">fields=None</em>, <em class="sig-param">headers=None</em>, <em class="sig-param">encode_multipart=True</em>, <em class="sig-param">multipart_boundary=None</em>, <em class="sig-param">**urlopen_kw</em><span class="sig-paren">)</span><a class="headerlink" href="#google.auth.transport.urllib3.AuthorizedHttp.request_encode_body" title="Permalink to this definition">¶</a></dt>
+<dd><p>Make a request using <a class="reference internal" href="#google.auth.transport.urllib3.AuthorizedHttp.urlopen" title="google.auth.transport.urllib3.AuthorizedHttp.urlopen"><code class="xref py py-meth docutils literal notranslate"><span class="pre">urlopen()</span></code></a> with the <code class="docutils literal notranslate"><span class="pre">fields</span></code> encoded in
+the body. This is useful for request methods like POST, PUT, PATCH, etc.</p>
+<p>When <code class="docutils literal notranslate"><span class="pre">encode_multipart=True</span></code> (default), then
+<a class="reference external" href="https://urllib3.readthedocs.io/en/stable/reference/urllib3.fields.html#urllib3.encode_multipart_formdata" title="(in urllib3 v1.26.4)"><code class="xref py py-func docutils literal notranslate"><span class="pre">urllib3.encode_multipart_formdata()</span></code></a> is used to encode
+the payload with the appropriate content type. Otherwise
+<a class="reference external" href="https://docs.python.org/3.5/library/urllib.parse.html#urllib.parse.urlencode" title="(in Python v3.5)"><code class="xref py py-func docutils literal notranslate"><span class="pre">urllib.parse.urlencode()</span></code></a> is used with the
+‘application/x-www-form-urlencoded’ content type.</p>
+<p>Multipart encoding must be used when posting files, and it’s reasonably
+safe to use it in other times too. However, it may break request
+signing, such as with OAuth.</p>
+<p>Supports an optional <code class="docutils literal notranslate"><span class="pre">fields</span></code> parameter of key/value strings AND
+key/filetuple. A filetuple is a (filename, data, MIME type) tuple where
+the MIME type is optional. For example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">fields</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">&#39;foo&#39;</span><span class="p">:</span> <span class="s1">&#39;bar&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;fakefile&#39;</span><span class="p">:</span> <span class="p">(</span><span class="s1">&#39;foofile.txt&#39;</span><span class="p">,</span> <span class="s1">&#39;contents of foofile&#39;</span><span class="p">),</span>
+    <span class="s1">&#39;realfile&#39;</span><span class="p">:</span> <span class="p">(</span><span class="s1">&#39;barfile.txt&#39;</span><span class="p">,</span> <span class="nb">open</span><span class="p">(</span><span class="s1">&#39;realfile&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">read</span><span class="p">()),</span>
+    <span class="s1">&#39;typedfile&#39;</span><span class="p">:</span> <span class="p">(</span><span class="s1">&#39;bazfile.bin&#39;</span><span class="p">,</span> <span class="nb">open</span><span class="p">(</span><span class="s1">&#39;bazfile&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">read</span><span class="p">(),</span>
+                  <span class="s1">&#39;image/jpeg&#39;</span><span class="p">),</span>
+    <span class="s1">&#39;nonamefile&#39;</span><span class="p">:</span> <span class="s1">&#39;contents of nonamefile field&#39;</span><span class="p">,</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>When uploading a file, providing a filename (the first parameter of the
+tuple) is optional but recommended to best mimic behavior of browsers.</p>
+<p>Note that if <code class="docutils literal notranslate"><span class="pre">headers</span></code> are supplied, the ‘Content-Type’ header will
+be overwritten because it depends on the dynamic random boundary string
+which is used to compose the body of the request. The random boundary
+string can be explicitly set with the <code class="docutils literal notranslate"><span class="pre">multipart_boundary</span></code> parameter.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="google.auth.transport.urllib3.AuthorizedHttp.request_encode_url">
+<code class="sig-name descname">request_encode_url</code><span class="sig-paren">(</span><em class="sig-param">method</em>, <em class="sig-param">url</em>, <em class="sig-param">fields=None</em>, <em class="sig-param">headers=None</em>, <em class="sig-param">**urlopen_kw</em><span class="sig-paren">)</span><a class="headerlink" href="#google.auth.transport.urllib3.AuthorizedHttp.request_encode_url" title="Permalink to this definition">¶</a></dt>
+<dd><p>Make a request using <a class="reference internal" href="#google.auth.transport.urllib3.AuthorizedHttp.urlopen" title="google.auth.transport.urllib3.AuthorizedHttp.urlopen"><code class="xref py py-meth docutils literal notranslate"><span class="pre">urlopen()</span></code></a> with the <code class="docutils literal notranslate"><span class="pre">fields</span></code> encoded in
+the url. This is useful for request methods like GET, HEAD, DELETE, etc.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="google.auth.transport.urllib3.AuthorizedHttp.headers">
+<em class="property">property </em><code class="sig-name descname">headers</code><a class="headerlink" href="#google.auth.transport.urllib3.AuthorizedHttp.headers" title="Permalink to this definition">¶</a></dt>
+<dd><p>Proxy to <code class="docutils literal notranslate"><span class="pre">self.http</span></code>.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">google-auth</a></h1>
+
+
+
+<p class="blurb">Google Auth Library for Python</p>
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=GoogleCloudPlatform&repo=google-auth-library-python&type=watch&count=true&size=large&v=2"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+
+    
+
+<p>
+<a class="badge" href="https://travis-ci.org/GoogleCloudPlatform/google-auth-library-python">
+    <img
+        alt="https://secure.travis-ci.org/GoogleCloudPlatform/google-auth-library-python.svg?branch=master"
+        src="https://secure.travis-ci.org/GoogleCloudPlatform/google-auth-library-python.svg?branch=master"
+    />
+</a>
+</p>
+
+
+<h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../user-guide.html">User Guide</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="modules.html">Reference</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="google.html">google package</a></li>
+</ul>
+</li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="modules.html">google</a><ul>
+  <li><a href="google.html">google package</a><ul>
+  <li><a href="google.auth.html">google.auth package</a><ul>
+  <li><a href="google.auth.transport.html">google.auth.transport package</a><ul>
+      <li>Previous: <a href="google.auth.transport.requests.html" title="previous chapter">google.auth.transport.requests module</a></li>
+      <li>Next: <a href="google.auth.app_engine.html" title="next chapter">google.auth.app_engine module</a></li>
+  </ul></li>
+  </ul></li>
+  </ul></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2016, Google, Inc..
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.4.4</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/reference/google.auth.transport.urllib3.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+    <a href="https://github.com/GoogleCloudPlatform/google-auth-library-python" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>
