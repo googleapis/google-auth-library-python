@@ -73,7 +73,9 @@ author = "Google, Inc."
 # built documents.
 #
 # The short X.Y version.
-version = ""
+version = pkg_resources.get_distribution("google-auth").version
+# The full version, including alpha/beta/rc tags.
+release = version
 
 # Static HTML pages, e.g. to support redirects
 # See: https://tech.signavio.com/2017/managing-sphinx-redirects
