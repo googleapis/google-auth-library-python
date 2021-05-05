@@ -223,7 +223,7 @@ async def fetch_id_token(request, audience):
             and os.path.isfile(credentials_filename)
         ):
             raise exceptions.DefaultCredentialsError(
-                f"GOOGLE_APPLICATION_CREDENTIALS path is either not found or invalid."
+                "GOOGLE_APPLICATION_CREDENTIALS path is either not found or invalid."
             )
 
         try:
