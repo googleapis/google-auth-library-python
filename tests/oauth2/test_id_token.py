@@ -135,7 +135,9 @@ def test_verify_firebase_token(verify_token):
     )
 
 
-def test_fetch_id_token_from_metadata_server():
+def test_fetch_id_token_from_metadata_server(monkeypatch):
+    monkeypatch.delenv(environment_vars.CREDENTIALS, raising=False)
+
     def mock_init(self, request, audience, use_metadata_identity_endpoint):
         assert use_metadata_identity_endpoint
         self.token = "id_token"
