@@ -215,6 +215,22 @@ async def test_fetch_id_token_invalid_cred_file(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_fetch_id_token_invalid_cred_type(monkeypatch):
+    user_credentials_file = os.path.join(
+        os.path.dirname(__file__), "../../tests/data/authorized_user.json"
+    )
+    monkeypatch.setenv(environment_vars.CREDENTIALS, user_credentials_file)
+
+    with mock.patch("google.auth.compute_engine._metadata.ping", return_value=False):
+        with pytest.raises(exceptions.DefaultCredentialsError) as excinfo:
+            request = mock.AsyncMock()
+            await id_token.fetch_id_token(request, "https://pubsub.googleapis.com")
+        assert excinfo.match(
+            r"Neither metadata server or valid service account credentials are found."
+        )
+
+
+@pytest.mark.asyncio
 async def test_fetch_id_token_invalid_cred_path(monkeypatch):
     not_json_file = os.path.join(
         os.path.dirname(__file__), "../../tests/data/not_exists.json"
