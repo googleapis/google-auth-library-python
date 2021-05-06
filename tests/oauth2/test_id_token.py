@@ -188,7 +188,22 @@ def test_fetch_id_token_no_cred_exists(monkeypatch):
         )
 
 
-def test_fetch_id_token_invalid_cred_file(monkeypatch):
+def test_fetch_id_token_invalid_cred_file_type(monkeypatch):
+    user_credentials_file = os.path.join(
+        os.path.dirname(__file__), "../data/authorized_user.json"
+    )
+    monkeypatch.setenv(environment_vars.CREDENTIALS, user_credentials_file)
+
+    with mock.patch("google.auth.compute_engine._metadata.ping", return_value=False):
+        with pytest.raises(exceptions.DefaultCredentialsError) as excinfo:
+            request = mock.Mock()
+            id_token.fetch_id_token(request, "https://pubsub.googleapis.com")
+        assert excinfo.match(
+            r"Neither metadata server or valid service account credentials are found."
+        )
+
+
+def test_fetch_id_token_invalid_json(monkeypatch):
     not_json_file = os.path.join(os.path.dirname(__file__), "../data/public_cert.pem")
     monkeypatch.setenv(environment_vars.CREDENTIALS, not_json_file)
 

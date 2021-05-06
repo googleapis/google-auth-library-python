@@ -227,18 +227,15 @@ def fetch_id_token(request, audience):
 
         try:
             with open(credentials_filename, "r") as f:
-                info = json.load(f)
-                credentials_content = (
-                    (info.get("type") == "service_account") and info or None
-                )
-
                 from google.oauth2 import service_account
 
-                credentials = service_account.IDTokenCredentials.from_service_account_info(
-                    credentials_content, target_audience=audience
-                )
-                credentials.refresh(request)
-                return credentials.token
+                info = json.load(f)
+                if info.get("type") == "service_account":
+                    credentials = service_account.IDTokenCredentials.from_service_account_info(
+                        info, target_audience=audience
+                    )
+                    credentials.refresh(request)
+                    return credentials.token
         except ValueError as caught_exc:
             new_exc = exceptions.DefaultCredentialsError(
                 "GOOGLE_APPLICATION_CREDENTIALS is not valid service account credentials.",
