@@ -95,10 +95,11 @@ def encode(signer, payload, header=None, key_id=None):
 
     header.update({"typ": "JWT"})
 
-    if es256 is not None and isinstance(signer, es256.ES256Signer):
-        header.update({"alg": "ES256"})
-    else:
-        header.update({"alg": "RS256"})
+    if "alg" not in header:
+        if es256 is not None and isinstance(signer, es256.ES256Signer):
+            header.update({"alg": "ES256"})
+        else:
+            header.update({"alg": "RS256"})
 
     if key_id is not None:
         header["kid"] = key_id
@@ -218,8 +219,9 @@ def decode(token, certs=None, verify=True, audience=None):
             in the token's header.
         verify (bool): Whether to perform signature and claim validation.
             Verification is done by default.
-        audience (str): The audience claim, 'aud', that this JWT should
-            contain. If None then the JWT's 'aud' parameter is not verified.
+        audience (str or list): The audience claim, 'aud', that this JWT should
+            contain. Or a list of audience claims. If None then the JWT's 'aud'
+            parameter is not verified.
 
     Returns:
         Mapping[str, str]: The deserialized JSON payload in the JWT.
@@ -278,9 +280,11 @@ def decode(token, certs=None, verify=True, audience=None):
     # Check audience.
     if audience is not None:
         claim_audience = payload.get("aud")
-        if audience != claim_audience:
+        if isinstance(audience, str):
+            audience = [audience]
+        if claim_audience not in audience:
             raise ValueError(
-                "Token has wrong audience {}, expected {}".format(
+                "Token has wrong audience {}, expected one of {}".format(
                     claim_audience, audience
                 )
             )

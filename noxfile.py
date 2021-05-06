@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import shutil
+import os
 import nox
 
 TEST_DEPENDENCIES = [
@@ -23,6 +25,7 @@ TEST_DEPENDENCIES = [
     "pytest",
     "pytest-cov",
     "pytest-localserver",
+    "pyu2f",
     "requests",
     "urllib3",
     "cryptography",
@@ -30,7 +33,12 @@ TEST_DEPENDENCIES = [
     "grpcio",
 ]
 
-ASYNC_DEPENDENCIES = ["pytest-asyncio", "aioresponses", "asynctest"]
+ASYNC_DEPENDENCIES = [
+    "pytest-asyncio",
+    "aioresponses",
+    "asynctest",
+    "aiohttp!=3.7.4.post0",
+]
 
 BLACK_VERSION = "black==19.3b0"
 BLACK_PATHS = [
@@ -80,6 +88,7 @@ def unit(session):
     session.install(".")
     session.run(
         "pytest",
+        f"--junitxml=unit_{session.python}_sponge_log.xml",
         "--cov=google.auth",
         "--cov=google.oauth2",
         "--cov=tests",
@@ -93,7 +102,12 @@ def unit_prev_versions(session):
     session.install(".")
     session.install(*TEST_DEPENDENCIES)
     session.run(
-        "pytest", "--cov=google.auth", "--cov=google.oauth2", "--cov=tests", "tests"
+        "pytest",
+        f"--junitxml=unit_{session.python}_sponge_log.xml",
+        "--cov=google.auth",
+        "--cov=google.oauth2",
+        "--cov=tests",
+        "tests",
     )
 
 
@@ -134,9 +148,26 @@ def docgen(session):
 
 @nox.session(python="3.7")
 def docs(session):
-    session.install("sphinx", "-r", "docs/requirements-docs.txt")
-    session.install(".")
-    session.run("make", "-C", "docs", "html")
+    """Build the docs for this library."""
+
+    session.install("-e", ".[aiohttp]")
+    session.install(
+        "sphinx<3.0.0", "alabaster", "recommonmark", "sphinx-docstring-typing"
+    )
+
+    shutil.rmtree(os.path.join("docs", "_build"), ignore_errors=True)
+    session.run(
+        "sphinx-build",
+        "-T",  # show full traceback on exception
+        "-W",  # warnings as errors
+        "-N",  # no colors
+        "-b",
+        "html",
+        "-d",
+        os.path.join("docs", "_build", "doctrees", ""),
+        os.path.join("docs", ""),
+        os.path.join("docs", "_build", "html", ""),
+    )
 
 
 @nox.session(python="pypy")
@@ -146,6 +177,7 @@ def pypy(session):
     session.install(".")
     session.run(
         "pytest",
+        f"--junitxml=unit_{session.python}_sponge_log.xml",
         "--cov=google.auth",
         "--cov=google.oauth2",
         "--cov=tests",

@@ -959,15 +959,15 @@ class TestCredentials(object):
         )
         # Assert region request.
         self.assert_aws_metadata_request_kwargs(
-            request.call_args_list[0].kwargs, REGION_URL
+            request.call_args_list[0][1], REGION_URL
         )
         # Assert role request.
         self.assert_aws_metadata_request_kwargs(
-            request.call_args_list[1].kwargs, SECURITY_CREDS_URL
+            request.call_args_list[1][1], SECURITY_CREDS_URL
         )
         # Assert security credentials request.
         self.assert_aws_metadata_request_kwargs(
-            request.call_args_list[2].kwargs,
+            request.call_args_list[2][1],
             "{}/{}".format(SECURITY_CREDS_URL, self.AWS_ROLE),
             {"Content-Type": "application/json"},
         )
@@ -986,11 +986,11 @@ class TestCredentials(object):
         assert len(new_request.call_args_list) == 2
         # Assert role request.
         self.assert_aws_metadata_request_kwargs(
-            new_request.call_args_list[0].kwargs, SECURITY_CREDS_URL
+            new_request.call_args_list[0][1], SECURITY_CREDS_URL
         )
         # Assert security credentials request.
         self.assert_aws_metadata_request_kwargs(
-            new_request.call_args_list[1].kwargs,
+            new_request.call_args_list[1][1],
             "{}/{}".format(SECURITY_CREDS_URL, self.AWS_ROLE),
             {"Content-Type": "application/json"},
         )
@@ -1027,6 +1027,56 @@ class TestCredentials(object):
         monkeypatch.setenv(environment_vars.AWS_ACCESS_KEY_ID, ACCESS_KEY_ID)
         monkeypatch.setenv(environment_vars.AWS_SECRET_ACCESS_KEY, SECRET_ACCESS_KEY)
         monkeypatch.setenv(environment_vars.AWS_SESSION_TOKEN, TOKEN)
+        monkeypatch.setenv(environment_vars.AWS_REGION, self.AWS_REGION)
+        utcnow.return_value = datetime.datetime.strptime(
+            self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
+        )
+        credentials = self.make_credentials(credential_source=self.CREDENTIAL_SOURCE)
+
+        subject_token = credentials.retrieve_subject_token(None)
+
+        assert subject_token == self.make_serialized_aws_signed_request(
+            {
+                "access_key_id": ACCESS_KEY_ID,
+                "secret_access_key": SECRET_ACCESS_KEY,
+                "security_token": TOKEN,
+            }
+        )
+
+    @mock.patch("google.auth._helpers.utcnow")
+    def test_retrieve_subject_token_success_environment_vars_with_default_region(
+        self, utcnow, monkeypatch
+    ):
+        monkeypatch.setenv(environment_vars.AWS_ACCESS_KEY_ID, ACCESS_KEY_ID)
+        monkeypatch.setenv(environment_vars.AWS_SECRET_ACCESS_KEY, SECRET_ACCESS_KEY)
+        monkeypatch.setenv(environment_vars.AWS_SESSION_TOKEN, TOKEN)
+        monkeypatch.setenv(environment_vars.AWS_DEFAULT_REGION, self.AWS_REGION)
+        utcnow.return_value = datetime.datetime.strptime(
+            self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
+        )
+        credentials = self.make_credentials(credential_source=self.CREDENTIAL_SOURCE)
+
+        subject_token = credentials.retrieve_subject_token(None)
+
+        assert subject_token == self.make_serialized_aws_signed_request(
+            {
+                "access_key_id": ACCESS_KEY_ID,
+                "secret_access_key": SECRET_ACCESS_KEY,
+                "security_token": TOKEN,
+            }
+        )
+
+    @mock.patch("google.auth._helpers.utcnow")
+    def test_retrieve_subject_token_success_environment_vars_with_both_regions_set(
+        self, utcnow, monkeypatch
+    ):
+        monkeypatch.setenv(environment_vars.AWS_ACCESS_KEY_ID, ACCESS_KEY_ID)
+        monkeypatch.setenv(environment_vars.AWS_SECRET_ACCESS_KEY, SECRET_ACCESS_KEY)
+        monkeypatch.setenv(environment_vars.AWS_SESSION_TOKEN, TOKEN)
+        monkeypatch.setenv(environment_vars.AWS_DEFAULT_REGION, "Malformed AWS Region")
+        # This test makes sure that the AWS_REGION gets used over AWS_DEFAULT_REGION,
+        # So, AWS_DEFAULT_REGION is set to something that would cause the test to fail,
+        # And AWS_REGION is set to the a valid value, and it should succeed
         monkeypatch.setenv(environment_vars.AWS_REGION, self.AWS_REGION)
         utcnow.return_value = datetime.datetime.strptime(
             self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -1193,7 +1243,7 @@ class TestCredentials(object):
         assert len(request.call_args_list) == 4
         # Fourth request should be sent to GCP STS endpoint.
         self.assert_token_request_kwargs(
-            request.call_args_list[3].kwargs, token_headers, token_request_data
+            request.call_args_list[3][1], token_headers, token_request_data
         )
         assert credentials.token == self.SUCCESS_RESPONSE["access_token"]
         assert credentials.quota_project_id == QUOTA_PROJECT_ID
@@ -1249,7 +1299,7 @@ class TestCredentials(object):
         assert len(request.call_args_list) == 4
         # Fourth request should be sent to GCP STS endpoint.
         self.assert_token_request_kwargs(
-            request.call_args_list[3].kwargs, token_headers, token_request_data
+            request.call_args_list[3][1], token_headers, token_request_data
         )
         assert credentials.token == self.SUCCESS_RESPONSE["access_token"]
         assert credentials.quota_project_id == QUOTA_PROJECT_ID
@@ -1326,12 +1376,12 @@ class TestCredentials(object):
         assert len(request.call_args_list) == 5
         # Fourth request should be sent to GCP STS endpoint.
         self.assert_token_request_kwargs(
-            request.call_args_list[3].kwargs, token_headers, token_request_data
+            request.call_args_list[3][1], token_headers, token_request_data
         )
         # Fifth request should be sent to iamcredentials endpoint for service
         # account impersonation.
         self.assert_impersonation_request_kwargs(
-            request.call_args_list[4].kwargs,
+            request.call_args_list[4][1],
             impersonation_headers,
             impersonation_request_data,
         )
@@ -1410,12 +1460,12 @@ class TestCredentials(object):
         assert len(request.call_args_list) == 5
         # Fourth request should be sent to GCP STS endpoint.
         self.assert_token_request_kwargs(
-            request.call_args_list[3].kwargs, token_headers, token_request_data
+            request.call_args_list[3][1], token_headers, token_request_data
         )
         # Fifth request should be sent to iamcredentials endpoint for service
         # account impersonation.
         self.assert_impersonation_request_kwargs(
-            request.call_args_list[4].kwargs,
+            request.call_args_list[4][1],
             impersonation_headers,
             impersonation_request_data,
         )
