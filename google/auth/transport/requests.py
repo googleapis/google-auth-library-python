@@ -40,6 +40,7 @@ from google.auth import environment_vars
 from google.auth import exceptions
 from google.auth import transport
 import google.auth.transport._mtls_helper
+import google.auth.transport.mtls
 from google.oauth2 import service_account
 
 _LOGGER = logging.getLogger(__name__)
@@ -230,6 +231,61 @@ class _MutualTlsAdapter(requests.adapters.HTTPAdapter):
         return super(_MutualTlsAdapter, self).proxy_manager_for(*args, **kwargs)
 
 
+class _HsmTlsAdapter(requests.adapters.HTTPAdapter):
+    """
+    A TransportAdapter that enables mutual TLS for HSM.
+
+    Args:
+        cert (bytes): client certificate in PEM format
+        key (bytes): the OpenSSL engine name and key information in HSM. The
+            format must be b"engine:<engine_id>:<key_url>", and the key_url
+            must be RFC7512 format. For example, if the engine is is "pkcs11",
+            and key_url is "pkcs11:token=token1;object=label1;pin-value=mypin",
+            then the key would be
+            b"engine:pkcs11:pkcs11:token=token1;object=label1;pin-value=mypin".
+
+    Raises:
+        ImportError: if certifi or pyOpenSSL is not installed
+        OpenSSL.crypto.Error: if client cert or key is invalid
+    """
+
+    def __init__(self, cert, key):
+        import certifi
+        from OpenSSL import crypto
+        import urllib3.contrib.pyopenssl
+        from OpenSSL._util import lib as _lib
+        from OpenSSL._util import exception_from_error_queue
+
+        urllib3.contrib.pyopenssl.inject_into_urllib3()
+
+        pkey = google.auth.transport.mtls._load_pkcs11_private_key(key)
+        x509 = crypto.load_certificate(crypto.FILETYPE_PEM, cert)
+
+        ctx_poolmanager = create_urllib3_context()
+        ctx_poolmanager.load_verify_locations(cafile=certifi.where())
+        ctx_poolmanager._ctx.use_certificate(x509)
+        if not _lib.SSL_CTX_use_PrivateKey(ctx_poolmanager._ctx._context, pkey):
+            raise exception_from_error_queue(exceptions.MutualTLSChannelError)
+        self._ctx_poolmanager = ctx_poolmanager
+
+        ctx_proxymanager = create_urllib3_context()
+        ctx_proxymanager.load_verify_locations(cafile=certifi.where())
+        ctx_proxymanager._ctx.use_certificate(x509)
+        if not _lib.SSL_CTX_use_PrivateKey(ctx_proxymanager._ctx._context, pkey):
+            raise exception_from_error_queue(exceptions.MutualTLSChannelError)
+        self._ctx_proxymanager = ctx_proxymanager
+
+        super(_HsmTlsAdapter, self).__init__()
+
+    def init_poolmanager(self, *args, **kwargs):
+        kwargs["ssl_context"] = self._ctx_poolmanager
+        super(_HsmTlsAdapter, self).init_poolmanager(*args, **kwargs)
+
+    def proxy_manager_for(self, *args, **kwargs):
+        kwargs["ssl_context"] = self._ctx_proxymanager
+        return super(_HsmTlsAdapter, self).proxy_manager_for(*args, **kwargs)
+
+
 class AuthorizedSession(requests.Session):
     """A Requests Session class with credentials.
 
@@ -295,6 +351,16 @@ class AuthorizedSession(requests.Session):
             authed_session.configure_mtls_channel()
         except:
             # handle exceptions.
+
+    `configure_mtls_channel` supports RSA private keys stored in TPM via
+    PKCS#11. To use this feature, set `GOOGLE_AUTH_PKCS11_SO_PATH` and
+    `GOOGLE_AUTH_PKCS11_MODULE_PATH` to the corresponding libpkcs11.so and
+    TPM module path. Then use b"engine:<engine_id>:<key_url>" as the key
+    instead, where the key url has RFC7512 format. For instance, if
+    your engine id is "pkcs11", and key url is
+    "pkcs11:token=token1;object=label1;pin-value=mypin", then the key is
+    b"engine:pkcs11:pkcs11:token=token1;object=label1;pin-value=mypin".
+    Currently only RSA key is supported and EC key is not supported.
 
     Args:
         credentials (google.auth.credentials.Credentials): The credentials to
@@ -366,13 +432,18 @@ class AuthorizedSession(requests.Session):
         The function does nothing unless `GOOGLE_API_USE_CLIENT_CERTIFICATE` is
         explicitly set to `true`. In this case if client certificate and key are
         successfully obtained (from the given client_cert_callback or from application
-        default SSL credentials), a :class:`_MutualTlsAdapter` instance will be mounted
-        to "https://" prefix.
+        default SSL credentials), an adapter instance will be mounted to the
+        "https://" prefix.
+
+        The key can be either a PEM format, or b"engine:<engine_id>:<key_url>"
+        format. The first case the adapter will be :class:`_MutualTlsAdapter`.
+        The second case the adapter will be :class:`_HsmTlsAdapter`.
 
         Args:
             client_cert_callback (Optional[Callable[[], (bytes, bytes)]]):
-                The optional callback returns the client certificate and private
-                key bytes both in PEM format.
+                The optional callback returns the client certificate bytes in PEM
+                format and private key bytes in PEM format or
+                b"engine:<engine_id>:<key_url>" format.
                 If the callback is None, application default SSL credentials
                 will be used.
 
@@ -403,7 +474,10 @@ class AuthorizedSession(requests.Session):
             )
 
             if self._is_mtls:
-                mtls_adapter = _MutualTlsAdapter(cert, key)
+                if not key.decode().startswith("engine:"):
+                    mtls_adapter = _MutualTlsAdapter(cert, key)
+                else:
+                    mtls_adapter = _HsmTlsAdapter(cert, key)
                 self.mount("https://", mtls_adapter)
         except (
             exceptions.ClientCertError,
