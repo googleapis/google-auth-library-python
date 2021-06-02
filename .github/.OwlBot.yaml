@@ -12,4 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-__version__ = "1.30.1"
+docker:
+  image: gcr.io/repo-automation-bots/owlbot-python:latest
+
+begin-after-commit-hash: ee56c3493ec6aeb237ff515ecea949710944a20f

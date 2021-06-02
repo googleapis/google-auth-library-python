@@ -12,9 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import shutil
 import os
+import pathlib
+import shutil
+
 import nox
+
+CURRENT_DIRECTORY = pathlib.Path(__file__).parent.absolute()
 
 TEST_DEPENDENCIES = [
     "flask",
@@ -69,13 +73,14 @@ def lint(session):
     )
 
 
-@nox.session(python="3.6")
+@nox.session(python="3.8")
 def blacken(session):
     """Run black.
     Format code to uniform standard.
-    This currently uses Python 3.6 due to the automated Kokoro run of synthtool.
-    That run uses an image that doesn't have 3.6 installed. Before updating this
-    check the state of the `gcp_ubuntu_config` we use for that Kokoro run.
+    The Python version should be consistent with what is
+    supplied in the Python Owlbot postprocessor.
+
+    https://github.com/googleapis/synthtool/blob/master/docker/owlbot/python/Dockerfile
     """
     session.install(BLACK_VERSION)
     session.run("black", *BLACK_PATHS)
@@ -83,15 +88,20 @@ def blacken(session):
 
 @nox.session(python=["3.6", "3.7", "3.8", "3.9"])
 def unit(session):
-    session.install(*TEST_DEPENDENCIES)
-    session.install(*(ASYNC_DEPENDENCIES))
-    session.install(".")
+    constraints_path = str(
+        CURRENT_DIRECTORY / "testing" / f"constraints-{session.python}.txt"
+    )
+    add_constraints = ["-c", constraints_path]
+    session.install(*(TEST_DEPENDENCIES + add_constraints))
+    session.install(*(ASYNC_DEPENDENCIES + add_constraints))
+    session.install(".", *add_constraints)
     session.run(
         "pytest",
         f"--junitxml=unit_{session.python}_sponge_log.xml",
         "--cov=google.auth",
         "--cov=google.oauth2",
         "--cov=tests",
+        "--cov-report=term-missing",
         "tests",
         "tests_async",
     )
@@ -122,7 +132,7 @@ def cover(session):
         "--cov=google.oauth2",
         "--cov=tests",
         "--cov=tests_async",
-        "--cov-report=",
+        "--cov-report=term-missing",
         "tests",
         "tests_async",
     )
