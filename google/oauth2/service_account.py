@@ -432,7 +432,7 @@ class Credentials(
                     None,
                     additional_claims={"scope": " ".join(self._default_scopes)},
                 )
-        elif not self._scopes and not self._default_scopes and audience:
+        elif not self._scopes and audience:
             self._jwt_credentials = jwt.Credentials.from_signing_credentials(
                 self, audience
             )
