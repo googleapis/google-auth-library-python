@@ -107,20 +107,6 @@ def unit(session):
     )
 
 
-@nox.session(python=["2.7"])
-def unit_prev_versions(session):
-    session.install(".")
-    session.install(*TEST_DEPENDENCIES)
-    session.run(
-        "pytest",
-        f"--junitxml=unit_{session.python}_sponge_log.xml",
-        "--cov=google.auth",
-        "--cov=google.oauth2",
-        "--cov=tests",
-        "tests",
-    )
-
-
 @nox.session(python="3.7")
 def cover(session):
     session.install(*TEST_DEPENDENCIES)
