@@ -32,19 +32,20 @@
 # original service account key.
 
 
+from http.server import BaseHTTPServer
 import json
 import os
 import socket
+import sys
 from tempfile import NamedTemporaryFile
 import threading
 
-import sys
-import google.auth
-from googleapiclient import discovery
-from six.moves import BaseHTTPServer
-from google.oauth2 import service_account
 import pytest
 from mock import patch
+
+import google.auth
+from googleapiclient import discovery
+from google.oauth2 import service_account
 
 # Populate values from the output of scripts/setup_external_accounts.sh.
 _AUDIENCE_OIDC = "//iam.googleapis.com/projects/79992041559/locations/global/workloadIdentityPools/pool-73wslmxn/providers/oidc-73wslmxn"

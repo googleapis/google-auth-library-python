@@ -55,11 +55,9 @@ library like `CacheControl`_ to create a cache-aware
 .. _CacheControl: https://cachecontrol.readthedocs.io
 """
 
+import http.client
 import json
 import os
-
-import six
-from six.moves import http_client
 
 from google.auth import environment_vars
 from google.auth import exceptions
@@ -97,7 +95,7 @@ def _fetch_certs(request, certs_url):
     """
     response = request(certs_url, method="GET")
 
-    if response.status != http_client.OK:
+    if response.status != http.client.OK:
         raise exceptions.TransportError(
             "Could not fetch certificates at {}".format(certs_url)
         )
@@ -257,7 +255,7 @@ def fetch_id_token(request, audience):
             "Neither metadata server or valid service account credentials are found.",
             caught_exc,
         )
-        six.raise_from(new_exc, caught_exc)
+        raise new_exc from caught_exc
 
     credentials.refresh(request)
     return credentials.token

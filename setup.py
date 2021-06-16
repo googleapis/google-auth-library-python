@@ -24,14 +24,10 @@ DEPENDENCIES = (
     "pyasn1-modules >= 0.2.1",
     "rsa >= 3.1.4, < 5",
     "setuptools >= 40.3.0",
-    "six >= 1.9.0",
 )
 
 extras = {
-    "aiohttp": [
-        "aiohttp >= 3.6.2, < 4.0.0dev",
-        "requests >= 2.20.0, < 3.0.0dev",
-    ],
+    "aiohttp": ["aiohttp >= 3.6.2, < 4.0.0dev", "requests >= 2.20.0, < 3.0.0dev"],
     "pyopenssl": "pyopenssl >= 20.0.0",
     "reauth": "pyu2f >= 0.1.5",
 }
