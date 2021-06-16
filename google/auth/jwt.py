@@ -527,7 +527,7 @@ class Credentials(
             "exp": _helpers.datetime_to_secs(expiry),
         }
         if self._audience:
-            payload.update({"aud": self._audience})
+            payload["aud"] = self._audience
 
         payload.update(self._additional_claims)
 
