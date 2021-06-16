@@ -32,7 +32,8 @@
 # original service account key.
 
 
-from http.server import BaseHTTPServer
+from http.server import BaseHTTPRequestHandler
+from http.server import HTTPServer
 import json
 import os
 import socket
@@ -176,7 +177,7 @@ def test_file_based_external_account(
 # This test makes sure that setting up an http server to provide credentials
 # works to allow access to Google resources.
 def test_url_based_external_account(dns_access, oidc_credentials, service_account_info):
-    class TestResponseHandler(BaseHTTPServer.BaseHTTPRequestHandler):
+    class TestResponseHandler(BaseHTTPRequestHandler):
         def do_GET(self):
             if self.headers["my-header"] != "expected-value":
                 self.send_response(400)
@@ -200,7 +201,7 @@ def test_url_based_external_account(dns_access, oidc_credentials, service_accoun
                     json.dumps({"access_token": oidc_credentials.token}).encode("utf-8")
                 )
 
-    class TestHTTPServer(BaseHTTPServer.HTTPServer, object):
+    class TestHTTPServer(HTTPServer, object):
         def __init__(self):
             self.port = self._find_open_port()
             super(TestHTTPServer, self).__init__(("", self.port), TestResponseHandler)
