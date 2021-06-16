@@ -36,7 +36,7 @@ class Credentials(credentials.Scoped, credentials.CredentialsWithQuotaProject):
     These credentials use the Google Compute Engine metadata server to obtain
     OAuth 2.0 access tokens associated with the instance's service account,
     and are also used for Cloud Run, Flex and App Engine (except for the Python
-    2.7 runtime).
+    2.7 runtime, which is supported only on older versions of this library).
 
     For more information about Compute Engine authentication, including how
     to configure scopes, see the `Compute Engine authentication
