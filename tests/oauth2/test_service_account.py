@@ -190,9 +190,9 @@ class TestCredentials(object):
         credentials = self.make_credentials()
         credentials._private_token_uri = self.PRIVATE_TOKEN_URI
 
-        token=credentials._make_authorization_grant_assertion()
+        token = credentials._make_authorization_grant_assertion()
         payload = jwt.decode(token, PUBLIC_CERT_BYTES)
-        assert payload['aud'] == credentials._token_uri
+        assert payload["aud"] == credentials._token_uri
 
     def test_apply_with_quota_project_id(self):
         credentials = service_account.Credentials(
@@ -353,7 +353,7 @@ class TestCredentials(object):
         assert token_uri == credentials._private_token_uri
 
         payload = jwt.decode(assertion, PUBLIC_CERT_BYTES)
-        assert payload['aud'] == credentials._token_uri
+        assert payload["aud"] == credentials._token_uri
 
     @mock.patch("google.oauth2._client.jwt_grant", autospec=True)
     def test_before_request_refreshes(self, jwt_grant):
@@ -536,8 +536,7 @@ class TestIDTokenCredentials(object):
         _, token_uri, assertion = id_token_jwt_grant.call_args[0]
         assert token_uri == credentials._private_token_uri
         payload = jwt.decode(assertion, PUBLIC_CERT_BYTES)
-        payload['aud'] = credentials._token_uri
-
+        payload["aud"] = credentials._token_uri
 
     @mock.patch("google.oauth2._client.id_token_jwt_grant", autospec=True)
     def test_before_request_refreshes(self, id_token_jwt_grant):

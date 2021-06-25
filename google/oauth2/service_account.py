@@ -414,9 +414,7 @@ class Credentials(
         else:
             assertion = self._make_authorization_grant_assertion()
             token_uri = self._private_token_uri or self._token_uri
-            access_token, expiry, _ = _client.jwt_grant(
-                request, token_uri, assertion
-            )
+            access_token, expiry, _ = _client.jwt_grant(request, token_uri, assertion)
             self.token = access_token
             self.expiry = expiry
 
