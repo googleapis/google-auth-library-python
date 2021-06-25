@@ -125,6 +125,7 @@ class Credentials(
         signer,
         service_account_email,
         token_uri,
+        private_token_uri=None,
         scopes=None,
         default_scopes=None,
         subject=None,
@@ -142,6 +143,8 @@ class Credentials(
             default_scopes (Sequence[str]): Default scopes passed by a
                 Google client library. Use 'scopes' for user-defined scopes.
             token_uri (str): The OAuth 2.0 Token URI.
+            private_token_uri (str): The Token URI in a Private Service Connect
+                network.
             subject (str): For domain-wide delegation, the email address of the
                 user to for which to request delegated access.
             project_id  (str): Project ID associated with the service account
@@ -168,6 +171,7 @@ class Credentials(
         self._project_id = project_id
         self._quota_project_id = quota_project_id
         self._token_uri = token_uri
+        self._private_token_uri = private_token_uri
         self._always_use_jwt_access = always_use_jwt_access
 
         self._jwt_credentials = None
@@ -266,6 +270,7 @@ class Credentials(
             scopes=scopes,
             default_scopes=default_scopes,
             token_uri=self._token_uri,
+            private_token_uri=self._private_token_uri,
             subject=self._subject,
             project_id=self._project_id,
             quota_project_id=self._quota_project_id,
@@ -289,6 +294,7 @@ class Credentials(
             scopes=self._scopes,
             default_scopes=self._default_scopes,
             token_uri=self._token_uri,
+            private_token_uri=self._private_token_uri,
             subject=self._subject,
             project_id=self._project_id,
             quota_project_id=self._quota_project_id,
@@ -312,6 +318,7 @@ class Credentials(
             scopes=self._scopes,
             default_scopes=self._default_scopes,
             token_uri=self._token_uri,
+            private_token_uri=self._private_token_uri,
             subject=subject,
             project_id=self._project_id,
             quota_project_id=self._quota_project_id,
@@ -340,6 +347,7 @@ class Credentials(
             scopes=self._scopes,
             default_scopes=self._default_scopes,
             token_uri=self._token_uri,
+            private_token_uri=self._private_token_uri,
             subject=self._subject,
             project_id=self._project_id,
             quota_project_id=self._quota_project_id,
@@ -356,6 +364,7 @@ class Credentials(
             default_scopes=self._default_scopes,
             scopes=self._scopes,
             token_uri=self._token_uri,
+            private_token_uri=self._private_token_uri,
             subject=self._subject,
             project_id=self._project_id,
             quota_project_id=quota_project_id,
@@ -404,9 +413,8 @@ class Credentials(
             self.expiry = self._jwt_credentials.expiry
         else:
             assertion = self._make_authorization_grant_assertion()
-            access_token, expiry, _ = _client.jwt_grant(
-                request, self._token_uri, assertion
-            )
+            token_uri = self._private_token_uri or self._token_uri
+            access_token, expiry, _ = _client.jwt_grant(request, token_uri, assertion)
             self.token = access_token
             self.expiry = expiry
 
@@ -503,6 +511,7 @@ class IDTokenCredentials(credentials.Signing, credentials.CredentialsWithQuotaPr
         service_account_email,
         token_uri,
         target_audience,
+        private_token_uri=None,
         additional_claims=None,
         quota_project_id=None,
     ):
@@ -514,6 +523,8 @@ class IDTokenCredentials(credentials.Signing, credentials.CredentialsWithQuotaPr
             target_audience (str): The intended audience for these credentials,
                 used when requesting the ID Token. The ID Token's ``aud`` claim
                 will be set to this string.
+            private_token_uri (str): The Token URI in a Private Service Connect
+                network.
             additional_claims (Mapping[str, str]): Any additional claims for
                 the JWT assertion used in the authorization grant.
             quota_project_id (Optional[str]): The project ID used for quota and billing.
@@ -526,6 +537,7 @@ class IDTokenCredentials(credentials.Signing, credentials.CredentialsWithQuotaPr
         self._signer = signer
         self._service_account_email = service_account_email
         self._token_uri = token_uri
+        self._private_token_uri = private_token_uri
         self._target_audience = target_audience
         self._quota_project_id = quota_project_id
 
@@ -609,6 +621,7 @@ class IDTokenCredentials(credentials.Signing, credentials.CredentialsWithQuotaPr
             service_account_email=self._service_account_email,
             token_uri=self._token_uri,
             target_audience=target_audience,
+            private_token_uri=self._private_token_uri,
             additional_claims=self._additional_claims.copy(),
             quota_project_id=self.quota_project_id,
         )
@@ -620,6 +633,7 @@ class IDTokenCredentials(credentials.Signing, credentials.CredentialsWithQuotaPr
             service_account_email=self._service_account_email,
             token_uri=self._token_uri,
             target_audience=self._target_audience,
+            private_token_uri=self._private_token_uri,
             additional_claims=self._additional_claims.copy(),
             quota_project_id=quota_project_id,
         )
@@ -658,8 +672,9 @@ class IDTokenCredentials(credentials.Signing, credentials.CredentialsWithQuotaPr
     @_helpers.copy_docstring(credentials.Credentials)
     def refresh(self, request):
         assertion = self._make_authorization_grant_assertion()
+        token_uri = self._private_token_uri or self._token_uri
         access_token, expiry, _ = _client.id_token_jwt_grant(
-            request, self._token_uri, assertion
+            request, token_uri, assertion
         )
         self.token = access_token
         self.expiry = expiry
