@@ -205,7 +205,7 @@ def default_explicit_service_account(session):
         session,
         "system_tests_sync/test_default.py",
         "system_tests_sync/test_id_token.py",
-        **session.posargs,
+        *session.posargs,
     )
 
 
@@ -217,7 +217,7 @@ def default_explicit_authorized_user(session):
     default(
         session,
         "system_tests_sync/test_default.py",
-        **session.posargs,
+        *session.posargs,
     )
 
 
@@ -231,7 +231,7 @@ def default_explicit_authorized_user_explicit_project(session):
     default(
         session,
         "system_tests_sync/test_default.py",
-        **session.posargs,
+        *session.posargs,
     )
 
 
@@ -244,7 +244,7 @@ def default_cloud_sdk_service_account(session):
     default(
         session,
         "system_tests_sync/test_default.py",
-        **session.posargs,
+        *session.posargs,
     )
 
 
@@ -256,7 +256,7 @@ def default_cloud_sdk_authorized_user(session):
     default(
         session,
         "system_tests_sync/test_default.py",
-        **session.posargs,
+        *session.posargs,
     )
 
 
@@ -269,7 +269,7 @@ def default_cloud_sdk_authorized_user_configured_project(session):
     default(
         session,
         "system_tests_sync/test_default.py",
-        **session.posargs,
+        *session.posargs,
     )
 
 
