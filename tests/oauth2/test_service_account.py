@@ -47,7 +47,6 @@ SIGNER = crypt.RSASigner.from_string(PRIVATE_KEY_BYTES, "1")
 class TestCredentials(object):
     SERVICE_ACCOUNT_EMAIL = "service-account@example.com"
     TOKEN_URI = "https://example.com/oauth2/token"
-    PRIVATE_TOKEN_URI = "https://another-example.com/oauth2/token"
 
     @classmethod
     def make_credentials(cls):
@@ -185,14 +184,6 @@ class TestCredentials(object):
         token = credentials._make_authorization_grant_assertion()
         payload = jwt.decode(token, PUBLIC_CERT_BYTES)
         assert payload["sub"] == subject
-
-    def test__make_authorization_grant_assertion_private_token_uri(self):
-        credentials = self.make_credentials()
-        credentials._private_token_uri = self.PRIVATE_TOKEN_URI
-
-        token = credentials._make_authorization_grant_assertion()
-        payload = jwt.decode(token, PUBLIC_CERT_BYTES)
-        assert payload["aud"] == credentials._token_uri
 
     def test_apply_with_quota_project_id(self):
         credentials = service_account.Credentials(
@@ -332,30 +323,6 @@ class TestCredentials(object):
         assert credentials.valid
 
     @mock.patch("google.oauth2._client.jwt_grant", autospec=True)
-    def test_refresh_private_token_uri(self, jwt_grant):
-        credentials = self.make_credentials()
-        credentials._private_token_uri = self.PRIVATE_TOKEN_URI
-        request = mock.create_autospec(transport.Request, instance=True)
-        token = "token"
-        jwt_grant.return_value = (
-            token,
-            _helpers.utcnow() + datetime.timedelta(seconds=500),
-            {},
-        )
-
-        # Refresh credentials
-        credentials.refresh(request)
-
-        # Check jwt grant call.
-        assert jwt_grant.called
-
-        _, token_uri, assertion = jwt_grant.call_args[0]
-        assert token_uri == credentials._private_token_uri
-
-        payload = jwt.decode(assertion, PUBLIC_CERT_BYTES)
-        assert payload["aud"] == credentials._token_uri
-
-    @mock.patch("google.oauth2._client.jwt_grant", autospec=True)
     def test_before_request_refreshes(self, jwt_grant):
         credentials = self.make_credentials()
         token = "token"
@@ -408,7 +375,6 @@ class TestCredentials(object):
 class TestIDTokenCredentials(object):
     SERVICE_ACCOUNT_EMAIL = "service-account@example.com"
     TOKEN_URI = "https://example.com/oauth2/token"
-    PRIVATE_TOKEN_URI = "https://another-example.com/oauth2/token"
     TARGET_AUDIENCE = "https://example.com"
 
     @classmethod
@@ -477,13 +443,6 @@ class TestIDTokenCredentials(object):
         assert payload["aud"] == self.TOKEN_URI
         assert payload["target_audience"] == self.TARGET_AUDIENCE
 
-    def test__make_authorization_grant_assertion_private_token_uri(self):
-        credentials = self.make_credentials()
-        credentials._private_token_uri = self.PRIVATE_TOKEN_URI
-        token = credentials._make_authorization_grant_assertion()
-        payload = jwt.decode(token, PUBLIC_CERT_BYTES)
-        assert payload["aud"] == self.TOKEN_URI
-
     @mock.patch("google.oauth2._client.id_token_jwt_grant", autospec=True)
     def test_refresh_success(self, id_token_jwt_grant):
         credentials = self.make_credentials()
@@ -514,29 +473,6 @@ class TestIDTokenCredentials(object):
         # Check that the credentials are valid (have a token and are not
         # expired)
         assert credentials.valid
-
-    @mock.patch("google.oauth2._client.id_token_jwt_grant", autospec=True)
-    def test_refresh_private_token_uri(self, id_token_jwt_grant):
-        credentials = self.make_credentials()
-        credentials._private_token_uri = self.PRIVATE_TOKEN_URI
-        token = "token"
-        id_token_jwt_grant.return_value = (
-            token,
-            _helpers.utcnow() + datetime.timedelta(seconds=500),
-            {},
-        )
-        request = mock.create_autospec(transport.Request, instance=True)
-
-        # Refresh credentials
-        credentials.refresh(request)
-
-        # Check jwt grant call.
-        assert id_token_jwt_grant.called
-
-        _, token_uri, assertion = id_token_jwt_grant.call_args[0]
-        assert token_uri == credentials._private_token_uri
-        payload = jwt.decode(assertion, PUBLIC_CERT_BYTES)
-        payload["aud"] = credentials._token_uri
 
     @mock.patch("google.oauth2._client.id_token_jwt_grant", autospec=True)
     def test_before_request_refreshes(self, id_token_jwt_grant):
