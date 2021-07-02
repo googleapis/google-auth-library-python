@@ -527,7 +527,6 @@ class IDTokenCredentials(credentials.Signing, credentials.CredentialsWithQuotaPr
         self._signer = signer
         self._service_account_email = service_account_email
         self._token_uri = token_uri
-        self._private_token_uri = private_token_uri
         self._target_audience = target_audience
         self._quota_project_id = quota_project_id
 
@@ -611,7 +610,6 @@ class IDTokenCredentials(credentials.Signing, credentials.CredentialsWithQuotaPr
             service_account_email=self._service_account_email,
             token_uri=self._token_uri,
             target_audience=target_audience,
-            private_token_uri=self._private_token_uri,
             additional_claims=self._additional_claims.copy(),
             quota_project_id=self.quota_project_id,
         )
@@ -623,7 +621,6 @@ class IDTokenCredentials(credentials.Signing, credentials.CredentialsWithQuotaPr
             service_account_email=self._service_account_email,
             token_uri=self._token_uri,
             target_audience=self._target_audience,
-            private_token_uri=self._private_token_uri,
             additional_claims=self._additional_claims.copy(),
             quota_project_id=quota_project_id,
         )
