@@ -33,6 +33,11 @@ export GOOGLE_APPLICATION_CREDENTIALS=${KOKORO_GFILE_DIR}/service-account.json
 # Setup project id.
 export PROJECT_ID=$(cat "${KOKORO_GFILE_DIR}/project-id.txt")
 
+# Install gcloud SDK
+mkdir -p /usr/local/gcloud
+curl -sSL https://sdk.cloud.google.com | bash -s -- --install-dir=/usr/local/gcloud
+export PATH=$PATH:/usr/local/gcloud/google-cloud-sdk/bin
+
 # Activate gcloud with service account credentials	
 gcloud auth activate-service-account --key-file=$GOOGLE_APPLICATION_CREDENTIALS	
 gcloud config set project ${PROJECT_ID}	
