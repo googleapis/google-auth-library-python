@@ -4,6 +4,13 @@
 
 [1]: https://pypi.org/project/google-auth/#history
 
+### [1.32.2](https://www.github.com/googleapis/google-auth-library-python/compare/v1.32.1...v1.32.2) (2021-07-08)
+
+
+### Documentation
+
+* fix code block formatting in 'user-guide.rst' ([#794](https://www.github.com/googleapis/google-auth-library-python/issues/794)) ([4fd84bd](https://www.github.com/googleapis/google-auth-library-python/commit/4fd84bdf43694af5107dc8c8b443c06ba2f61d2c))
+
 ### [1.32.1](https://www.github.com/googleapis/google-auth-library-python/compare/v1.32.0...v1.32.1) (2021-06-30)
 
 
