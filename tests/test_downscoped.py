@@ -489,13 +489,13 @@ class TestCredentials(object):
     def test_default_state(self):
         credentials = self.make_credentials()
 
-        # Not token acquired yet.
+        # No token acquired yet.
         assert not credentials.token
         assert not credentials.valid
         # Expiration hasn't been set yet.
         assert not credentials.expiry
         assert not credentials.expired
-        # Not quota project ID set.
+        # No quota project ID set.
         assert not credentials.quota_project_id
 
     def test_with_quota_project(self):
