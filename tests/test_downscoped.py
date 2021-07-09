@@ -46,6 +46,37 @@ OTHER_DESCRIPTION = (
 )
 OTHER_AVAILABLE_RESOURCE = "//storage.googleapis.com/projects/_/buckets/other-bucket"
 OTHER_AVAILABLE_PERMISSIONS = ["inRole:roles/storage.objectCreator"]
+QUOTA_PROJECT_ID = "QUOTA_PROJECT_ID"
+GRANT_TYPE = "urn:ietf:params:oauth:grant-type:token-exchange"
+REQUESTED_TOKEN_TYPE = "urn:ietf:params:oauth:token-type:access_token"
+TOKEN_EXCHANGE_ENDPOINT = "https://sts.googleapis.com/v1/token"
+SUBJECT_TOKEN_TYPE = "urn:ietf:params:oauth:token-type:access_token"
+SUCCESS_RESPONSE = {
+    "access_token": "ACCESS_TOKEN",
+    "issued_token_type": "urn:ietf:params:oauth:token-type:access_token",
+    "token_type": "Bearer",
+    "expires_in": 3600,
+}
+ERROR_RESPONSE = {
+    "error": "invalid_grant",
+    "error_description": "Subject token is invalid.",
+    "error_uri": "https://tools.ietf.org/html/rfc6749",
+}
+CREDENTIAL_ACCESS_BOUNDARY_JSON = {
+    "accessBoundary": {
+        "accessBoundaryRules": [
+            {
+                "availablePermissions": AVAILABLE_PERMISSIONS,
+                "availableResource": AVAILABLE_RESOURCE,
+                "availabilityCondition": {
+                    "expression": EXPRESSION,
+                    "title": TITLE,
+                    "description": DESCRIPTION,
+                },
+            }
+        ]
+    }
+}
 
 
 class SourceCredentials(credentials.Credentials):
@@ -413,38 +444,6 @@ class TestCredentialAccessBoundary(object):
 
 
 class TestCredentials(object):
-    QUOTA_PROJECT_ID = "QUOTA_PROJECT_ID"
-    GRANT_TYPE = "urn:ietf:params:oauth:grant-type:token-exchange"
-    REQUESTED_TOKEN_TYPE = "urn:ietf:params:oauth:token-type:access_token"
-    TOKEN_EXCHANGE_ENDPOINT = "https://sts.googleapis.com/v1/token"
-    SUBJECT_TOKEN_TYPE = "urn:ietf:params:oauth:token-type:access_token"
-    SUCCESS_RESPONSE = {
-        "access_token": "ACCESS_TOKEN",
-        "issued_token_type": "urn:ietf:params:oauth:token-type:access_token",
-        "token_type": "Bearer",
-        "expires_in": 3600,
-    }
-    ERROR_RESPONSE = {
-        "error": "invalid_grant",
-        "error_description": "Subject token is invalid.",
-        "error_uri": "https://tools.ietf.org/html/rfc6749",
-    }
-    CREDENTIAL_ACCESS_BOUNDARY_JSON = {
-        "accessBoundary": {
-            "accessBoundaryRules": [
-                {
-                    "availablePermissions": AVAILABLE_PERMISSIONS,
-                    "availableResource": AVAILABLE_RESOURCE,
-                    "availabilityCondition": {
-                        "expression": EXPRESSION,
-                        "title": TITLE,
-                        "description": DESCRIPTION,
-                    },
-                }
-            ]
-        }
-    }
-
     @staticmethod
     def make_credentials(source_credentials=SourceCredentials(), quota_project_id=None):
         availability_condition = make_availability_condition(
@@ -471,11 +470,11 @@ class TestCredentials(object):
 
         return request
 
-    @classmethod
-    def assert_request_kwargs(cls, request_kwargs, headers, request_data):
+    @staticmethod
+    def assert_request_kwargs(request_kwargs, headers, request_data):
         """Asserts the request was called with the expected parameters.
         """
-        assert request_kwargs["url"] == cls.TOKEN_EXCHANGE_ENDPOINT
+        assert request_kwargs["url"] == TOKEN_EXCHANGE_ENDPOINT
         assert request_kwargs["method"] == "POST"
         assert request_kwargs["headers"] == headers
         assert request_kwargs["body"] is not None
@@ -507,7 +506,7 @@ class TestCredentials(object):
 
     @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
     def test_refresh(self, unused_utcnow):
-        response = self.SUCCESS_RESPONSE.copy()
+        response = SUCCESS_RESPONSE.copy()
         # Test custom expiration to confirm expiry is set correctly.
         response["expires_in"] = 2800
         expected_expiry = datetime.datetime.min + datetime.timedelta(
@@ -515,13 +514,11 @@ class TestCredentials(object):
         )
         headers = {"Content-Type": "application/x-www-form-urlencoded"}
         request_data = {
-            "grant_type": self.GRANT_TYPE,
+            "grant_type": GRANT_TYPE,
             "subject_token": "ACCESS_TOKEN_1",
-            "subject_token_type": self.SUBJECT_TOKEN_TYPE,
-            "requested_token_type": self.REQUESTED_TOKEN_TYPE,
-            "options": urllib.parse.quote(
-                json.dumps(self.CREDENTIAL_ACCESS_BOUNDARY_JSON)
-            ),
+            "subject_token_type": SUBJECT_TOKEN_TYPE,
+            "requested_token_type": REQUESTED_TOKEN_TYPE,
+            "options": urllib.parse.quote(json.dumps(CREDENTIAL_ACCESS_BOUNDARY_JSON)),
         }
         request = self.make_mock_request(status=http_client.OK, data=response)
         source_credentials = SourceCredentials()
@@ -544,7 +541,7 @@ class TestCredentials(object):
 
     def test_refresh_token_exchange_error(self):
         request = self.make_mock_request(
-            status=http_client.BAD_REQUEST, data=self.ERROR_RESPONSE
+            status=http_client.BAD_REQUEST, data=ERROR_RESPONSE
         )
         credentials = self.make_credentials()
 
@@ -573,39 +570,33 @@ class TestCredentials(object):
 
     def test_apply_without_quota_project_id(self):
         headers = {}
-        request = self.make_mock_request(
-            status=http_client.OK, data=self.SUCCESS_RESPONSE
-        )
+        request = self.make_mock_request(status=http_client.OK, data=SUCCESS_RESPONSE)
         credentials = self.make_credentials()
 
         credentials.refresh(request)
         credentials.apply(headers)
 
         assert headers == {
-            "authorization": "Bearer {}".format(self.SUCCESS_RESPONSE["access_token"])
+            "authorization": "Bearer {}".format(SUCCESS_RESPONSE["access_token"])
         }
 
     def test_apply_with_quota_project_id(self):
         headers = {"other": "header-value"}
-        request = self.make_mock_request(
-            status=http_client.OK, data=self.SUCCESS_RESPONSE
-        )
-        credentials = self.make_credentials(quota_project_id=self.QUOTA_PROJECT_ID)
+        request = self.make_mock_request(status=http_client.OK, data=SUCCESS_RESPONSE)
+        credentials = self.make_credentials(quota_project_id=QUOTA_PROJECT_ID)
 
         credentials.refresh(request)
         credentials.apply(headers)
 
         assert headers == {
             "other": "header-value",
-            "authorization": "Bearer {}".format(self.SUCCESS_RESPONSE["access_token"]),
-            "x-goog-user-project": self.QUOTA_PROJECT_ID,
+            "authorization": "Bearer {}".format(SUCCESS_RESPONSE["access_token"]),
+            "x-goog-user-project": QUOTA_PROJECT_ID,
         }
 
     def test_before_request(self):
         headers = {"other": "header-value"}
-        request = self.make_mock_request(
-            status=http_client.OK, data=self.SUCCESS_RESPONSE
-        )
+        request = self.make_mock_request(status=http_client.OK, data=SUCCESS_RESPONSE)
         credentials = self.make_credentials()
 
         # First call should call refresh, setting the token.
@@ -613,7 +604,7 @@ class TestCredentials(object):
 
         assert headers == {
             "other": "header-value",
-            "authorization": "Bearer {}".format(self.SUCCESS_RESPONSE["access_token"]),
+            "authorization": "Bearer {}".format(SUCCESS_RESPONSE["access_token"]),
         }
 
         # Second call shouldn't call refresh (request should be untouched).
@@ -623,15 +614,13 @@ class TestCredentials(object):
 
         assert headers == {
             "other": "header-value",
-            "authorization": "Bearer {}".format(self.SUCCESS_RESPONSE["access_token"]),
+            "authorization": "Bearer {}".format(SUCCESS_RESPONSE["access_token"]),
         }
 
     @mock.patch("google.auth._helpers.utcnow")
     def test_before_request_expired(self, utcnow):
         headers = {}
-        request = self.make_mock_request(
-            status=http_client.OK, data=self.SUCCESS_RESPONSE
-        )
+        request = self.make_mock_request(status=http_client.OK, data=SUCCESS_RESPONSE)
         credentials = self.make_credentials()
         credentials.token = "token"
         utcnow.return_value = datetime.datetime.min
@@ -659,5 +648,5 @@ class TestCredentials(object):
 
         # New token should be retrieved.
         assert headers == {
-            "authorization": "Bearer {}".format(self.SUCCESS_RESPONSE["access_token"])
+            "authorization": "Bearer {}".format(SUCCESS_RESPONSE["access_token"])
         }
