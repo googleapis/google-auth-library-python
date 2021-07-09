@@ -445,10 +445,8 @@ class TestCredentials(object):
         }
     }
 
-    @classmethod
-    def make_credentials(
-        cls, source_credentials=SourceCredentials(), quota_project_id=None
-    ):
+    @staticmethod
+    def make_credentials(source_credentials=SourceCredentials(), quota_project_id=None):
         availability_condition = make_availability_condition(
             EXPRESSION, TITLE, DESCRIPTION
         )
@@ -462,8 +460,8 @@ class TestCredentials(object):
             source_credentials, credential_access_boundary, quota_project_id
         )
 
-    @classmethod
-    def make_mock_request(cls, data, status=http_client.OK):
+    @staticmethod
+    def make_mock_request(data, status=http_client.OK):
         response = mock.create_autospec(transport.Response, instance=True)
         response.status = status
         response.data = json.dumps(data).encode("utf-8")
