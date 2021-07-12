@@ -4,6 +4,49 @@
 
 [1]: https://pypi.org/project/google-auth/#history
 
+### [1.32.1](https://www.github.com/googleapis/google-auth-library-python/compare/v1.32.0...v1.32.1) (2021-06-30)
+
+
+### Bug Fixes
+
+* avoid leaking sub-session created for '_auth_request' ([#789](https://www.github.com/googleapis/google-auth-library-python/issues/789)) ([2079ab5](https://www.github.com/googleapis/google-auth-library-python/commit/2079ab5e1db464f502248ae4f9e424deeef87fb2))
+
+## [1.32.0](https://www.github.com/googleapis/google-auth-library-python/compare/v1.31.0...v1.32.0) (2021-06-16)
+
+
+### Features
+
+* allow scopes for self signed jwt ([#776](https://www.github.com/googleapis/google-auth-library-python/issues/776)) ([2cfe655](https://www.github.com/googleapis/google-auth-library-python/commit/2cfe655bba837170abc07701557a1a5e0fe3294e))
+
+## [1.31.0](https://www.github.com/googleapis/google-auth-library-python/compare/v1.30.2...v1.31.0) (2021-06-09)
+
+
+### Features
+
+* define useful properties on `google.auth.external_account.Credentials` ([#770](https://www.github.com/googleapis/google-auth-library-python/issues/770)) ([f97499c](https://www.github.com/googleapis/google-auth-library-python/commit/f97499c718af70d17c17e0c58d6381273eceabcd))
+
+
+### Bug Fixes
+
+* avoid deleting items while iterating ([#772](https://www.github.com/googleapis/google-auth-library-python/issues/772)) ([a5e6b65](https://www.github.com/googleapis/google-auth-library-python/commit/a5e6b651aa8ad407ce087fe32f40b46925bae527))
+
+### [1.30.2](https://www.github.com/googleapis/google-auth-library-python/compare/v1.30.1...v1.30.2) (2021-06-03)
+
+
+### Bug Fixes
+
+* **dependencies:** add urllib3 and requests to aiohttp extra ([#755](https://www.github.com/googleapis/google-auth-library-python/issues/755)) ([a923442](https://www.github.com/googleapis/google-auth-library-python/commit/a9234423cb2b69068fc0d30a5a0ee86a599ab8b7))
+* enforce constraints during unit tests ([#760](https://www.github.com/googleapis/google-auth-library-python/issues/760)) ([1a6496a](https://www.github.com/googleapis/google-auth-library-python/commit/1a6496abfc17ab781bfa485dc74d0f7dbbe0c44b)), closes [#759](https://www.github.com/googleapis/google-auth-library-python/issues/759)
+* session object was never used in aiohttp request ([#700](https://www.github.com/googleapis/google-auth-library-python/issues/700)) ([#701](https://www.github.com/googleapis/google-auth-library-python/issues/701)) ([09e0389](https://www.github.com/googleapis/google-auth-library-python/commit/09e0389db72cc9d6c5dde34864cb54d717dc0b92))
+
+### [1.30.1](https://www.github.com/googleapis/google-auth-library-python/compare/v1.30.0...v1.30.1) (2021-05-20)
+
+
+### Bug Fixes
+
+* allow user to customize context aware metadata path in _mtls_helper ([#754](https://www.github.com/googleapis/google-auth-library-python/issues/754)) ([e697687](https://www.github.com/googleapis/google-auth-library-python/commit/e6976879b392508c022610ab3ea2ea55c7089c63))
+* fix function name in signing error message ([#751](https://www.github.com/googleapis/google-auth-library-python/issues/751)) ([e9ca25f](https://www.github.com/googleapis/google-auth-library-python/commit/e9ca25fa39a112cc1a376388ab47a4e1b3ea746c))
+
 ## [1.30.0](https://www.github.com/googleapis/google-auth-library-python/compare/v1.29.0...v1.30.0) (2021-04-23)
 
 

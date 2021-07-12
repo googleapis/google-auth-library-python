@@ -340,17 +340,19 @@ class AuthorizedSession(requests.Session):
         self._default_host = default_host
 
         if auth_request is None:
-            auth_request_session = requests.Session()
+            self._auth_request_session = requests.Session()
 
             # Using an adapter to make HTTP requests robust to network errors.
             # This adapter retrys HTTP requests when network errors occur
             # and the requests seems safely retryable.
             retry_adapter = requests.adapters.HTTPAdapter(max_retries=3)
-            auth_request_session.mount("https://", retry_adapter)
+            self._auth_request_session.mount("https://", retry_adapter)
 
             # Do not pass `self` as the session here, as it can lead to
             # infinite recursion.
-            auth_request = Request(auth_request_session)
+            auth_request = Request(self._auth_request_session)
+        else:
+            self._auth_request_session = None
 
         # Request instance used by internal methods (for example,
         # credentials.refresh).
@@ -358,13 +360,9 @@ class AuthorizedSession(requests.Session):
 
         # https://google.aip.dev/auth/4111
         # Attempt to use self-signed JWTs when a service account is used.
-        # A default host must be explicitly provided.
-        if (
-            isinstance(self.credentials, service_account.Credentials)
-            and self._default_host
-        ):
+        if isinstance(self.credentials, service_account.Credentials):
             self.credentials._create_self_signed_jwt(
-                "https://{}/".format(self._default_host)
+                "https://{}/".format(self._default_host) if self._default_host else None
             )
 
     def configure_mtls_channel(self, client_cert_callback=None):
@@ -537,3 +535,8 @@ class AuthorizedSession(requests.Session):
     def is_mtls(self):
         """Indicates if the created SSL channel is mutual TLS."""
         return self._is_mtls
+
+    def close(self):
+        if self._auth_request_session is not None:
+            self._auth_request_session.close()
+        super(AuthorizedSession, self).close()
