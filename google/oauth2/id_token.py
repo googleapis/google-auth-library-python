@@ -179,7 +179,8 @@ def verify_firebase_token(id_token, request, audience=None):
 def fetch_id_token(request, audience):
     """Fetch the ID Token from the current environment.
 
-    This function acquires ID token from the environment in the following order:
+    This function acquires ID token from the environment in the following order.
+    See https://google.aip.dev/auth/4110.
 
     1. If the environment variable ``GOOGLE_APPLICATION_CREDENTIALS`` is set
        to the path of a valid service account JSON file, then ID token is
