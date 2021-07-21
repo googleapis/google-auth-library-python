@@ -84,11 +84,11 @@ class TestCredentials(object):
             refresh_handler=original_refresh_handler,
         )
 
-        assert creds.refresh_handler == original_refresh_handler
+        assert creds.refresh_handler is original_refresh_handler
 
         creds.refresh_handler = updated_refresh_handler
 
-        assert creds.refresh_handler == updated_refresh_handler
+        assert creds.refresh_handler is updated_refresh_handler
 
         creds.refresh_handler = None
 
@@ -106,7 +106,7 @@ class TestCredentials(object):
                 rapt_token=None,
                 scopes=scopes,
                 default_scopes=None,
-                refresh_handler=[mock.Mock()],
+                refresh_handler=object(),
             )
 
         assert excinfo.match("The provided refresh_handler is not a callable or None.")

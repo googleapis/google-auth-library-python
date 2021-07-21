@@ -132,8 +132,10 @@ class Credentials(credentials.ReadOnlyScoped, credentials.CredentialsWithQuotaPr
         See https://docs.python.org/3.7/library/pickle.html#object.__setstate__
         """
         state_dict = self.__dict__.copy()
-        # Remove _refresh_handler function as functions can't be pickled.
-        # The refresh_handler setter should be used to repopulate this.
+        # Remove _refresh_handler function as there are limitations pickling and
+        # unpickling certain callables (lambda, functools.partial instances)
+        # because they need to be importable.
+        # Instead, the refresh_handler setter should be used to repopulate this.
         del state_dict["_refresh_handler"]
         return state_dict
 
