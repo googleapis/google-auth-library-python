@@ -465,6 +465,7 @@ def test__get_gae_credentials_gen2():
     assert credentials is None
     assert project_id is None
 
+
 @mock.patch.dict(os.environ)
 def test__get_gae_credentials_gen2_backwards_compat():
     # compat helpers may copy GAE_RUNTIME to APPENGINE_RUNTIME
@@ -474,6 +475,7 @@ def test__get_gae_credentials_gen2_backwards_compat():
     credentials, project_id = _default._get_gae_credentials()
     assert credentials is None
     assert project_id is None
+
 
 def test__get_gae_credentials_env_unset():
     assert environment_vars.LEGACY_APPENGINE_RUNTIME not in os.environ
@@ -489,6 +491,7 @@ def test__get_gae_credentials_no_app_engine():
     assert environment_vars.LEGACY_APPENGINE_RUNTIME not in os.environ
 
     import sys
+
     with mock.patch.dict(sys.modules, {"google.auth.app_engine": None}):
         credentials, project_id = _default._get_gae_credentials()
         assert credentials is None
@@ -501,7 +504,7 @@ def test__get_gae_credentials_no_app_engine():
 
 
 @mock.patch.dict(os.environ)
-@mock.patch.object(app_engine, 'app_identity', new=None)
+@mock.patch.object(app_engine, "app_identity", new=None)
 def test__get_gae_credentials_no_apis():
     # test both with and without LEGACY_APPENGINE_RUNTIME setting
     assert environment_vars.LEGACY_APPENGINE_RUNTIME not in os.environ
