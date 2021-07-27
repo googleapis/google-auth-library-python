@@ -29,7 +29,7 @@ Python >= 3.6
 Unsupported Python Versions
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 - Python == 2.7:  The last version of this library with support for Python 2.7
-  was `google.auth == 1.33.1`.
+  was `google.auth == 1.34.0`.
 
 - Python 3.5:   The last version of this library with support for Python 3.5
   was `google.auth == 1.23.0`.
