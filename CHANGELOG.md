@@ -4,6 +4,44 @@
 
 [1]: https://pypi.org/project/google-auth/#history
 
+### [1.33.1](https://www.github.com/googleapis/google-auth-library-python/compare/v1.33.0...v1.33.1) (2021-07-20)
+
+
+### Bug Fixes
+
+* fallback to source creds expiration in downscoped tokens ([#805](https://www.github.com/googleapis/google-auth-library-python/issues/805)) ([dfad661](https://www.github.com/googleapis/google-auth-library-python/commit/dfad66128c6ee7513e5565d39bc7b002055dd0d5))
+
+
+### Reverts
+
+* revert "feat: service account is able to use a private token endpoint ([#784](https://www.github.com/googleapis/google-auth-library-python/issues/784))" ([#808](https://www.github.com/googleapis/google-auth-library-python/issues/808)) ([d94e65c](https://www.github.com/googleapis/google-auth-library-python/commit/d94e65c0e441183403608d762b92b30b77e21eeb))
+
+## [1.33.0](https://www.github.com/googleapis/google-auth-library-python/compare/v1.32.1...v1.33.0) (2021-07-14)
+
+
+### Features
+
+* define `CredentialAccessBoundary` classes ([#793](https://www.github.com/googleapis/google-auth-library-python/issues/793)) ([d883921](https://www.github.com/googleapis/google-auth-library-python/commit/d883921ae8fdc92b2c2cf1b3a5cd389e1287eb60))
+* define `google.auth.downscoped.Credentials` class ([#801](https://www.github.com/googleapis/google-auth-library-python/issues/801)) ([2f5c3a6](https://www.github.com/googleapis/google-auth-library-python/commit/2f5c3a636192c20cf4c92c3831d1f485031d24d2))
+* service account is able to use a private token endpoint ([#784](https://www.github.com/googleapis/google-auth-library-python/issues/784)) ([0e26409](https://www.github.com/googleapis/google-auth-library-python/commit/0e264092e35ac02ad68d5d91424ecba5397daa41))
+
+
+### Bug Fixes
+
+* fix fetch_id_token credential lookup order to match adc ([#748](https://www.github.com/googleapis/google-auth-library-python/issues/748)) ([c34452e](https://www.github.com/googleapis/google-auth-library-python/commit/c34452ef450c42cfef37a1b0c548bb422302dd5d))
+
+
+### Documentation
+
+* fix code block formatting in 'user-guide.rst' ([#794](https://www.github.com/googleapis/google-auth-library-python/issues/794)) ([4fd84bd](https://www.github.com/googleapis/google-auth-library-python/commit/4fd84bdf43694af5107dc8c8b443c06ba2f61d2c))
+
+### [1.32.1](https://www.github.com/googleapis/google-auth-library-python/compare/v1.32.0...v1.32.1) (2021-06-30)
+
+
+### Bug Fixes
+
+* avoid leaking sub-session created for '_auth_request' ([#789](https://www.github.com/googleapis/google-auth-library-python/issues/789)) ([2079ab5](https://www.github.com/googleapis/google-auth-library-python/commit/2079ab5e1db464f502248ae4f9e424deeef87fb2))
+
 ## [1.32.0](https://www.github.com/googleapis/google-auth-library-python/compare/v1.31.0...v1.32.0) (2021-06-16)
 
 
