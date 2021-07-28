@@ -19,6 +19,7 @@ import mock
 import pytest
 
 from google.auth import _default
+from google.auth import api_key
 from google.auth import app_engine
 from google.auth import aws
 from google.auth import compute_engine
@@ -779,3 +780,43 @@ def test_default_environ_external_credentials_bad_format(monkeypatch, tmpdir):
     assert excinfo.match(
         "Failed to load external account credentials from {}".format(str(filename))
     )
+
+
+def test__get_api_key_credentials():
+    cred, project_id = _default._get_api_key_credentials("api-key")
+    assert isinstance(cred, api_key.Credentials)
+    assert cred.token == "api-key"
+    assert project_id is None
+
+
+def test__get_api_key_credentials_from_env_var():
+    with mock.patch.dict(os.environ, {environment_vars.API_KEY: "api-key"}):
+        cred, project_id = _default._get_api_key_credentials()
+        assert isinstance(cred, api_key.Credentials)
+        assert cred.token == "api-key"
+        assert project_id is None
+
+
+@mock.patch(
+    "google.auth._default._get_explicit_environ_credentials",
+    return_value=(MOCK_CREDENTIALS, mock.sentinel.project_id),
+    autospec=True,
+)
+def test_default_api_key(unused_get):
+    cred, project_id = _default.default(api_key="api-key")
+    assert isinstance(cred, api_key.Credentials)
+    assert cred.token == "api-key"
+    assert project_id is None
+
+
+@mock.patch(
+    "google.auth._default._get_explicit_environ_credentials",
+    return_value=(MOCK_CREDENTIALS, mock.sentinel.project_id),
+    autospec=True,
+)
+def test_default_api_key_from_env_var(unused_get):
+    with mock.patch.dict(os.environ, {environment_vars.API_KEY: "api-key"}):
+        cred, project_id = _default._get_api_key_credentials()
+        assert isinstance(cred, api_key.Credentials)
+        assert cred.token == "api-key"
+        assert project_id is None

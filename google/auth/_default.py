@@ -289,6 +289,17 @@ def _get_gce_credentials(request=None):
         return None, None
 
 
+def _get_api_key_credentials(api_key_string=None):
+    """Gets API key credentials and project ID."""
+    from google.auth import api_key
+
+    api_key_to_use = api_key_string or os.environ.get(environment_vars.API_KEY)
+
+    if not api_key_to_use:
+        return None, None
+    return api_key.Credentials(api_key_to_use), None
+
+
 def _get_external_account_credentials(
     info, filename, scopes=None, default_scopes=None, request=None
 ):
@@ -348,7 +359,9 @@ def _get_external_account_credentials(
     return credentials, credentials.get_project_id(request=request)
 
 
-def default(scopes=None, request=None, quota_project_id=None, default_scopes=None):
+def default(
+    scopes=None, request=None, quota_project_id=None, default_scopes=None, api_key=None
+):
     """Gets the default credentials for the current environment.
 
     `Application Default Credentials`_ provides an easy way to obtain
@@ -356,7 +369,12 @@ def default(scopes=None, request=None, quota_project_id=None, default_scopes=Non
     This function acquires credentials from the environment in the following
     order:
 
-    1. If the environment variable ``GOOGLE_APPLICATION_CREDENTIALS`` is set
+    1. If `api_key` is provided or the environment variable ``GOOGLE_API_KEY`` is
+       set, an API key credentials will be returned. The provided `api_key` takes
+       precedence over the environment variable.
+       The project ID returned is the one defined by ``GOOGLE_CLOUD_PROJECT`` or
+       ``GCLOUD_PROJECT`` environment variables.
+    2. If the environment variable ``GOOGLE_APPLICATION_CREDENTIALS`` is set
        to the path of a valid service account JSON private key file, then it is
        loaded and returned. The project ID returned is the project ID defined
        in the service account file if available (some older files do not
@@ -370,7 +388,7 @@ def default(scopes=None, request=None, quota_project_id=None, default_scopes=Non
        endpoint.
        The project ID returned in this case is the one corresponding to the
        underlying workload identity pool resource if determinable.
-    2. If the `Google Cloud SDK`_ is installed and has application default
+    3. If the `Google Cloud SDK`_ is installed and has application default
        credentials set they are loaded and returned.
 
        To enable application default credentials with the Cloud SDK run::
@@ -382,14 +400,14 @@ def default(scopes=None, request=None, quota_project_id=None, default_scopes=Non
 
             gcloud config set project
 
-    3. If the application is running in the `App Engine standard environment`_
+    4. If the application is running in the `App Engine standard environment`_
        (first generation) then the credentials and project ID from the
        `App Identity Service`_ are used.
-    4. If the application is running in `Compute Engine`_ or `Cloud Run`_ or
+    5. If the application is running in `Compute Engine`_ or `Cloud Run`_ or
        the `App Engine flexible environment`_ or the `App Engine standard
        environment`_ (second generation) then the credentials and project ID
        are obtained from the `Metadata Service`_.
-    5. If no credentials are found,
+    6. If no credentials are found,
        :class:`~google.auth.exceptions.DefaultCredentialsError` will be raised.
 
     .. _Application Default Credentials: https://developers.google.com\
@@ -427,6 +445,7 @@ def default(scopes=None, request=None, quota_project_id=None, default_scopes=Non
             quota and billing.
         default_scopes (Optional[Sequence[str]]): Default scopes passed by a
             Google client library. Use 'scopes' for user-defined scopes.
+        api_key (Optional[str]): The API key used to create API key credentials.
     Returns:
         Tuple[~google.auth.credentials.Credentials, Optional[str]]:
             the current environment's credentials and project ID. Project ID
@@ -449,6 +468,7 @@ def default(scopes=None, request=None, quota_project_id=None, default_scopes=Non
         # with_scopes_if_required() below will ensure scopes/default scopes are
         # safely set on the returned credentials since requires_scopes will
         # guard against setting scopes on user credentials.
+        lambda: _get_api_key_credentials(api_key),
         _get_explicit_environ_credentials,
         _get_gcloud_sdk_credentials,
         _get_gae_credentials,
