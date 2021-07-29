@@ -366,6 +366,7 @@ class Credentials(credentials.ReadOnlyScoped, credentials.CredentialsWithQuotaPr
             client_secret=info.get("client_secret"),
             quota_project_id=info.get("quota_project_id"),  # may not exist
             expiry=expiry,
+            rapt_token=info.get("rapt_token"),  # may not exist
         )
 
     @classmethod
