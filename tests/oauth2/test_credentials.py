@@ -51,6 +51,7 @@ class TestCredentials(object):
             client_id=cls.CLIENT_ID,
             client_secret=cls.CLIENT_SECRET,
             rapt_token=cls.RAPT_TOKEN,
+            enable_reauth_refresh=True,
         )
 
     def test_default_state(self):
@@ -149,6 +150,7 @@ class TestCredentials(object):
             self.CLIENT_SECRET,
             None,
             self.RAPT_TOKEN,
+            True,
         )
 
         # Check that the credentials have the token and expiry
@@ -219,6 +221,7 @@ class TestCredentials(object):
             self.CLIENT_SECRET,
             None,
             self.RAPT_TOKEN,
+            False,
         )
 
         # Check that the credentials have the token and expiry
@@ -422,6 +425,7 @@ class TestCredentials(object):
             scopes=scopes,
             default_scopes=default_scopes,
             rapt_token=self.RAPT_TOKEN,
+            enable_reauth_refresh=True,
         )
 
         # Refresh credentials
@@ -436,6 +440,7 @@ class TestCredentials(object):
             self.CLIENT_SECRET,
             scopes,
             self.RAPT_TOKEN,
+            True,
         )
 
         # Check that the credentials have the token and expiry
@@ -484,6 +489,7 @@ class TestCredentials(object):
             client_secret=self.CLIENT_SECRET,
             default_scopes=default_scopes,
             rapt_token=self.RAPT_TOKEN,
+            enable_reauth_refresh=True,
         )
 
         # Refresh credentials
@@ -498,6 +504,7 @@ class TestCredentials(object):
             self.CLIENT_SECRET,
             default_scopes,
             self.RAPT_TOKEN,
+            True,
         )
 
         # Check that the credentials have the token and expiry
@@ -549,6 +556,7 @@ class TestCredentials(object):
             client_secret=self.CLIENT_SECRET,
             scopes=scopes,
             rapt_token=self.RAPT_TOKEN,
+            enable_reauth_refresh=True,
         )
 
         # Refresh credentials
@@ -563,6 +571,7 @@ class TestCredentials(object):
             self.CLIENT_SECRET,
             scopes,
             self.RAPT_TOKEN,
+            True,
         )
 
         # Check that the credentials have the token and expiry
@@ -615,6 +624,7 @@ class TestCredentials(object):
             client_secret=self.CLIENT_SECRET,
             scopes=scopes,
             rapt_token=self.RAPT_TOKEN,
+            enable_reauth_refresh=True,
         )
 
         # Refresh credentials
@@ -632,6 +642,7 @@ class TestCredentials(object):
             self.CLIENT_SECRET,
             scopes,
             self.RAPT_TOKEN,
+            True,
         )
 
         # Check that the credentials have the token and expiry
