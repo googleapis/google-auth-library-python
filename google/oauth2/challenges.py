@@ -26,7 +26,7 @@ from google.auth import exceptions
 
 REAUTH_ORIGIN = "https://accounts.google.com"
 SAML_CHALLENGE_MESSAGE = (
-    "Please run `gcloud auth login` to complete reauthentication with SAML\n"
+    "Please run `gcloud auth login` to complete reauthentication with SAML."
 )
 
 
@@ -154,8 +154,9 @@ class SecurityKeyChallenge(ReauthChallenge):
 class SamlChallenge(ReauthChallenge):
     """Challenge that asks the users to browse to their ID Providers.
 
-    Currently SAML challenge is not supported. When obtaining the challenge input,
-    exception will be raised to instruct the users to run `gcloud auth login` for reauthentication.
+    Currently SAML challenge is not supported. When obtaining the challenge
+    input, exception will be raised to instruct the users to run
+    `gcloud auth login` for reauthentication.
     """
 
     @property
@@ -170,7 +171,6 @@ class SamlChallenge(ReauthChallenge):
         # Magic Arch has not fully supported returning a proper dedirect URL
         # for programmatic SAML users today. So we error our here and request
         # users to use gcloud to complete a login.
-        sys.stderr.write(SAML_CHALLENGE_MESSAGE)
         raise exceptions.ReauthSamlChallengeFailError(SAML_CHALLENGE_MESSAGE)
 
 

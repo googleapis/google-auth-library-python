@@ -110,8 +110,8 @@ class Credentials(credentials.ReadOnlyScoped, credentials.CredentialsWithQuotaPr
                 refresh tokens are provided and tokens are obtained by calling
                 some external process on demand. It is particularly useful for
                 retrieving downscoped tokens from a token broker.
-            enable_reauth_refresh (Optional[bool]): Whether reauth refresh flow should
-                be used. The default value is False.
+            enable_reauth_refresh (Optional[bool]): Whether reauth refresh flow
+                should be used. The default value is False.
         """
         super(Credentials, self).__init__()
         self.token = token
