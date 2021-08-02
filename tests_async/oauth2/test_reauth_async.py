@@ -346,4 +346,4 @@ async def test_refresh_grant_reauth_refresh_disabled():
             assert await _reauth_async.refresh_grant(
                 MOCK_REQUEST, "token_uri", "refresh_token", "client_id", "client_secret"
             )
-        assert excinfo.match(r"Reauthenticatio is needed")
+        assert excinfo.match(r"Reauthentication is needed")
