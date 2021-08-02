@@ -41,6 +41,8 @@ from requests.packages.urllib3.util.ssl_ import (
 )  # pylint: disable=ungrouped-imports
 import six  # pylint: disable=ungrouped-imports
 
+from google.auth import _helpers
+from google.auth import api_key
 from google.auth import environment_vars
 from google.auth import exceptions
 from google.auth import transport
@@ -473,7 +475,14 @@ class AuthorizedSession(requests.Session):
         remaining_time = max_allowed_time
 
         with TimeoutGuard(remaining_time) as guard:
-            self.credentials.before_request(auth_request, method, url, request_headers)
+            # For HTTP we need to add api_key to the query instead of headers
+            # to support geo apis.
+            if isinstance(self.credentials, api_key.Credentials):
+                url = _helpers.update_query(url, {"key": self.credentials.token})
+            else:
+                self.credentials.before_request(
+                    auth_request, method, url, request_headers
+                )
         remaining_time = guard.remaining_timeout
 
         with TimeoutGuard(remaining_time) as guard:

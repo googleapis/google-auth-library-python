@@ -21,6 +21,7 @@ import pytest
 from six.moves import http_client
 import urllib3
 
+from google.auth import api_key
 from google.auth import environment_vars
 from google.auth import exceptions
 import google.auth.credentials
@@ -305,3 +306,18 @@ class TestAuthorizedHttp(object):
         is_mtls = authed_http.configure_mtls_channel(callback)
         assert not is_mtls
         get_client_cert_and_key.assert_not_called()
+
+    def test_urlopen_api_key(self):
+        credentials = api_key.Credentials("api-key")
+        http = HttpStub([ResponseStub()])
+
+        authed_http = google.auth.transport.urllib3.AuthorizedHttp(
+            credentials, http=http
+        )
+
+        authed_http.urlopen("GET", self.TEST_URL)
+
+        print(http.requests)
+        assert http.requests == [
+            ("GET", "http://example.com?key=api-key", None, {}, {})
+        ]

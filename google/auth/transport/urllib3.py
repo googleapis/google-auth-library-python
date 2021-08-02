@@ -46,6 +46,8 @@ except ImportError as caught_exc:  # pragma: NO COVER
 import six
 import urllib3.exceptions  # pylint: disable=ungrouped-imports
 
+from google.auth import _helpers
+from google.auth import api_key
 from google.auth import environment_vars
 from google.auth import exceptions
 from google.auth import transport
@@ -379,7 +381,12 @@ class AuthorizedHttp(urllib3.request.RequestMethods):
         # and we want to pass the original headers if we recurse.
         request_headers = headers.copy()
 
-        self.credentials.before_request(self._request, method, url, request_headers)
+        # For HTTP we need to add api_key to the query instead of headers
+        # to support geo apis.
+        if isinstance(self.credentials, api_key.Credentials):
+            url = _helpers.update_query(url, {"key": self.credentials.token})
+        else:
+            self.credentials.before_request(self._request, method, url, request_headers)
 
         response = self.http.urlopen(
             method, url, body=body, headers=request_headers, **kwargs

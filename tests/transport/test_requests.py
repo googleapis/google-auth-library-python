@@ -25,6 +25,7 @@ import requests
 import requests.adapters
 from six.moves import http_client
 
+from google.auth import api_key
 from google.auth import environment_vars
 from google.auth import exceptions
 import google.auth.credentials
@@ -523,3 +524,16 @@ class TestAuthorizedSession(object):
         )
 
         authed_session.close()  # no raise
+
+    def test_request_api_key(self):
+        credentials = api_key.Credentials("api-key")
+        adapter = AdapterStub([make_response()])
+
+        authed_session = google.auth.transport.requests.AuthorizedSession(credentials)
+        authed_session.mount(self.TEST_URL, adapter)
+
+        authed_session.request("GET", self.TEST_URL)
+
+        assert len(adapter.requests) == 1
+        assert adapter.requests[0].url == "http://example.com/?key=api-key"
+        assert "x-goog-api-key" not in adapter.requests[0].headers
