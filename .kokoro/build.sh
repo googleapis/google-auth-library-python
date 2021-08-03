@@ -31,7 +31,7 @@ env | grep KOKORO
 export GOOGLE_APPLICATION_CREDENTIALS=${KOKORO_GFILE_DIR}/service-account.json
 
 # Setup project id.
-export PROJECT_ID=$(cat "${KOKORO_GFILE_DIR}/project-id.txt")
+export PROJECT_ID=$(cat "${KOKORO_GFILE_DIR}/project-id.json")
 
 # Install gcloud SDK
 mkdir -p /usr/local/gcloud
