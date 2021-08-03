@@ -11,6 +11,7 @@ s.move(
     templated_files / ".kokoro",
     excludes=[
         "continuous/common.cfg",
+        "docs/docs-presubmit.cfg",
         "presubmit/common.cfg",
         "build.sh",
     ],
