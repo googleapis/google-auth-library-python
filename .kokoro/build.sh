@@ -33,18 +33,6 @@ export GOOGLE_APPLICATION_CREDENTIALS=${KOKORO_GFILE_DIR}/service-account.json
 # Setup project id.
 export PROJECT_ID=$(cat "${KOKORO_GFILE_DIR}/project-id.json")
 
-# Install gcloud SDK
-mkdir -p /usr/local/gcloud
-curl -sSL https://sdk.cloud.google.com | bash -s -- --install-dir=/usr/local/gcloud
-export PATH=$PATH:/usr/local/gcloud/google-cloud-sdk/bin
-
-# Activate gcloud with service account credentials	
-gcloud auth activate-service-account --key-file=$GOOGLE_APPLICATION_CREDENTIALS	
-gcloud config set project ${PROJECT_ID}	
-
-# Decrypt system test secrets	
-./scripts/decrypt-secrets.sh
-
 # Remove old nox
 python3 -m pip uninstall --yes --quiet nox-automation
 
@@ -58,11 +46,6 @@ if [[ -n "${NOX_SESSION:-}" ]]; then
     python3 -m nox -s ${NOX_SESSION:-}
 else
     python3 -m nox
+    # Run system tests which use a different noxfile
+    python3 -m nox -f system_tests/noxfile.py
 fi
-
-
-# Decrypt system test secrets
-./scripts/decrypt-secrets.sh
-
-# Run system tests which use a different noxfile
-python3 -m nox -f system_tests/noxfile.py
