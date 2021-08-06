@@ -43,3 +43,17 @@ class MutualTLSChannelError(GoogleAuthError):
 
 class ClientCertError(GoogleAuthError):
     """Used to indicate that client certificate is missing or invalid."""
+
+
+class OAuthError(GoogleAuthError):
+    """Used to indicate an error occurred during an OAuth related HTTP
+    request."""
+
+
+class ReauthFailError(RefreshError):
+    """An exception for when reauth failed."""
+
+    def __init__(self, message=None):
+        super(ReauthFailError, self).__init__(
+            "Reauthentication failed. {0}".format(message)
+        )

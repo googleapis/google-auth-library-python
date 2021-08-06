@@ -12,18 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import http.client
+import os
 import sys
 
 from unittest import mock
 import OpenSSL
 import pytest
-from six.moves import http_client
 import urllib3
 
+from google.auth import environment_vars
 from google.auth import exceptions
 import google.auth.credentials
 import google.auth.transport._mtls_helper
 import google.auth.transport.urllib3
+from google.oauth2 import service_account
 from tests.transport import compliance
 
 
@@ -81,7 +84,7 @@ class HttpStub(object):
 
 
 class ResponseStub(object):
-    def __init__(self, status=http_client.OK, data=None):
+    def __init__(self, status=http.client.OK, data=None):
         self.status = status
         self.data = data
 
@@ -138,12 +141,12 @@ class TestAuthorizedHttp(object):
 
     def test_urlopen_refresh(self):
         credentials = mock.Mock(wraps=CredentialsStub())
-        final_response = ResponseStub(status=http_client.OK)
+        final_response = ResponseStub(status=http.client.OK)
         # First request will 401, second request will succeed.
-        http = HttpStub([ResponseStub(status=http_client.UNAUTHORIZED), final_response])
+        stub = HttpStub([ResponseStub(status=http.client.UNAUTHORIZED), final_response])
 
         authed_http = google.auth.transport.urllib3.AuthorizedHttp(
-            credentials, http=http
+            credentials, http=stub
         )
 
         authed_http = authed_http.urlopen("GET", "http://example.com")
@@ -151,10 +154,29 @@ class TestAuthorizedHttp(object):
         assert authed_http == final_response
         assert credentials.before_request.call_count == 2
         assert credentials.refresh.called
-        assert http.requests == [
+        assert stub.requests == [
             ("GET", self.TEST_URL, None, {"authorization": "token"}, {}),
             ("GET", self.TEST_URL, None, {"authorization": "token1"}, {}),
         ]
+
+    def test_urlopen_no_default_host(self):
+        credentials = mock.create_autospec(service_account.Credentials)
+
+        authed_http = google.auth.transport.urllib3.AuthorizedHttp(credentials)
+
+        authed_http.credentials._create_self_signed_jwt.assert_called_once_with(None)
+
+    def test_urlopen_with_default_host(self):
+        default_host = "pubsub.googleapis.com"
+        credentials = mock.create_autospec(service_account.Credentials)
+
+        authed_http = google.auth.transport.urllib3.AuthorizedHttp(
+            credentials, default_host=default_host
+        )
+
+        authed_http.credentials._create_self_signed_jwt.assert_called_once_with(
+            "https://{}/".format(default_host)
+        )
 
     def test_proxies(self):
         http = mock.create_autospec(urllib3.PoolManager)
@@ -179,7 +201,10 @@ class TestAuthorizedHttp(object):
         )
 
         with pytest.warns(UserWarning):
-            is_mtls = authed_http.configure_mtls_channel(callback)
+            with mock.patch.dict(
+                os.environ, {environment_vars.GOOGLE_API_USE_CLIENT_CERTIFICATE: "true"}
+            ):
+                is_mtls = authed_http.configure_mtls_channel(callback)
 
         assert is_mtls
         mock_make_mutual_tls_http.assert_called_once_with(
@@ -202,7 +227,10 @@ class TestAuthorizedHttp(object):
             pytest.public_cert_bytes,
             pytest.private_key_bytes,
         )
-        is_mtls = authed_http.configure_mtls_channel()
+        with mock.patch.dict(
+            os.environ, {environment_vars.GOOGLE_API_USE_CLIENT_CERTIFICATE: "true"}
+        ):
+            is_mtls = authed_http.configure_mtls_channel()
 
         assert is_mtls
         mock_get_client_cert_and_key.assert_called_once()
@@ -222,7 +250,10 @@ class TestAuthorizedHttp(object):
         )
 
         mock_get_client_cert_and_key.return_value = (False, None, None)
-        is_mtls = authed_http.configure_mtls_channel()
+        with mock.patch.dict(
+            os.environ, {environment_vars.GOOGLE_API_USE_CLIENT_CERTIFICATE: "true"}
+        ):
+            is_mtls = authed_http.configure_mtls_channel()
 
         assert not is_mtls
         mock_get_client_cert_and_key.assert_called_once()
@@ -238,10 +269,39 @@ class TestAuthorizedHttp(object):
 
         mock_get_client_cert_and_key.side_effect = exceptions.ClientCertError()
         with pytest.raises(exceptions.MutualTLSChannelError):
-            authed_http.configure_mtls_channel()
+            with mock.patch.dict(
+                os.environ, {environment_vars.GOOGLE_API_USE_CLIENT_CERTIFICATE: "true"}
+            ):
+                authed_http.configure_mtls_channel()
 
         mock_get_client_cert_and_key.return_value = (False, None, None)
         with mock.patch.dict("sys.modules"):
             sys.modules["OpenSSL"] = None
             with pytest.raises(exceptions.MutualTLSChannelError):
-                authed_http.configure_mtls_channel()
+                with mock.patch.dict(
+                    os.environ,
+                    {environment_vars.GOOGLE_API_USE_CLIENT_CERTIFICATE: "true"},
+                ):
+                    authed_http.configure_mtls_channel()
+
+    @mock.patch(
+        "google.auth.transport._mtls_helper.get_client_cert_and_key", autospec=True
+    )
+    def test_configure_mtls_channel_without_client_cert_env(
+        self, get_client_cert_and_key
+    ):
+        callback = mock.Mock()
+
+        authed_http = google.auth.transport.urllib3.AuthorizedHttp(
+            credentials=mock.Mock(), http=mock.Mock()
+        )
+
+        # Test the callback is not called if GOOGLE_API_USE_CLIENT_CERTIFICATE is not set.
+        is_mtls = authed_http.configure_mtls_channel(callback)
+        assert not is_mtls
+        callback.assert_not_called()
+
+        # Test ADC client cert is not used if GOOGLE_API_USE_CLIENT_CERTIFICATE is not set.
+        is_mtls = authed_http.configure_mtls_channel(callback)
+        assert not is_mtls
+        get_client_cert_and_key.assert_not_called()

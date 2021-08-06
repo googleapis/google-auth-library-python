@@ -13,14 +13,13 @@
 # limitations under the License.
 
 import datetime
+import http.client
 import json
 import os
+import urllib
 
 from unittest import mock
 import pytest
-import six
-from six.moves import http_client
-from six.moves import urllib
 
 from google.auth import _helpers
 from google.auth import crypt
@@ -48,7 +47,7 @@ SCOPES_AS_STRING = (
 
 
 def test__handle_error_response():
-    response_data = json.dumps({"error": "help", "error_description": "I'm alive"})
+    response_data = {"error": "help", "error_description": "I'm alive"}
 
     with pytest.raises(exceptions.RefreshError) as excinfo:
         _client._handle_error_response(response_data)
@@ -57,12 +56,12 @@ def test__handle_error_response():
 
 
 def test__handle_error_response_non_json():
-    response_data = "Help, I'm alive"
+    response_data = {"foo": "bar"}
 
     with pytest.raises(exceptions.RefreshError) as excinfo:
         _client._handle_error_response(response_data)
 
-    assert excinfo.match(r"Help, I\'m alive")
+    assert excinfo.match(r"{\"foo\": \"bar\"}")
 
 
 @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
@@ -75,7 +74,7 @@ def test__parse_expiry_none():
     assert _client._parse_expiry({}) is None
 
 
-def make_request(response_data, status=http_client.OK):
+def make_request(response_data, status=http.client.OK):
     response = mock.create_autospec(transport.Response, instance=True)
     response.status = status
     response.data = json.dumps(response_data).encode("utf-8")
@@ -95,7 +94,7 @@ def test__token_endpoint_request():
     request.assert_called_with(
         method="POST",
         url="http://example.com",
-        headers={"content-type": "application/x-www-form-urlencoded"},
+        headers={"Content-Type": "application/x-www-form-urlencoded"},
         body="test=params".encode("utf-8"),
     )
 
@@ -103,8 +102,34 @@ def test__token_endpoint_request():
     assert result == {"test": "response"}
 
 
+def test__token_endpoint_request_use_json():
+    request = make_request({"test": "response"})
+
+    result = _client._token_endpoint_request(
+        request,
+        "http://example.com",
+        {"test": "params"},
+        access_token="access_token",
+        use_json=True,
+    )
+
+    # Check request call
+    request.assert_called_with(
+        method="POST",
+        url="http://example.com",
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": "Bearer access_token",
+        },
+        body=b'{"test": "params"}',
+    )
+
+    # Check result
+    assert result == {"test": "response"}
+
+
 def test__token_endpoint_request_error():
-    request = make_request({}, status=http_client.BAD_REQUEST)
+    request = make_request({}, status=http.client.BAD_REQUEST)
 
     with pytest.raises(exceptions.RefreshError):
         _client._token_endpoint_request(request, "http://example.com", {})
@@ -112,7 +137,7 @@ def test__token_endpoint_request_error():
 
 def test__token_endpoint_request_internal_failure_error():
     request = make_request(
-        {"error_description": "internal_failure"}, status=http_client.BAD_REQUEST
+        {"error_description": "internal_failure"}, status=http.client.BAD_REQUEST
     )
 
     with pytest.raises(exceptions.RefreshError):
@@ -121,7 +146,7 @@ def test__token_endpoint_request_internal_failure_error():
         )
 
     request = make_request(
-        {"error": "internal_failure"}, status=http_client.BAD_REQUEST
+        {"error": "internal_failure"}, status=http.client.BAD_REQUEST
     )
 
     with pytest.raises(exceptions.RefreshError):
@@ -134,7 +159,7 @@ def verify_request_params(request, params):
     request_body = request.call_args[1]["body"].decode("utf-8")
     request_params = urllib.parse.parse_qs(request_body)
 
-    for key, value in six.iteritems(params):
+    for key, value in params.items():
         assert request_params[key][0] == value
 
 
@@ -220,7 +245,12 @@ def test_refresh_grant(unused_utcnow):
     )
 
     token, refresh_token, expiry, extra_data = _client.refresh_grant(
-        request, "http://example.com", "refresh_token", "client_id", "client_secret"
+        request,
+        "http://example.com",
+        "refresh_token",
+        "client_id",
+        "client_secret",
+        rapt_token="rapt_token",
     )
 
     # Check request call
@@ -231,6 +261,7 @@ def test_refresh_grant(unused_utcnow):
             "refresh_token": "refresh_token",
             "client_id": "client_id",
             "client_secret": "client_secret",
+            "rapt": "rapt_token",
         },
     )
 

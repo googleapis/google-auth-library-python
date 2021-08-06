@@ -22,6 +22,7 @@ db.sqlite3
 # Coverage files
 .coverage
 coverage.xml
+*sponge_log.xml
 nosetests.xml
 htmlcov/
 
@@ -30,6 +31,7 @@ scripts/local_test_setup
 tests/data/key.json
 tests/data/key.p12
 tests/data/user-key.json
+system_tests/data/
 
 # PyCharm configuration:
 .idea
@@ -41,3 +43,6 @@ pylintrc.test
 pytype_output/
 
 .python-version
+.DS_Store
+cert_path
+key_path

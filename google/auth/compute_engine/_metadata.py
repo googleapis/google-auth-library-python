@@ -18,13 +18,11 @@ See https://cloud.google.com/compute/docs/metadata for more details.
 """
 
 import datetime
+import http.client
 import json
 import logging
 import os
-
-import six
-from six.moves import http_client
-from six.moves.urllib import parse as urlparse
+from urllib import parse as urlparse
 
 from google.auth import _helpers
 from google.auth import environment_vars
@@ -91,22 +89,26 @@ def ping(request, timeout=_METADATA_DEFAULT_TIMEOUT, retry_count=3):
 
             metadata_flavor = response.headers.get(_METADATA_FLAVOR_HEADER)
             return (
-                response.status == http_client.OK
+                response.status == http.client.OK
                 and metadata_flavor == _METADATA_FLAVOR_VALUE
             )
 
-        except exceptions.TransportError:
-            _LOGGER.info(
-                "Compute Engine Metadata server unavailable on" "attempt %s of %s",
+        except exceptions.TransportError as e:
+            _LOGGER.warning(
+                "Compute Engine Metadata server unavailable on "
+                "attempt %s of %s. Reason: %s",
                 retries + 1,
                 retry_count,
+                e,
             )
             retries += 1
 
     return False
 
 
-def get(request, path, root=_METADATA_ROOT, recursive=False, retry_count=5):
+def get(
+    request, path, root=_METADATA_ROOT, params=None, recursive=False, retry_count=5
+):
     """Fetch a resource from the metadata server.
 
     Args:
@@ -115,6 +117,8 @@ def get(request, path, root=_METADATA_ROOT, recursive=False, retry_count=5):
         path (str): The resource to retrieve. For example,
             ``'instance/service-accounts/default'``.
         root (str): The full path to the metadata server root.
+        params (Optional[Mapping[str, str]]): A mapping of query parameter
+            keys to values.
         recursive (bool): Whether to do a recursive query of metadata. See
             https://cloud.google.com/compute/docs/metadata#aggcontents for more
             details.
@@ -131,7 +135,7 @@ def get(request, path, root=_METADATA_ROOT, recursive=False, retry_count=5):
             retrieving metadata.
     """
     base_url = urlparse.urljoin(root, path)
-    query_params = {}
+    query_params = {} if params is None else params
 
     if recursive:
         query_params["recursive"] = "true"
@@ -144,11 +148,13 @@ def get(request, path, root=_METADATA_ROOT, recursive=False, retry_count=5):
             response = request(url=url, method="GET", headers=_METADATA_HEADERS)
             break
 
-        except exceptions.TransportError:
-            _LOGGER.info(
-                "Compute Engine Metadata server unavailable on" "attempt %s of %s",
+        except exceptions.TransportError as e:
+            _LOGGER.warning(
+                "Compute Engine Metadata server unavailable on "
+                "attempt %s of %s. Reason: %s",
                 retries + 1,
                 retry_count,
+                e,
             )
             retries += 1
     else:
@@ -157,7 +163,7 @@ def get(request, path, root=_METADATA_ROOT, recursive=False, retry_count=5):
             "metadata service. Compute Engine Metadata server unavailable".format(url)
         )
 
-    if response.status == http_client.OK:
+    if response.status == http.client.OK:
         content = _helpers.from_bytes(response.data)
         if response.headers["content-type"] == "application/json":
             try:
@@ -167,7 +173,7 @@ def get(request, path, root=_METADATA_ROOT, recursive=False, retry_count=5):
                     "Received invalid JSON from the Google Compute Engine"
                     "metadata service: {:.20}".format(content)
                 )
-                six.raise_from(new_exc, caught_exc)
+                raise new_exc from caught_exc
         else:
             return content
     else:
@@ -220,14 +226,13 @@ def get_service_account_info(request, service_account="default"):
         google.auth.exceptions.TransportError: if an error occurred while
             retrieving metadata.
     """
-    return get(
-        request,
-        "instance/service-accounts/{0}/".format(service_account),
-        recursive=True,
-    )
+    path = "instance/service-accounts/{0}/".format(service_account)
+    # See https://cloud.google.com/compute/docs/metadata#aggcontents
+    # for more on the use of 'recursive'.
+    return get(request, path, params={"recursive": "true"})
 
 
-def get_service_account_token(request, service_account="default"):
+def get_service_account_token(request, service_account="default", scopes=None):
     """Get the OAuth 2.0 access token for a service account.
 
     Args:
@@ -236,7 +241,8 @@ def get_service_account_token(request, service_account="default"):
         service_account (str): The string 'default' or a service account email
             address. The determines which service account for which to acquire
             an access token.
-
+        scopes (Optional[Union[str, List[str]]]): Optional string or list of
+            strings with auth scopes.
     Returns:
         Union[str, datetime]: The access token and its expiration.
 
@@ -244,9 +250,15 @@ def get_service_account_token(request, service_account="default"):
         google.auth.exceptions.TransportError: if an error occurred while
             retrieving metadata.
     """
-    token_json = get(
-        request, "instance/service-accounts/{0}/token".format(service_account)
-    )
+    if scopes:
+        if not isinstance(scopes, str):
+            scopes = ",".join(scopes)
+        params = {"scopes": scopes}
+    else:
+        params = None
+
+    path = "instance/service-accounts/{0}/token".format(service_account)
+    token_json = get(request, path, params=params)
     token_expiry = _helpers.utcnow() + datetime.timedelta(
         seconds=token_json["expires_in"]
     )

@@ -28,10 +28,8 @@ service account.
 import base64
 import copy
 from datetime import datetime
+import http.client
 import json
-
-import six
-from six.moves import http_client
 
 from google.auth import _helpers
 from google.auth import credentials
@@ -65,7 +63,9 @@ _DEFAULT_TOKEN_LIFETIME_SECS = 3600  # 1 hour in seconds
 _DEFAULT_TOKEN_URI = "https://oauth2.googleapis.com/token"
 
 
-def _make_iam_token_request(request, principal, headers, body):
+def _make_iam_token_request(
+    request, principal, headers, body, iam_endpoint_override=None
+):
     """Makes a request to the Google Cloud IAM service for an access token.
     Args:
         request (Request): The Request object to use.
@@ -73,6 +73,9 @@ def _make_iam_token_request(request, principal, headers, body):
         headers (Mapping[str, str]): Map of headers to transmit.
         body (Mapping[str, str]): JSON Payload body for the iamcredentials
             API call.
+        iam_endpoint_override (Optiona[str]): The full IAM endpoint override
+            with the target_principal embedded. This is useful when supporting
+            impersonation with regional endpoints.
 
     Raises:
         google.auth.exceptions.TransportError: Raised if there is an underlying
@@ -82,7 +85,7 @@ def _make_iam_token_request(request, principal, headers, body):
             `iamcredentials.googleapis.com` is not enabled or the
             `Service Account Token Creator` is not assigned
     """
-    iam_endpoint = _IAM_ENDPOINT.format(principal)
+    iam_endpoint = iam_endpoint_override or _IAM_ENDPOINT.format(principal)
 
     body = json.dumps(body).encode("utf-8")
 
@@ -95,7 +98,7 @@ def _make_iam_token_request(request, principal, headers, body):
         else response.data
     )
 
-    if response.status != http_client.OK:
+    if response.status != http.client.OK:
         exceptions.RefreshError(_REFRESH_ERROR, response_body)
 
     try:
@@ -112,10 +115,10 @@ def _make_iam_token_request(request, principal, headers, body):
             ),
             response_body,
         )
-        six.raise_from(new_exc, caught_exc)
+        raise new_exc from caught_exc
 
 
-class Credentials(credentials.Credentials, credentials.Signing):
+class Credentials(credentials.CredentialsWithQuotaProject, credentials.Signing):
     """This module defines impersonated credentials which are essentially
     impersonated identities.
 
@@ -148,7 +151,7 @@ class Credentials(credentials.Credentials, credentials.Signing):
     Initialize a source credential which does not have access to
     list bucket::
 
-        from google.oauth2 import service_acccount
+        from google.oauth2 import service_account
 
         target_scopes = [
             'https://www.googleapis.com/auth/devstorage.read_only']
@@ -185,6 +188,7 @@ class Credentials(credentials.Credentials, credentials.Signing):
         delegates=None,
         lifetime=_DEFAULT_TOKEN_LIFETIME_SECS,
         quota_project_id=None,
+        iam_endpoint_override=None,
     ):
         """
         Args:
@@ -209,6 +213,9 @@ class Credentials(credentials.Credentials, credentials.Signing):
             quota_project_id (Optional[str]): The project ID used for quota and billing.
                 This project may be different from the project used to
                 create the credentials.
+            iam_endpoint_override (Optiona[str]): The full IAM endpoint override
+                with the target_principal embedded. This is useful when supporting
+                impersonation with regional endpoints.
         """
 
         super(Credentials, self).__init__()
@@ -226,6 +233,7 @@ class Credentials(credentials.Credentials, credentials.Signing):
         self.token = None
         self.expiry = _helpers.utcnow()
         self._quota_project_id = quota_project_id
+        self._iam_endpoint_override = iam_endpoint_override
 
     @_helpers.copy_docstring(credentials.Credentials)
     def refresh(self, request):
@@ -260,6 +268,7 @@ class Credentials(credentials.Credentials, credentials.Signing):
             principal=self._target_principal,
             headers=headers,
             body=body,
+            iam_endpoint_override=self._iam_endpoint_override,
         )
 
     def sign_bytes(self, message):
@@ -293,7 +302,7 @@ class Credentials(credentials.Credentials, credentials.Signing):
     def signer(self):
         return self
 
-    @_helpers.copy_docstring(credentials.Credentials)
+    @_helpers.copy_docstring(credentials.CredentialsWithQuotaProject)
     def with_quota_project(self, quota_project_id):
         return self.__class__(
             self._source_credentials,
@@ -302,10 +311,11 @@ class Credentials(credentials.Credentials, credentials.Signing):
             delegates=self._delegates,
             lifetime=self._lifetime,
             quota_project_id=quota_project_id,
+            iam_endpoint_override=self._iam_endpoint_override,
         )
 
 
-class IDTokenCredentials(credentials.Credentials):
+class IDTokenCredentials(credentials.CredentialsWithQuotaProject):
     """Open ID Connect ID Token-based service account credentials.
 
     """
@@ -341,6 +351,7 @@ class IDTokenCredentials(credentials.Credentials):
         return self.__class__(
             target_credentials=self._target_credentials,
             target_audience=target_audience,
+            include_email=self._include_email,
             quota_project_id=self._quota_project_id,
         )
 
@@ -348,6 +359,7 @@ class IDTokenCredentials(credentials.Credentials):
         return self.__class__(
             target_credentials=self._target_credentials,
             target_audience=target_audience,
+            include_email=self._include_email,
             quota_project_id=self._quota_project_id,
         )
 
@@ -359,7 +371,7 @@ class IDTokenCredentials(credentials.Credentials):
             quota_project_id=self._quota_project_id,
         )
 
-    @_helpers.copy_docstring(credentials.Credentials)
+    @_helpers.copy_docstring(credentials.CredentialsWithQuotaProject)
     def with_quota_project(self, quota_project_id):
         return self.__class__(
             target_credentials=self._target_credentials,

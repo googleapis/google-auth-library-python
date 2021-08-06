@@ -14,8 +14,6 @@
 
 """Utilites for mutual TLS."""
 
-import six
-
 from google.auth import exceptions
 from google.auth.transport import _mtls_helper
 
@@ -53,7 +51,7 @@ def default_client_cert_source():
             _, cert_bytes, key_bytes = _mtls_helper.get_client_cert_and_key()
         except (OSError, RuntimeError, ValueError) as caught_exc:
             new_exc = exceptions.MutualTLSChannelError(caught_exc)
-            six.raise_from(new_exc, caught_exc)
+            raise new_exc from caught_exc
 
         return cert_bytes, key_bytes
 
@@ -86,16 +84,19 @@ def default_client_encrypted_cert_source(cert_path, key_path):
 
     def callback():
         try:
-            _, cert_bytes, key_bytes, passphrase_bytes = _mtls_helper.get_client_ssl_credentials(
-                generate_encrypted_key=True
-            )
+            (
+                _,
+                cert_bytes,
+                key_bytes,
+                passphrase_bytes,
+            ) = _mtls_helper.get_client_ssl_credentials(generate_encrypted_key=True)
             with open(cert_path, "wb") as cert_file:
                 cert_file.write(cert_bytes)
             with open(key_path, "wb") as key_file:
                 key_file.write(key_bytes)
         except (exceptions.ClientCertError, OSError) as caught_exc:
             new_exc = exceptions.MutualTLSChannelError(caught_exc)
-            six.raise_from(new_exc, caught_exc)
+            raise new_exc from caught_exc
 
         return cert_path, key_path, passphrase_bytes
 

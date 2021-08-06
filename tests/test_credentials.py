@@ -115,12 +115,6 @@ def test_anonymous_credentials_before_request():
     assert headers == {}
 
 
-def test_anonymous_credentials_with_quota_project():
-    with pytest.raises(ValueError):
-        anon = credentials.AnonymousCredentials()
-        anon.with_quota_project("project-foo")
-
-
 class ReadOnlyScopedCredentialsImpl(credentials.ReadOnlyScoped, CredentialsImpl):
     @property
     def requires_scopes(self):
@@ -148,16 +142,19 @@ def test_readonly_scoped_credentials_requires_scopes():
 
 
 class RequiresScopedCredentialsImpl(credentials.Scoped, CredentialsImpl):
-    def __init__(self, scopes=None):
+    def __init__(self, scopes=None, default_scopes=None):
         super(RequiresScopedCredentialsImpl, self).__init__()
         self._scopes = scopes
+        self._default_scopes = default_scopes
 
     @property
     def requires_scopes(self):
         return not self.scopes
 
-    def with_scopes(self, scopes):
-        return RequiresScopedCredentialsImpl(scopes=scopes)
+    def with_scopes(self, scopes, default_scopes=None):
+        return RequiresScopedCredentialsImpl(
+            scopes=scopes, default_scopes=default_scopes
+        )
 
 
 def test_create_scoped_if_required_scoped():

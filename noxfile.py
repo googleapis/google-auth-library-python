@@ -12,7 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
+import pathlib
+import shutil
+
 import nox
+
+CURRENT_DIRECTORY = pathlib.Path(__file__).parent.absolute()
 
 TEST_DEPENDENCIES = [
     "flask",
@@ -23,20 +29,36 @@ TEST_DEPENDENCIES = [
     "pytest",
     "pytest-cov",
     "pytest-localserver",
+    "pyu2f",
     "requests",
     "urllib3",
     "cryptography",
     "responses",
     "grpcio",
 ]
+
+ASYNC_DEPENDENCIES = [
+    "pytest-asyncio",
+    "aioresponses",
+    "asynctest",
+    "aiohttp!=3.7.4.post0",
+]
+
 BLACK_VERSION = "black==19.3b0"
-BLACK_PATHS = ["google", "tests", "noxfile.py", "setup.py", "docs/conf.py"]
+BLACK_PATHS = [
+    "google",
+    "tests",
+    "tests_async",
+    "noxfile.py",
+    "setup.py",
+    "docs/conf.py",
+]
 
 
 @nox.session(python="3.7")
 def lint(session):
     session.install("flake8", "flake8-import-order", "docutils", BLACK_VERSION)
-    session.install(".")
+    session.install("-e", ".")
     session.run("black", "--check", *BLACK_PATHS)
     session.run(
         "flake8",
@@ -44,46 +66,61 @@ def lint(session):
         "--application-import-names=google,tests,system_tests",
         "google",
         "tests",
+        "tests_async",
     )
     session.run(
         "python", "setup.py", "check", "--metadata", "--restructuredtext", "--strict"
     )
 
 
-@nox.session(python="3.6")
+@nox.session(python="3.8")
 def blacken(session):
     """Run black.
-
     Format code to uniform standard.
+    The Python version should be consistent with what is
+    supplied in the Python Owlbot postprocessor.
 
-    This currently uses Python 3.6 due to the automated Kokoro run of synthtool.
-    That run uses an image that doesn't have 3.6 installed. Before updating this
-    check the state of the `gcp_ubuntu_config` we use for that Kokoro run.
+    https://github.com/googleapis/synthtool/blob/master/docker/owlbot/python/Dockerfile
     """
     session.install(BLACK_VERSION)
     session.run("black", *BLACK_PATHS)
 
 
-@nox.session(python=["2.7", "3.5", "3.6", "3.7"])
+@nox.session(python=["3.6", "3.7", "3.8", "3.9"])
 def unit(session):
-    session.install(*TEST_DEPENDENCIES)
-    session.install(".")
+    constraints_path = str(
+        CURRENT_DIRECTORY / "testing" / f"constraints-{session.python}.txt"
+    )
+    add_constraints = ["-c", constraints_path]
+    session.install(*(TEST_DEPENDENCIES + add_constraints))
+    session.install(*(ASYNC_DEPENDENCIES + add_constraints))
+    session.install("-e", ".", *add_constraints)
     session.run(
-        "pytest", "--cov=google.auth", "--cov=google.oauth2", "--cov=tests", "tests"
+        "pytest",
+        f"--junitxml=unit_{session.python}_sponge_log.xml",
+        "--cov=google.auth",
+        "--cov=google.oauth2",
+        "--cov=tests",
+        "--cov-report=term-missing",
+        "tests",
+        "tests_async",
     )
 
 
 @nox.session(python="3.7")
 def cover(session):
     session.install(*TEST_DEPENDENCIES)
-    session.install(".")
+    session.install(*(ASYNC_DEPENDENCIES))
+    session.install("-e", ".")
     session.run(
         "pytest",
         "--cov=google.auth",
         "--cov=google.oauth2",
         "--cov=tests",
-        "--cov-report=",
+        "--cov=tests_async",
+        "--cov-report=term-missing",
         "tests",
+        "tests_async",
     )
     session.run("coverage", "report", "--show-missing", "--fail-under=100")
 
@@ -93,7 +130,7 @@ def docgen(session):
     session.env["SPHINX_APIDOC_OPTIONS"] = "members,inherited-members,show-inheritance"
     session.install(*TEST_DEPENDENCIES)
     session.install("sphinx")
-    session.install(".")
+    session.install("-e", ".")
     session.run("rm", "-r", "docs/reference")
     session.run(
         "sphinx-apidoc",
@@ -107,15 +144,39 @@ def docgen(session):
 
 @nox.session(python="3.7")
 def docs(session):
-    session.install("sphinx", "-r", "docs/requirements-docs.txt")
-    session.install(".")
-    session.run("make", "-C", "docs", "html")
+    """Build the docs for this library."""
+
+    session.install("-e", ".[aiohttp]")
+    session.install(
+        "sphinx<3.0.0", "alabaster", "recommonmark", "sphinx-docstring-typing"
+    )
+
+    shutil.rmtree(os.path.join("docs", "_build"), ignore_errors=True)
+    session.run(
+        "sphinx-build",
+        "-T",  # show full traceback on exception
+        "-W",  # warnings as errors
+        "-N",  # no colors
+        "-b",
+        "html",
+        "-d",
+        os.path.join("docs", "_build", "doctrees", ""),
+        os.path.join("docs", ""),
+        os.path.join("docs", "_build", "html", ""),
+    )
 
 
 @nox.session(python="pypy")
 def pypy(session):
     session.install(*TEST_DEPENDENCIES)
-    session.install(".")
+    session.install(*ASYNC_DEPENDENCIES)
+    session.install("-e", ".")
     session.run(
-        "pytest", "--cov=google.auth", "--cov=google.oauth2", "--cov=tests", "tests"
+        "pytest",
+        f"--junitxml=unit_{session.python}_sponge_log.xml",
+        "--cov=google.auth",
+        "--cov=google.oauth2",
+        "--cov=tests",
+        "tests",
+        "tests_async",
     )

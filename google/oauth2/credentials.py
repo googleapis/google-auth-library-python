@@ -31,29 +31,32 @@ Authorization Code grant flow.
 .. _rfc6749 section 4.1: https://tools.ietf.org/html/rfc6749#section-4.1
 """
 
+from datetime import datetime
 import io
 import json
-
-import six
 
 from google.auth import _cloud_sdk
 from google.auth import _helpers
 from google.auth import credentials
 from google.auth import exceptions
-from google.oauth2 import _client
+from google.oauth2 import reauth
 
 
 # The Google OAuth 2.0 token endpoint. Used for authorized user credentials.
 _GOOGLE_OAUTH2_TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token"
 
 
-class Credentials(credentials.ReadOnlyScoped, credentials.Credentials):
+class Credentials(credentials.ReadOnlyScoped, credentials.CredentialsWithQuotaProject):
     """Credentials using OAuth 2.0 access and refresh tokens.
 
     The credentials are considered immutable. If you want to modify the
     quota project, use :meth:`with_quota_project` or ::
 
         credentials = credentials.with_quota_project('myproject-123)
+
+    If reauth is enabled, `pyu2f` dependency has to be installed in order to use security
+    key reauth feature. Dependency can be installed via `pip install pyu2f` or `pip install
+    google-auth[reauth]`.
     """
 
     def __init__(
@@ -65,7 +68,11 @@ class Credentials(credentials.ReadOnlyScoped, credentials.Credentials):
         client_id=None,
         client_secret=None,
         scopes=None,
+        default_scopes=None,
         quota_project_id=None,
+        expiry=None,
+        rapt_token=None,
+        refresh_handler=None,
     ):
         """
         Args:
@@ -89,26 +96,46 @@ class Credentials(credentials.ReadOnlyScoped, credentials.Credentials):
                 token if refresh information is provided (e.g. The refresh
                 token scopes are a superset of this or contain a wild card
                 scope like 'https://www.googleapis.com/auth/any-api').
+            default_scopes (Sequence[str]): Default scopes passed by a
+                Google client library. Use 'scopes' for user-defined scopes.
             quota_project_id (Optional[str]): The project ID used for quota and billing.
                 This project may be different from the project used to
                 create the credentials.
+            rapt_token (Optional[str]): The reauth Proof Token.
+            refresh_handler (Optional[Callable[[google.auth.transport.Request, Sequence[str]], [str, datetime]]]):
+                A callable which takes in the HTTP request callable and the list of
+                OAuth scopes and when called returns an access token string for the
+                requested scopes and its expiry datetime. This is useful when no
+                refresh tokens are provided and tokens are obtained by calling
+                some external process on demand. It is particularly useful for
+                retrieving downscoped tokens from a token broker.
         """
         super(Credentials, self).__init__()
         self.token = token
+        self.expiry = expiry
         self._refresh_token = refresh_token
         self._id_token = id_token
         self._scopes = scopes
+        self._default_scopes = default_scopes
         self._token_uri = token_uri
         self._client_id = client_id
         self._client_secret = client_secret
         self._quota_project_id = quota_project_id
+        self._rapt_token = rapt_token
+        self.refresh_handler = refresh_handler
 
     def __getstate__(self):
         """A __getstate__ method must exist for the __setstate__ to be called
         This is identical to the default implementation.
         See https://docs.python.org/3.7/library/pickle.html#object.__setstate__
         """
-        return self.__dict__
+        state_dict = self.__dict__.copy()
+        # Remove _refresh_handler function as there are limitations pickling and
+        # unpickling certain callables (lambda, functools.partial instances)
+        # because they need to be importable.
+        # Instead, the refresh_handler setter should be used to repopulate this.
+        del state_dict["_refresh_handler"]
+        return state_dict
 
     def __setstate__(self, d):
         """Credentials pickled with older versions of the class do not have
@@ -118,15 +145,24 @@ class Credentials(credentials.ReadOnlyScoped, credentials.Credentials):
         self._refresh_token = d.get("_refresh_token")
         self._id_token = d.get("_id_token")
         self._scopes = d.get("_scopes")
+        self._default_scopes = d.get("_default_scopes")
         self._token_uri = d.get("_token_uri")
         self._client_id = d.get("_client_id")
         self._client_secret = d.get("_client_secret")
         self._quota_project_id = d.get("_quota_project_id")
+        self._rapt_token = d.get("_rapt_token")
+        # The refresh_handler setter should be used to repopulate this.
+        self._refresh_handler = None
 
     @property
     def refresh_token(self):
         """Optional[str]: The OAuth 2.0 refresh token."""
         return self._refresh_token
+
+    @property
+    def scopes(self):
+        """Optional[str]: The OAuth 2.0 permission scopes."""
+        return self._scopes
 
     @property
     def token_uri(self):
@@ -161,7 +197,37 @@ class Credentials(credentials.ReadOnlyScoped, credentials.Credentials):
         the initial token is requested and can not be changed."""
         return False
 
-    @_helpers.copy_docstring(credentials.Credentials)
+    @property
+    def rapt_token(self):
+        """Optional[str]: The reauth Proof Token."""
+        return self._rapt_token
+
+    @property
+    def refresh_handler(self):
+        """Returns the refresh handler if available.
+
+        Returns:
+           Optional[Callable[[google.auth.transport.Request, Sequence[str]], [str, datetime]]]:
+               The current refresh handler.
+        """
+        return self._refresh_handler
+
+    @refresh_handler.setter
+    def refresh_handler(self, value):
+        """Updates the current refresh handler.
+
+        Args:
+            value (Optional[Callable[[google.auth.transport.Request, Sequence[str]], [str, datetime]]]):
+                The updated value of the refresh handler.
+
+        Raises:
+            TypeError: If the value is not a callable or None.
+        """
+        if not callable(value) and value is not None:
+            raise TypeError("The provided refresh_handler is not a callable or None.")
+        self._refresh_handler = value
+
+    @_helpers.copy_docstring(credentials.CredentialsWithQuotaProject)
     def with_quota_project(self, quota_project_id):
 
         return self.__class__(
@@ -172,11 +238,38 @@ class Credentials(credentials.ReadOnlyScoped, credentials.Credentials):
             client_id=self.client_id,
             client_secret=self.client_secret,
             scopes=self.scopes,
+            default_scopes=self.default_scopes,
             quota_project_id=quota_project_id,
+            rapt_token=self.rapt_token,
         )
 
     @_helpers.copy_docstring(credentials.Credentials)
     def refresh(self, request):
+        scopes = self._scopes if self._scopes is not None else self._default_scopes
+        # Use refresh handler if available and no refresh token is
+        # available. This is useful in general when tokens are obtained by calling
+        # some external process on demand. It is particularly useful for retrieving
+        # downscoped tokens from a token broker.
+        if self._refresh_token is None and self.refresh_handler:
+            token, expiry = self.refresh_handler(request, scopes=scopes)
+            # Validate returned data.
+            if not isinstance(token, str):
+                raise exceptions.RefreshError(
+                    "The refresh_handler returned token is not a string."
+                )
+            if not isinstance(expiry, datetime):
+                raise exceptions.RefreshError(
+                    "The refresh_handler returned expiry is not a datetime object."
+                )
+            if _helpers.utcnow() >= expiry - _helpers.CLOCK_SKEW:
+                raise exceptions.RefreshError(
+                    "The credentials returned by the refresh_handler are "
+                    "already expired."
+                )
+            self.token = token
+            self.expiry = expiry
+            return
+
         if (
             self._refresh_token is None
             or self._token_uri is None
@@ -189,23 +282,31 @@ class Credentials(credentials.ReadOnlyScoped, credentials.Credentials):
                 "token_uri, client_id, and client_secret."
             )
 
-        access_token, refresh_token, expiry, grant_response = _client.refresh_grant(
+        (
+            access_token,
+            refresh_token,
+            expiry,
+            grant_response,
+            rapt_token,
+        ) = reauth.refresh_grant(
             request,
             self._token_uri,
             self._refresh_token,
             self._client_id,
             self._client_secret,
-            self._scopes,
+            scopes=scopes,
+            rapt_token=self._rapt_token,
         )
 
         self.token = access_token
         self.expiry = expiry
         self._refresh_token = refresh_token
         self._id_token = grant_response.get("id_token")
+        self._rapt_token = rapt_token
 
-        if self._scopes and "scopes" in grant_response:
-            requested_scopes = frozenset(self._scopes)
-            granted_scopes = frozenset(grant_response["scopes"].split())
+        if scopes and "scope" in grant_response:
+            requested_scopes = frozenset(scopes)
+            granted_scopes = frozenset(grant_response["scope"].split())
             scopes_requested_but_not_granted = requested_scopes - granted_scopes
             if scopes_requested_but_not_granted:
                 raise exceptions.RefreshError(
@@ -233,7 +334,7 @@ class Credentials(credentials.ReadOnlyScoped, credentials.Credentials):
             ValueError: If the info is not in the expected format.
         """
         keys_needed = set(("refresh_token", "client_id", "client_secret"))
-        missing = keys_needed.difference(six.iterkeys(info))
+        missing = keys_needed.difference(info)
 
         if missing:
             raise ValueError(
@@ -241,16 +342,30 @@ class Credentials(credentials.ReadOnlyScoped, credentials.Credentials):
                 "fields {}.".format(", ".join(missing))
             )
 
+        # access token expiry (datetime obj); auto-expire if not saved
+        expiry = info.get("expiry")
+        if expiry:
+            expiry = datetime.strptime(
+                expiry.rstrip("Z").split(".")[0], "%Y-%m-%dT%H:%M:%S"
+            )
+        else:
+            expiry = _helpers.utcnow() - _helpers.CLOCK_SKEW
+
+        # process scopes, which needs to be a seq
+        if scopes is None and "scopes" in info:
+            scopes = info.get("scopes")
+            if isinstance(scopes, str):
+                scopes = scopes.split(" ")
+
         return cls(
-            None,  # No access token, must be refreshed.
-            refresh_token=info["refresh_token"],
-            token_uri=_GOOGLE_OAUTH2_TOKEN_ENDPOINT,
+            token=info.get("token"),
+            refresh_token=info.get("refresh_token"),
+            token_uri=_GOOGLE_OAUTH2_TOKEN_ENDPOINT,  # always overrides
             scopes=scopes,
-            client_id=info["client_id"],
-            client_secret=info["client_secret"],
-            quota_project_id=info.get(
-                "quota_project_id"
-            ),  # quota project may not exist
+            client_id=info.get("client_id"),
+            client_secret=info.get("client_secret"),
+            quota_project_id=info.get("quota_project_id"),  # may not exist
+            expiry=expiry,
         )
 
     @classmethod
@@ -293,9 +408,12 @@ class Credentials(credentials.ReadOnlyScoped, credentials.Credentials):
             "client_id": self.client_id,
             "client_secret": self.client_secret,
             "scopes": self.scopes,
+            "rapt_token": self.rapt_token,
         }
+        if self.expiry:  # flatten expiry timestamp
+            prep["expiry"] = self.expiry.isoformat() + "Z"
 
-        # Remove empty entries
+        # Remove empty entries (those which are None)
         prep = {k: v for k, v in prep.items() if v is not None}
 
         # Remove entries that explicitely need to be removed
@@ -305,7 +423,7 @@ class Credentials(credentials.ReadOnlyScoped, credentials.Credentials):
         return json.dumps(prep)
 
 
-class UserAccessTokenCredentials(credentials.Credentials):
+class UserAccessTokenCredentials(credentials.CredentialsWithQuotaProject):
     """Access token credentials for user account.
 
     Obtain the access token for a given user account or the current active
@@ -316,7 +434,6 @@ class UserAccessTokenCredentials(credentials.Credentials):
             specified, the current active account will be used.
         quota_project_id (Optional[str]): The project ID used for quota
             and billing.
-
     """
 
     def __init__(self, account=None, quota_project_id=None):
@@ -336,7 +453,7 @@ class UserAccessTokenCredentials(credentials.Credentials):
         """
         return self.__class__(account=account, quota_project_id=self._quota_project_id)
 
-    @_helpers.copy_docstring(credentials.Credentials)
+    @_helpers.copy_docstring(credentials.CredentialsWithQuotaProject)
     def with_quota_project(self, quota_project_id):
         return self.__class__(account=self._account, quota_project_id=quota_project_id)
 

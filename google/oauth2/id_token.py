@@ -33,9 +33,6 @@ Example::
     id_info = id_token.verify_oauth2_token(
         token, request, 'my-client-id.example.com')
 
-    if id_info['iss'] != 'https://accounts.google.com':
-        raise ValueError('Wrong issuer.')
-
     userid = id_info['sub']
 
 By default, this will re-fetch certificates for each verification. Because
@@ -53,16 +50,14 @@ library like `CacheControl`_ to create a cache-aware
     cached_session = cachecontrol.CacheControl(session)
     request = google.auth.transport.requests.Request(session=cached_session)
 
-.. _OpenID Connect ID Token:
+.. _OpenID Connect ID Tokens:
     http://openid.net/specs/openid-connect-core-1_0.html#IDToken
 .. _CacheControl: https://cachecontrol.readthedocs.io
 """
 
+import http.client
 import json
 import os
-
-import six
-from six.moves import http_client
 
 from google.auth import environment_vars
 from google.auth import exceptions
@@ -100,7 +95,7 @@ def _fetch_certs(request, certs_url):
     """
     response = request(certs_url, method="GET")
 
-    if response.status != http_client.OK:
+    if response.status != http.client.OK:
         raise exceptions.TransportError(
             "Could not fetch certificates at {}".format(certs_url)
         )
@@ -115,8 +110,8 @@ def verify_token(id_token, request, audience=None, certs_url=_GOOGLE_OAUTH2_CERT
         id_token (Union[str, bytes]): The encoded token.
         request (google.auth.transport.Request): The object used to make
             HTTP requests.
-        audience (str): The audience that this token is intended for. If None
-            then the audience is not verified.
+        audience (str or list): The audience or audiences that this token is
+            intended for. If None then the audience is not verified.
         certs_url (str): The URL that specifies the certificates to use to
             verify the token. This URL should return JSON in the format of
             ``{'key id': 'x509 certificate'}``.
@@ -182,13 +177,14 @@ def verify_firebase_token(id_token, request, audience=None):
 def fetch_id_token(request, audience):
     """Fetch the ID Token from the current environment.
 
-    This function acquires ID token from the environment in the following order:
+    This function acquires ID token from the environment in the following order.
+    See https://google.aip.dev/auth/4110.
 
-    1. If the application is running in Compute Engine, App Engine or Cloud Run,
-       then the ID token are obtained from the metadata server.
-    2. If the environment variable ``GOOGLE_APPLICATION_CREDENTIALS`` is set
+    1. If the environment variable ``GOOGLE_APPLICATION_CREDENTIALS`` is set
        to the path of a valid service account JSON file, then ID token is
        acquired using this service account credentials.
+    2. If the application is running in Compute Engine, App Engine or Cloud Run,
+       then the ID token are obtained from the metadata server.
     3. If metadata server doesn't exist and no valid service account credentials
        are found, :class:`~google.auth.exceptions.DefaultCredentialsError` will
        be raised.
@@ -216,51 +212,51 @@ def fetch_id_token(request, audience):
             If metadata server doesn't exist and no valid service account
             credentials are found.
     """
-    # 1. First try to fetch ID token from metada server if it exists. The code
+    # 1. Try to get credentials from the GOOGLE_APPLICATION_CREDENTIALS environment
+    # variable.
+    credentials_filename = os.environ.get(environment_vars.CREDENTIALS)
+    if credentials_filename:
+        if not (
+            os.path.exists(credentials_filename)
+            and os.path.isfile(credentials_filename)
+        ):
+            raise exceptions.DefaultCredentialsError(
+                "GOOGLE_APPLICATION_CREDENTIALS path is either not found or invalid."
+            )
+
+        try:
+            with open(credentials_filename, "r") as f:
+                from google.oauth2 import service_account
+
+                info = json.load(f)
+                if info.get("type") == "service_account":
+                    credentials = service_account.IDTokenCredentials.from_service_account_info(
+                        info, target_audience=audience
+                    )
+                    credentials.refresh(request)
+                    return credentials.token
+        except ValueError as caught_exc:
+            new_exc = exceptions.DefaultCredentialsError(
+                "GOOGLE_APPLICATION_CREDENTIALS is not valid service account credentials.",
+                caught_exc,
+            )
+            raise new_exc from caught_exc
+
+    # 2. Try to fetch ID token from metada server if it exists. The code
     # works for GAE and Cloud Run metadata server as well.
     try:
         from google.auth import compute_engine
+        from google.auth.compute_engine import _metadata
 
-        credentials = compute_engine.IDTokenCredentials(
-            request, audience, use_metadata_identity_endpoint=True
-        )
-        credentials.refresh(request)
-        return credentials.token
-    except (ImportError, exceptions.TransportError, exceptions.RefreshError):
+        if _metadata.ping(request):
+            credentials = compute_engine.IDTokenCredentials(
+                request, audience, use_metadata_identity_endpoint=True
+            )
+            credentials.refresh(request)
+            return credentials.token
+    except (ImportError, exceptions.TransportError):
         pass
 
-    # 2. Try to use service account credentials to get ID token.
-
-    # Try to get credentials from the GOOGLE_APPLICATION_CREDENTIALS environment
-    # variable.
-    credentials_filename = os.environ.get(environment_vars.CREDENTIALS)
-    if not (
-        credentials_filename
-        and os.path.exists(credentials_filename)
-        and os.path.isfile(credentials_filename)
-    ):
-        raise exceptions.DefaultCredentialsError(
-            "Neither metadata server or valid service account credentials are found."
-        )
-
-    try:
-        with open(credentials_filename, "r") as f:
-            info = json.load(f)
-            credentials_content = (
-                (info.get("type") == "service_account") and info or None
-            )
-
-            from google.oauth2 import service_account
-
-            credentials = service_account.IDTokenCredentials.from_service_account_info(
-                credentials_content, target_audience=audience
-            )
-    except ValueError as caught_exc:
-        new_exc = exceptions.DefaultCredentialsError(
-            "Neither metadata server or valid service account credentials are found.",
-            caught_exc,
-        )
-        six.raise_from(new_exc, caught_exc)
-
-    credentials.refresh(request)
-    return credentials.token
+    raise exceptions.DefaultCredentialsError(
+        "Neither metadata server or valid service account credentials are found."
+    )

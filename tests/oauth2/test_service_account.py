@@ -155,6 +155,13 @@ class TestCredentials(object):
         new_credentials.apply(hdrs, token="tok")
         assert "x-goog-user-project" in hdrs
 
+    def test__with_always_use_jwt_access(self):
+        credentials = self.make_credentials()
+        assert not credentials._always_use_jwt_access
+
+        new_credentials = credentials.with_always_use_jwt_access(True)
+        assert new_credentials._always_use_jwt_access
+
     def test__make_authorization_grant_assertion(self):
         credentials = self.make_credentials()
         token = credentials._make_authorization_grant_assertion()
@@ -177,6 +184,112 @@ class TestCredentials(object):
         token = credentials._make_authorization_grant_assertion()
         payload = jwt.decode(token, PUBLIC_CERT_BYTES)
         assert payload["sub"] == subject
+
+    def test_apply_with_quota_project_id(self):
+        credentials = service_account.Credentials(
+            SIGNER,
+            self.SERVICE_ACCOUNT_EMAIL,
+            self.TOKEN_URI,
+            quota_project_id="quota-project-123",
+        )
+
+        headers = {}
+        credentials.apply(headers, token="token")
+
+        assert headers["x-goog-user-project"] == "quota-project-123"
+        assert "token" in headers["authorization"]
+
+    def test_apply_with_no_quota_project_id(self):
+        credentials = service_account.Credentials(
+            SIGNER, self.SERVICE_ACCOUNT_EMAIL, self.TOKEN_URI
+        )
+
+        headers = {}
+        credentials.apply(headers, token="token")
+
+        assert "x-goog-user-project" not in headers
+        assert "token" in headers["authorization"]
+
+    @mock.patch("google.auth.jwt.Credentials", instance=True, autospec=True)
+    def test__create_self_signed_jwt(self, jwt):
+        credentials = service_account.Credentials(
+            SIGNER, self.SERVICE_ACCOUNT_EMAIL, self.TOKEN_URI
+        )
+
+        audience = "https://pubsub.googleapis.com"
+        credentials._create_self_signed_jwt(audience)
+        jwt.from_signing_credentials.assert_called_once_with(credentials, audience)
+
+    @mock.patch("google.auth.jwt.Credentials", instance=True, autospec=True)
+    def test__create_self_signed_jwt_with_user_scopes(self, jwt):
+        credentials = service_account.Credentials(
+            SIGNER, self.SERVICE_ACCOUNT_EMAIL, self.TOKEN_URI, scopes=["foo"]
+        )
+
+        audience = "https://pubsub.googleapis.com"
+        credentials._create_self_signed_jwt(audience)
+
+        # JWT should not be created if there are user-defined scopes
+        jwt.from_signing_credentials.assert_not_called()
+
+    @mock.patch("google.auth.jwt.Credentials", instance=True, autospec=True)
+    def test__create_self_signed_jwt_always_use_jwt_access_with_audience(self, jwt):
+        credentials = service_account.Credentials(
+            SIGNER,
+            self.SERVICE_ACCOUNT_EMAIL,
+            self.TOKEN_URI,
+            default_scopes=["bar", "foo"],
+            always_use_jwt_access=True,
+        )
+
+        audience = "https://pubsub.googleapis.com"
+        credentials._create_self_signed_jwt(audience)
+        jwt.from_signing_credentials.assert_called_once_with(credentials, audience)
+
+    @mock.patch("google.auth.jwt.Credentials", instance=True, autospec=True)
+    def test__create_self_signed_jwt_always_use_jwt_access_with_scopes(self, jwt):
+        credentials = service_account.Credentials(
+            SIGNER,
+            self.SERVICE_ACCOUNT_EMAIL,
+            self.TOKEN_URI,
+            scopes=["bar", "foo"],
+            always_use_jwt_access=True,
+        )
+
+        audience = "https://pubsub.googleapis.com"
+        credentials._create_self_signed_jwt(audience)
+        jwt.from_signing_credentials.assert_called_once_with(
+            credentials, None, additional_claims={"scope": "bar foo"}
+        )
+
+    @mock.patch("google.auth.jwt.Credentials", instance=True, autospec=True)
+    def test__create_self_signed_jwt_always_use_jwt_access_with_default_scopes(
+        self, jwt
+    ):
+        credentials = service_account.Credentials(
+            SIGNER,
+            self.SERVICE_ACCOUNT_EMAIL,
+            self.TOKEN_URI,
+            default_scopes=["bar", "foo"],
+            always_use_jwt_access=True,
+        )
+
+        credentials._create_self_signed_jwt(None)
+        jwt.from_signing_credentials.assert_called_once_with(
+            credentials, None, additional_claims={"scope": "bar foo"}
+        )
+
+    @mock.patch("google.auth.jwt.Credentials", instance=True, autospec=True)
+    def test__create_self_signed_jwt_always_use_jwt_access(self, jwt):
+        credentials = service_account.Credentials(
+            SIGNER,
+            self.SERVICE_ACCOUNT_EMAIL,
+            self.TOKEN_URI,
+            always_use_jwt_access=True,
+        )
+
+        credentials._create_self_signed_jwt(None)
+        jwt.from_signing_credentials.assert_not_called()
 
     @mock.patch("google.oauth2._client.jwt_grant", autospec=True)
     def test_refresh_success(self, jwt_grant):
@@ -231,6 +344,32 @@ class TestCredentials(object):
 
         # Credentials should now be valid.
         assert credentials.valid
+
+    @mock.patch("google.auth.jwt.Credentials._make_jwt")
+    def test_refresh_with_jwt_credentials(self, make_jwt):
+        credentials = self.make_credentials()
+        credentials._create_self_signed_jwt("https://pubsub.googleapis.com")
+
+        request = mock.create_autospec(transport.Request, instance=True)
+
+        token = "token"
+        expiry = _helpers.utcnow() + datetime.timedelta(seconds=500)
+        make_jwt.return_value = (token, expiry)
+
+        # Credentials should start as invalid
+        assert not credentials.valid
+
+        # before_request should cause a refresh
+        credentials.before_request(request, "GET", "http://example.com?a=1#3", {})
+
+        # Credentials should now be valid.
+        assert credentials.valid
+
+        # Assert make_jwt was called
+        assert make_jwt.called_once()
+
+        assert credentials.token == token
+        assert credentials.expiry == expiry
 
 
 class TestIDTokenCredentials(object):

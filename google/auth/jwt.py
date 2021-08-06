@@ -40,18 +40,13 @@ You can also skip verification::
 
 """
 
-try:
-    from collections.abc import Mapping
-# Python 2.7 compatibility
-except ImportError:  # pragma: NO COVER
-    from collections import Mapping
+from collections.abc import Mapping
 import copy
 import datetime
 import json
+import urllib
 
 import cachetools
-import six
-from six.moves import urllib
 
 from google.auth import _helpers
 from google.auth import _service_account_info
@@ -95,10 +90,11 @@ def encode(signer, payload, header=None, key_id=None):
 
     header.update({"typ": "JWT"})
 
-    if es256 is not None and isinstance(signer, es256.ES256Signer):
-        header.update({"alg": "ES256"})
-    else:
-        header.update({"alg": "RS256"})
+    if "alg" not in header:
+        if es256 is not None and isinstance(signer, es256.ES256Signer):
+            header.update({"alg": "ES256"})
+        else:
+            header.update({"alg": "RS256"})
 
     if key_id is not None:
         header["kid"] = key_id
@@ -122,7 +118,7 @@ def _decode_jwt_segment(encoded_section):
         return json.loads(section_bytes.decode("utf-8"))
     except ValueError as caught_exc:
         new_exc = ValueError("Can't parse segment: {0}".format(section_bytes))
-        six.raise_from(new_exc, caught_exc)
+        raise new_exc from caught_exc
 
 
 def _unverified_decode(token):
@@ -218,8 +214,9 @@ def decode(token, certs=None, verify=True, audience=None):
             in the token's header.
         verify (bool): Whether to perform signature and claim validation.
             Verification is done by default.
-        audience (str): The audience claim, 'aud', that this JWT should
-            contain. If None then the JWT's 'aud' parameter is not verified.
+        audience (str or list): The audience claim, 'aud', that this JWT should
+            contain. Or a list of audience claims. If None then the JWT's 'aud'
+            parameter is not verified.
 
     Returns:
         Mapping[str, str]: The deserialized JSON payload in the JWT.
@@ -239,19 +236,16 @@ def decode(token, certs=None, verify=True, audience=None):
 
     try:
         verifier_cls = _ALGORITHM_TO_VERIFIER_CLASS[key_alg]
-    except KeyError as exc:
+    except KeyError as caught_exc:
         if key_alg in _CRYPTOGRAPHY_BASED_ALGORITHMS:
-            six.raise_from(
-                ValueError(
-                    "The key algorithm {} requires the cryptography package "
-                    "to be installed.".format(key_alg)
-                ),
-                exc,
+            msg = (
+                "The key algorithm {} requires the cryptography package "
+                "to be installed."
             )
         else:
-            six.raise_from(
-                ValueError("Unsupported signature algorithm {}".format(key_alg)), exc
-            )
+            msg = "Unsupported signature algorithm {}"
+        new_exc = ValueError(msg.format(key_alg))
+        raise new_exc from caught_exc
 
     # If certs is specified as a dictionary of key IDs to certificates, then
     # use the certificate identified by the key ID in the token header.
@@ -278,9 +272,11 @@ def decode(token, certs=None, verify=True, audience=None):
     # Check audience.
     if audience is not None:
         claim_audience = payload.get("aud")
-        if audience != claim_audience:
+        if isinstance(audience, str):
+            audience = [audience]
+        if claim_audience not in audience:
             raise ValueError(
-                "Token has wrong audience {}, expected {}".format(
+                "Token has wrong audience {}, expected one of {}".format(
                     claim_audience, audience
                 )
             )
@@ -288,7 +284,9 @@ def decode(token, certs=None, verify=True, audience=None):
     return payload
 
 
-class Credentials(google.auth.credentials.Signing, google.auth.credentials.Credentials):
+class Credentials(
+    google.auth.credentials.Signing, google.auth.credentials.CredentialsWithQuotaProject
+):
     """Credentials that use a JWT as the bearer token.
 
     These credentials require an "audience" claim. This claim identifies the
@@ -493,7 +491,7 @@ class Credentials(google.auth.credentials.Signing, google.auth.credentials.Crede
             quota_project_id=self._quota_project_id,
         )
 
-    @_helpers.copy_docstring(google.auth.credentials.Credentials)
+    @_helpers.copy_docstring(google.auth.credentials.CredentialsWithQuotaProject)
     def with_quota_project(self, quota_project_id):
         return self.__class__(
             self._signer,
@@ -519,8 +517,9 @@ class Credentials(google.auth.credentials.Signing, google.auth.credentials.Crede
             "sub": self._subject,
             "iat": _helpers.datetime_to_secs(now),
             "exp": _helpers.datetime_to_secs(expiry),
-            "aud": self._audience,
         }
+        if self._audience:
+            payload["aud"] = self._audience
 
         payload.update(self._additional_claims)
 
@@ -554,7 +553,7 @@ class Credentials(google.auth.credentials.Signing, google.auth.credentials.Crede
 
 
 class OnDemandCredentials(
-    google.auth.credentials.Signing, google.auth.credentials.Credentials
+    google.auth.credentials.Signing, google.auth.credentials.CredentialsWithQuotaProject
 ):
     """On-demand JWT credentials.
 
@@ -721,7 +720,7 @@ class OnDemandCredentials(
             quota_project_id=self._quota_project_id,
         )
 
-    @_helpers.copy_docstring(google.auth.credentials.Credentials)
+    @_helpers.copy_docstring(google.auth.credentials.CredentialsWithQuotaProject)
     def with_quota_project(self, quota_project_id):
 
         return self.__class__(

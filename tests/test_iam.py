@@ -14,11 +14,11 @@
 
 import base64
 import datetime
+import http.client
 import json
 
 from unittest import mock
 import pytest
-from six.moves import http_client
 
 from google.auth import _helpers
 from google.auth import exceptions
@@ -81,7 +81,7 @@ class TestSigner(object):
     def test_sign_bytes(self):
         signature = b"DEADBEEF"
         encoded_signature = base64.b64encode(signature).decode("utf-8")
-        request = make_request(http_client.OK, data={"signature": encoded_signature})
+        request = make_request(http.client.OK, data={"signedBlob": encoded_signature})
         credentials = make_credentials()
 
         signer = iam.Signer(request, credentials, mock.sentinel.service_account_email)
@@ -89,9 +89,11 @@ class TestSigner(object):
         returned_signature = signer.sign("123")
 
         assert returned_signature == signature
+        kwargs = request.call_args[1]
+        assert kwargs["headers"]["Content-Type"] == "application/json"
 
     def test_sign_bytes_failure(self):
-        request = make_request(http_client.UNAUTHORIZED)
+        request = make_request(http.client.UNAUTHORIZED)
         credentials = make_credentials()
 
         signer = iam.Signer(request, credentials, mock.sentinel.service_account_email)

@@ -13,13 +13,13 @@
 # limitations under the License.
 
 import datetime
+import http.client
+import importlib
 import json
 import os
 
 from unittest import mock
 import pytest
-from six.moves import http_client
-from six.moves import reload_module
 
 from google.auth import _helpers
 from google.auth import environment_vars
@@ -30,7 +30,7 @@ from google.auth.compute_engine import _metadata
 PATH = "instance/service-accounts/default"
 
 
-def make_request(data, status=http_client.OK, headers=None, retry=False):
+def make_request(data, status=http.client.OK, headers=None, retry=False):
     response = mock.create_autospec(transport.Response, instance=True)
     response.status = status
     response.data = _helpers.to_bytes(data)
@@ -90,13 +90,13 @@ def test_ping_success_custom_root():
 
     fake_ip = "1.2.3.4"
     os.environ[environment_vars.GCE_METADATA_IP] = fake_ip
-    reload_module(_metadata)
+    importlib.reload(_metadata)
 
     try:
         assert _metadata.ping(request)
     finally:
         del os.environ[environment_vars.GCE_METADATA_IP]
-        reload_module(_metadata)
+        importlib.reload(_metadata)
 
     request.assert_called_once_with(
         method="GET",
@@ -155,18 +155,61 @@ def test_get_success_text():
     assert result == data
 
 
+def test_get_success_params():
+    data = "foobar"
+    request = make_request(data, headers={"content-type": "text/plain"})
+    params = {"recursive": "true"}
+
+    result = _metadata.get(request, PATH, params=params)
+
+    request.assert_called_once_with(
+        method="GET",
+        url=_metadata._METADATA_ROOT + PATH + "?recursive=true",
+        headers=_metadata._METADATA_HEADERS,
+    )
+    assert result == data
+
+
+def test_get_success_recursive_and_params():
+    data = "foobar"
+    request = make_request(data, headers={"content-type": "text/plain"})
+    params = {"recursive": "false"}
+    result = _metadata.get(request, PATH, recursive=True, params=params)
+
+    request.assert_called_once_with(
+        method="GET",
+        url=_metadata._METADATA_ROOT + PATH + "?recursive=true",
+        headers=_metadata._METADATA_HEADERS,
+    )
+    assert result == data
+
+
+def test_get_success_recursive():
+    data = "foobar"
+    request = make_request(data, headers={"content-type": "text/plain"})
+
+    result = _metadata.get(request, PATH, recursive=True)
+
+    request.assert_called_once_with(
+        method="GET",
+        url=_metadata._METADATA_ROOT + PATH + "?recursive=true",
+        headers=_metadata._METADATA_HEADERS,
+    )
+    assert result == data
+
+
 def test_get_success_custom_root_new_variable():
     request = make_request("{}", headers={"content-type": "application/json"})
 
     fake_root = "another.metadata.service"
     os.environ[environment_vars.GCE_METADATA_HOST] = fake_root
-    reload_module(_metadata)
+    importlib.reload(_metadata)
 
     try:
         _metadata.get(request, PATH)
     finally:
         del os.environ[environment_vars.GCE_METADATA_HOST]
-        reload_module(_metadata)
+        importlib.reload(_metadata)
 
     request.assert_called_once_with(
         method="GET",
@@ -180,13 +223,13 @@ def test_get_success_custom_root_old_variable():
 
     fake_root = "another.metadata.service"
     os.environ[environment_vars.GCE_METADATA_ROOT] = fake_root
-    reload_module(_metadata)
+    importlib.reload(_metadata)
 
     try:
         _metadata.get(request, PATH)
     finally:
         del os.environ[environment_vars.GCE_METADATA_ROOT]
-        reload_module(_metadata)
+        importlib.reload(_metadata)
 
     request.assert_called_once_with(
         method="GET",
@@ -196,7 +239,7 @@ def test_get_success_custom_root_old_variable():
 
 
 def test_get_failure():
-    request = make_request("Metadata error", status=http_client.NOT_FOUND)
+    request = make_request("Metadata error", status=http.client.NOT_FOUND)
 
     with pytest.raises(exceptions.TransportError) as excinfo:
         _metadata.get(request, PATH)
@@ -269,6 +312,44 @@ def test_get_service_account_token(utcnow):
     request.assert_called_once_with(
         method="GET",
         url=_metadata._METADATA_ROOT + PATH + "/token",
+        headers=_metadata._METADATA_HEADERS,
+    )
+    assert token == "token"
+    assert expiry == utcnow() + datetime.timedelta(seconds=ttl)
+
+
+@mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+def test_get_service_account_token_with_scopes_list(utcnow):
+    ttl = 500
+    request = make_request(
+        json.dumps({"access_token": "token", "expires_in": ttl}),
+        headers={"content-type": "application/json"},
+    )
+
+    token, expiry = _metadata.get_service_account_token(request, scopes=["foo", "bar"])
+
+    request.assert_called_once_with(
+        method="GET",
+        url=_metadata._METADATA_ROOT + PATH + "/token" + "?scopes=foo%2Cbar",
+        headers=_metadata._METADATA_HEADERS,
+    )
+    assert token == "token"
+    assert expiry == utcnow() + datetime.timedelta(seconds=ttl)
+
+
+@mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+def test_get_service_account_token_with_scopes_string(utcnow):
+    ttl = 500
+    request = make_request(
+        json.dumps({"access_token": "token", "expires_in": ttl}),
+        headers={"content-type": "application/json"},
+    )
+
+    token, expiry = _metadata.get_service_account_token(request, scopes="foo,bar")
+
+    request.assert_called_once_with(
+        method="GET",
+        url=_metadata._METADATA_ROOT + PATH + "/token" + "?scopes=foo%2Cbar",
         headers=_metadata._METADATA_HEADERS,
     )
     assert token == "token"

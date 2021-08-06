@@ -1,4 +1,4 @@
-# Copyright 2016 Google LLC
+# Copyright 2020 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -29,9 +29,8 @@ from nox.command import which
 import nox
 import py.path
 
-
 HERE = os.path.abspath(os.path.dirname(__file__))
-LIBRARY_DIR = os.path.join(HERE, "..")
+LIBRARY_DIR = os.path.abspath(os.path.dirname(HERE))
 DATA_DIR = os.path.join(HERE, "data")
 SERVICE_ACCOUNT_FILE = os.path.join(DATA_DIR, "service_account.json")
 AUTHORIZED_USER_FILE = os.path.join(DATA_DIR, "authorized_user.json")
@@ -169,147 +168,274 @@ def configure_cloud_sdk(session, application_default_credentials, project=False)
 
 # Test sesssions
 
-TEST_DEPENDENCIES = ["pytest", "requests"]
-PYTHON_VERSIONS = ["2.7", "3.7"]
+TEST_DEPENDENCIES_ASYNC = ["aiohttp", "pytest-asyncio", "nest-asyncio"]
+TEST_DEPENDENCIES_SYNC = ["pytest", "requests", "mock"]
+PYTHON_VERSIONS_ASYNC = ["3.7"]
+PYTHON_VERSIONS_SYNC = ["3.7"]
 
 
-@nox.session(python=PYTHON_VERSIONS)
-def service_account(session):
-    session.install(*TEST_DEPENDENCIES)
+def default(session, *test_paths):
+    # replace 'session._runner.friendly_name' with
+    # session.name once nox has released a new version
+    # https://github.com/theacodes/nox/pull/386
+    sponge_log = f"--junitxml=system_{str(session._runner.friendly_name)}_sponge_log.xml"
+    session.run(
+        "pytest", sponge_log, *test_paths,
+    )
+
+
+@nox.session(python=PYTHON_VERSIONS_SYNC)
+def service_account_sync(session):
+    session.install(*TEST_DEPENDENCIES_SYNC)
     session.install(LIBRARY_DIR)
-    session.run("pytest", "test_service_account.py")
+    default(
+        session,
+        "system_tests_sync/test_service_account.py",
+        *session.posargs,
+    )
 
 
-@nox.session(python=PYTHON_VERSIONS)
-def oauth2_credentials(session):
-    session.install(*TEST_DEPENDENCIES)
-    session.install(LIBRARY_DIR)
-    session.run("pytest", "test_oauth2_credentials.py")
-
-
-@nox.session(python=PYTHON_VERSIONS)
-def impersonated_credentials(session):
-    session.install(*TEST_DEPENDENCIES)
-    session.install(LIBRARY_DIR)
-    session.run("pytest", "test_impersonated_credentials.py")
-
-
-@nox.session(python=PYTHON_VERSIONS)
+@nox.session(python=PYTHON_VERSIONS_SYNC)
 def default_explicit_service_account(session):
     session.env[EXPLICIT_CREDENTIALS_ENV] = SERVICE_ACCOUNT_FILE
     session.env[EXPECT_PROJECT_ENV] = "1"
-    session.install(*TEST_DEPENDENCIES)
+    session.install(*TEST_DEPENDENCIES_SYNC)
     session.install(LIBRARY_DIR)
-    session.run("pytest", "test_default.py", "test_id_token.py")
+    default(
+        session,
+        "system_tests_sync/test_default.py",
+        "system_tests_sync/test_id_token.py",
+        *session.posargs,
+    )
 
 
-@nox.session(python=PYTHON_VERSIONS)
+@nox.session(python=PYTHON_VERSIONS_SYNC)
 def default_explicit_authorized_user(session):
     session.env[EXPLICIT_CREDENTIALS_ENV] = AUTHORIZED_USER_FILE
-    session.install(*TEST_DEPENDENCIES)
+    session.install(*TEST_DEPENDENCIES_SYNC)
     session.install(LIBRARY_DIR)
-    session.run("pytest", "test_default.py")
+    default(
+        session,
+        "system_tests_sync/test_default.py",
+        *session.posargs,
+    )
 
 
-@nox.session(python=PYTHON_VERSIONS)
+@nox.session(python=PYTHON_VERSIONS_SYNC)
 def default_explicit_authorized_user_explicit_project(session):
     session.env[EXPLICIT_CREDENTIALS_ENV] = AUTHORIZED_USER_FILE
     session.env[EXPLICIT_PROJECT_ENV] = "example-project"
     session.env[EXPECT_PROJECT_ENV] = "1"
-    session.install(*TEST_DEPENDENCIES)
+    session.install(*TEST_DEPENDENCIES_SYNC)
     session.install(LIBRARY_DIR)
-    session.run("pytest", "test_default.py")
+    default(
+        session,
+        "system_tests_sync/test_default.py",
+        *session.posargs,
+    )
 
 
-@nox.session(python=PYTHON_VERSIONS)
+@nox.session(python=PYTHON_VERSIONS_SYNC)
 def default_cloud_sdk_service_account(session):
     configure_cloud_sdk(session, SERVICE_ACCOUNT_FILE)
     session.env[EXPECT_PROJECT_ENV] = "1"
-    session.install(*TEST_DEPENDENCIES)
+    session.install(*TEST_DEPENDENCIES_SYNC)
     session.install(LIBRARY_DIR)
-    session.run("pytest", "test_default.py")
+    default(
+        session,
+        "system_tests_sync/test_default.py",
+        *session.posargs,
+    )
 
 
-@nox.session(python=PYTHON_VERSIONS)
+@nox.session(python=PYTHON_VERSIONS_SYNC)
 def default_cloud_sdk_authorized_user(session):
     configure_cloud_sdk(session, AUTHORIZED_USER_FILE)
-    session.install(*TEST_DEPENDENCIES)
+    session.install(*TEST_DEPENDENCIES_SYNC)
     session.install(LIBRARY_DIR)
-    session.run("pytest", "test_default.py")
+    default(
+        session,
+        "system_tests_sync/test_default.py",
+        *session.posargs,
+    )
 
 
-@nox.session(python=PYTHON_VERSIONS)
+@nox.session(python=PYTHON_VERSIONS_SYNC)
 def default_cloud_sdk_authorized_user_configured_project(session):
     configure_cloud_sdk(session, AUTHORIZED_USER_FILE, project=True)
     session.env[EXPECT_PROJECT_ENV] = "1"
-    session.install(*TEST_DEPENDENCIES)
+    session.install(*TEST_DEPENDENCIES_SYNC)
     session.install(LIBRARY_DIR)
-    session.run("pytest", "test_default.py")
+    default(
+        session,
+        "system_tests_sync/test_default.py",
+        *session.posargs,
+    )
 
 
-@nox.session(python=PYTHON_VERSIONS)
+@nox.session(python=PYTHON_VERSIONS_SYNC)
 def compute_engine(session):
-    session.install(*TEST_DEPENDENCIES)
+    session.install(*TEST_DEPENDENCIES_SYNC)
     # unset Application Default Credentials so
     # credentials are detected from environment
     del session.virtualenv.env["GOOGLE_APPLICATION_CREDENTIALS"]
     session.install(LIBRARY_DIR)
-    session.run("pytest", "test_compute_engine.py")
-
-
-@nox.session(python=["2.7"])
-def app_engine(session):
-    if SKIP_GAE_TEST_ENV in os.environ:
-        session.log("Skipping App Engine tests.")
-        return
-
-    # Unlike the default tests above, the App Engine system test require a
-    # 'real' gcloud sdk installation that is configured to deploy to an
-    # app engine project.
-    # Grab the project ID from the cloud sdk.
-    project_id = (
-        subprocess.check_output(
-            ["gcloud", "config", "list", "project", "--format", "value(core.project)"]
-        )
-        .decode("utf-8")
-        .strip()
+    default(
+        session,
+        "system_tests_sync/test_compute_engine.py",
+        *session.posargs,
     )
 
-    if not project_id:
-        session.error(
-            "The Cloud SDK must be installed and configured to deploy to App " "Engine."
-        )
 
-    application_url = GAE_APP_URL_TMPL.format(GAE_TEST_APP_SERVICE, project_id)
-
-    # Vendor in the test application's dependencies
-    session.chdir(os.path.join(HERE, "app_engine_test_app"))
-    session.install(*TEST_DEPENDENCIES)
-    session.install(LIBRARY_DIR)
-    session.run(
-        "pip", "install", "--target", "lib", "-r", "requirements.txt", silent=True
-    )
-
-    # Deploy the application.
-    session.run("gcloud", "app", "deploy", "-q", "app.yaml")
-
-    # Run the tests
-    session.env["TEST_APP_URL"] = application_url
-    session.chdir(HERE)
-    session.run("pytest", "test_app_engine.py")
-
-
-@nox.session(python=PYTHON_VERSIONS)
+@nox.session(python=PYTHON_VERSIONS_SYNC)
 def grpc(session):
     session.install(LIBRARY_DIR)
-    session.install(*TEST_DEPENDENCIES, "google-cloud-pubsub==1.0.0")
+    session.install(*TEST_DEPENDENCIES_SYNC, "google-cloud-pubsub==1.7.0")
     session.env[EXPLICIT_CREDENTIALS_ENV] = SERVICE_ACCOUNT_FILE
-    session.run("pytest", "test_grpc.py")
+    default(
+        session,
+        "system_tests_sync/test_grpc.py",
+        *session.posargs,
+    )
 
 
-@nox.session(python=PYTHON_VERSIONS)
+@nox.session(python=PYTHON_VERSIONS_SYNC)
+def requests(session):
+    session.install(LIBRARY_DIR)
+    session.install(*TEST_DEPENDENCIES_SYNC)
+    session.env[EXPLICIT_CREDENTIALS_ENV] = SERVICE_ACCOUNT_FILE
+    default(
+        session,
+        "system_tests_sync/test_requests.py",
+        *session.posargs,
+    )
+
+
+@nox.session(python=PYTHON_VERSIONS_SYNC)
+def urllib3(session):
+    session.install(LIBRARY_DIR)
+    session.install(*TEST_DEPENDENCIES_SYNC)
+    session.env[EXPLICIT_CREDENTIALS_ENV] = SERVICE_ACCOUNT_FILE
+    default(
+        session,
+        "system_tests_sync/test_urllib3.py",
+        *session.posargs,
+    )
+
+
+@nox.session(python=PYTHON_VERSIONS_SYNC)
 def mtls_http(session):
     session.install(LIBRARY_DIR)
-    session.install(*TEST_DEPENDENCIES, "pyopenssl")
+    session.install(*TEST_DEPENDENCIES_SYNC, "pyopenssl")
     session.env[EXPLICIT_CREDENTIALS_ENV] = SERVICE_ACCOUNT_FILE
-    session.run("pytest", "test_mtls_http.py")
+    default(
+        session,
+        "system_tests_sync/test_mtls_http.py",
+        *session.posargs,
+    )
+
+
+@nox.session(python=PYTHON_VERSIONS_SYNC)
+def external_accounts(session):
+    session.install(
+        *TEST_DEPENDENCIES_SYNC,
+        "google-auth",
+        "google-api-python-client",
+        "enum34",
+    )
+    default(
+        session,
+        "system_tests_sync/test_external_accounts.py",
+        *session.posargs,
+    )
+
+
+# ASYNC SYSTEM TESTS
+
+@nox.session(python=PYTHON_VERSIONS_ASYNC)
+def service_account_async(session):
+    session.install(*(TEST_DEPENDENCIES_SYNC + TEST_DEPENDENCIES_ASYNC))
+    session.install(LIBRARY_DIR)
+    default(
+        session,
+        "system_tests_async/test_service_account.py",
+        *session.posargs,
+    )
+
+
+@nox.session(python=PYTHON_VERSIONS_ASYNC)
+def default_explicit_service_account_async(session):
+    session.env[EXPLICIT_CREDENTIALS_ENV] = SERVICE_ACCOUNT_FILE
+    session.env[EXPECT_PROJECT_ENV] = "1"
+    session.install(*(TEST_DEPENDENCIES_SYNC + TEST_DEPENDENCIES_ASYNC))
+    session.install(LIBRARY_DIR)
+    default(
+        session,
+        "system_tests_async/test_default.py",
+        "system_tests_async/test_id_token.py",
+        *session.posargs,
+    )
+
+
+@nox.session(python=PYTHON_VERSIONS_ASYNC)
+def default_explicit_authorized_user_async(session):
+    session.env[EXPLICIT_CREDENTIALS_ENV] = AUTHORIZED_USER_FILE
+    session.install(*(TEST_DEPENDENCIES_SYNC + TEST_DEPENDENCIES_ASYNC))
+    session.install(LIBRARY_DIR)
+    default(
+        session,
+        "system_tests_async/test_default.py",
+        *session.posargs,
+    )
+
+
+@nox.session(python=PYTHON_VERSIONS_ASYNC)
+def default_explicit_authorized_user_explicit_project_async(session):
+    session.env[EXPLICIT_CREDENTIALS_ENV] = AUTHORIZED_USER_FILE
+    session.env[EXPLICIT_PROJECT_ENV] = "example-project"
+    session.env[EXPECT_PROJECT_ENV] = "1"
+    session.install(*(TEST_DEPENDENCIES_SYNC + TEST_DEPENDENCIES_ASYNC))
+    session.install(LIBRARY_DIR)
+    default(
+        session,
+        "system_tests_async/test_default.py",
+        *session.posargs,
+    )
+
+
+@nox.session(python=PYTHON_VERSIONS_ASYNC)
+def default_cloud_sdk_service_account_async(session):
+    configure_cloud_sdk(session, SERVICE_ACCOUNT_FILE)
+    session.env[EXPECT_PROJECT_ENV] = "1"
+    session.install(*(TEST_DEPENDENCIES_SYNC + TEST_DEPENDENCIES_ASYNC))
+    session.install(LIBRARY_DIR)
+    default(
+        session,
+        "system_tests_async/test_default.py",
+        *session.posargs,
+    )
+
+
+@nox.session(python=PYTHON_VERSIONS_ASYNC)
+def default_cloud_sdk_authorized_user_async(session):
+    configure_cloud_sdk(session, AUTHORIZED_USER_FILE)
+    session.install(*(TEST_DEPENDENCIES_SYNC + TEST_DEPENDENCIES_ASYNC))
+    session.install(LIBRARY_DIR)
+    default(
+        session,
+        "system_tests_async/test_default.py",
+        *session.posargs,
+    )
+
+
+@nox.session(python=PYTHON_VERSIONS_ASYNC)
+def default_cloud_sdk_authorized_user_configured_project_async(session):
+    configure_cloud_sdk(session, AUTHORIZED_USER_FILE, project=True)
+    session.env[EXPECT_PROJECT_ENV] = "1"
+    session.install(*(TEST_DEPENDENCIES_SYNC + TEST_DEPENDENCIES_ASYNC))
+    session.install(LIBRARY_DIR)
+    default(
+        session,
+        "system_tests_async/test_default.py",
+        *session.posargs,
+    )

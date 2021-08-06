@@ -73,6 +73,12 @@ def test_encode_extra_headers(signer):
     }
 
 
+def test_encode_custom_alg_in_headers(signer):
+    encoded = jwt.encode(signer, {}, header={"alg": "foo"})
+    header = jwt.decode_header(encoded)
+    assert header == {"typ": "JWT", "alg": "foo", "kid": signer.key_id}
+
+
 @pytest.fixture
 def es256_signer():
     return crypt.ES256Signer.from_string(EC_PRIVATE_KEY_BYTES, "1")
@@ -132,6 +138,17 @@ def test_decode_valid_es256(token_factory):
 def test_decode_valid_with_audience(token_factory):
     payload = jwt.decode(
         token_factory(), certs=PUBLIC_CERT_BYTES, audience="audience@example.com"
+    )
+    assert payload["aud"] == "audience@example.com"
+    assert payload["user"] == "billy bob"
+    assert payload["metadata"]["meta"] == "data"
+
+
+def test_decode_valid_with_audience_list(token_factory):
+    payload = jwt.decode(
+        token_factory(),
+        certs=PUBLIC_CERT_BYTES,
+        audience=["audience@example.com", "another_audience@example.com"],
     )
     assert payload["aud"] == "audience@example.com"
     assert payload["user"] == "billy bob"
@@ -205,6 +222,14 @@ def test_decode_bad_token_wrong_audience(token_factory):
     assert excinfo.match(r"Token has wrong audience")
 
 
+def test_decode_bad_token_wrong_audience_list(token_factory):
+    token = token_factory()
+    audience = ["audience2@example.com", "audience3@example.com"]
+    with pytest.raises(ValueError) as excinfo:
+        jwt.decode(token, PUBLIC_CERT_BYTES, audience=audience)
+    assert excinfo.match(r"Token has wrong audience")
+
+
 def test_decode_wrong_cert(token_factory):
     with pytest.raises(ValueError) as excinfo:
         jwt.decode(token_factory(), OTHER_CERT_BYTES)
@@ -233,9 +258,9 @@ def test_decode_no_key_id(token_factory):
 
 
 def test_decode_unknown_alg():
-    headers = json.dumps({u"kid": u"1", u"alg": u"fakealg"})
+    headers = json.dumps({"kid": "1", "alg": "fakealg"})
     token = b".".join(
-        map(lambda seg: base64.b64encode(seg.encode("utf-8")), [headers, u"{}", u"sig"])
+        map(lambda seg: base64.b64encode(seg.encode("utf-8")), [headers, "{}", "sig"])
     )
 
     with pytest.raises(ValueError) as excinfo:
@@ -245,9 +270,9 @@ def test_decode_unknown_alg():
 
 def test_decode_missing_crytography_alg(monkeypatch):
     monkeypatch.delitem(jwt._ALGORITHM_TO_VERIFIER_CLASS, "ES256")
-    headers = json.dumps({u"kid": u"1", u"alg": u"ES256"})
+    headers = json.dumps({"kid": "1", "alg": "ES256"})
     token = b".".join(
-        map(lambda seg: base64.b64encode(seg.encode("utf-8")), [headers, u"{}", u"sig"])
+        map(lambda seg: base64.b64encode(seg.encode("utf-8")), [headers, "{}", "sig"])
     )
 
     with pytest.raises(ValueError) as excinfo:
@@ -364,6 +389,18 @@ class TestCredentials(object):
         assert new_credentials._audience == new_audience
         assert new_credentials._additional_claims == self.credentials._additional_claims
         assert new_credentials._quota_project_id == self.credentials._quota_project_id
+
+    def test__make_jwt_without_audience(self):
+        cred = jwt.Credentials.from_service_account_info(
+            SERVICE_ACCOUNT_INFO.copy(),
+            subject=self.SUBJECT,
+            audience=None,
+            additional_claims={"scope": "foo bar"},
+        )
+        token, _ = cred._make_jwt()
+        payload = jwt.decode(token, PUBLIC_CERT_BYTES)
+        assert payload["scope"] == "foo bar"
+        assert "aud" not in payload
 
     def test_with_quota_project(self):
         quota_project_id = "project-foo"

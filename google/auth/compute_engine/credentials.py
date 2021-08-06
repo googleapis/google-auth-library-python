@@ -14,14 +14,12 @@
 
 """Google Compute Engine credentials.
 
-This module provides authentication for application running on Google Compute
-Engine using the Compute Engine metadata server.
+This module provides authentication for an application running on Google
+Compute Engine using the Compute Engine metadata server.
 
 """
 
 import datetime
-
-import six
 
 from google.auth import _helpers
 from google.auth import credentials
@@ -32,29 +30,32 @@ from google.auth.compute_engine import _metadata
 from google.oauth2 import _client
 
 
-class Credentials(credentials.ReadOnlyScoped, credentials.Credentials):
+class Credentials(credentials.Scoped, credentials.CredentialsWithQuotaProject):
     """Compute Engine Credentials.
 
     These credentials use the Google Compute Engine metadata server to obtain
-    OAuth 2.0 access tokens associated with the instance's service account.
+    OAuth 2.0 access tokens associated with the instance's service account,
+    and are also used for Cloud Run, Flex and App Engine (except for the Python
+    2.7 runtime, which is supported only on older versions of this library).
 
     For more information about Compute Engine authentication, including how
     to configure scopes, see the `Compute Engine authentication
     documentation`_.
 
-    .. note:: Compute Engine instances can be created with scopes and therefore
-        these credentials are considered to be 'scoped'. However, you can
-        not use :meth:`~google.auth.credentials.ScopedCredentials.with_scopes`
-        because it is not possible to change the scopes that the instance
-        has. Also note that
-        :meth:`~google.auth.credentials.ScopedCredentials.has_scopes` will not
-        work until the credentials have been refreshed.
+    .. note:: On Compute Engine the metadata server ignores requested scopes.
+        On Cloud Run, Flex and App Engine the server honours requested scopes.
 
     .. _Compute Engine authentication documentation:
         https://cloud.google.com/compute/docs/authentication#using
     """
 
-    def __init__(self, service_account_email="default", quota_project_id=None):
+    def __init__(
+        self,
+        service_account_email="default",
+        quota_project_id=None,
+        scopes=None,
+        default_scopes=None,
+    ):
         """
         Args:
             service_account_email (str): The service account email to use, or
@@ -62,10 +63,15 @@ class Credentials(credentials.ReadOnlyScoped, credentials.Credentials):
                 accounts.
             quota_project_id (Optional[str]): The project ID used for quota and
                 billing.
+            scopes (Optional[Sequence[str]]): The list of scopes for the credentials.
+            default_scopes (Optional[Sequence[str]]): Default scopes passed by a
+                Google client library. Use 'scopes' for user-defined scopes.
         """
         super(Credentials, self).__init__()
         self._service_account_email = service_account_email
         self._quota_project_id = quota_project_id
+        self._scopes = scopes
+        self._default_scopes = default_scopes
 
     def _retrieve_info(self, request):
         """Retrieve information about the service account.
@@ -81,7 +87,10 @@ class Credentials(credentials.ReadOnlyScoped, credentials.Credentials):
         )
 
         self._service_account_email = info["email"]
-        self._scopes = info["scopes"]
+
+        # Don't override scopes requested by the user.
+        if self._scopes is None:
+            self._scopes = info["scopes"]
 
     def refresh(self, request):
         """Refresh the access token and scopes.
@@ -95,14 +104,15 @@ class Credentials(credentials.ReadOnlyScoped, credentials.Credentials):
                 service can't be reached if if the instance has not
                 credentials.
         """
+        scopes = self._scopes if self._scopes is not None else self._default_scopes
         try:
             self._retrieve_info(request)
             self.token, self.expiry = _metadata.get_service_account_token(
-                request, service_account=self._service_account_email
+                request, service_account=self._service_account_email, scopes=scopes
             )
         except exceptions.TransportError as caught_exc:
             new_exc = exceptions.RefreshError(caught_exc)
-            six.raise_from(new_exc, caught_exc)
+            raise new_exc from caught_exc
 
     @property
     def service_account_email(self):
@@ -115,14 +125,26 @@ class Credentials(credentials.ReadOnlyScoped, credentials.Credentials):
 
     @property
     def requires_scopes(self):
-        """False: Compute Engine credentials can not be scoped."""
-        return False
+        return not self._scopes
 
-    @_helpers.copy_docstring(credentials.Credentials)
+    @_helpers.copy_docstring(credentials.CredentialsWithQuotaProject)
     def with_quota_project(self, quota_project_id):
         return self.__class__(
             service_account_email=self._service_account_email,
             quota_project_id=quota_project_id,
+            scopes=self._scopes,
+        )
+
+    @_helpers.copy_docstring(credentials.Scoped)
+    def with_scopes(self, scopes, default_scopes=None):
+        # Compute Engine credentials can not be scoped (the metadata service
+        # ignores the scopes parameter). App Engine, Cloud Run and Flex support
+        # requesting scopes.
+        return self.__class__(
+            scopes=scopes,
+            default_scopes=default_scopes,
+            service_account_email=self._service_account_email,
+            quota_project_id=self._quota_project_id,
         )
 
 
@@ -130,7 +152,7 @@ _DEFAULT_TOKEN_LIFETIME_SECS = 3600  # 1 hour in seconds
 _DEFAULT_TOKEN_URI = "https://www.googleapis.com/oauth2/v4/token"
 
 
-class IDTokenCredentials(credentials.Credentials, credentials.Signing):
+class IDTokenCredentials(credentials.CredentialsWithQuotaProject, credentials.Signing):
     """Open ID Connect ID Token-based service account credentials.
 
     These credentials relies on the default service account of a GCE instance.
@@ -254,7 +276,7 @@ class IDTokenCredentials(credentials.Credentials, credentials.Signing):
                 quota_project_id=self._quota_project_id,
             )
 
-    @_helpers.copy_docstring(credentials.Credentials)
+    @_helpers.copy_docstring(credentials.CredentialsWithQuotaProject)
     def with_quota_project(self, quota_project_id):
 
         # since the signer is already instantiated,
@@ -323,15 +345,12 @@ class IDTokenCredentials(credentials.Credentials, credentials.Signing):
             ValueError: If extracting expiry from the obtained ID token fails.
         """
         try:
-            id_token = _metadata.get(
-                request,
-                "instance/service-accounts/default/identity?audience={}&format=full".format(
-                    self._target_audience
-                ),
-            )
+            path = "instance/service-accounts/default/identity"
+            params = {"audience": self._target_audience, "format": "full"}
+            id_token = _metadata.get(request, path, params=params)
         except exceptions.TransportError as caught_exc:
             new_exc = exceptions.RefreshError(caught_exc)
-            six.raise_from(new_exc, caught_exc)
+            raise new_exc from caught_exc
 
         _, payload, _, _ = jwt._unverified_decode(id_token)
         return id_token, datetime.datetime.fromtimestamp(payload["exp"])

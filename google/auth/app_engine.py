@@ -77,18 +77,28 @@ def get_project_id():
     return app_identity.get_application_id()
 
 
-class Credentials(credentials.Scoped, credentials.Signing, credentials.Credentials):
+class Credentials(
+    credentials.Scoped, credentials.Signing, credentials.CredentialsWithQuotaProject
+):
     """App Engine standard environment credentials.
 
     These credentials use the App Engine App Identity API to obtain access
     tokens.
     """
 
-    def __init__(self, scopes=None, service_account_id=None, quota_project_id=None):
+    def __init__(
+        self,
+        scopes=None,
+        default_scopes=None,
+        service_account_id=None,
+        quota_project_id=None,
+    ):
         """
         Args:
             scopes (Sequence[str]): Scopes to request from the App Identity
                 API.
+            default_scopes (Sequence[str]): Default scopes passed by a
+                Google client library. Use 'scopes' for user-defined scopes.
             service_account_id (str): The service account ID passed into
                 :func:`google.appengine.api.app_identity.get_access_token`.
                 If not specified, the default application service account
@@ -107,16 +117,16 @@ class Credentials(credentials.Scoped, credentials.Signing, credentials.Credentia
 
         super(Credentials, self).__init__()
         self._scopes = scopes
+        self._default_scopes = default_scopes
         self._service_account_id = service_account_id
         self._signer = Signer()
         self._quota_project_id = quota_project_id
 
     @_helpers.copy_docstring(credentials.Credentials)
     def refresh(self, request):
+        scopes = self._scopes if self._scopes is not None else self._default_scopes
         # pylint: disable=unused-argument
-        token, ttl = app_identity.get_access_token(
-            self._scopes, self._service_account_id
-        )
+        token, ttl = app_identity.get_access_token(scopes, self._service_account_id)
         expiry = datetime.datetime.utcfromtimestamp(ttl)
 
         self.token, self.expiry = token, expiry
@@ -135,17 +145,18 @@ class Credentials(credentials.Scoped, credentials.Signing, credentials.Credentia
         Returns:
             bool: True if there are no scopes set otherwise False.
         """
-        return not self._scopes
+        return not self._scopes and not self._default_scopes
 
     @_helpers.copy_docstring(credentials.Scoped)
-    def with_scopes(self, scopes):
+    def with_scopes(self, scopes, default_scopes=None):
         return self.__class__(
             scopes=scopes,
+            default_scopes=default_scopes,
             service_account_id=self._service_account_id,
             quota_project_id=self.quota_project_id,
         )
 
-    @_helpers.copy_docstring(credentials.Credentials)
+    @_helpers.copy_docstring(credentials.CredentialsWithQuotaProject)
     def with_quota_project(self, quota_project_id):
         return self.__class__(
             scopes=self._scopes,

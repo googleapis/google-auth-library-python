@@ -17,22 +17,21 @@
 from __future__ import absolute_import
 
 import logging
+import os
 
-import six
-
+from google.auth import environment_vars
 from google.auth import exceptions
 from google.auth.transport import _mtls_helper
+from google.oauth2 import service_account
 
 try:
     import grpc
 except ImportError as caught_exc:  # pragma: NO COVER
-    six.raise_from(
-        ImportError(
-            "gRPC is not installed, please install the grpcio package "
-            "to use the gRPC transport."
-        ),
-        caught_exc,
+    new_exc = ImportError(
+        "gRPC is not installed, please install the grpcio package "
+        "to use the gRPC transport."
     )
+    raise new_exc from caught_exc
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -49,15 +48,19 @@ class AuthMetadataPlugin(grpc.AuthMetadataPlugin):
             add to requests.
         request (google.auth.transport.Request): A HTTP transport request
             object used to refresh credentials as needed.
+        default_host (Optional[str]): A host like "pubsub.googleapis.com".
+            This is used when a self-signed JWT is created from service
+            account credentials.
     """
 
-    def __init__(self, credentials, request):
+    def __init__(self, credentials, request, default_host=None):
         # pylint: disable=no-value-for-parameter
         # pylint doesn't realize that the super method takes no arguments
         # because this class is the same name as the superclass.
         super(AuthMetadataPlugin, self).__init__()
         self._credentials = credentials
         self._request = request
+        self._default_host = default_host
 
     def _get_authorization_headers(self, context):
         """Gets the authorization headers for a request.
@@ -67,11 +70,21 @@ class AuthMetadataPlugin(grpc.AuthMetadataPlugin):
                 to add to the request.
         """
         headers = {}
+
+        # https://google.aip.dev/auth/4111
+        # Attempt to use self-signed JWTs when a service account is used.
+        # A default host must be explicitly provided since it cannot always
+        # be determined from the context.service_url.
+        if isinstance(self._credentials, service_account.Credentials):
+            self._credentials._create_self_signed_jwt(
+                "https://{}/".format(self._default_host) if self._default_host else None
+            )
+
         self._credentials.before_request(
             self._request, context.method_name, context.service_url, headers
         )
 
-        return list(six.iteritems(headers))
+        return list(headers.items())
 
     def __call__(self, context, callback):
         """Passes authorization metadata into the given callback.
@@ -96,6 +109,9 @@ def secure_authorized_channel(
 
     This creates a channel with SSL and :class:`AuthMetadataPlugin`. This
     channel can be used to create a stub that can make authorized requests.
+    Users can configure client certificate or rely on device certificates to
+    establish a mutual TLS channel, if the `GOOGLE_API_USE_CLIENT_CERTIFICATE`
+    variable is explicitly set to `true`.
 
     Example::
 
@@ -138,7 +154,9 @@ def secure_authorized_channel(
             ssl_credentials=regular_ssl_credentials)
 
     Option 2: create a mutual TLS channel by calling a callback which returns
-    the client side certificate and the key::
+    the client side certificate and the key (Note that
+    `GOOGLE_API_USE_CLIENT_CERTIFICATE` environment variable must be explicitly
+    set to `true`)::
 
         def my_client_cert_callback():
             code_to_load_client_cert_and_key()
@@ -155,7 +173,9 @@ def secure_authorized_channel(
 
     Option 3: use application default SSL credentials. It searches and uses
     the command in a context aware metadata file, which is available on devices
-    with endpoint verification support.
+    with endpoint verification support (Note that
+    `GOOGLE_API_USE_CLIENT_CERTIFICATE` environment variable must be explicitly
+    set to `true`).
     See https://cloud.google.com/endpoint-verification/docs/overview::
 
         try:
@@ -174,7 +194,8 @@ def secure_authorized_channel(
             ssl_credentials=default_ssl_credentials)
 
     Option 4: not setting ssl_credentials and client_cert_callback. For devices
-    without endpoint verification support, a regular TLS channel is created;
+    without endpoint verification support or `GOOGLE_API_USE_CLIENT_CERTIFICATE`
+    environment variable is not `true`, a regular TLS channel is created;
     otherwise, a mutual TLS channel is created, however, the call should be
     wrapped in a try/except block in case of malformed context aware metadata.
 
@@ -205,13 +226,15 @@ def secure_authorized_channel(
             This argument is mutually exclusive with client_cert_callback;
             providing both will raise an exception.
             If ssl_credentials and client_cert_callback are None, application
-            default SSL credentials will be used.
+            default SSL credentials are used if `GOOGLE_API_USE_CLIENT_CERTIFICATE`
+            environment variable is explicitly set to `true`, otherwise one way TLS
+            SSL credentials are used.
         client_cert_callback (Callable[[], (bytes, bytes)]): Optional
             callback function to obtain client certicate and key for mutual TLS
             connection. This argument is mutually exclusive with
             ssl_credentials; providing both will raise an exception.
-            If ssl_credentials and client_cert_callback are None, application
-            default SSL credentials will be used.
+            This argument does nothing unless `GOOGLE_API_USE_CLIENT_CERTIFICATE`
+            environment variable is explicitly set to `true`.
         kwargs: Additional arguments to pass to :func:`grpc.secure_channel`.
 
     Returns:
@@ -235,16 +258,21 @@ def secure_authorized_channel(
 
     # If SSL credentials are not explicitly set, try client_cert_callback and ADC.
     if not ssl_credentials:
-        if client_cert_callback:
+        use_client_cert = os.getenv(
+            environment_vars.GOOGLE_API_USE_CLIENT_CERTIFICATE, "false"
+        )
+        if use_client_cert == "true" and client_cert_callback:
             # Use the callback if provided.
             cert, key = client_cert_callback()
             ssl_credentials = grpc.ssl_channel_credentials(
                 certificate_chain=cert, private_key=key
             )
-        else:
+        elif use_client_cert == "true":
             # Use application default SSL credentials.
             adc_ssl_credentils = SslCredentials()
             ssl_credentials = adc_ssl_credentils.ssl_credentials
+        else:
+            ssl_credentials = grpc.ssl_channel_credentials()
 
     # Combine the ssl credentials and the authorization credentials.
     composite_credentials = grpc.composite_channel_credentials(
@@ -257,17 +285,29 @@ def secure_authorized_channel(
 class SslCredentials:
     """Class for application default SSL credentials.
 
-    For devices with endpoint verification support, a device certificate will be
-    automatically loaded and mutual TLS will be established.
+    The behavior is controlled by `GOOGLE_API_USE_CLIENT_CERTIFICATE` environment
+    variable whose default value is `false`. Client certificate will not be used
+    unless the environment variable is explicitly set to `true`. See
+    https://google.aip.dev/auth/4114
+
+    If the environment variable is `true`, then for devices with endpoint verification
+    support, a device certificate will be automatically loaded and mutual TLS will
+    be established.
     See https://cloud.google.com/endpoint-verification/docs/overview.
     """
 
     def __init__(self):
-        # Load client SSL credentials.
-        metadata_path = _mtls_helper._check_dca_metadata_path(
-            _mtls_helper.CONTEXT_AWARE_METADATA_PATH
+        use_client_cert = os.getenv(
+            environment_vars.GOOGLE_API_USE_CLIENT_CERTIFICATE, "false"
         )
-        self._is_mtls = metadata_path is not None
+        if use_client_cert != "true":
+            self._is_mtls = False
+        else:
+            # Load client SSL credentials.
+            metadata_path = _mtls_helper._check_dca_metadata_path(
+                _mtls_helper.CONTEXT_AWARE_METADATA_PATH
+            )
+            self._is_mtls = metadata_path is not None
 
     @property
     def ssl_credentials(self):
@@ -293,7 +333,7 @@ class SslCredentials:
                 )
             except exceptions.ClientCertError as caught_exc:
                 new_exc = exceptions.MutualTLSChannelError(caught_exc)
-                six.raise_from(new_exc, caught_exc)
+                raise new_exc from caught_exc
         else:
             self._ssl_credentials = grpc.ssl_channel_credentials()
 

@@ -38,6 +38,7 @@ with open(AUTH_USER_JSON_FILE, "r") as fh:
 class TestCredentials(object):
     TOKEN_URI = "https://example.com/oauth2/token"
     REFRESH_TOKEN = "refresh_token"
+    RAPT_TOKEN = "rapt_token"
     CLIENT_ID = "client_id"
     CLIENT_SECRET = "client_secret"
 
@@ -49,6 +50,7 @@ class TestCredentials(object):
             token_uri=cls.TOKEN_URI,
             client_id=cls.CLIENT_ID,
             client_secret=cls.CLIENT_SECRET,
+            rapt_token=cls.RAPT_TOKEN,
         )
 
     def test_default_state(self):
@@ -63,14 +65,60 @@ class TestCredentials(object):
         assert credentials.token_uri == self.TOKEN_URI
         assert credentials.client_id == self.CLIENT_ID
         assert credentials.client_secret == self.CLIENT_SECRET
+        assert credentials.rapt_token == self.RAPT_TOKEN
+        assert credentials.refresh_handler is None
 
-    @mock.patch("google.oauth2._client.refresh_grant", autospec=True)
+    def test_refresh_handler_setter_and_getter(self):
+        scopes = ["email", "profile"]
+        original_refresh_handler = mock.Mock(return_value=("ACCESS_TOKEN_1", None))
+        updated_refresh_handler = mock.Mock(return_value=("ACCESS_TOKEN_2", None))
+        creds = credentials.Credentials(
+            token=None,
+            refresh_token=None,
+            token_uri=None,
+            client_id=None,
+            client_secret=None,
+            rapt_token=None,
+            scopes=scopes,
+            default_scopes=None,
+            refresh_handler=original_refresh_handler,
+        )
+
+        assert creds.refresh_handler is original_refresh_handler
+
+        creds.refresh_handler = updated_refresh_handler
+
+        assert creds.refresh_handler is updated_refresh_handler
+
+        creds.refresh_handler = None
+
+        assert creds.refresh_handler is None
+
+    def test_invalid_refresh_handler(self):
+        scopes = ["email", "profile"]
+        with pytest.raises(TypeError) as excinfo:
+            credentials.Credentials(
+                token=None,
+                refresh_token=None,
+                token_uri=None,
+                client_id=None,
+                client_secret=None,
+                rapt_token=None,
+                scopes=scopes,
+                default_scopes=None,
+                refresh_handler=object(),
+            )
+
+        assert excinfo.match("The provided refresh_handler is not a callable or None.")
+
+    @mock.patch("google.oauth2.reauth.refresh_grant", autospec=True)
     @mock.patch(
         "google.auth._helpers.utcnow",
         return_value=datetime.datetime.min + _helpers.CLOCK_SKEW,
     )
     def test_refresh_success(self, unused_utcnow, refresh_grant):
         token = "token"
+        new_rapt_token = "new_rapt_token"
         expiry = _helpers.utcnow() + datetime.timedelta(seconds=500)
         grant_response = {"id_token": mock.sentinel.id_token}
         refresh_grant.return_value = (
@@ -82,6 +130,8 @@ class TestCredentials(object):
             expiry,
             # Extra data
             grant_response,
+            # rapt_token
+            new_rapt_token,
         )
 
         request = mock.create_autospec(transport.Request)
@@ -98,12 +148,14 @@ class TestCredentials(object):
             self.CLIENT_ID,
             self.CLIENT_SECRET,
             None,
+            self.RAPT_TOKEN,
         )
 
         # Check that the credentials have the token and expiry
         assert credentials.token == token
         assert credentials.expiry == expiry
         assert credentials.id_token == mock.sentinel.id_token
+        assert credentials.rapt_token == new_rapt_token
 
         # Check that the credentials are valid (have a token and are not
         # expired)
@@ -118,16 +170,16 @@ class TestCredentials(object):
 
         request.assert_not_called()
 
-    @mock.patch("google.oauth2._client.refresh_grant", autospec=True)
+    @mock.patch("google.oauth2.reauth.refresh_grant", autospec=True)
     @mock.patch(
         "google.auth._helpers.utcnow",
         return_value=datetime.datetime.min + _helpers.CLOCK_SKEW,
     )
-    def test_credentials_with_scopes_requested_refresh_success(
+    def test_refresh_with_refresh_token_and_refresh_handler(
         self, unused_utcnow, refresh_grant
     ):
-        scopes = ["email", "profile"]
         token = "token"
+        new_rapt_token = "new_rapt_token"
         expiry = _helpers.utcnow() + datetime.timedelta(seconds=500)
         grant_response = {"id_token": mock.sentinel.id_token}
         refresh_grant.return_value = (
@@ -139,6 +191,225 @@ class TestCredentials(object):
             expiry,
             # Extra data
             grant_response,
+            # rapt_token
+            new_rapt_token,
+        )
+
+        refresh_handler = mock.Mock()
+        request = mock.create_autospec(transport.Request)
+        creds = credentials.Credentials(
+            token=None,
+            refresh_token=self.REFRESH_TOKEN,
+            token_uri=self.TOKEN_URI,
+            client_id=self.CLIENT_ID,
+            client_secret=self.CLIENT_SECRET,
+            rapt_token=self.RAPT_TOKEN,
+            refresh_handler=refresh_handler,
+        )
+
+        # Refresh credentials
+        creds.refresh(request)
+
+        # Check jwt grant call.
+        refresh_grant.assert_called_with(
+            request,
+            self.TOKEN_URI,
+            self.REFRESH_TOKEN,
+            self.CLIENT_ID,
+            self.CLIENT_SECRET,
+            None,
+            self.RAPT_TOKEN,
+        )
+
+        # Check that the credentials have the token and expiry
+        assert creds.token == token
+        assert creds.expiry == expiry
+        assert creds.id_token == mock.sentinel.id_token
+        assert creds.rapt_token == new_rapt_token
+
+        # Check that the credentials are valid (have a token and are not
+        # expired)
+        assert creds.valid
+
+        # Assert refresh handler not called as the refresh token has
+        # higher priority.
+        refresh_handler.assert_not_called()
+
+    @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+    def test_refresh_with_refresh_handler_success_scopes(self, unused_utcnow):
+        expected_expiry = datetime.datetime.min + datetime.timedelta(seconds=2800)
+        refresh_handler = mock.Mock(return_value=("ACCESS_TOKEN", expected_expiry))
+        scopes = ["email", "profile"]
+        default_scopes = ["https://www.googleapis.com/auth/cloud-platform"]
+        request = mock.create_autospec(transport.Request)
+        creds = credentials.Credentials(
+            token=None,
+            refresh_token=None,
+            token_uri=None,
+            client_id=None,
+            client_secret=None,
+            rapt_token=None,
+            scopes=scopes,
+            default_scopes=default_scopes,
+            refresh_handler=refresh_handler,
+        )
+
+        creds.refresh(request)
+
+        assert creds.token == "ACCESS_TOKEN"
+        assert creds.expiry == expected_expiry
+        assert creds.valid
+        assert not creds.expired
+        # Confirm refresh handler called with the expected arguments.
+        refresh_handler.assert_called_with(request, scopes=scopes)
+
+    @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+    def test_refresh_with_refresh_handler_success_default_scopes(self, unused_utcnow):
+        expected_expiry = datetime.datetime.min + datetime.timedelta(seconds=2800)
+        original_refresh_handler = mock.Mock(
+            return_value=("UNUSED_TOKEN", expected_expiry)
+        )
+        refresh_handler = mock.Mock(return_value=("ACCESS_TOKEN", expected_expiry))
+        default_scopes = ["https://www.googleapis.com/auth/cloud-platform"]
+        request = mock.create_autospec(transport.Request)
+        creds = credentials.Credentials(
+            token=None,
+            refresh_token=None,
+            token_uri=None,
+            client_id=None,
+            client_secret=None,
+            rapt_token=None,
+            scopes=None,
+            default_scopes=default_scopes,
+            refresh_handler=original_refresh_handler,
+        )
+
+        # Test newly set refresh_handler is used instead of the original one.
+        creds.refresh_handler = refresh_handler
+        creds.refresh(request)
+
+        assert creds.token == "ACCESS_TOKEN"
+        assert creds.expiry == expected_expiry
+        assert creds.valid
+        assert not creds.expired
+        # default_scopes should be used since no developer provided scopes
+        # are provided.
+        refresh_handler.assert_called_with(request, scopes=default_scopes)
+
+    @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+    def test_refresh_with_refresh_handler_invalid_token(self, unused_utcnow):
+        expected_expiry = datetime.datetime.min + datetime.timedelta(seconds=2800)
+        # Simulate refresh handler does not return a valid token.
+        refresh_handler = mock.Mock(return_value=(None, expected_expiry))
+        scopes = ["email", "profile"]
+        default_scopes = ["https://www.googleapis.com/auth/cloud-platform"]
+        request = mock.create_autospec(transport.Request)
+        creds = credentials.Credentials(
+            token=None,
+            refresh_token=None,
+            token_uri=None,
+            client_id=None,
+            client_secret=None,
+            rapt_token=None,
+            scopes=scopes,
+            default_scopes=default_scopes,
+            refresh_handler=refresh_handler,
+        )
+
+        with pytest.raises(
+            exceptions.RefreshError, match="returned token is not a string"
+        ):
+            creds.refresh(request)
+
+        assert creds.token is None
+        assert creds.expiry is None
+        assert not creds.valid
+        # Confirm refresh handler called with the expected arguments.
+        refresh_handler.assert_called_with(request, scopes=scopes)
+
+    def test_refresh_with_refresh_handler_invalid_expiry(self):
+        # Simulate refresh handler returns expiration time in an invalid unit.
+        refresh_handler = mock.Mock(return_value=("TOKEN", 2800))
+        scopes = ["email", "profile"]
+        default_scopes = ["https://www.googleapis.com/auth/cloud-platform"]
+        request = mock.create_autospec(transport.Request)
+        creds = credentials.Credentials(
+            token=None,
+            refresh_token=None,
+            token_uri=None,
+            client_id=None,
+            client_secret=None,
+            rapt_token=None,
+            scopes=scopes,
+            default_scopes=default_scopes,
+            refresh_handler=refresh_handler,
+        )
+
+        with pytest.raises(
+            exceptions.RefreshError, match="returned expiry is not a datetime object"
+        ):
+            creds.refresh(request)
+
+        assert creds.token is None
+        assert creds.expiry is None
+        assert not creds.valid
+        # Confirm refresh handler called with the expected arguments.
+        refresh_handler.assert_called_with(request, scopes=scopes)
+
+    @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+    def test_refresh_with_refresh_handler_expired_token(self, unused_utcnow):
+        expected_expiry = datetime.datetime.min + _helpers.CLOCK_SKEW
+        # Simulate refresh handler returns an expired token.
+        refresh_handler = mock.Mock(return_value=("TOKEN", expected_expiry))
+        scopes = ["email", "profile"]
+        default_scopes = ["https://www.googleapis.com/auth/cloud-platform"]
+        request = mock.create_autospec(transport.Request)
+        creds = credentials.Credentials(
+            token=None,
+            refresh_token=None,
+            token_uri=None,
+            client_id=None,
+            client_secret=None,
+            rapt_token=None,
+            scopes=scopes,
+            default_scopes=default_scopes,
+            refresh_handler=refresh_handler,
+        )
+
+        with pytest.raises(exceptions.RefreshError, match="already expired"):
+            creds.refresh(request)
+
+        assert creds.token is None
+        assert creds.expiry is None
+        assert not creds.valid
+        # Confirm refresh handler called with the expected arguments.
+        refresh_handler.assert_called_with(request, scopes=scopes)
+
+    @mock.patch("google.oauth2.reauth.refresh_grant", autospec=True)
+    @mock.patch(
+        "google.auth._helpers.utcnow",
+        return_value=datetime.datetime.min + _helpers.CLOCK_SKEW,
+    )
+    def test_credentials_with_scopes_requested_refresh_success(
+        self, unused_utcnow, refresh_grant
+    ):
+        scopes = ["email", "profile"]
+        default_scopes = ["https://www.googleapis.com/auth/cloud-platform"]
+        token = "token"
+        new_rapt_token = "new_rapt_token"
+        expiry = _helpers.utcnow() + datetime.timedelta(seconds=500)
+        grant_response = {"id_token": mock.sentinel.id_token, "scope": "email profile"}
+        refresh_grant.return_value = (
+            # Access token
+            token,
+            # New refresh token
+            None,
+            # Expiry,
+            expiry,
+            # Extra data
+            grant_response,
+            # rapt token
+            new_rapt_token,
         )
 
         request = mock.create_autospec(transport.Request)
@@ -149,6 +420,8 @@ class TestCredentials(object):
             client_id=self.CLIENT_ID,
             client_secret=self.CLIENT_SECRET,
             scopes=scopes,
+            default_scopes=default_scopes,
+            rapt_token=self.RAPT_TOKEN,
         )
 
         # Refresh credentials
@@ -162,6 +435,7 @@ class TestCredentials(object):
             self.CLIENT_ID,
             self.CLIENT_SECRET,
             scopes,
+            self.RAPT_TOKEN,
         )
 
         # Check that the credentials have the token and expiry
@@ -169,12 +443,75 @@ class TestCredentials(object):
         assert creds.expiry == expiry
         assert creds.id_token == mock.sentinel.id_token
         assert creds.has_scopes(scopes)
+        assert creds.rapt_token == new_rapt_token
 
         # Check that the credentials are valid (have a token and are not
         # expired.)
         assert creds.valid
 
-    @mock.patch("google.oauth2._client.refresh_grant", autospec=True)
+    @mock.patch("google.oauth2.reauth.refresh_grant", autospec=True)
+    @mock.patch(
+        "google.auth._helpers.utcnow",
+        return_value=datetime.datetime.min + _helpers.CLOCK_SKEW,
+    )
+    def test_credentials_with_only_default_scopes_requested(
+        self, unused_utcnow, refresh_grant
+    ):
+        default_scopes = ["email", "profile"]
+        token = "token"
+        new_rapt_token = "new_rapt_token"
+        expiry = _helpers.utcnow() + datetime.timedelta(seconds=500)
+        grant_response = {"id_token": mock.sentinel.id_token}
+        refresh_grant.return_value = (
+            # Access token
+            token,
+            # New refresh token
+            None,
+            # Expiry,
+            expiry,
+            # Extra data
+            grant_response,
+            # rapt token
+            new_rapt_token,
+        )
+
+        request = mock.create_autospec(transport.Request)
+        creds = credentials.Credentials(
+            token=None,
+            refresh_token=self.REFRESH_TOKEN,
+            token_uri=self.TOKEN_URI,
+            client_id=self.CLIENT_ID,
+            client_secret=self.CLIENT_SECRET,
+            default_scopes=default_scopes,
+            rapt_token=self.RAPT_TOKEN,
+        )
+
+        # Refresh credentials
+        creds.refresh(request)
+
+        # Check jwt grant call.
+        refresh_grant.assert_called_with(
+            request,
+            self.TOKEN_URI,
+            self.REFRESH_TOKEN,
+            self.CLIENT_ID,
+            self.CLIENT_SECRET,
+            default_scopes,
+            self.RAPT_TOKEN,
+        )
+
+        # Check that the credentials have the token and expiry
+        assert creds.token == token
+        assert creds.expiry == expiry
+        assert creds.id_token == mock.sentinel.id_token
+        assert creds.has_scopes(default_scopes)
+        assert creds.rapt_token == new_rapt_token
+
+        # Check that the credentials are valid (have a token and are not
+        # expired.)
+        assert creds.valid
+
+    @mock.patch("google.oauth2.reauth.refresh_grant", autospec=True)
     @mock.patch(
         "google.auth._helpers.utcnow",
         return_value=datetime.datetime.min + _helpers.CLOCK_SKEW,
@@ -184,6 +521,7 @@ class TestCredentials(object):
     ):
         scopes = ["email", "profile"]
         token = "token"
+        new_rapt_token = "new_rapt_token"
         expiry = _helpers.utcnow() + datetime.timedelta(seconds=500)
         grant_response = {
             "id_token": mock.sentinel.id_token,
@@ -198,6 +536,8 @@ class TestCredentials(object):
             expiry,
             # Extra data
             grant_response,
+            # rapt token
+            new_rapt_token,
         )
 
         request = mock.create_autospec(transport.Request)
@@ -208,6 +548,7 @@ class TestCredentials(object):
             client_id=self.CLIENT_ID,
             client_secret=self.CLIENT_SECRET,
             scopes=scopes,
+            rapt_token=self.RAPT_TOKEN,
         )
 
         # Refresh credentials
@@ -221,6 +562,7 @@ class TestCredentials(object):
             self.CLIENT_ID,
             self.CLIENT_SECRET,
             scopes,
+            self.RAPT_TOKEN,
         )
 
         # Check that the credentials have the token and expiry
@@ -228,12 +570,13 @@ class TestCredentials(object):
         assert creds.expiry == expiry
         assert creds.id_token == mock.sentinel.id_token
         assert creds.has_scopes(scopes)
+        assert creds.rapt_token == new_rapt_token
 
         # Check that the credentials are valid (have a token and are not
         # expired.)
         assert creds.valid
 
-    @mock.patch("google.oauth2._client.refresh_grant", autospec=True)
+    @mock.patch("google.oauth2.reauth.refresh_grant", autospec=True)
     @mock.patch(
         "google.auth._helpers.utcnow",
         return_value=datetime.datetime.min + _helpers.CLOCK_SKEW,
@@ -244,10 +587,11 @@ class TestCredentials(object):
         scopes = ["email", "profile"]
         scopes_returned = ["email"]
         token = "token"
+        new_rapt_token = "new_rapt_token"
         expiry = _helpers.utcnow() + datetime.timedelta(seconds=500)
         grant_response = {
             "id_token": mock.sentinel.id_token,
-            "scopes": " ".join(scopes_returned),
+            "scope": " ".join(scopes_returned),
         }
         refresh_grant.return_value = (
             # Access token
@@ -258,6 +602,8 @@ class TestCredentials(object):
             expiry,
             # Extra data
             grant_response,
+            # rapt token
+            new_rapt_token,
         )
 
         request = mock.create_autospec(transport.Request)
@@ -268,6 +614,7 @@ class TestCredentials(object):
             client_id=self.CLIENT_ID,
             client_secret=self.CLIENT_SECRET,
             scopes=scopes,
+            rapt_token=self.RAPT_TOKEN,
         )
 
         # Refresh credentials
@@ -284,6 +631,7 @@ class TestCredentials(object):
             self.CLIENT_ID,
             self.CLIENT_SECRET,
             scopes,
+            self.RAPT_TOKEN,
         )
 
         # Check that the credentials have the token and expiry
@@ -291,6 +639,7 @@ class TestCredentials(object):
         assert creds.expiry == expiry
         assert creds.id_token == mock.sentinel.id_token
         assert creds.has_scopes(scopes)
+        assert creds.rapt_token == new_rapt_token
 
         # Check that the credentials are valid (have a token and are not
         # expired.)
@@ -309,6 +658,7 @@ class TestCredentials(object):
         headers = {}
         creds.apply(headers)
         assert headers["x-goog-user-project"] == "quota-project-123"
+        assert "token" in headers["authorization"]
 
     def test_apply_with_no_quota_project_id(self):
         creds = credentials.Credentials(
@@ -322,6 +672,7 @@ class TestCredentials(object):
         headers = {}
         creds.apply(headers)
         assert "x-goog-user-project" not in headers
+        assert "token" in headers["authorization"]
 
     def test_with_quota_project(self):
         creds = credentials.Credentials(
@@ -357,6 +708,20 @@ class TestCredentials(object):
         assert creds.token_uri == credentials._GOOGLE_OAUTH2_TOKEN_ENDPOINT
         assert creds.scopes == scopes
 
+        info["scopes"] = "email"  # single non-array scope from file
+        creds = credentials.Credentials.from_authorized_user_info(info)
+        assert creds.scopes == [info["scopes"]]
+
+        info["scopes"] = ["email", "profile"]  # array scope from file
+        creds = credentials.Credentials.from_authorized_user_info(info)
+        assert creds.scopes == info["scopes"]
+
+        expiry = datetime.datetime(2020, 8, 14, 15, 54, 1)
+        info["expiry"] = expiry.isoformat() + "Z"
+        creds = credentials.Credentials.from_authorized_user_info(info)
+        assert creds.expiry == expiry
+        assert creds.expired
+
     def test_from_authorized_user_file(self):
         info = AUTH_USER_INFO.copy()
 
@@ -379,7 +744,10 @@ class TestCredentials(object):
 
     def test_to_json(self):
         info = AUTH_USER_INFO.copy()
+        expiry = datetime.datetime(2020, 8, 14, 15, 54, 1)
+        info["expiry"] = expiry.isoformat() + "Z"
         creds = credentials.Credentials.from_authorized_user_info(info)
+        assert creds.expiry == expiry
 
         # Test with no `strip` arg
         json_output = creds.to_json()
@@ -390,6 +758,7 @@ class TestCredentials(object):
         assert json_asdict.get("client_id") == creds.client_id
         assert json_asdict.get("scopes") == creds.scopes
         assert json_asdict.get("client_secret") == creds.client_secret
+        assert json_asdict.get("expiry") == info["expiry"]
 
         # Test with a `strip` arg
         json_output = creds.to_json(strip=["client_secret"])
@@ -401,6 +770,12 @@ class TestCredentials(object):
         assert json_asdict.get("scopes") == creds.scopes
         assert json_asdict.get("client_secret") is None
 
+        # Test with no expiry
+        creds.expiry = None
+        json_output = creds.to_json()
+        json_asdict = json.loads(json_output)
+        assert json_asdict.get("expiry") is None
+
     def test_pickle_and_unpickle(self):
         creds = self.make_credentials()
         unpickled = pickle.loads(pickle.dumps(creds))
@@ -410,6 +785,32 @@ class TestCredentials(object):
 
         for attr in list(creds.__dict__):
             assert getattr(creds, attr) == getattr(unpickled, attr)
+
+    def test_pickle_and_unpickle_with_refresh_handler(self):
+        expected_expiry = _helpers.utcnow() + datetime.timedelta(seconds=2800)
+        refresh_handler = mock.Mock(return_value=("TOKEN", expected_expiry))
+
+        creds = credentials.Credentials(
+            token=None,
+            refresh_token=None,
+            token_uri=None,
+            client_id=None,
+            client_secret=None,
+            rapt_token=None,
+            refresh_handler=refresh_handler,
+        )
+        unpickled = pickle.loads(pickle.dumps(creds))
+
+        # make sure attributes aren't lost during pickling
+        assert list(creds.__dict__).sort() == list(unpickled.__dict__).sort()
+
+        for attr in list(creds.__dict__):
+            # For the _refresh_handler property, the unpickled creds should be
+            # set to None.
+            if attr == "_refresh_handler":
+                assert getattr(unpickled, attr) is None
+            else:
+                assert getattr(creds, attr) == getattr(unpickled, attr)
 
     def test_pickle_with_missing_attribute(self):
         creds = self.make_credentials()

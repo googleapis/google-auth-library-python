@@ -53,3 +53,26 @@ the system falls back to the old variable.
 GCE_METADATA_IP = "GCE_METADATA_IP"
 """Environment variable providing an alternate ip:port to be used for ip-only
 GCE metadata requests."""
+
+GOOGLE_API_USE_CLIENT_CERTIFICATE = "GOOGLE_API_USE_CLIENT_CERTIFICATE"
+"""Environment variable controlling whether to use client certificate or not.
+
+The default value is false. Users have to explicitly set this value to true
+in order to use client certificate to establish a mutual TLS channel."""
+
+LEGACY_APPENGINE_RUNTIME = "APPENGINE_RUNTIME"
+"""Gen1 environment variable defining the App Engine Runtime.
+
+Used to distinguish between GAE gen1 and GAE gen2+.
+"""
+
+# AWS environment variables used with AWS workload identity pools to retrieve
+# AWS security credentials and the AWS region needed to create a serialized
+# signed requests to the AWS STS GetCalledIdentity API that can be exchanged
+# for a Google access tokens via the GCP STS endpoint.
+# When not available the AWS metadata server is used to retrieve these values.
+AWS_ACCESS_KEY_ID = "AWS_ACCESS_KEY_ID"
+AWS_SECRET_ACCESS_KEY = "AWS_SECRET_ACCESS_KEY"
+AWS_SESSION_TOKEN = "AWS_SESSION_TOKEN"
+AWS_REGION = "AWS_REGION"
+AWS_DEFAULT_REGION = "AWS_DEFAULT_REGION"

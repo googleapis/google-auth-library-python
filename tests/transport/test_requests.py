@@ -14,6 +14,8 @@
 
 import datetime
 import functools
+import http.client
+import os
 import sys
 
 import freezegun
@@ -22,12 +24,13 @@ import OpenSSL
 import pytest
 import requests
 import requests.adapters
-from six.moves import http_client
 
+from google.auth import environment_vars
 from google.auth import exceptions
 import google.auth.credentials
 import google.auth.transport._mtls_helper
 import google.auth.transport.requests
+from google.oauth2 import service_account
 from tests.transport import compliance
 
 
@@ -185,7 +188,7 @@ class TestMutualTlsAdapter(object):
             )
 
 
-def make_response(status=http_client.OK, data=None):
+def make_response(status=http.client.OK, data=None):
     response = requests.Response()
     response.status_code = status
     response._content = data
@@ -210,7 +213,7 @@ class TestAuthorizedSession(object):
             mock.sentinel.credentials, auth_request=auth_request
         )
 
-        assert authed_session._auth_request == auth_request
+        assert authed_session._auth_request is auth_request
 
     def test_request_default_timeout(self):
         credentials = mock.Mock(wraps=CredentialsStub())
@@ -246,10 +249,10 @@ class TestAuthorizedSession(object):
 
     def test_request_refresh(self):
         credentials = mock.Mock(wraps=CredentialsStub())
-        final_response = make_response(status=http_client.OK)
+        final_response = make_response(status=http.client.OK)
         # First request will 401, second request will succeed.
         adapter = AdapterStub(
-            [make_response(status=http_client.UNAUTHORIZED), final_response]
+            [make_response(status=http.client.UNAUTHORIZED), final_response]
         )
 
         authed_session = google.auth.transport.requests.AuthorizedSession(
@@ -279,7 +282,7 @@ class TestAuthorizedSession(object):
             wraps=TimeTickCredentialsStub(time_tick=tick_one_second)
         )
         adapter = TimeTickAdapterStub(
-            time_tick=tick_one_second, responses=[make_response(status=http_client.OK)]
+            time_tick=tick_one_second, responses=[make_response(status=http.client.OK)]
         )
 
         authed_session = google.auth.transport.requests.AuthorizedSession(credentials)
@@ -301,8 +304,8 @@ class TestAuthorizedSession(object):
         adapter = TimeTickAdapterStub(
             time_tick=tick_one_second,
             responses=[
-                make_response(status=http_client.UNAUTHORIZED),
-                make_response(status=http_client.OK),
+                make_response(status=http.client.UNAUTHORIZED),
+                make_response(status=http.client.OK),
             ],
         )
 
@@ -325,8 +328,8 @@ class TestAuthorizedSession(object):
         adapter = TimeTickAdapterStub(
             time_tick=tick_one_second,
             responses=[
-                make_response(status=http_client.UNAUTHORIZED),
-                make_response(status=http_client.OK),
+                make_response(status=http.client.UNAUTHORIZED),
+                make_response(status=http.client.OK),
             ],
         )
 
@@ -352,8 +355,8 @@ class TestAuthorizedSession(object):
         adapter = TimeTickAdapterStub(
             time_tick=tick_one_second,
             responses=[
-                make_response(status=http_client.UNAUTHORIZED),
-                make_response(status=http_client.OK),
+                make_response(status=http.client.UNAUTHORIZED),
+                make_response(status=http.client.OK),
             ],
         )
 
@@ -370,6 +373,25 @@ class TestAuthorizedSession(object):
                 "GET", self.TEST_URL, timeout=60, max_allowed_time=2.9
             )
 
+    def test_authorized_session_without_default_host(self):
+        credentials = mock.create_autospec(service_account.Credentials)
+
+        authed_session = google.auth.transport.requests.AuthorizedSession(credentials)
+
+        authed_session.credentials._create_self_signed_jwt.assert_called_once_with(None)
+
+    def test_authorized_session_with_default_host(self):
+        default_host = "pubsub.googleapis.com"
+        credentials = mock.create_autospec(service_account.Credentials)
+
+        authed_session = google.auth.transport.requests.AuthorizedSession(
+            credentials, default_host=default_host
+        )
+
+        authed_session.credentials._create_self_signed_jwt.assert_called_once_with(
+            "https://{}/".format(default_host)
+        )
+
     def test_configure_mtls_channel_with_callback(self):
         mock_callback = mock.Mock()
         mock_callback.return_value = (
@@ -380,7 +402,10 @@ class TestAuthorizedSession(object):
         auth_session = google.auth.transport.requests.AuthorizedSession(
             credentials=mock.Mock()
         )
-        auth_session.configure_mtls_channel(mock_callback)
+        with mock.patch.dict(
+            os.environ, {environment_vars.GOOGLE_API_USE_CLIENT_CERTIFICATE: "true"}
+        ):
+            auth_session.configure_mtls_channel(mock_callback)
 
         assert auth_session.is_mtls
         assert isinstance(
@@ -401,7 +426,10 @@ class TestAuthorizedSession(object):
         auth_session = google.auth.transport.requests.AuthorizedSession(
             credentials=mock.Mock()
         )
-        auth_session.configure_mtls_channel()
+        with mock.patch.dict(
+            os.environ, {environment_vars.GOOGLE_API_USE_CLIENT_CERTIFICATE: "true"}
+        ):
+            auth_session.configure_mtls_channel()
 
         assert auth_session.is_mtls
         assert isinstance(
@@ -421,7 +449,10 @@ class TestAuthorizedSession(object):
         auth_session = google.auth.transport.requests.AuthorizedSession(
             credentials=mock.Mock()
         )
-        auth_session.configure_mtls_channel()
+        with mock.patch.dict(
+            os.environ, {environment_vars.GOOGLE_API_USE_CLIENT_CERTIFICATE: "true"}
+        ):
+            auth_session.configure_mtls_channel()
 
         assert not auth_session.is_mtls
 
@@ -438,10 +469,57 @@ class TestAuthorizedSession(object):
             credentials=mock.Mock()
         )
         with pytest.raises(exceptions.MutualTLSChannelError):
-            auth_session.configure_mtls_channel()
+            with mock.patch.dict(
+                os.environ, {environment_vars.GOOGLE_API_USE_CLIENT_CERTIFICATE: "true"}
+            ):
+                auth_session.configure_mtls_channel()
 
         mock_get_client_cert_and_key.return_value = (False, None, None)
         with mock.patch.dict("sys.modules"):
             sys.modules["OpenSSL"] = None
             with pytest.raises(exceptions.MutualTLSChannelError):
-                auth_session.configure_mtls_channel()
+                with mock.patch.dict(
+                    os.environ,
+                    {environment_vars.GOOGLE_API_USE_CLIENT_CERTIFICATE: "true"},
+                ):
+                    auth_session.configure_mtls_channel()
+
+    @mock.patch(
+        "google.auth.transport._mtls_helper.get_client_cert_and_key", autospec=True
+    )
+    def test_configure_mtls_channel_without_client_cert_env(
+        self, get_client_cert_and_key
+    ):
+        # Test client cert won't be used if GOOGLE_API_USE_CLIENT_CERTIFICATE
+        # environment variable is not set.
+        auth_session = google.auth.transport.requests.AuthorizedSession(
+            credentials=mock.Mock()
+        )
+
+        auth_session.configure_mtls_channel()
+        assert not auth_session.is_mtls
+        get_client_cert_and_key.assert_not_called()
+
+        mock_callback = mock.Mock()
+        auth_session.configure_mtls_channel(mock_callback)
+        assert not auth_session.is_mtls
+        mock_callback.assert_not_called()
+
+    def test_close_wo_passed_in_auth_request(self):
+        authed_session = google.auth.transport.requests.AuthorizedSession(
+            mock.sentinel.credentials
+        )
+        authed_session._auth_request_session = mock.Mock(spec=["close"])
+
+        authed_session.close()
+
+        authed_session._auth_request_session.close.assert_called_once_with()
+
+    def test_close_w_passed_in_auth_request(self):
+        http = mock.create_autospec(requests.Session)
+        auth_request = google.auth.transport.requests.Request(http)
+        authed_session = google.auth.transport.requests.AuthorizedSession(
+            mock.sentinel.credentials, auth_request=auth_request
+        )
+
+        authed_session.close()  # no raise
