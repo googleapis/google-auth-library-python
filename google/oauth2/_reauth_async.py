@@ -250,7 +250,8 @@ async def refresh_grant(
     rapt_token=None,
     enable_reauth_refresh=False,
 ):
-    """Implements the reauthentication flow.
+    """Implements the reauthentication flow. This function is intended for
+    gcloud to use only.
 
     Args:
         request (google.auth.transport.Request): A callable used to make

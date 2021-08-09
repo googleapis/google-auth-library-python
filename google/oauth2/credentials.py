@@ -54,6 +54,9 @@ class Credentials(credentials.ReadOnlyScoped, credentials.CredentialsWithQuotaPr
 
         credentials = credentials.with_quota_project('myproject-123)
 
+    Reauth is disabled by default. To enable reauth, set the
+    `enable_reauth_refresh` parameter to True in the constructor. Note that
+    reauth feature is intended for gcloud to use only.
     If reauth is enabled, `pyu2f` dependency has to be installed in order to use security
     key reauth feature. Dependency can be installed via `pip install pyu2f` or `pip install
     google-auth[reauth]`.
@@ -111,7 +114,7 @@ class Credentials(credentials.ReadOnlyScoped, credentials.CredentialsWithQuotaPr
                 some external process on demand. It is particularly useful for
                 retrieving downscoped tokens from a token broker.
             enable_reauth_refresh (Optional[bool]): Whether reauth refresh flow
-                should be used. The default value is False.
+                should be used. This flag is for gcloud to use only.
         """
         super(Credentials, self).__init__()
         self.token = token

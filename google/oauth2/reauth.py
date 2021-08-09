@@ -277,7 +277,8 @@ def refresh_grant(
     rapt_token=None,
     enable_reauth_refresh=False,
 ):
-    """Implements the reauthentication flow.
+    """Implements the reauthentication flow. This method is intended for gcloud
+    to use only.
 
     Args:
         request (google.auth.transport.Request): A callable used to make
@@ -329,7 +330,7 @@ def refresh_grant(
     ):
         if not enable_reauth_refresh:
             raise exceptions.RefreshError(
-                "Reauthentication is needed. Please run `gcloud auth application-default login` to reauthenticate."
+                "Reauthentication is needed. Please run `gcloud auth login --update-adc` to reauthenticate."
             )
 
         rapt_token = get_rapt_token(
