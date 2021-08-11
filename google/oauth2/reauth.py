@@ -314,7 +314,7 @@ def refresh_grant(
     }
     if scopes:
         body["scope"] = " ".join(scopes)
-    if rapt_token and enable_reauth_refresh:
+    if rapt_token:
         body["rapt"] = rapt_token
 
     response_status_ok, response_data = _client._token_endpoint_request_no_throw(
