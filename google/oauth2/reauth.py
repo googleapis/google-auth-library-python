@@ -277,8 +277,7 @@ def refresh_grant(
     rapt_token=None,
     enable_reauth_refresh=False,
 ):
-    """Implements the reauthentication flow. This method is intended for gcloud
-    to use only.
+    """Implements the reauthentication flow.
 
     Args:
         request (google.auth.transport.Request): A callable used to make
@@ -295,7 +294,8 @@ def refresh_grant(
             'https://www.googleapis.com/auth/any-api').
         rapt_token (Optional(str)): The rapt token for reauth.
         enable_reauth_refresh (Optional[bool]): Whether reauth refresh flow
-            should be used. The default value is False.
+            should be used. The default value is False. This option is for
+            gcloud only, otherwise users should use the default value.
 
     Returns:
         Tuple[str, Optional[str], Optional[datetime], Mapping[str, str], str]: The
