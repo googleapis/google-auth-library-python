@@ -295,7 +295,7 @@ def refresh_grant(
         rapt_token (Optional(str)): The rapt token for reauth.
         enable_reauth_refresh (Optional[bool]): Whether reauth refresh flow
             should be used. The default value is False. This option is for
-            gcloud only, otherwise users should use the default value.
+            gcloud only, other users should use the default value.
 
     Returns:
         Tuple[str, Optional[str], Optional[datetime], Mapping[str, str], str]: The
