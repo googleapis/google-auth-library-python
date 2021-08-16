@@ -4,6 +4,24 @@
 
 [1]: https://pypi.org/project/google-auth/#history
 
+## [1.35.0](https://www.github.com/googleapis/google-auth-library-python/compare/v1.35.0...v1.34.0) (2021-08-16)
+
+
+### Features
+
+* service account is able to use a private token endpoint ([#835](https://www.github.com/googleapis/google-auth-library-python/issues/835)) ([20b817a](https://www.github.com/googleapis/google-auth-library-python/commit/20b817af8e202b0331998e5abde4e2a5aab51f9a))
+
+
+### Bug Fixes
+
+* downscoping documentation bugs ([#830](https://www.github.com/googleapis/google-auth-library-python/issues/830)) ([da8bb13](https://www.github.com/googleapis/google-auth-library-python/commit/da8bb13c1349e771ffc2e125256030495c53d956))
+* Fix missing space in error message. ([#821](https://www.github.com/googleapis/google-auth-library-python/issues/821)) ([7b03988](https://www.github.com/googleapis/google-auth-library-python/commit/7b039888aeb6ec7691d91c9afce182b17f02b1a6))
+
+
+### Documentation
+
+* update user guide/references for downscoped creds ([#827](https://www.github.com/googleapis/google-auth-library-python/issues/827)) ([d1840dc](https://www.github.com/googleapis/google-auth-library-python/commit/d1840dcdcd03dfd7fdfa81d08da68402f6f8b658))
+
 ## [1.34.0](https://www.github.com/googleapis/google-auth-library-python/compare/v1.33.1...v1.34.0) (2021-07-23)
 
 
@@ -95,7 +113,7 @@
 
 ### Features
 
-* add reauth support to async user credentials for gcloud ([#738](https://www.github.com/googleapis/google-auth-library-python/issues/738)) ([9e10823](https://www.github.com/googleapis/google-auth-library-python/commit/9e1082366d113286bc063051fd76b4799791d943)). This internal feature is for gcloud developers only. 
+* add reauth support to async user credentials for gcloud ([#738](https://www.github.com/googleapis/google-auth-library-python/issues/738)) ([9e10823](https://www.github.com/googleapis/google-auth-library-python/commit/9e1082366d113286bc063051fd76b4799791d943)). This internal feature is for gcloud developers only.
 
 ## [1.29.0](https://www.github.com/googleapis/google-auth-library-python/compare/v1.28.1...v1.29.0) (2021-04-15)
 
@@ -269,7 +287,7 @@
 
 
 ### Bug fixes
- 
+
 * Revert "fix: migrate signBlob to iamcredentials.googleapis.com"  ([#563](https://www.github.com/googleapis/google-auth-library-python/issues/563)) ([a48b5b](https://www.github.com/googleapis/google-auth-library-python/commit/a48b5b9135b30ff06f1fe18dd9dbe92ffcf3a272))
 
 ### [1.19.1](https://www.github.com/googleapis/google-auth-library-python/compare/v1.19.0...v1.19.1) (2020-07-15)
