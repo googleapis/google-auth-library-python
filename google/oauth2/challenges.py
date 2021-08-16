@@ -25,7 +25,7 @@ from google.auth import exceptions
 
 
 REAUTH_ORIGIN = "https://accounts.google.com"
-SAML_CHALLENGE_MESSAGE = "Please run `gcloud auth login --update-adc` to complete reauthentication with SAML."
+SAML_CHALLENGE_MESSAGE = "Please run `gcloud auth login` to complete reauthentication with SAML."
 
 
 def get_user_password(text):
