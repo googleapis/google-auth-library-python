@@ -7,6 +7,10 @@
 ## [2.0.0](https://www.github.com/googleapis/google-auth-library-python/compare/v2.0.0-b1...v2.0.0) (2021-08-16)
 
 
+### ⚠ BREAKING CHANGES
+* drop support for Python 2.7 ([#778](https://www.github.com/googleapis/google-auth-library-python/issues/778)) ([560cf1e](https://www.github.com/googleapis/google-auth-library-python/commit/560cf1ed02a900436c5d9e0a0fb3f94b5fd98c55))
+
+
 ### Features
 
 * service account is able to use a private token endpoint ([#835](https://www.github.com/googleapis/google-auth-library-python/issues/835)) ([20b817a](https://www.github.com/googleapis/google-auth-library-python/commit/20b817af8e202b0331998e5abde4e2a5aab51f9a))
