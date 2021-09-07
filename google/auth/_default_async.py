@@ -73,11 +73,13 @@ def load_credentials_from_file(filename, scopes=None, quota_project_id=None):
         try:
             credentials = credentials.Credentials.from_authorized_user_info(
                 info, scopes=scopes
-            ).with_quota_project(quota_project_id)
+            )
         except ValueError as caught_exc:
             msg = "Failed to load authorized user credentials from {}".format(filename)
             new_exc = exceptions.DefaultCredentialsError(msg, caught_exc)
             raise new_exc from caught_exc
+        if quota_project_id:
+            credentials = credentials.with_quota_project(quota_project_id)
         if not credentials.quota_project_id:
             _default._warn_about_problematic_credentials(credentials)
         return credentials, None

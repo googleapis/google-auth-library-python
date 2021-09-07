@@ -786,3 +786,22 @@ def test_default_environ_external_credentials_bad_format(monkeypatch, tmpdir):
     assert excinfo.match(
         "Failed to load external account credentials from {}".format(str(filename))
     )
+
+
+@mock.patch(
+    "google.auth._cloud_sdk.get_application_default_credentials_path", autospec=True
+)
+def test_default_warning_without_quota_project_id_for_user_creds(get_adc_path):
+    get_adc_path.return_value = AUTHORIZED_USER_CLOUD_SDK_FILE
+
+    with pytest.warns(UserWarning, match="Cloud SDK"):
+        credentials, project_id = _default.default(quota_project_id=None)
+
+
+@mock.patch(
+    "google.auth._cloud_sdk.get_application_default_credentials_path", autospec=True
+)
+def test_default_no_warning_with_quota_project_id_for_user_creds(get_adc_path):
+    get_adc_path.return_value = AUTHORIZED_USER_CLOUD_SDK_FILE
+
+    credentials, project_id = _default.default(quota_project_id="project-foo")

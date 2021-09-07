@@ -542,3 +542,22 @@ def test_default_no_app_engine_compute_engine_module(unused_get):
         sys.modules["google.auth.compute_engine"] = None
         sys.modules["google.auth.app_engine"] = None
         assert _default.default_async() == (MOCK_CREDENTIALS, mock.sentinel.project_id)
+
+
+@mock.patch(
+    "google.auth._cloud_sdk.get_application_default_credentials_path", autospec=True
+)
+def test_default_warning_without_quota_project_id_for_user_creds(get_adc_path):
+    get_adc_path.return_value = test_default.AUTHORIZED_USER_CLOUD_SDK_FILE
+
+    with pytest.warns(UserWarning, match="Cloud SDK"):
+        credentials, project_id = _default.default_async(quota_project_id=None)
+
+
+@mock.patch(
+    "google.auth._cloud_sdk.get_application_default_credentials_path", autospec=True
+)
+def test_default_no_warning_with_quota_project_id_for_user_creds(get_adc_path):
+    get_adc_path.return_value = test_default.AUTHORIZED_USER_CLOUD_SDK_FILE
+
+    credentials, project_id = _default.default_async(quota_project_id="project-foo")
