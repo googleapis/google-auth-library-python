@@ -4,6 +4,13 @@
 
 [1]: https://pypi.org/project/google-auth/#history
 
+### [2.0.3](https://www.github.com/googleapis/google-auth-library-python/compare/v2.0.2...v2.0.3) (2021-09-07)
+
+
+### Bug Fixes
+
+* disable warning if quota project id provided to auth.default() ([#856](https://www.github.com/googleapis/google-auth-library-python/issues/856)) ([11ebaeb](https://www.github.com/googleapis/google-auth-library-python/commit/11ebaeb9d7c0862916154cfb810238574507629a))
+
 ### [2.0.2](https://www.github.com/googleapis/google-auth-library-python/compare/v2.0.1...v2.0.2) (2021-08-25)
 
 
