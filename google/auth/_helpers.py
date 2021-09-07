@@ -20,7 +20,9 @@ import datetime
 import urllib
 
 
-CLOCK_SKEW_SECS = 60  # 60 seconds
+# Clock skew has to be less than 30 seconds, see:
+# https://github.com/googleapis/google-auth-library-python/pull/581
+CLOCK_SKEW_SECS = 10  # 10 seconds
 CLOCK_SKEW = datetime.timedelta(seconds=CLOCK_SKEW_SECS)
 
 
