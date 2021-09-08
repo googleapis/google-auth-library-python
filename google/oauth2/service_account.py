@@ -72,6 +72,7 @@ specific subject using :meth:`~Credentials.with_subject`.
 
 import copy
 import datetime
+import logging
 
 from google.auth import _helpers
 from google.auth import _service_account_info
@@ -81,6 +82,7 @@ from google.oauth2 import _client
 
 _DEFAULT_TOKEN_LIFETIME_SECS = 3600  # 1 hour in seconds
 _GOOGLE_OAUTH2_TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token"
+_LOGGER = logging.getLogger(__name__)
 
 
 class Credentials(
@@ -400,10 +402,16 @@ class Credentials(
     @_helpers.copy_docstring(credentials.Credentials)
     def refresh(self, request):
         if self._jwt_credentials is not None:
+            _LOGGER.info(
+                "GOOGLE_AUTH_DEBUG: using self signed JWT flow for service account credentials"
+            )
             self._jwt_credentials.refresh(request)
             self.token = self._jwt_credentials.token
             self.expiry = self._jwt_credentials.expiry
         else:
+            _LOGGER.info(
+                "GOOGLE_AUTH_DEBUG: using refresh grant flow for service account credentials"
+            )
             assertion = self._make_authorization_grant_assertion()
             access_token, expiry, _ = _client.jwt_grant(
                 request, self._token_uri, assertion
@@ -420,20 +428,36 @@ class Credentials(
         # https://google.aip.dev/auth/4111
         if self._always_use_jwt_access:
             if self._scopes:
+                _LOGGER.info(
+                    "GOOGLE_AUTH_DEBUG: using self signed JWT flow with scopes: "
+                    + " ".join(self._scopes)
+                )
                 self._jwt_credentials = jwt.Credentials.from_signing_credentials(
                     self, None, additional_claims={"scope": " ".join(self._scopes)}
                 )
             elif audience:
+                _LOGGER.info(
+                    "GOOGLE_AUTH_DEBUG: using self signed JWT flow with audience: "
+                    + audience
+                )
                 self._jwt_credentials = jwt.Credentials.from_signing_credentials(
                     self, audience
                 )
             elif self._default_scopes:
+                _LOGGER.info(
+                    "GOOGLE_AUTH_DEBUG: using self signed JWT flow with default scopes: "
+                    + " ".join(self._default_scopes)
+                )
                 self._jwt_credentials = jwt.Credentials.from_signing_credentials(
                     self,
                     None,
                     additional_claims={"scope": " ".join(self._default_scopes)},
                 )
         elif not self._scopes and audience:
+            _LOGGER.info(
+                "GOOGLE_AUTH_DEBUG: using self signed JWT flow with audience: "
+                + audience
+            )
             self._jwt_credentials = jwt.Credentials.from_signing_credentials(
                 self, audience
             )
