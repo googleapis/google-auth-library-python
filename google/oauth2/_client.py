@@ -26,6 +26,7 @@ For more information about the token endpoint, see
 import datetime
 import http.client
 import json
+import logging
 import urllib
 
 from google.auth import _helpers
@@ -36,6 +37,8 @@ _URLENCODED_CONTENT_TYPE = "application/x-www-form-urlencoded"
 _JSON_CONTENT_TYPE = "application/json"
 _JWT_GRANT_TYPE = "urn:ietf:params:oauth:grant-type:jwt-bearer"
 _REFRESH_GRANT_TYPE = "refresh_token"
+
+_LOGGER = logging.getLogger(__name__)
 
 
 def _handle_error_response(response_data):
@@ -266,6 +269,7 @@ def _handle_refresh_grant_response(response_data, refresh_token):
         raise new_exc from caught_exc
 
     refresh_token = response_data.get("refresh_token", refresh_token)
+    _LOGGER.debug(f"Token expires in {response_data.get('expires_in')} seconds.")
     expiry = _parse_expiry(response_data)
 
     return access_token, refresh_token, expiry, response_data
