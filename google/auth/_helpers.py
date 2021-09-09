@@ -24,7 +24,7 @@ import urllib
 # token is expiring within 30 seconds, so refresh threshold should not be
 # more than 30 seconds. Otherwise auth lib will send tons of refresh requests
 # until 30 seconds before the expiration, and cause a spike of CPU usage.
-REFRESH_THRESHOLD = datetime.timedelta(seconds=10)
+REFRESH_THRESHOLD = datetime.timedelta(seconds=20)
 
 
 def copy_docstring(source_class):
