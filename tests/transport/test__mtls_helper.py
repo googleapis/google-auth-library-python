@@ -17,8 +17,10 @@ import re
 
 import mock
 from OpenSSL import crypto
+from OpenSSL._util import lib
 import pytest
 
+from google.auth import environment_vars
 from google.auth import exceptions
 from google.auth.transport import _mtls_helper
 
@@ -43,6 +45,8 @@ PASSPHRASE = b"""-----BEGIN PASSPHRASE-----
 password
 -----END PASSPHRASE-----"""
 PASSPHRASE_VALUE = b"password"
+
+TPM_KEY_INFO = b"engine:engine_id:pkcs11:object=object1;token=token1"
 
 
 def check_cert_and_key(content, expected_cert, expected_key):
@@ -438,3 +442,137 @@ class TestDecryptPrivateKey(object):
             _mtls_helper.decrypt_private_key(
                 ENCRYPTED_EC_PRIVATE_KEY, b"wrong_password"
             )
+
+
+@mock.patch.dict(os.environ)
+class TestLoadPkcs11PrivateKey(object):
+    def test_invalid_key_info(self):
+        with pytest.raises(exceptions.MutualTLSChannelError) as excinfo:
+            _mtls_helper._load_pkcs11_private_key(b"key")
+
+        assert excinfo.match("invalid key info format")
+
+    def test_invalid_key_info_less_than_3_parts(self):
+        with pytest.raises(exceptions.MutualTLSChannelError) as excinfo:
+            _mtls_helper._load_pkcs11_private_key(b"engine:engine_id")
+
+        assert excinfo.match("invalid key info format")
+
+    def test_missing_so_path(self):
+        with pytest.raises(exceptions.MutualTLSChannelError) as excinfo:
+            _mtls_helper._load_pkcs11_private_key(TPM_KEY_INFO)
+
+        assert excinfo.match(
+            "GOOGLE_AUTH_PKCS11_SO_PATH is required for PKCS#11 support."
+        )
+
+    def test_missing_module_path(self):
+        os.environ[environment_vars.PKCS11_SO_PATH] = "/path/to/libpkcs11.so"
+        with pytest.raises(exceptions.MutualTLSChannelError) as excinfo:
+            _mtls_helper._load_pkcs11_private_key(TPM_KEY_INFO)
+
+        assert excinfo.match(
+            "GOOGLE_AUTH_PKCS11_MODULE_PATH is required for PKCS#11 support."
+        )
+
+    @mock.patch.object(lib, "ENGINE_load_builtin_engines")
+    @mock.patch.object(lib, "ENGINE_by_id", return_value=None)
+    def test_failed_to_load_dynamic_engine(
+        self, engine_by_id, engine_load_builtin_engines
+    ):
+        os.environ[environment_vars.PKCS11_SO_PATH] = "/path/to/libpkcs11.so"
+        os.environ[environment_vars.PKCS11_MODULE_PATH] = "/path/to/tpm/module"
+
+        with pytest.raises(exceptions.MutualTLSChannelError) as excinfo:
+            _mtls_helper._load_pkcs11_private_key(TPM_KEY_INFO)
+
+        assert excinfo.match("failed to load dynamic engine")
+
+    # We will call ENGINE_ctrl_cmd_string 4 times where the 2nd parameter is
+    # b"ID", b"SO_PATH", b"LOAD" and b"MODULE_PATH" respectively. This function
+    # assigns the result for the calls in order.
+    def cmd_side_effect(self, results):
+        def side_effect(*args, **kwargs):
+            if args[1] == b"ID":
+                return results[0]
+            elif args[1] == b"SO_PATH":
+                return results[1]
+            elif args[1] == b"LOAD":
+                return results[2]
+            else:  # args[1] == b"MODULE_PATH"
+                return results[3]
+
+        return side_effect
+
+    @mock.patch.object(lib, "ENGINE_load_builtin_engines")
+    @mock.patch.object(lib, "ENGINE_by_id", return_value=mock.Mock())
+    @pytest.mark.parametrize(
+        "cmd_results, error_message",
+        [
+            ([0, 1, 1, 1], "failed to set engine ID"),
+            ([1, 0, 1, 1], "failed to set SO_PATH"),
+            ([1, 1, 0, 1], "failed to set LOAD"),
+            ([1, 1, 1, 0], "failed to set MODULE_PATH"),
+        ],
+    )
+    def test_failed_to_call_engine_ctrl_cmd_string(
+        self, engine_by_id, engine_load_builtin_engines, cmd_results, error_message
+    ):
+        os.environ[environment_vars.PKCS11_SO_PATH] = "/path/to/libpkcs11.so"
+        os.environ[environment_vars.PKCS11_MODULE_PATH] = "/path/to/tpm/module"
+
+        with pytest.raises(exceptions.MutualTLSChannelError) as excinfo:
+            with mock.patch.object(
+                lib,
+                "ENGINE_ctrl_cmd_string",
+                side_effect=self.cmd_side_effect(cmd_results),
+            ):
+                _mtls_helper._load_pkcs11_private_key(TPM_KEY_INFO)
+
+        assert excinfo.match(error_message)
+
+    @mock.patch.object(lib, "ENGINE_load_builtin_engines")
+    @mock.patch.object(lib, "ENGINE_by_id", return_value=mock.Mock())
+    @mock.patch.object(lib, "ENGINE_ctrl_cmd_string", side_effect=[1, 1, 1, 1])
+    @mock.patch.object(lib, "ENGINE_init", return_value=0)
+    def test_failed_to_init_engine(
+        self, engine_init, engine_cmd, engine_by_id, engine_load_builtin_engines
+    ):
+        os.environ[environment_vars.PKCS11_SO_PATH] = "/path/to/libpkcs11.so"
+        os.environ[environment_vars.PKCS11_MODULE_PATH] = "/path/to/tpm/module"
+
+        with pytest.raises(exceptions.MutualTLSChannelError) as excinfo:
+            _mtls_helper._load_pkcs11_private_key(TPM_KEY_INFO)
+
+        assert excinfo.match("failed to init engine")
+
+    @mock.patch.object(lib, "ENGINE_load_builtin_engines")
+    @mock.patch.object(lib, "ENGINE_by_id", return_value=mock.Mock())
+    @mock.patch.object(lib, "ENGINE_ctrl_cmd_string", side_effect=[1, 1, 1, 1])
+    @mock.patch.object(lib, "ENGINE_init", return_value=1)
+    def test_failed_to_load_private_key(
+        self, engine_init, engine_cmd, engine_by_id, engine_load_builtin_engines
+    ):
+        os.environ[environment_vars.PKCS11_SO_PATH] = "/path/to/libpkcs11.so"
+        os.environ[environment_vars.PKCS11_MODULE_PATH] = "/path/to/tpm/module"
+
+        with pytest.raises(exceptions.MutualTLSChannelError) as excinfo:
+            with mock.patch.object(lib, "ENGINE_load_private_key", return_value=None):
+                _mtls_helper._load_pkcs11_private_key(TPM_KEY_INFO)
+
+        assert excinfo.match("failed to load private key")
+
+    @mock.patch.object(lib, "ENGINE_load_builtin_engines")
+    @mock.patch.object(lib, "ENGINE_by_id", return_value=mock.Mock())
+    @mock.patch.object(lib, "ENGINE_ctrl_cmd_string", side_effect=[1, 1, 1, 1])
+    @mock.patch.object(lib, "ENGINE_init", return_value=1)
+    def test_success(
+        self, engine_init, engine_cmd, engine_by_id, engine_load_builtin_engines
+    ):
+        os.environ[environment_vars.PKCS11_SO_PATH] = "/path/to/libpkcs11.so"
+        os.environ[environment_vars.PKCS11_MODULE_PATH] = "/path/to/tpm/module"
+
+        loaded_key = mock.Mock()
+
+        with mock.patch.object(lib, "ENGINE_load_private_key", return_value=loaded_key):
+            assert _mtls_helper._load_pkcs11_private_key(TPM_KEY_INFO) == loaded_key

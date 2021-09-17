@@ -269,7 +269,7 @@ def _load_pkcs11_private_key(key_info):
     # key_info has b"engine:<engine_id>:<key_uri>" format. Split it into 3 parts.
     parts = key_info.decode().split(":", 2)
     if parts[0] != "engine" or len(parts) < 3:
-        raise exceptions.MutualTLSChannelError("invalid key format")
+        raise exceptions.MutualTLSChannelError("invalid key info format")
     engine_id = parts[1]
     key_uri = parts[2]
 
@@ -308,9 +308,7 @@ def _load_pkcs11_private_key(key_info):
         raise exceptions.MutualTLSChannelError("failed to init engine")
     key = _lib.ENGINE_load_private_key(e, key_uri.encode(), null, null)
     if not key:
-        raise exceptions.MutualTLSChannelError(
-            "failed to load private key: " + key_info
-        )
+        raise exceptions.MutualTLSChannelError("failed to load private key")
 
     return key
 

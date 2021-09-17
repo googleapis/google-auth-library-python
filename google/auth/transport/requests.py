@@ -39,8 +39,7 @@ from requests.packages.urllib3.util.ssl_ import (
 from google.auth import environment_vars
 from google.auth import exceptions
 from google.auth import transport
-import google.auth.transport._mtls_helper
-import google.auth.transport.mtls
+from google.auth.transport import _mtls_helper
 from google.oauth2 import service_account
 
 _LOGGER = logging.getLogger(__name__)
@@ -210,14 +209,10 @@ class _MutualTlsAdapter(requests.adapters.HTTPAdapter):
         urllib3.contrib.pyopenssl.inject_into_urllib3()
 
         self._ctx_poolmanager = create_urllib3_context()
-        google.auth.transport._mtls_helper._add_cert_and_key_to_ssl_context(
-            self._ctx_poolmanager, cert, key
-        )
+        _mtls_helper._add_cert_and_key_to_ssl_context(self._ctx_poolmanager, cert, key)
 
         self._ctx_proxymanager = create_urllib3_context()
-        google.auth.transport._mtls_helper._add_cert_and_key_to_ssl_context(
-            self._ctx_proxymanager, cert, key
-        )
+        _mtls_helper._add_cert_and_key_to_ssl_context(self._ctx_proxymanager, cert, key)
 
         super(_MutualTlsAdapter, self).__init__()
 
@@ -376,8 +371,8 @@ class AuthorizedSession(requests.Session):
         The function does nothing unless `GOOGLE_API_USE_CLIENT_CERTIFICATE` is
         explicitly set to `true`. In this case if client certificate and key are
         successfully obtained (from the given client_cert_callback or from application
-        default SSL credentials), an adapter instance will be mounted to the
-        "https://" prefix.
+        default SSL credentials), a :class:`_MutualTlsAdapter` instance will be mounted
+        to "https://" prefix.
 
         The key can be either a PEM format, or the key information in TPM of the
         b"engine:<engine_id>:<key_uri>" format. Key uri has RFC7512 format.
@@ -408,11 +403,7 @@ class AuthorizedSession(requests.Session):
             raise new_exc from caught_exc
 
         try:
-            (
-                self._is_mtls,
-                cert,
-                key,
-            ) = google.auth.transport._mtls_helper.get_client_cert_and_key(
+            (self._is_mtls, cert, key) = _mtls_helper.get_client_cert_and_key(
                 client_cert_callback
             )
 
