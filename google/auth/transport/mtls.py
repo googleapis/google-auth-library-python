@@ -14,9 +14,6 @@
 
 """Utilites for mutual TLS."""
 
-import os
-
-from google.auth import environment_vars
 from google.auth import exceptions
 from google.auth.transport import _mtls_helper
 
@@ -104,58 +101,3 @@ def default_client_encrypted_cert_source(cert_path, key_path):
         return cert_path, key_path, passphrase_bytes
 
     return callback
-
-
-def _load_pkcs11_private_key(key_url):
-    """Get the key object from HSM with the given key_url.
-
-    Args:
-        key_url (bytes): key_url must have b"engine:<engine_id>:<key_id>" format.
-            For instance, if engine id is "pkcs11", and key id is
-            "pkcs11:token=token1;object=label1;pin-value=mypin", then the key_url
-            is b"engine:pkcs11:pkcs11:token=token1;object=label1;pin-value=mypin".
-    """
-    pkcs11_so_path = os.getnenv(environment_vars.PKCS11_SO_PATH, None)
-    if not pkcs11_so_path:
-        raise exceptions.MutualTLSChannelError(
-            "GOOGLE_AUTH_PKCS11_SO_PATH is required for PKCS#11 support."
-        )
-
-    pkcs11_module_path = os.getnenv(environment_vars.PKCS11_MODULE_PATH, None)
-    if not pkcs11_module_path:
-        raise exceptions.MutualTLSChannelError(
-            "GOOGLE_AUTH_PKCS11_MODULE_PATH is required for PKCS#11 support."
-        )
-
-    from OpenSSL._util import ffi as _ffi, lib as _lib
-
-    null = _ffi.NULL
-
-    # key_url has b"engine:<engine_id>:<key_id>" format. Split it into 3 parts.
-    parts = key_url.decode().split(":", 2)
-    if parts[0] != "engine" or len(parts) < 3:
-        raise exceptions.MutualTLSChannelError("invalid key format")
-    engine_id = parts[1]
-    key_id = parts[2]
-
-    _lib.ENGINE_load_builtin_engines()
-    e = _lib.ENGINE_by_id(b"dynamic")
-    if not e:
-        raise exceptions.MutualTLSChannelError("failed to load dynamic engine")
-    if not _lib.ENGINE_ctrl_cmd_string(e, b"ID", engine_id.encode(), 0):
-        raise exceptions.MutualTLSChannelError("failed to set engine ID")
-    if not _lib.ENGINE_ctrl_cmd_string(e, b"SO_PATH", pkcs11_so_path.encode(), 0):
-        raise exceptions.MutualTLSChannelError("failed to set SO_PATH")
-    if not _lib.ENGINE_ctrl_cmd_string(e, b"LOAD", null, 0):
-        raise exceptions.MutualTLSChannelError("cannot LOAD")
-    if not _lib.ENGINE_ctrl_cmd_string(
-        e, b"MODULE_PATH", pkcs11_module_path.encode(), 0
-    ):
-        raise exceptions.MutualTLSChannelError("failed to set MODULE_PATH")
-    if not _lib.ENGINE_init(e):
-        raise exceptions.MutualTLSChannelError("failed to init engine")
-    key = _lib.ENGINE_load_private_key(e, key_id.encode(), null, null)
-    if not key:
-        raise exceptions.MutualTLSChannelError("failed to load private key: " + key_id)
-
-    return key

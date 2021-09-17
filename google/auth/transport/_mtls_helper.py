@@ -16,10 +16,12 @@
 
 import json
 import logging
+import os
 from os import path
 import re
 import subprocess
 
+from google.auth import environment_vars
 from google.auth import exceptions
 
 CONTEXT_AWARE_METADATA_PATH = "~/.secureConnect/context_aware_metadata.json"
@@ -250,3 +252,100 @@ def decrypt_private_key(key, passphrase):
 
     # Then dump the decrypted key bytes
     return crypto.dump_privatekey(crypto.FILETYPE_PEM, pkey)
+
+
+def _load_pkcs11_private_key(key_info):
+    """Get the key object from TPM with the given key_info.
+
+    Args:
+        key_info (bytes): key_info must have b"engine:<engine_id>:<key_uri>" format.
+            For instance, if engine id is "pkcs11", and RFC7512 format key uri is
+            "pkcs11:token=token1;object=label1;pin-value=mypin", then the key_info
+            is b"engine:pkcs11:pkcs11:token=token1;object=label1;pin-value=mypin".
+
+    Raises:
+        exceptions.MutualTLSChannelError: if problems happen when loading the key.
+    """
+    # key_info has b"engine:<engine_id>:<key_uri>" format. Split it into 3 parts.
+    parts = key_info.decode().split(":", 2)
+    if parts[0] != "engine" or len(parts) < 3:
+        raise exceptions.MutualTLSChannelError("invalid key format")
+    engine_id = parts[1]
+    key_uri = parts[2]
+
+    # read the libpkcs11.so path and TPM module path.
+    pkcs11_so_path = os.getenv(environment_vars.PKCS11_SO_PATH, None)
+    if not pkcs11_so_path:
+        raise exceptions.MutualTLSChannelError(
+            "GOOGLE_AUTH_PKCS11_SO_PATH is required for PKCS#11 support."
+        )
+
+    pkcs11_module_path = os.getenv(environment_vars.PKCS11_MODULE_PATH, None)
+    if not pkcs11_module_path:
+        raise exceptions.MutualTLSChannelError(
+            "GOOGLE_AUTH_PKCS11_MODULE_PATH is required for PKCS#11 support."
+        )
+
+    # load private key from TPM.
+    from OpenSSL._util import ffi as _ffi, lib as _lib
+
+    null = _ffi.NULL
+    _lib.ENGINE_load_builtin_engines()
+    e = _lib.ENGINE_by_id(b"dynamic")
+    if not e:
+        raise exceptions.MutualTLSChannelError("failed to load dynamic engine")
+    if not _lib.ENGINE_ctrl_cmd_string(e, b"ID", engine_id.encode(), 0):
+        raise exceptions.MutualTLSChannelError("failed to set engine ID")
+    if not _lib.ENGINE_ctrl_cmd_string(e, b"SO_PATH", pkcs11_so_path.encode(), 0):
+        raise exceptions.MutualTLSChannelError("failed to set SO_PATH")
+    if not _lib.ENGINE_ctrl_cmd_string(e, b"LOAD", null, 0):
+        raise exceptions.MutualTLSChannelError("failed to set LOAD")
+    if not _lib.ENGINE_ctrl_cmd_string(
+        e, b"MODULE_PATH", pkcs11_module_path.encode(), 0
+    ):
+        raise exceptions.MutualTLSChannelError("failed to set MODULE_PATH")
+    if not _lib.ENGINE_init(e):
+        raise exceptions.MutualTLSChannelError("failed to init engine")
+    key = _lib.ENGINE_load_private_key(e, key_uri.encode(), null, null)
+    if not key:
+        raise exceptions.MutualTLSChannelError(
+            "failed to load private key: " + key_info
+        )
+
+    return key
+
+
+def _add_cert_and_key_to_ssl_context(ssl_context, cert, key):
+    """Add the certificate and private key to SSL context.
+
+    Args:
+        ssl_context (urllib3.contrib.pyopenssl.PyOpenSSLContext): The SSL context.
+        cert (bytes): The certificate bytes in PEM bytes.
+        key (bytes): The private key bytes in PEM bytes, or the key information
+            in TPM of the b"engine:<engine_id>:<key_uri>" format.
+
+    Raises:
+        exceptions.MutualTLSChannelError: if problems happen when loading the key
+            from TPM, or adding the key and cert to SSL context.
+    """
+    import certifi
+    from OpenSSL import crypto
+    from OpenSSL._util import lib as _lib
+    from OpenSSL._util import exception_from_error_queue
+
+    # load CA certs to verify server's cert.
+    ssl_context.load_verify_locations(cafile=certifi.where())
+
+    # create the cert object and add cert to SSL context.
+    x509 = crypto.load_certificate(crypto.FILETYPE_PEM, cert)
+    ssl_context._ctx.use_certificate(x509)
+
+    # create the private key object and add key to SSL context.
+    if key.decode().startswith("engine:"):
+        # load key from TPM.
+        pkey = _load_pkcs11_private_key(key)
+        if not _lib.SSL_CTX_use_PrivateKey(ssl_context._ctx._context, pkey):
+            raise exception_from_error_queue(exceptions.MutualTLSChannelError)
+    else:
+        pkey = crypto.load_privatekey(crypto.FILETYPE_PEM, key)
+        ssl_context._ctx.use_privatekey(pkey)
