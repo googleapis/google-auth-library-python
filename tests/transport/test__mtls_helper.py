@@ -17,6 +17,7 @@ import re
 
 import mock
 from OpenSSL import crypto
+import OpenSSL._util
 from OpenSSL._util import lib
 import pytest
 
@@ -576,3 +577,70 @@ class TestLoadPkcs11PrivateKey(object):
 
         with mock.patch.object(lib, "ENGINE_load_private_key", return_value=loaded_key):
             assert _mtls_helper._load_pkcs11_private_key(TPM_KEY_INFO) == loaded_key
+
+
+@mock.patch.object(crypto, "load_certificate")
+@mock.patch.object(crypto, "load_privatekey")
+class TestAddCertAndKeyToSslContext(object):
+    def test_raw_key(self, crypto_load_privatekey, crypto_load_cert):
+        ssl_context = mock.MagicMock()
+        _mtls_helper._add_cert_and_key_to_ssl_context(
+            ssl_context, b"fake_cert", b"fake_key"
+        )
+
+        # check crypto lib is used to load cert and key
+        crypto_load_cert.assert_called()
+        crypto_load_privatekey.assert_called()
+
+        # check CA cert is used
+        ssl_context.load_verify_locations.assert_called()
+
+        # check cert and key are used in ssl context
+        ssl_context._ctx.use_certificate.assert_called()
+        ssl_context._ctx.use_privatekey.assert_called()
+
+    @mock.patch.object(_mtls_helper, "_load_pkcs11_private_key")
+    @mock.patch.object(lib, "SSL_CTX_use_PrivateKey")
+    def test_tpm_key(
+        self, ssl_ctx_use_key, load_pkcs11_key, crypto_load_privatekey, crypto_load_cert
+    ):
+        ssl_context = mock.MagicMock()
+        _mtls_helper._add_cert_and_key_to_ssl_context(
+            ssl_context, b"fake_cert", TPM_KEY_INFO
+        )
+
+        # check crypto lib is used to load cert
+        crypto_load_cert.assert_called()
+
+        # check key is loaded by _load_pkcs11_private_key instead of crypto api
+        crypto_load_privatekey.assert_not_called()
+        load_pkcs11_key.assert_called()
+
+        # check CA cert is used
+        ssl_context.load_verify_locations.assert_called()
+
+        # check cert and key are used in ssl context
+        ssl_context._ctx.use_certificate.assert_called()
+        ssl_context._ctx.use_privatekey.assert_not_called()
+        ssl_ctx_use_key.assert_called()
+
+    @mock.patch.object(_mtls_helper, "_load_pkcs11_private_key")
+    @mock.patch.object(lib, "SSL_CTX_use_PrivateKey", return_value=0)
+    @mock.patch.object(
+        OpenSSL._util,
+        "exception_from_error_queue",
+        return_value=exceptions.MutualTLSChannelError(""),
+    )
+    def test_tpm_key_exception(
+        self,
+        exception_from_queue,
+        ssl_ctx_use_key,
+        load_pkcs11_key,
+        crypto_load_privatekey,
+        crypto_load_cert,
+    ):
+        ssl_context = mock.MagicMock()
+        with pytest.raises(exceptions.MutualTLSChannelError):
+            _mtls_helper._add_cert_and_key_to_ssl_context(
+                ssl_context, b"fake_cert", TPM_KEY_INFO
+            )
