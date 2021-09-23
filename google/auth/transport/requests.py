@@ -20,6 +20,7 @@ import functools
 import logging
 import numbers
 import os
+import re
 import time
 
 try:
@@ -230,6 +231,121 @@ class _MutualTlsAdapter(requests.adapters.HTTPAdapter):
         return super(_MutualTlsAdapter, self).proxy_manager_for(*args, **kwargs)
 
 
+class _MutualTlsPkcs11Adapter(requests.adapters.HTTPAdapter):
+    """
+    A TransportAdapter that enables mutual TLS and uses the private key via
+    PKCS#11 interface.
+
+    Args:
+        cert (bytes): client certificate in PEM format
+        key (bytes): client private key in b"engine:<engine_id>:<key_uri>"
+            format. For example, if the engine id is "pkcs11", key uri is
+            "pkcs11:token=token1;object=object1", then the key is
+            b"engine:pkcs11:pkcs11:token=token1;object=object1".
+
+    Raises:
+        ImportError: if certifi or pyOpenSSL is not installed
+        OpenSSL.crypto.Error: if client cert or key is invalid
+    """
+
+    def __init__(self, cert, key):
+        import certifi
+        import ctypes
+        import cffi
+        import urllib3.contrib.pyopenssl
+
+        urllib3.contrib.pyopenssl.inject_into_urllib3()
+
+        # Parse the key.
+        parts = key.decode().split(":", 2)
+        if parts[0] != "engine" or len(parts) < 3:
+            raise exceptions.MutualTLSChannelError(
+                "invalid key format, should be b'engine:<engine_id>:<key_uri>' format"
+            )
+        engine_id = parts[1]
+        key_uri = parts[2]
+
+        # Check libpkcs11.so and TPM module path are provided.
+        libpkcs11_so_path = os.getenv("GOOGLE_AUTH_PKCS11_SO_PATH")
+        if not libpkcs11_so_path:
+            raise exceptions.MutualTLSChannelError(
+                "GOOGLE_AUTH_PKCS11_SO_PATH is not provided"
+            )
+        tpm_module_path = os.getenv("GOOGLE_AUTH_PKCS11_MODULE_PATH")
+        if not tpm_module_path:
+            raise exceptions.MutualTLSChannelError(
+                "GOOGLE_AUTH_PKCS11_MODULE_PATH is not provided"
+            )
+
+        # Load the PKCS#11 extension shared library.
+        pkcs11_ext = None
+        root_path = os.path.join(os.path.dirname(__file__), "../../../")
+        for filename in os.listdir(root_path):
+            if re.match("pkcs11_ext*", filename):
+                pkcs11_ext = ctypes.CDLL(os.path.join(root_path, filename))
+        if not pkcs11_ext:
+            raise exceptions.MutualTLSChannelError(
+                "pkcs11_ext shared library is not found"
+            )
+        add_cert_key = pkcs11_ext.add_cert_key
+        add_cert_key.argtypes = [
+            ctypes.c_void_p,
+            ctypes.c_char_p,
+            ctypes.c_char_p,
+            ctypes.c_char_p,
+            ctypes.c_char_p,
+            ctypes.c_char_p,
+        ]
+
+        ctx_poolmanager = create_urllib3_context()
+        ctx_poolmanager.load_verify_locations(cafile=certifi.where())
+        ctx_ptr = ctypes.cast(
+            int(cffi.FFI().cast("intptr_t", ctx_poolmanager._ctx._context)),
+            ctypes.c_void_p,
+        )
+        if not add_cert_key(
+            ctx_ptr,
+            cert,
+            engine_id.encode(),
+            libpkcs11_so_path.encode(),
+            tpm_module_path.encode(),
+            key_uri.encode(),
+        ):
+            raise exceptions.MutualTLSChannelError(
+                "failed to call add_key_to_ssl_context"
+            )
+        self._ctx_poolmanager = ctx_poolmanager
+
+        ctx_proxymanager = create_urllib3_context()
+        ctx_proxymanager.load_verify_locations(cafile=certifi.where())
+        ctx_ptr = ctypes.cast(
+            int(cffi.FFI().cast("intptr_t", ctx_proxymanager._ctx._context)),
+            ctypes.c_void_p,
+        )
+        if not add_cert_key(
+            ctx_ptr,
+            cert,
+            engine_id.encode(),
+            libpkcs11_so_path.encode(),
+            tpm_module_path.encode(),
+            key_uri.encode(),
+        ):
+            raise exceptions.MutualTLSChannelError(
+                "failed to call add_key_to_ssl_context"
+            )
+        self._ctx_proxymanager = ctx_proxymanager
+
+        super(_MutualTlsPkcs11Adapter, self).__init__()
+
+    def init_poolmanager(self, *args, **kwargs):
+        kwargs["ssl_context"] = self._ctx_poolmanager
+        super(_MutualTlsPkcs11Adapter, self).init_poolmanager(*args, **kwargs)
+
+    def proxy_manager_for(self, *args, **kwargs):
+        kwargs["ssl_context"] = self._ctx_proxymanager
+        return super(_MutualTlsPkcs11Adapter, self).proxy_manager_for(*args, **kwargs)
+
+
 class AuthorizedSession(requests.Session):
     """A Requests Session class with credentials.
 
@@ -403,7 +519,10 @@ class AuthorizedSession(requests.Session):
             )
 
             if self._is_mtls:
-                mtls_adapter = _MutualTlsAdapter(cert, key)
+                if key.decode().startswith("engine:"):
+                    mtls_adapter = _MutualTlsPkcs11Adapter(cert, key)
+                else:
+                    mtls_adapter = _MutualTlsAdapter(cert, key)
                 self.mount("https://", mtls_adapter)
         except (
             exceptions.ClientCertError,

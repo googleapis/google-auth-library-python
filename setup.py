@@ -15,6 +15,7 @@
 import io
 import os
 
+from setuptools import Extension
 from setuptools import find_packages
 from setuptools import setup
 
@@ -42,6 +43,15 @@ with open(os.path.join(package_root, "google/auth/version.py")) as fp:
     exec(fp.read(), version)
 version = version["__version__"]
 
+
+BUILD_PKCS11 = os.getenv("GOOGLE_AUTH_BUILD_PKCS11")
+if BUILD_PKCS11:
+    pkcs11_ext = Extension(
+        "pkcs11_ext",
+        libraries=["ssl", "crypto"],
+        sources=["google/auth/transport/pkcs11/engine.c"],
+    )
+
 setup(
     name="google-auth",
     version=version,
@@ -57,6 +67,7 @@ setup(
     python_requires=">= 3.6",
     license="Apache 2.0",
     keywords="google auth oauth client",
+    ext_modules=[pkcs11_ext] if BUILD_PKCS11 else None,
     classifiers=[
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.6",
