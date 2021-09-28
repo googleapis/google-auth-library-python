@@ -176,13 +176,13 @@ def _get_gcloud_sdk_credentials(quota_project_id=None):
     """Gets the credentials and project ID from the Cloud SDK."""
     from google.auth import _cloud_sdk
 
-    _LOGGER.debug("Checking Cloud SDK credentials as part of auth process...")
+    _LOGGER.info("Checking Cloud SDK credentials as part of auth process...")
 
     # Check if application default credentials exist.
     credentials_filename = _cloud_sdk.get_application_default_credentials_path()
 
     if not os.path.isfile(credentials_filename):
-        _LOGGER.debug("Cloud SDK credentials not found on disk; not using them")
+        _LOGGER.info("Cloud SDK credentials not found on disk; not using them")
         return None, None
 
     credentials, project_id = load_credentials_from_file(
@@ -203,7 +203,7 @@ def _get_explicit_environ_credentials(quota_project_id=None):
     cloud_sdk_adc_path = _cloud_sdk.get_application_default_credentials_path()
     explicit_file = os.environ.get(environment_vars.CREDENTIALS)
 
-    _LOGGER.debug(
+    _LOGGER.info(
         "Checking %s for explicit credentials as part of auth process...", explicit_file
     )
 
@@ -211,7 +211,7 @@ def _get_explicit_environ_credentials(quota_project_id=None):
         # Cloud sdk flow calls gcloud to fetch project id, so if the explicit
         # file path is cloud sdk credentials path, then we should fall back
         # to cloud sdk flow, otherwise project id cannot be obtained.
-        _LOGGER.debug(
+        _LOGGER.info(
             "Explicit credentials path %s is the same as Cloud SDK credentials path, fall back to Cloud SDK credentials flow...",
             explicit_file,
         )
@@ -238,10 +238,10 @@ def _get_gae_credentials():
     # While this library is normally bundled with app_engine, there are
     # some cases where it's not available, so we tolerate ImportError.
     try:
-        _LOGGER.debug("Checking for App Engine runtime as part of auth process...")
+        _LOGGER.info("Checking for App Engine runtime as part of auth process...")
         import google.auth.app_engine as app_engine
     except ImportError:
-        _LOGGER.warning("Import of App Engine auth library failed.")
+        _LOGGER.info("Import of App Engine auth library failed.")
         return None, None
 
     try:
@@ -249,7 +249,7 @@ def _get_gae_credentials():
         project_id = app_engine.get_project_id()
         return credentials, project_id
     except EnvironmentError:
-        _LOGGER.debug(
+        _LOGGER.info(
             "No App Engine library was found so cannot authentication via App Engine Identity Credentials."
         )
         return None, None
@@ -268,7 +268,7 @@ def _get_gce_credentials(request=None):
         from google.auth import compute_engine
         from google.auth.compute_engine import _metadata
     except ImportError:
-        _LOGGER.warning("Import of Compute Engine auth library failed.")
+        _LOGGER.info("Import of Compute Engine auth library failed.")
         return None, None
 
     if request is None:
@@ -283,7 +283,7 @@ def _get_gce_credentials(request=None):
 
         return compute_engine.Credentials(), project_id
     else:
-        _LOGGER.warning(
+        _LOGGER.info(
             "Authentication failed using Compute Engine authentication due to unavailable metadata server."
         )
         return None, None
@@ -477,7 +477,7 @@ def default(scopes=None, request=None, quota_project_id=None, default_scopes=Non
 
             effective_project_id = explicit_project_id or project_id
             if not effective_project_id:
-                _LOGGER.warning(
+                _LOGGER.info(
                     "No project ID could be determined. Consider running "
                     "`gcloud config set project` or setting the %s "
                     "environment variable",
