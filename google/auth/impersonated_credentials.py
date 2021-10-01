@@ -288,7 +288,12 @@ class Credentials(credentials.CredentialsWithQuotaProject, credentials.Signing):
             url=iam_sign_endpoint, headers=headers, json=body
         )
 
-        return base64.b64decode(response.json()["signedBlob"])
+        response_data = response.json()
+
+        if "error" in response:
+          raise Exception(response_data["error"])
+
+        return base64.b64decode(response_data["signedBlob"])
 
     @property
     def signer_email(self):
