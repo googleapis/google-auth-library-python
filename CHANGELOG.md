@@ -4,6 +4,13 @@
 
 [1]: https://pypi.org/project/google-auth/#history
 
+### [2.2.2](https://www.github.com/googleapis/google-auth-library-python/compare/v2.2.1...v2.2.2) (2021-10-06)
+
+
+### Bug Fixes
+
+* ADC with impersonated workforce pools ([#877](https://www.github.com/googleapis/google-auth-library-python/issues/877)) ([10bd9fb](https://www.github.com/googleapis/google-auth-library-python/commit/10bd9fbecd462435246afa46fd666a2836cd9e89))
+
 ### [2.2.1](https://www.github.com/googleapis/google-auth-library-python/compare/v2.2.0...v2.2.1) (2021-09-28)
 
 
