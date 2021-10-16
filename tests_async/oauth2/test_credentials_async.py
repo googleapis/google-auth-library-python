@@ -43,6 +43,7 @@ class TestCredentials:
             token_uri=cls.TOKEN_URI,
             client_id=cls.CLIENT_ID,
             client_secret=cls.CLIENT_SECRET,
+            enable_reauth_refresh=True,
         )
 
     def test_default_state(self):
@@ -61,7 +62,7 @@ class TestCredentials:
     @mock.patch("google.oauth2._reauth_async.refresh_grant", autospec=True)
     @mock.patch(
         "google.auth._helpers.utcnow",
-        return_value=datetime.datetime.min + _helpers.CLOCK_SKEW,
+        return_value=datetime.datetime.min + _helpers.REFRESH_THRESHOLD,
     )
     @pytest.mark.asyncio
     async def test_refresh_success(self, unused_utcnow, refresh_grant):
@@ -97,6 +98,7 @@ class TestCredentials:
             self.CLIENT_SECRET,
             None,
             None,
+            True,
         )
 
         # Check that the credentials have the token and expiry
@@ -122,7 +124,7 @@ class TestCredentials:
     @mock.patch("google.oauth2._reauth_async.refresh_grant", autospec=True)
     @mock.patch(
         "google.auth._helpers.utcnow",
-        return_value=datetime.datetime.min + _helpers.CLOCK_SKEW,
+        return_value=datetime.datetime.min + _helpers.REFRESH_THRESHOLD,
     )
     @pytest.mark.asyncio
     async def test_credentials_with_scopes_requested_refresh_success(
@@ -169,6 +171,7 @@ class TestCredentials:
             self.CLIENT_SECRET,
             scopes,
             "old_rapt_token",
+            False,
         )
 
         # Check that the credentials have the token and expiry
@@ -185,7 +188,7 @@ class TestCredentials:
     @mock.patch("google.oauth2._reauth_async.refresh_grant", autospec=True)
     @mock.patch(
         "google.auth._helpers.utcnow",
-        return_value=datetime.datetime.min + _helpers.CLOCK_SKEW,
+        return_value=datetime.datetime.min + _helpers.REFRESH_THRESHOLD,
     )
     @pytest.mark.asyncio
     async def test_credentials_with_scopes_returned_refresh_success(
@@ -231,6 +234,7 @@ class TestCredentials:
             self.CLIENT_SECRET,
             scopes,
             None,
+            False,
         )
 
         # Check that the credentials have the token and expiry
@@ -247,7 +251,7 @@ class TestCredentials:
     @mock.patch("google.oauth2._reauth_async.refresh_grant", autospec=True)
     @mock.patch(
         "google.auth._helpers.utcnow",
-        return_value=datetime.datetime.min + _helpers.CLOCK_SKEW,
+        return_value=datetime.datetime.min + _helpers.REFRESH_THRESHOLD,
     )
     @pytest.mark.asyncio
     async def test_credentials_with_scopes_refresh_failure_raises_refresh_error(
@@ -301,6 +305,7 @@ class TestCredentials:
             self.CLIENT_SECRET,
             scopes,
             None,
+            False,
         )
 
         # Check that the credentials have the token and expiry

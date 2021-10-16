@@ -51,6 +51,7 @@ class TestCredentials(object):
             client_id=cls.CLIENT_ID,
             client_secret=cls.CLIENT_SECRET,
             rapt_token=cls.RAPT_TOKEN,
+            enable_reauth_refresh=True,
         )
 
     def test_default_state(self):
@@ -114,7 +115,7 @@ class TestCredentials(object):
     @mock.patch("google.oauth2.reauth.refresh_grant", autospec=True)
     @mock.patch(
         "google.auth._helpers.utcnow",
-        return_value=datetime.datetime.min + _helpers.CLOCK_SKEW,
+        return_value=datetime.datetime.min + _helpers.REFRESH_THRESHOLD,
     )
     def test_refresh_success(self, unused_utcnow, refresh_grant):
         token = "token"
@@ -149,6 +150,7 @@ class TestCredentials(object):
             self.CLIENT_SECRET,
             None,
             self.RAPT_TOKEN,
+            True,
         )
 
         # Check that the credentials have the token and expiry
@@ -173,7 +175,7 @@ class TestCredentials(object):
     @mock.patch("google.oauth2.reauth.refresh_grant", autospec=True)
     @mock.patch(
         "google.auth._helpers.utcnow",
-        return_value=datetime.datetime.min + _helpers.CLOCK_SKEW,
+        return_value=datetime.datetime.min + _helpers.REFRESH_THRESHOLD,
     )
     def test_refresh_with_refresh_token_and_refresh_handler(
         self, unused_utcnow, refresh_grant
@@ -219,6 +221,7 @@ class TestCredentials(object):
             self.CLIENT_SECRET,
             None,
             self.RAPT_TOKEN,
+            False,
         )
 
         # Check that the credentials have the token and expiry
@@ -358,7 +361,7 @@ class TestCredentials(object):
 
     @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
     def test_refresh_with_refresh_handler_expired_token(self, unused_utcnow):
-        expected_expiry = datetime.datetime.min + _helpers.CLOCK_SKEW
+        expected_expiry = datetime.datetime.min + _helpers.REFRESH_THRESHOLD
         # Simulate refresh handler returns an expired token.
         refresh_handler = mock.Mock(return_value=("TOKEN", expected_expiry))
         scopes = ["email", "profile"]
@@ -388,7 +391,7 @@ class TestCredentials(object):
     @mock.patch("google.oauth2.reauth.refresh_grant", autospec=True)
     @mock.patch(
         "google.auth._helpers.utcnow",
-        return_value=datetime.datetime.min + _helpers.CLOCK_SKEW,
+        return_value=datetime.datetime.min + _helpers.REFRESH_THRESHOLD,
     )
     def test_credentials_with_scopes_requested_refresh_success(
         self, unused_utcnow, refresh_grant
@@ -422,6 +425,7 @@ class TestCredentials(object):
             scopes=scopes,
             default_scopes=default_scopes,
             rapt_token=self.RAPT_TOKEN,
+            enable_reauth_refresh=True,
         )
 
         # Refresh credentials
@@ -436,6 +440,7 @@ class TestCredentials(object):
             self.CLIENT_SECRET,
             scopes,
             self.RAPT_TOKEN,
+            True,
         )
 
         # Check that the credentials have the token and expiry
@@ -452,7 +457,7 @@ class TestCredentials(object):
     @mock.patch("google.oauth2.reauth.refresh_grant", autospec=True)
     @mock.patch(
         "google.auth._helpers.utcnow",
-        return_value=datetime.datetime.min + _helpers.CLOCK_SKEW,
+        return_value=datetime.datetime.min + _helpers.REFRESH_THRESHOLD,
     )
     def test_credentials_with_only_default_scopes_requested(
         self, unused_utcnow, refresh_grant
@@ -484,6 +489,7 @@ class TestCredentials(object):
             client_secret=self.CLIENT_SECRET,
             default_scopes=default_scopes,
             rapt_token=self.RAPT_TOKEN,
+            enable_reauth_refresh=True,
         )
 
         # Refresh credentials
@@ -498,6 +504,7 @@ class TestCredentials(object):
             self.CLIENT_SECRET,
             default_scopes,
             self.RAPT_TOKEN,
+            True,
         )
 
         # Check that the credentials have the token and expiry
@@ -514,7 +521,7 @@ class TestCredentials(object):
     @mock.patch("google.oauth2.reauth.refresh_grant", autospec=True)
     @mock.patch(
         "google.auth._helpers.utcnow",
-        return_value=datetime.datetime.min + _helpers.CLOCK_SKEW,
+        return_value=datetime.datetime.min + _helpers.REFRESH_THRESHOLD,
     )
     def test_credentials_with_scopes_returned_refresh_success(
         self, unused_utcnow, refresh_grant
@@ -549,6 +556,7 @@ class TestCredentials(object):
             client_secret=self.CLIENT_SECRET,
             scopes=scopes,
             rapt_token=self.RAPT_TOKEN,
+            enable_reauth_refresh=True,
         )
 
         # Refresh credentials
@@ -563,6 +571,7 @@ class TestCredentials(object):
             self.CLIENT_SECRET,
             scopes,
             self.RAPT_TOKEN,
+            True,
         )
 
         # Check that the credentials have the token and expiry
@@ -579,7 +588,7 @@ class TestCredentials(object):
     @mock.patch("google.oauth2.reauth.refresh_grant", autospec=True)
     @mock.patch(
         "google.auth._helpers.utcnow",
-        return_value=datetime.datetime.min + _helpers.CLOCK_SKEW,
+        return_value=datetime.datetime.min + _helpers.REFRESH_THRESHOLD,
     )
     def test_credentials_with_scopes_refresh_failure_raises_refresh_error(
         self, unused_utcnow, refresh_grant
@@ -615,6 +624,7 @@ class TestCredentials(object):
             client_secret=self.CLIENT_SECRET,
             scopes=scopes,
             rapt_token=self.RAPT_TOKEN,
+            enable_reauth_refresh=True,
         )
 
         # Refresh credentials
@@ -632,6 +642,7 @@ class TestCredentials(object):
             self.CLIENT_SECRET,
             scopes,
             self.RAPT_TOKEN,
+            True,
         )
 
         # Check that the credentials have the token and expiry
@@ -731,6 +742,7 @@ class TestCredentials(object):
         assert creds.refresh_token == info["refresh_token"]
         assert creds.token_uri == credentials._GOOGLE_OAUTH2_TOKEN_ENDPOINT
         assert creds.scopes is None
+        assert creds.rapt_token is None
 
         scopes = ["email", "profile"]
         creds = credentials.Credentials.from_authorized_user_file(
@@ -741,6 +753,18 @@ class TestCredentials(object):
         assert creds.refresh_token == info["refresh_token"]
         assert creds.token_uri == credentials._GOOGLE_OAUTH2_TOKEN_ENDPOINT
         assert creds.scopes == scopes
+
+    def test_from_authorized_user_file_with_rapt_token(self):
+        info = AUTH_USER_INFO.copy()
+        file_path = os.path.join(DATA_DIR, "authorized_user_with_rapt_token.json")
+
+        creds = credentials.Credentials.from_authorized_user_file(file_path)
+        assert creds.client_secret == info["client_secret"]
+        assert creds.client_id == info["client_id"]
+        assert creds.refresh_token == info["refresh_token"]
+        assert creds.token_uri == credentials._GOOGLE_OAUTH2_TOKEN_ENDPOINT
+        assert creds.scopes is None
+        assert creds.rapt_token == "rapt"
 
     def test_to_json(self):
         info = AUTH_USER_INFO.copy()

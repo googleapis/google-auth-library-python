@@ -54,6 +54,9 @@ or "API not enabled" error. We recommend you rerun \
 added. Or you can use service accounts instead. For more information \
 about service accounts, see https://cloud.google.com/docs/authentication/"""
 
+# The subject token type used for AWS external_account credentials.
+_AWS_SUBJECT_TOKEN_TYPE = "urn:ietf:params:aws:token-type:aws4_request"
+
 
 def _warn_about_problematic_credentials(credentials):
     """Determines if the credentials are problematic.
@@ -172,7 +175,7 @@ def load_credentials_from_file(
         )
 
 
-def _get_gcloud_sdk_credentials():
+def _get_gcloud_sdk_credentials(quota_project_id=None):
     """Gets the credentials and project ID from the Cloud SDK."""
     from google.auth import _cloud_sdk
 
@@ -185,7 +188,9 @@ def _get_gcloud_sdk_credentials():
         _LOGGER.debug("Cloud SDK credentials not found on disk; not using them")
         return None, None
 
-    credentials, project_id = load_credentials_from_file(credentials_filename)
+    credentials, project_id = load_credentials_from_file(
+        credentials_filename, quota_project_id=quota_project_id
+    )
 
     if not project_id:
         project_id = _cloud_sdk.get_project_id()
@@ -193,7 +198,7 @@ def _get_gcloud_sdk_credentials():
     return credentials, project_id
 
 
-def _get_explicit_environ_credentials():
+def _get_explicit_environ_credentials(quota_project_id=None):
     """Gets credentials from the GOOGLE_APPLICATION_CREDENTIALS environment
     variable."""
     from google.auth import _cloud_sdk
@@ -213,11 +218,11 @@ def _get_explicit_environ_credentials():
             "Explicit credentials path %s is the same as Cloud SDK credentials path, fall back to Cloud SDK credentials flow...",
             explicit_file,
         )
-        return _get_gcloud_sdk_credentials()
+        return _get_gcloud_sdk_credentials(quota_project_id=quota_project_id)
 
     if explicit_file is not None:
         credentials, project_id = load_credentials_from_file(
-            os.environ[environment_vars.CREDENTIALS]
+            os.environ[environment_vars.CREDENTIALS], quota_project_id=quota_project_id
         )
 
         return credentials, project_id
@@ -319,14 +324,14 @@ def _get_external_account_credentials(
             is in the wrong format or is missing required information.
     """
     # There are currently 2 types of external_account credentials.
-    try:
+    if info.get("subject_token_type") == _AWS_SUBJECT_TOKEN_TYPE:
         # Check if configuration corresponds to an AWS credentials.
         from google.auth import aws
 
         credentials = aws.Credentials.from_info(
             info, scopes=scopes, default_scopes=default_scopes
         )
-    except ValueError:
+    else:
         try:
             # Check if configuration corresponds to an Identity Pool credentials.
             from google.auth import identity_pool
@@ -447,8 +452,8 @@ def default(scopes=None, request=None, quota_project_id=None, default_scopes=Non
         # with_scopes_if_required() below will ensure scopes/default scopes are
         # safely set on the returned credentials since requires_scopes will
         # guard against setting scopes on user credentials.
-        _get_explicit_environ_credentials,
-        _get_gcloud_sdk_credentials,
+        lambda: _get_explicit_environ_credentials(quota_project_id=quota_project_id),
+        lambda: _get_gcloud_sdk_credentials(quota_project_id=quota_project_id),
         _get_gae_credentials,
         lambda: _get_gce_credentials(request),
     )

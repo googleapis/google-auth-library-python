@@ -55,6 +55,10 @@ with open(SERVICE_ACCOUNT_FILE) as fh:
 SUBJECT_TOKEN_TEXT_FILE = os.path.join(DATA_DIR, "external_subject_token.txt")
 TOKEN_URL = "https://sts.googleapis.com/v1/token"
 AUDIENCE = "//iam.googleapis.com/projects/123456/locations/global/workloadIdentityPools/POOL_ID/providers/PROVIDER_ID"
+WORKFORCE_AUDIENCE = (
+    "//iam.googleapis.com/locations/global/workforcePools/POOL_ID/providers/PROVIDER_ID"
+)
+WORKFORCE_POOL_USER_PROJECT = "WORKFORCE_POOL_USER_PROJECT_NUMBER"
 REGION_URL = "http://169.254.169.254/latest/meta-data/placement/availability-zone"
 SECURITY_CREDS_URL = "http://169.254.169.254/latest/meta-data/iam/security-credentials"
 CRED_VERIFICATION_URL = (
@@ -78,6 +82,49 @@ AWS_DATA = {
         "url": SECURITY_CREDS_URL,
         "regional_cred_verification_url": CRED_VERIFICATION_URL,
     },
+}
+SERVICE_ACCOUNT_EMAIL = "service-1234@service-name.iam.gserviceaccount.com"
+SERVICE_ACCOUNT_IMPERSONATION_URL = (
+    "https://us-east1-iamcredentials.googleapis.com/v1/projects/-"
+    + "/serviceAccounts/{}:generateAccessToken".format(SERVICE_ACCOUNT_EMAIL)
+)
+IMPERSONATED_IDENTITY_POOL_DATA = {
+    "type": "external_account",
+    "audience": AUDIENCE,
+    "subject_token_type": "urn:ietf:params:oauth:token-type:jwt",
+    "token_url": TOKEN_URL,
+    "credential_source": {"file": SUBJECT_TOKEN_TEXT_FILE},
+    "service_account_impersonation_url": SERVICE_ACCOUNT_IMPERSONATION_URL,
+}
+IMPERSONATED_AWS_DATA = {
+    "type": "external_account",
+    "audience": AUDIENCE,
+    "subject_token_type": "urn:ietf:params:aws:token-type:aws4_request",
+    "token_url": TOKEN_URL,
+    "credential_source": {
+        "environment_id": "aws1",
+        "region_url": REGION_URL,
+        "url": SECURITY_CREDS_URL,
+        "regional_cred_verification_url": CRED_VERIFICATION_URL,
+    },
+    "service_account_impersonation_url": SERVICE_ACCOUNT_IMPERSONATION_URL,
+}
+IDENTITY_POOL_WORKFORCE_DATA = {
+    "type": "external_account",
+    "audience": WORKFORCE_AUDIENCE,
+    "subject_token_type": "urn:ietf:params:oauth:token-type:id_token",
+    "token_url": TOKEN_URL,
+    "credential_source": {"file": SUBJECT_TOKEN_TEXT_FILE},
+    "workforce_pool_user_project": WORKFORCE_POOL_USER_PROJECT,
+}
+IMPERSONATED_IDENTITY_POOL_WORKFORCE_DATA = {
+    "type": "external_account",
+    "audience": WORKFORCE_AUDIENCE,
+    "subject_token_type": "urn:ietf:params:oauth:token-type:id_token",
+    "token_url": TOKEN_URL,
+    "credential_source": {"file": SUBJECT_TOKEN_TEXT_FILE},
+    "service_account_impersonation_url": SERVICE_ACCOUNT_IMPERSONATION_URL,
+    "workforce_pool_user_project": WORKFORCE_POOL_USER_PROJECT,
 }
 
 MOCK_CREDENTIALS = mock.Mock(spec=credentials.CredentialsWithQuotaProject)
@@ -257,6 +304,68 @@ def test_load_credentials_from_file_external_account_aws(get_project_id, tmpdir)
 
 
 @EXTERNAL_ACCOUNT_GET_PROJECT_ID_PATCH
+def test_load_credentials_from_file_external_account_identity_pool_impersonated(
+    get_project_id, tmpdir
+):
+    config_file = tmpdir.join("config.json")
+    config_file.write(json.dumps(IMPERSONATED_IDENTITY_POOL_DATA))
+    credentials, project_id = _default.load_credentials_from_file(str(config_file))
+
+    assert isinstance(credentials, identity_pool.Credentials)
+    assert not credentials.is_user
+    assert not credentials.is_workforce_pool
+    # Since no scopes are specified, the project ID cannot be determined.
+    assert project_id is None
+    assert get_project_id.called
+
+
+@EXTERNAL_ACCOUNT_GET_PROJECT_ID_PATCH
+def test_load_credentials_from_file_external_account_aws_impersonated(
+    get_project_id, tmpdir
+):
+    config_file = tmpdir.join("config.json")
+    config_file.write(json.dumps(IMPERSONATED_AWS_DATA))
+    credentials, project_id = _default.load_credentials_from_file(str(config_file))
+
+    assert isinstance(credentials, aws.Credentials)
+    assert not credentials.is_user
+    assert not credentials.is_workforce_pool
+    # Since no scopes are specified, the project ID cannot be determined.
+    assert project_id is None
+    assert get_project_id.called
+
+
+@EXTERNAL_ACCOUNT_GET_PROJECT_ID_PATCH
+def test_load_credentials_from_file_external_account_workforce(get_project_id, tmpdir):
+    config_file = tmpdir.join("config.json")
+    config_file.write(json.dumps(IDENTITY_POOL_WORKFORCE_DATA))
+    credentials, project_id = _default.load_credentials_from_file(str(config_file))
+
+    assert isinstance(credentials, identity_pool.Credentials)
+    assert credentials.is_user
+    assert credentials.is_workforce_pool
+    # Since no scopes are specified, the project ID cannot be determined.
+    assert project_id is None
+    assert get_project_id.called
+
+
+@EXTERNAL_ACCOUNT_GET_PROJECT_ID_PATCH
+def test_load_credentials_from_file_external_account_workforce_impersonated(
+    get_project_id, tmpdir
+):
+    config_file = tmpdir.join("config.json")
+    config_file.write(json.dumps(IMPERSONATED_IDENTITY_POOL_WORKFORCE_DATA))
+    credentials, project_id = _default.load_credentials_from_file(str(config_file))
+
+    assert isinstance(credentials, identity_pool.Credentials)
+    assert not credentials.is_user
+    assert credentials.is_workforce_pool
+    # Since no scopes are specified, the project ID cannot be determined.
+    assert project_id is None
+    assert get_project_id.called
+
+
+@EXTERNAL_ACCOUNT_GET_PROJECT_ID_PATCH
 def test_load_credentials_from_file_external_account_with_user_and_default_scopes(
     get_project_id, tmpdir
 ):
@@ -328,15 +437,18 @@ def test__get_explicit_environ_credentials_no_env():
     assert _default._get_explicit_environ_credentials() == (None, None)
 
 
+@pytest.mark.parametrize("quota_project_id", [None, "project-foo"])
 @LOAD_FILE_PATCH
-def test__get_explicit_environ_credentials(load, monkeypatch):
+def test__get_explicit_environ_credentials(load, quota_project_id, monkeypatch):
     monkeypatch.setenv(environment_vars.CREDENTIALS, "filename")
 
-    credentials, project_id = _default._get_explicit_environ_credentials()
+    credentials, project_id = _default._get_explicit_environ_credentials(
+        quota_project_id=quota_project_id
+    )
 
     assert credentials is MOCK_CREDENTIALS
     assert project_id is mock.sentinel.project_id
-    load.assert_called_with("filename")
+    load.assert_called_with("filename", quota_project_id=quota_project_id)
 
 
 @LOAD_FILE_PATCH
@@ -350,36 +462,40 @@ def test__get_explicit_environ_credentials_no_project_id(load, monkeypatch):
     assert project_id is None
 
 
+@pytest.mark.parametrize("quota_project_id", [None, "project-foo"])
 @mock.patch(
     "google.auth._cloud_sdk.get_application_default_credentials_path", autospec=True
 )
 @mock.patch("google.auth._default._get_gcloud_sdk_credentials", autospec=True)
 def test__get_explicit_environ_credentials_fallback_to_gcloud(
-    get_gcloud_creds, get_adc_path, monkeypatch
+    get_gcloud_creds, get_adc_path, quota_project_id, monkeypatch
 ):
     # Set explicit credentials path to cloud sdk credentials path.
     get_adc_path.return_value = "filename"
     monkeypatch.setenv(environment_vars.CREDENTIALS, "filename")
 
-    _default._get_explicit_environ_credentials()
+    _default._get_explicit_environ_credentials(quota_project_id=quota_project_id)
 
     # Check we fall back to cloud sdk flow since explicit credentials path is
     # cloud sdk credentials path
-    get_gcloud_creds.assert_called_once()
+    get_gcloud_creds.assert_called_with(quota_project_id=quota_project_id)
 
 
+@pytest.mark.parametrize("quota_project_id", [None, "project-foo"])
 @LOAD_FILE_PATCH
 @mock.patch(
     "google.auth._cloud_sdk.get_application_default_credentials_path", autospec=True
 )
-def test__get_gcloud_sdk_credentials(get_adc_path, load):
+def test__get_gcloud_sdk_credentials(get_adc_path, load, quota_project_id):
     get_adc_path.return_value = SERVICE_ACCOUNT_FILE
 
-    credentials, project_id = _default._get_gcloud_sdk_credentials()
+    credentials, project_id = _default._get_gcloud_sdk_credentials(
+        quota_project_id=quota_project_id
+    )
 
     assert credentials is MOCK_CREDENTIALS
     assert project_id is mock.sentinel.project_id
-    load.assert_called_with(SERVICE_ACCOUNT_FILE)
+    load.assert_called_with(SERVICE_ACCOUNT_FILE, quota_project_id=quota_project_id)
 
 
 @mock.patch(
@@ -711,7 +827,9 @@ def test_default_no_app_engine_compute_engine_module(unused_get):
 
 
 @EXTERNAL_ACCOUNT_GET_PROJECT_ID_PATCH
-def test_default_environ_external_credentials(get_project_id, monkeypatch, tmpdir):
+def test_default_environ_external_credentials_identity_pool(
+    get_project_id, monkeypatch, tmpdir
+):
     config_file = tmpdir.join("config.json")
     config_file.write(json.dumps(IDENTITY_POOL_DATA))
     monkeypatch.setenv(environment_vars.CREDENTIALS, str(config_file))
@@ -719,8 +837,86 @@ def test_default_environ_external_credentials(get_project_id, monkeypatch, tmpdi
     credentials, project_id = _default.default()
 
     assert isinstance(credentials, identity_pool.Credentials)
+    assert not credentials.is_user
+    assert not credentials.is_workforce_pool
     # Without scopes, project ID cannot be determined.
     assert project_id is None
+
+
+@EXTERNAL_ACCOUNT_GET_PROJECT_ID_PATCH
+def test_default_environ_external_credentials_identity_pool_impersonated(
+    get_project_id, monkeypatch, tmpdir
+):
+    config_file = tmpdir.join("config.json")
+    config_file.write(json.dumps(IMPERSONATED_IDENTITY_POOL_DATA))
+    monkeypatch.setenv(environment_vars.CREDENTIALS, str(config_file))
+
+    credentials, project_id = _default.default(
+        scopes=["https://www.google.com/calendar/feeds"]
+    )
+
+    assert isinstance(credentials, identity_pool.Credentials)
+    assert not credentials.is_user
+    assert not credentials.is_workforce_pool
+    assert project_id is mock.sentinel.project_id
+    assert credentials.scopes == ["https://www.google.com/calendar/feeds"]
+
+
+@EXTERNAL_ACCOUNT_GET_PROJECT_ID_PATCH
+def test_default_environ_external_credentials_aws_impersonated(
+    get_project_id, monkeypatch, tmpdir
+):
+    config_file = tmpdir.join("config.json")
+    config_file.write(json.dumps(IMPERSONATED_AWS_DATA))
+    monkeypatch.setenv(environment_vars.CREDENTIALS, str(config_file))
+
+    credentials, project_id = _default.default(
+        scopes=["https://www.google.com/calendar/feeds"]
+    )
+
+    assert isinstance(credentials, aws.Credentials)
+    assert not credentials.is_user
+    assert not credentials.is_workforce_pool
+    assert project_id is mock.sentinel.project_id
+    assert credentials.scopes == ["https://www.google.com/calendar/feeds"]
+
+
+@EXTERNAL_ACCOUNT_GET_PROJECT_ID_PATCH
+def test_default_environ_external_credentials_workforce(
+    get_project_id, monkeypatch, tmpdir
+):
+    config_file = tmpdir.join("config.json")
+    config_file.write(json.dumps(IDENTITY_POOL_WORKFORCE_DATA))
+    monkeypatch.setenv(environment_vars.CREDENTIALS, str(config_file))
+
+    credentials, project_id = _default.default(
+        scopes=["https://www.google.com/calendar/feeds"]
+    )
+
+    assert isinstance(credentials, identity_pool.Credentials)
+    assert credentials.is_user
+    assert credentials.is_workforce_pool
+    assert project_id is mock.sentinel.project_id
+    assert credentials.scopes == ["https://www.google.com/calendar/feeds"]
+
+
+@EXTERNAL_ACCOUNT_GET_PROJECT_ID_PATCH
+def test_default_environ_external_credentials_workforce_impersonated(
+    get_project_id, monkeypatch, tmpdir
+):
+    config_file = tmpdir.join("config.json")
+    config_file.write(json.dumps(IMPERSONATED_IDENTITY_POOL_WORKFORCE_DATA))
+    monkeypatch.setenv(environment_vars.CREDENTIALS, str(config_file))
+
+    credentials, project_id = _default.default(
+        scopes=["https://www.google.com/calendar/feeds"]
+    )
+
+    assert isinstance(credentials, identity_pool.Credentials)
+    assert not credentials.is_user
+    assert credentials.is_workforce_pool
+    assert project_id is mock.sentinel.project_id
+    assert credentials.scopes == ["https://www.google.com/calendar/feeds"]
 
 
 @EXTERNAL_ACCOUNT_GET_PROJECT_ID_PATCH
@@ -779,3 +975,22 @@ def test_default_environ_external_credentials_bad_format(monkeypatch, tmpdir):
     assert excinfo.match(
         "Failed to load external account credentials from {}".format(str(filename))
     )
+
+
+@mock.patch(
+    "google.auth._cloud_sdk.get_application_default_credentials_path", autospec=True
+)
+def test_default_warning_without_quota_project_id_for_user_creds(get_adc_path):
+    get_adc_path.return_value = AUTHORIZED_USER_CLOUD_SDK_FILE
+
+    with pytest.warns(UserWarning, match="Cloud SDK"):
+        credentials, project_id = _default.default(quota_project_id=None)
+
+
+@mock.patch(
+    "google.auth._cloud_sdk.get_application_default_credentials_path", autospec=True
+)
+def test_default_no_warning_with_quota_project_id_for_user_creds(get_adc_path):
+    get_adc_path.return_value = AUTHORIZED_USER_CLOUD_SDK_FILE
+
+    credentials, project_id = _default.default(quota_project_id="project-foo")
