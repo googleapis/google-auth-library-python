@@ -50,7 +50,7 @@ the system will fall back to the old variable.
 """
 
 GCE_METADATA_ROOT = "GCE_METADATA_ROOT"
-"""Old environment variable for for GCE_METADATA_HOST."""
+"""Old environment variable for GCE_METADATA_HOST."""
 
 GCE_METADATA_IP = "GCE_METADATA_IP"
 """Environment variable providing an alternate ip:port to be used for ip-only
