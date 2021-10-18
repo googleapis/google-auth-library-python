@@ -20,16 +20,23 @@ from setuptools import setup
 
 
 DEPENDENCIES = (
-    "cachetools >= 2.0.0, < 5.0",
-    "pyasn1-modules >= 0.2.1",
-    "rsa >= 3.1.4, < 5",
-    "setuptools >= 40.3.0",
+    "cachetools>=2.0.0,<5.0",
+    "pyasn1-modules>=0.2.1",
+    # rsa==4.5 is the last version to support 2.7
+    # https://github.com/sybrenstuvel/python-rsa/issues/152#issuecomment-643470233
+    'rsa<4.6; python_version < "3.6"',
+    'rsa>=3.1.4,<5; python_version >= "3.6"',
+    "setuptools>=40.3.0",
+    "six>=1.9.0",
 )
 
 extras = {
-    "aiohttp": ["aiohttp >= 3.6.2, < 4.0.0dev", "requests >= 2.20.0, < 3.0.0dev"],
-    "pyopenssl": "pyopenssl >= 20.0.0",
-    "reauth": "pyu2f >= 0.1.5",
+    "aiohttp": [
+        "aiohttp >= 3.6.2, < 4.0.0dev; python_version>='3.6'",
+        "requests >= 2.20.0, < 3.0.0dev",
+    ],
+    "pyopenssl": "pyopenssl>=20.0.0",
+    "reauth": "pyu2f>=0.1.5",
 }
 
 with io.open("README.rst", "r") as fh:
