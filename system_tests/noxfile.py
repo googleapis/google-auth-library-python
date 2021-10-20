@@ -394,8 +394,23 @@ def external_accounts(session):
     )
 
 
-@nox.session(python=PYTHON_VERSIONS_SYNC)
-def downscoping(session):
+@nox.session(python=["2.7"])
+def downscoping_27(session):
+    session.install(
+        *TEST_DEPENDENCIES_SYNC,
+        "enum34",
+        "google-auth",
+        "google-cloud-storage",
+    )
+    default(
+        session,
+        "system_tests_sync/test_downscoping.py",
+        *session.posargs,
+    )
+
+
+@nox.session(python=["3.7"])
+def downscoping_37(session):
     session.install(
         *TEST_DEPENDENCIES_SYNC,
         "google-auth",
