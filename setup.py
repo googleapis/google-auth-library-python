@@ -26,6 +26,8 @@ DEPENDENCIES = (
     # https://github.com/sybrenstuvel/python-rsa/issues/152#issuecomment-643470233
     'rsa<4.6; python_version < "3.6"',
     'rsa>=3.1.4,<5; python_version >= "3.6"',
+    # install enum34 to support 2.7. enum34 only works up to python version 3.3.
+    'enum34>=1.1.10; python_version < "3.4"',
     "setuptools>=40.3.0",
     "six>=1.9.0",
 )
