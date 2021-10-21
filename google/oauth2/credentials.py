@@ -264,7 +264,7 @@ class Credentials(credentials.ReadOnlyScoped, credentials.CredentialsWithQuotaPr
         if self._refresh_token is None and self.refresh_handler:
             token, expiry = self.refresh_handler(request, scopes=scopes)
             # Validate returned data.
-            if not isinstance(token, str):
+            if not isinstance(token, six.string_types):
                 raise exceptions.RefreshError(
                     "The refresh_handler returned token is not a string."
                 )
@@ -366,7 +366,7 @@ class Credentials(credentials.ReadOnlyScoped, credentials.CredentialsWithQuotaPr
         # process scopes, which needs to be a seq
         if scopes is None and "scopes" in info:
             scopes = info.get("scopes")
-            if isinstance(scopes, str):
+            if isinstance(scopes, six.string_types):
                 scopes = scopes.split(" ")
 
         return cls(
