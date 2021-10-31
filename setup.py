@@ -15,6 +15,7 @@
 import io
 import os
 
+from setuptools import Extension
 from setuptools import find_packages
 from setuptools import setup
 
@@ -51,6 +52,15 @@ with open(os.path.join(package_root, "google/auth/version.py")) as fp:
     exec(fp.read(), version)
 version = version["__version__"]
 
+BUILD_TLS_OFFLOAD = os.getenv("GOOGLE_AUTH_BUILD_TLS_OFFLOAD")
+if BUILD_TLS_OFFLOAD:
+    tls_offload_ext = Extension(
+        "tls_offload_ext",
+        language = "c++",
+        libraries=["ssl", "crypto"],
+        sources=["google/auth/transport/cpp/tls_offload.cpp"],
+    )
+
 setup(
     name="google-auth",
     version=version,
@@ -66,6 +76,8 @@ setup(
     python_requires=">=2.7,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,!=3.5.*",
     license="Apache 2.0",
     keywords="google auth oauth client",
+    # GOOGLE_AUTH_BUILD_TLS_OFFLOAD=1 CC=g++ python -m pip install -e .
+    ext_modules=[tls_offload_ext] if BUILD_TLS_OFFLOAD else None,
     classifiers=[
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.6",
