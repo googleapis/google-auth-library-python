@@ -235,6 +235,104 @@ class _MutualTlsAdapter(requests.adapters.HTTPAdapter):
         return super(_MutualTlsAdapter, self).proxy_manager_for(*args, **kwargs)
 
 
+class _MutualTlsOffloadAdapter(requests.adapters.HTTPAdapter):
+    """
+    A TransportAdapter that enables mutual TLS and uses the private key via
+    PKCS#11 interface.
+    Args:
+        cert (bytes): client certificate in PEM format
+        key (bytes): client private key in b"offload:<type>:<key_info_json>"
+            format. For example, the type could be "pkcs11".
+    Raises:
+        ImportError: if certifi or pyOpenSSL is not installed
+        OpenSSL.crypto.Error: if client cert or key is invalid
+    """
+
+    def __init__(self, cert, key):
+        import json
+        import re
+
+        import certifi
+        import ctypes
+        import cffi
+        import urllib3.contrib.pyopenssl
+
+        from google.auth.transport import pkcs11_sign
+
+        urllib3.contrib.pyopenssl.inject_into_urllib3()
+
+        # Parse the key.
+        parts = key.decode().split(":", 2)
+        if parts[0] != "offload" or len(parts) < 3:
+            raise exceptions.MutualTLSChannelError(
+                "invalid key format, should be b'offload:<type>:<key_info_json>' format"
+            )
+        type = parts[1]
+        key_info_json = parts[2]
+        #key_info = json.loads(key_info_json)
+        if type != "pkcs11":
+            raise exceptions.MutualTLSChannelError("currently only pkcs11 type is supported")
+
+        # Load the PKCS#11 extension shared library.
+        tls_offload_ext = None
+        root_path = os.path.join(os.path.dirname(__file__), "../../../")
+        for filename in os.listdir(root_path):
+            if re.match("tls_offload_ext*", filename):
+                tls_offload_ext = ctypes.CDLL(os.path.join(root_path, filename))
+        if not tls_offload_ext:
+            raise exceptions.MutualTLSChannelError("tls_offload_ext shared library is not found")
+        offload_func = tls_offload_ext._Z7OffloadPFiPhPmPKhmEPKcP10ssl_ctx_st
+        callback_type = ctypes.CFUNCTYPE(ctypes.c_int, ctypes.POINTER(ctypes.c_ubyte), ctypes.POINTER(ctypes.c_size_t), ctypes.POINTER(ctypes.c_ubyte), ctypes.c_size_t)
+        sign_callback = pkcs11_sign.create_sign_callback(
+            "/usr/local/lib/softhsm/libsofthsm2.so",
+            "token1",
+            "rsaclient",
+            "mynewpin"
+        )
+
+        ctx_poolmanager = create_urllib3_context()
+        ctx_poolmanager.load_verify_locations(cafile=certifi.where())
+        ctx_ptr = ctypes.cast(
+            int(cffi.FFI().cast("intptr_t", ctx_poolmanager._ctx._context)),
+            ctypes.c_void_p,
+        )
+        if not offload_func(
+            callback_type(sign_callback),
+            ctypes.c_char_p(cert),
+            ctx_ptr
+        ):
+            raise exceptions.MutualTLSChannelError(
+                "failed to offload"
+            )
+        self._ctx_poolmanager = ctx_poolmanager
+
+        ctx_proxymanager = create_urllib3_context()
+        ctx_proxymanager.load_verify_locations(cafile=certifi.where())
+        ctx_ptr = ctypes.cast(
+            int(cffi.FFI().cast("intptr_t", ctx_proxymanager._ctx._context)),
+            ctypes.c_void_p,
+        )
+        if not offload_func(
+            callback_type(sign_callback),
+            ctypes.c_char_p(cert),
+            ctx_ptr
+        ):
+            raise exceptions.MutualTLSChannelError(
+                "failed to offload"
+            )
+        self._ctx_proxymanager = ctx_proxymanager
+
+        super(_MutualTlsOffloadAdapter, self).__init__()
+
+    def init_poolmanager(self, *args, **kwargs):
+        kwargs["ssl_context"] = self._ctx_poolmanager
+        super(_MutualTlsOffloadAdapter, self).init_poolmanager(*args, **kwargs)
+
+    def proxy_manager_for(self, *args, **kwargs):
+        kwargs["ssl_context"] = self._ctx_proxymanager
+        return super(_MutualTlsOffloadAdapter, self).proxy_manager_for(*args, **kwargs)
+
+
 class AuthorizedSession(requests.Session):
     """A Requests Session class with credentials.
 
@@ -408,7 +506,10 @@ class AuthorizedSession(requests.Session):
             )
 
             if self._is_mtls:
-                mtls_adapter = _MutualTlsAdapter(cert, key)
+                if key.decode().startswith("offload"):
+                    mtls_adapter = _MutualTlsOffloadAdapter(cert, key)
+                else:
+                    mtls_adapter = _MutualTlsAdapter(cert, key)
                 self.mount("https://", mtls_adapter)
         except (
             exceptions.ClientCertError,
