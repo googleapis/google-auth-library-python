@@ -356,7 +356,7 @@ class TestImpersonatedCredentials(object):
 
             with pytest.raises(exceptions.TransportError) as excinfo:
                 credentials.sign_bytes(b"foo")
-            assert excinfo.match("{'error': {'code': 403, 'message': 'unauthorized'}")
+            assert excinfo.match("'code': 403")
 
     def test_with_quota_project(self):
         credentials = self.make_credentials()
