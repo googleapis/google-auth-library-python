@@ -1,3 +1,7 @@
+import faulthandler
+
+faulthandler.enable()
+
 from google.auth.transport.requests import AuthorizedSession
 import google.auth
 
@@ -36,4 +40,5 @@ def run_sample(callback):
 
 if __name__ == "__main__":
     #run_sample(raw_callback)
+    run_sample(offload_callback)
     run_sample(offload_callback)
