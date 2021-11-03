@@ -282,13 +282,13 @@ class _MutualTlsOffloadAdapter(requests.adapters.HTTPAdapter):
         if not tls_offload_ext:
             raise exceptions.MutualTLSChannelError("tls_offload_ext shared library is not found")
         offload_func = tls_offload_ext._Z7OffloadPFiPhPmPKhmEPKcP10ssl_ctx_st
-        callback_type = ctypes.CFUNCTYPE(ctypes.c_int, ctypes.POINTER(ctypes.c_ubyte), ctypes.POINTER(ctypes.c_size_t), ctypes.POINTER(ctypes.c_ubyte), ctypes.c_size_t)
-        sign_callback = pkcs11_sign.create_sign_callback(
-            "/usr/local/lib/softhsm/libsofthsm2.so",
-            "token1",
-            "rsaclient",
-            "mynewpin"
-        )
+        # self.sign_callback = pkcs11_sign.create_sign_callback(
+        #     "/usr/local/lib/softhsm/libsofthsm2.so",
+        #     "token1",
+        #     "rsaclient",
+        #     "mynewpin"
+        # )
+        self.sign_callback = pkcs11_sign.sign_callback
 
         ctx_poolmanager = create_urllib3_context()
         ctx_poolmanager.load_verify_locations(cafile=certifi.where())
@@ -297,7 +297,7 @@ class _MutualTlsOffloadAdapter(requests.adapters.HTTPAdapter):
             ctypes.c_void_p,
         )
         if not offload_func(
-            callback_type(sign_callback),
+            self.sign_callback,
             ctypes.c_char_p(cert),
             ctx_ptr
         ):
@@ -313,7 +313,7 @@ class _MutualTlsOffloadAdapter(requests.adapters.HTTPAdapter):
             ctypes.c_void_p,
         )
         if not offload_func(
-            callback_type(sign_callback),
+            self.sign_callback,
             ctypes.c_char_p(cert),
             ctx_ptr
         ):
