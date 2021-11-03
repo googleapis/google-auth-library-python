@@ -41,7 +41,7 @@ def test_refresh(authorized_user_file, http_request, token_info):
     info_scopes = _helpers.string_to_scopes(info["scope"])
 
     # Canonical list of scopes at https://cloud.google.com/sdk/gcloud/reference/auth/application-default/login
-    # or do `gcloud auth application-defaut login --help`
+    # or do `gcloud auth application-default login --help`
     canonical_scopes = set(
         [
             "https://www.googleapis.com/auth/userinfo.email",
