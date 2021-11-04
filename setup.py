@@ -58,7 +58,7 @@ if BUILD_TLS_OFFLOAD:
         "tls_offload_ext",
         language = "c++",
         libraries=["ssl", "crypto"],
-        sources=["google/auth/transport/cpp/tls_offload2.cpp"],
+        sources=["google/auth/transport/cpp/tls_offload.cpp"],
     )
 
 setup(

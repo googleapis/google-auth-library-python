@@ -248,7 +248,7 @@ class _MutualTlsOffloadAdapter(requests.adapters.HTTPAdapter):
         OpenSSL.crypto.Error: if client cert or key is invalid
     """
 
-    def __init__(self, cert, key, refs):
+    def __init__(self, cert, key):
         import json
         import re
 
@@ -290,7 +290,6 @@ class _MutualTlsOffloadAdapter(requests.adapters.HTTPAdapter):
             "mynewpin"
         )
         self.wrapped_sign_callback = callback_type(self.sign_callback)
-        refs.append(self.wrapped_sign_callback)
 
         ctx_poolmanager = create_urllib3_context()
         ctx_poolmanager.load_verify_locations(cafile=certifi.where())
@@ -464,8 +463,6 @@ class AuthorizedSession(requests.Session):
             self.credentials._create_self_signed_jwt(
                 "https://{}/".format(self._default_host) if self._default_host else None
             )
-        
-        self.refs = []
 
     def configure_mtls_channel(self, client_cert_callback=None):
         """Configure the client certificate and key for SSL connection.
@@ -511,7 +508,7 @@ class AuthorizedSession(requests.Session):
 
             if self._is_mtls:
                 if key.decode().startswith("offload"):
-                    mtls_adapter = _MutualTlsOffloadAdapter(cert, key, self.refs)
+                    mtls_adapter = _MutualTlsOffloadAdapter(cert, key)
                 else:
                     mtls_adapter = _MutualTlsAdapter(cert, key)
                 self.mount("https://", mtls_adapter)
