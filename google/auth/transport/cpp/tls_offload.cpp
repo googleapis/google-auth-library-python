@@ -72,8 +72,19 @@ void FreeExData(void *parent, void *ptr, CRYPTO_EX_DATA *ad, int idx, long argl,
   LogInfo("calling FreeExData");
   delete static_cast<CustomKey *>(ptr);
 }
-static int rsa_ex_index = RSA_get_ex_new_index(0, nullptr, nullptr, nullptr, FreeExData);
-static int ec_ex_index = EC_KEY_get_ex_new_index(0, nullptr, nullptr, nullptr, FreeExData);
+
+static int rsa_ex_index = -1, ec_ex_index = -1;
+
+bool InitExData() {
+  rsa_ex_index = RSA_get_ex_new_index(0, nullptr, nullptr, nullptr, FreeExData);
+  ec_ex_index =
+      EC_KEY_get_ex_new_index(0, nullptr, nullptr, nullptr, FreeExData);
+  if (rsa_ex_index < 0 || ec_ex_index < 0) {
+    fprintf(stderr, "Error allocating ex data.\n");
+    return false;
+  }
+  return true;
+}
  
 bool SetCustomKey(RSA *rsa, std::unique_ptr<CustomKey> key) {
   LogInfo("setting RSA custom key");
@@ -189,7 +200,7 @@ OwnedEVP_PKEY_METHOD MakeCustomMethod(int nid) {
 }
  
 static EVP_PKEY_METHOD *custom_rsa_pkey_method, *custom_ec_pkey_method;
-static ENGINE *custom_engine;
+static ENGINE *custom_engine = nullptr;
 
 static int EngineGetMethods(ENGINE *e, EVP_PKEY_METHOD **out_method,
                             const int **out_nids, int nid) {
@@ -291,8 +302,14 @@ int Offload(SignFunc sign_func, const char *cert, SSL_CTX *ctx) {
   char * val = getenv("GOOGLE_AUTH_TLS_OFFLOAD_LOGGING");
   EnableLogging = (val == nullptr)? false : true;
   LogInfo("entering offload function");
-  if (!InitEngine() ||
-      !ServeTLS(sign_func, cert, ctx)) {
+  if (!custom_engine) {
+    LogInfo("initializing ex data and custom engine");
+    if (!InitExData() || !InitEngine()) {
+      ERR_print_errors_fp(stderr);
+      return 0;
+    }
+  }
+  if (!ServeTLS(sign_func, cert, ctx)) {
     ERR_print_errors_fp(stderr);
     return 0;
   }

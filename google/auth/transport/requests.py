@@ -307,21 +307,21 @@ class _MutualTlsOffloadAdapter(requests.adapters.HTTPAdapter):
             )
         self._ctx_poolmanager = ctx_poolmanager
 
-        # ctx_proxymanager = create_urllib3_context()
-        # ctx_proxymanager.load_verify_locations(cafile=certifi.where())
-        # ctx_ptr = ctypes.cast(
-        #     int(cffi.FFI().cast("intptr_t", ctx_proxymanager._ctx._context)),
-        #     ctypes.c_void_p,
-        # )
-        # if not offload_func(
-        #     self.sign_callback,
-        #     ctypes.c_char_p(cert),
-        #     ctx_ptr
-        # ):
-        #     raise exceptions.MutualTLSChannelError(
-        #         "failed to offload"
-        #     )
-        self._ctx_proxymanager = ctx_poolmanager
+        ctx_proxymanager = create_urllib3_context()
+        ctx_proxymanager.load_verify_locations(cafile=certifi.where())
+        ctx_ptr = ctypes.cast(
+            int(cffi.FFI().cast("intptr_t", ctx_proxymanager._ctx._context)),
+            ctypes.c_void_p,
+        )
+        if not offload_func(
+            self.wrapped_sign_callback,
+            ctypes.c_char_p(cert),
+            ctx_ptr
+        ):
+            raise exceptions.MutualTLSChannelError(
+                "failed to offload"
+            )
+        self._ctx_proxymanager = ctx_proxymanager
 
         super(_MutualTlsOffloadAdapter, self).__init__()
 
@@ -330,7 +330,7 @@ class _MutualTlsOffloadAdapter(requests.adapters.HTTPAdapter):
         super(_MutualTlsOffloadAdapter, self).init_poolmanager(*args, **kwargs)
 
     def proxy_manager_for(self, *args, **kwargs):
-        kwargs["ssl_context"] = self._ctx_poolmanager
+        kwargs["ssl_context"] = self._ctx_proxymanager
         return super(_MutualTlsOffloadAdapter, self).proxy_manager_for(*args, **kwargs)
 
 
