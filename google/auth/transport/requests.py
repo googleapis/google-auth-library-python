@@ -248,7 +248,7 @@ class _MutualTlsOffloadAdapter(requests.adapters.HTTPAdapter):
         OpenSSL.crypto.Error: if client cert or key is invalid
     """
 
-    def __init__(self, cert, key):
+    def __init__(self, cert, key, refs):
         import json
         import re
 
@@ -282,13 +282,15 @@ class _MutualTlsOffloadAdapter(requests.adapters.HTTPAdapter):
         if not tls_offload_ext:
             raise exceptions.MutualTLSChannelError("tls_offload_ext shared library is not found")
         offload_func = tls_offload_ext._Z7OffloadPFiPhPmPKhmEPKcP10ssl_ctx_st
-        # self.sign_callback = pkcs11_sign.create_sign_callback(
-        #     "/usr/local/lib/softhsm/libsofthsm2.so",
-        #     "token1",
-        #     "rsaclient",
-        #     "mynewpin"
-        # )
-        self.sign_callback = pkcs11_sign.sign_callback
+        from google.auth.transport.pkcs11_sign import callback_type
+        self.sign_callback = pkcs11_sign.create_sign_callback(
+            "/usr/local/lib/softhsm/libsofthsm2.so",
+            "token1",
+            "mtlskey",
+            "mynewpin"
+        )
+        self.wrapped_sign_callback = callback_type(self.sign_callback)
+        refs.append(self.wrapped_sign_callback)
 
         ctx_poolmanager = create_urllib3_context()
         ctx_poolmanager.load_verify_locations(cafile=certifi.where())
@@ -297,7 +299,7 @@ class _MutualTlsOffloadAdapter(requests.adapters.HTTPAdapter):
             ctypes.c_void_p,
         )
         if not offload_func(
-            self.sign_callback,
+            self.wrapped_sign_callback,
             ctypes.c_char_p(cert),
             ctx_ptr
         ):
@@ -306,21 +308,21 @@ class _MutualTlsOffloadAdapter(requests.adapters.HTTPAdapter):
             )
         self._ctx_poolmanager = ctx_poolmanager
 
-        ctx_proxymanager = create_urllib3_context()
-        ctx_proxymanager.load_verify_locations(cafile=certifi.where())
-        ctx_ptr = ctypes.cast(
-            int(cffi.FFI().cast("intptr_t", ctx_proxymanager._ctx._context)),
-            ctypes.c_void_p,
-        )
-        if not offload_func(
-            self.sign_callback,
-            ctypes.c_char_p(cert),
-            ctx_ptr
-        ):
-            raise exceptions.MutualTLSChannelError(
-                "failed to offload"
-            )
-        self._ctx_proxymanager = ctx_proxymanager
+        # ctx_proxymanager = create_urllib3_context()
+        # ctx_proxymanager.load_verify_locations(cafile=certifi.where())
+        # ctx_ptr = ctypes.cast(
+        #     int(cffi.FFI().cast("intptr_t", ctx_proxymanager._ctx._context)),
+        #     ctypes.c_void_p,
+        # )
+        # if not offload_func(
+        #     self.sign_callback,
+        #     ctypes.c_char_p(cert),
+        #     ctx_ptr
+        # ):
+        #     raise exceptions.MutualTLSChannelError(
+        #         "failed to offload"
+        #     )
+        self._ctx_proxymanager = ctx_poolmanager
 
         super(_MutualTlsOffloadAdapter, self).__init__()
 
@@ -329,7 +331,7 @@ class _MutualTlsOffloadAdapter(requests.adapters.HTTPAdapter):
         super(_MutualTlsOffloadAdapter, self).init_poolmanager(*args, **kwargs)
 
     def proxy_manager_for(self, *args, **kwargs):
-        kwargs["ssl_context"] = self._ctx_proxymanager
+        kwargs["ssl_context"] = self._ctx_poolmanager
         return super(_MutualTlsOffloadAdapter, self).proxy_manager_for(*args, **kwargs)
 
 
@@ -462,6 +464,8 @@ class AuthorizedSession(requests.Session):
             self.credentials._create_self_signed_jwt(
                 "https://{}/".format(self._default_host) if self._default_host else None
             )
+        
+        self.refs = []
 
     def configure_mtls_channel(self, client_cert_callback=None):
         """Configure the client certificate and key for SSL connection.
@@ -507,7 +511,7 @@ class AuthorizedSession(requests.Session):
 
             if self._is_mtls:
                 if key.decode().startswith("offload"):
-                    mtls_adapter = _MutualTlsOffloadAdapter(cert, key)
+                    mtls_adapter = _MutualTlsOffloadAdapter(cert, key, self.refs)
                 else:
                     mtls_adapter = _MutualTlsAdapter(cert, key)
                 self.mount("https://", mtls_adapter)
