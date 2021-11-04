@@ -13,8 +13,17 @@
  
 #include <memory>
 #include <iostream>
+#include <stdlib.h>
 
 namespace {
+
+static bool EnableLogging = false;
+
+void LogInfo(const std::string& message) {
+  if (EnableLogging) {
+    std::cout << "tls_offload.cpp: " << message << "...." << std::endl;
+  }
+}
 
 typedef int (*SignFunc)(unsigned char *sig, size_t *sig_len, const unsigned char *tbs, size_t tbs_len);
 
@@ -60,13 +69,14 @@ class CustomKey {
 
 void FreeExData(void *parent, void *ptr, CRYPTO_EX_DATA *ad, int idx, long argl,
                 void *argp) {
-  printf("comes to FreeExData....\n");
+  LogInfo("calling FreeExData");
   delete static_cast<CustomKey *>(ptr);
 }
 static int rsa_ex_index = RSA_get_ex_new_index(0, nullptr, nullptr, nullptr, FreeExData);
 static int ec_ex_index = EC_KEY_get_ex_new_index(0, nullptr, nullptr, nullptr, FreeExData);
  
 bool SetCustomKey(RSA *rsa, std::unique_ptr<CustomKey> key) {
+  LogInfo("setting RSA custom key");
   if (!RSA_set_ex_data(rsa, rsa_ex_index, key.get())) {
     return false;
   }
@@ -75,7 +85,7 @@ bool SetCustomKey(RSA *rsa, std::unique_ptr<CustomKey> key) {
 }
  
 bool SetCustomKey(EC_KEY *ec_key, std::unique_ptr<CustomKey> key) {
-  printf("setting ec_key...\n");
+  LogInfo("setting EC custom key");
   if (!EC_KEY_set_ex_data(ec_key, ec_ex_index, key.get())) {
     return false;
   }
@@ -96,33 +106,31 @@ bool SetCustomKey(EVP_PKEY *pkey, std::unique_ptr<CustomKey> key) {
 }
  
 CustomKey *GetCustomKey(const RSA *rsa) {
-  printf("calling rsa get custom key...\n");
+  LogInfo("getting RSA custom key");
   return static_cast<CustomKey*>(RSA_get_ex_data(rsa, rsa_ex_index));
 }
  
 CustomKey *GetCustomKey(const EC_KEY *ec_key) {
-  printf("calling ec get custom key...\n");
+  LogInfo("getting EC custom key");
   return static_cast<CustomKey*>(EC_KEY_get_ex_data(ec_key, ec_ex_index));
 }
  
 CustomKey *GetCustomKey(EVP_PKEY *pkey) {
   if (EVP_PKEY_id(pkey) == EVP_PKEY_RSA) {
-    printf("GetCustomKey for rsa...\n");
     const RSA *rsa = EVP_PKEY_get0_RSA(pkey);
     if (rsa) {
-      printf("rsa exists...\n");
+      LogInfo("rsa exists in GetCustomKey");
     } else {
-      printf("rsa not exists...\n");
+      LogInfo("rsa doesn't exist in GetCustomKey");
     }
     return rsa ? GetCustomKey(rsa) : nullptr;
   }
   if (EVP_PKEY_id(pkey) == EVP_PKEY_EC) {
-    printf("GetCustomKey for ec...\n");
     const EC_KEY *ec_key = EVP_PKEY_get0_EC_KEY(pkey);
     if (ec_key) {
-      printf("ec_key exists...\n");
+      LogInfo("ec_key exists in GetCustomKey");
     } else {
-      printf("ec_key not exists...\n");
+      LogInfo("ec_key doesn't exist in GetCustomKey");
     }
     return ec_key ? GetCustomKey(ec_key) : nullptr;
   }
@@ -131,7 +139,7 @@ CustomKey *GetCustomKey(EVP_PKEY *pkey) {
 
 int CustomDigestSign(EVP_MD_CTX *ctx, unsigned char *sig, size_t *sig_len,
                      const unsigned char *tbs, size_t tbs_len) {
-  printf("calling CustomDigestSign....\n");
+  LogInfo("calling CustomDigestSign");
   EVP_PKEY_CTX *pctx = EVP_MD_CTX_pkey_ctx(ctx);
   EVP_PKEY *pkey = EVP_PKEY_CTX_get0_pkey(pctx);
   if (!pkey) {
@@ -143,15 +151,14 @@ int CustomDigestSign(EVP_MD_CTX *ctx, unsigned char *sig, size_t *sig_len,
     fprintf(stderr, "Could not get CustomKey from EVP_PKEY.\n");
     return 0;
   }
-  printf("before calling key->Sign...........\n");
-  printf("sig len is: %ld\n", *sig_len);
-  printf("tbs len is: %ld\n", tbs_len);
-  std::cout << "load custom key: " << key << std::endl;
-  printf("sig_len is: %ld\n", *sig_len);
+  if (EnableLogging) {
+    std::cout << "tls_offload.cpp: " << "before calling key->Sign, " << "sig len: " << *sig_len << std::endl;
+  }
   int res = key->sign_func_(sig, sig_len, tbs, tbs_len);
-  printf("after calling key->Sign...........\n");
-  printf("sig len is: %ld\n", *sig_len);
-  std::cout << "signature is: " << *sig << std::endl;
+  if (EnableLogging) {
+    std::cout << "tls_offload.cpp: " << "after calling key->Sign, " << "sig len: " << *sig_len 
+      << "\nsignature: " << *sig << "\nkey->sign_func result: " << res << std::endl;
+  }
   return res;  
 }
 
@@ -221,32 +228,24 @@ static bool InitEngine() {
 
 OwnedEVP_PKEY MakeCustomKey(std::unique_ptr<CustomKey> custom_key, X509 *cert) {
   unsigned char *spki = nullptr;
-  printf("1.....\n");
   int spki_len = i2d_X509_PUBKEY(X509_get_X509_PUBKEY(cert), &spki);
-  printf("2.....\n");
   if (spki_len < 0) {
-    printf("3.....\n");
     return nullptr;
   }
   OwnedOpenSSLBuffer owned_spki(spki);
   
   const unsigned char *ptr = spki;
   OwnedX509_PUBKEY pubkey(d2i_X509_PUBKEY(nullptr, &ptr, spki_len));
-  printf("4.....\n");
   if (!pubkey) {
-    printf("5.....\n");
     return nullptr;
   }
  
   OwnedEVP_PKEY wrapped(X509_PUBKEY_get(pubkey.get()));
-  printf("6.....\n");
   if (!wrapped ||
       !EVP_PKEY_set1_engine(wrapped.get(), custom_engine) ||
       !SetCustomKey(wrapped.get(), std::move(custom_key))) {
-    printf("7.....\n");
     return nullptr;
   }
-  printf("8.....\n");
   return wrapped;
 }
 
@@ -260,51 +259,43 @@ static OwnedX509 CertFromPEM(const char *pem) {
 }
 
 static bool ServeTLS(SignFunc sign_func, const char *cert, SSL_CTX *ctx) {
-  fprintf(stderr, "Using the tls offloading...\n");
- 
-  printf("calling cert from pem \n");
+  LogInfo("calling ServeTLS");
+
+  LogInfo("create x509 using CertFromPEM");
   OwnedX509 x509 = CertFromPEM(cert);
-  printf("calling make custom key \n");
+  LogInfo("create custom key");
   OwnedEVP_PKEY wrapped_key = MakeCustomKey(
       std::make_unique<CustomKey>(sign_func), x509.get());
-  printf("11..... \n");
   if (!wrapped_key) {
-    printf("no wrapped key \n");
+    LogInfo("failed to create custom key");
     return false;
   }
-  printf("12..... \n");
   if (!SSL_CTX_use_PrivateKey(ctx, wrapped_key.get())) {
-    printf("use private key failed \n");
+    LogInfo("SSL_CTX_use_PrivateKey failed");
     return false;
   }
-  printf("13..... \n");
   if (!SSL_CTX_use_certificate(ctx, x509.get())) {
-    printf("use certificate failed \n");
+    LogInfo("SSL_CTX_use_certificate failed");
     return false;
   }
-  printf("14..... \n");
   if (!SSL_CTX_set_min_proto_version(ctx, TLS1_3_VERSION)) {
-    printf("set ctx min version failed \n");
+    LogInfo("SSL_CTX_set_min_proto_version failed");
     return false;
   }
-  // if (!wrapped_key ||
-  //     !SSL_CTX_use_certificate(ctx, x509.get()) ||
-  //     !SSL_CTX_use_PrivateKey(ctx, wrapped_key.get()) ||
-  //     !SSL_CTX_set_min_proto_version(ctx, TLS1_3_VERSION)) {
-  //   return false;
-  // }
   return true;
 }
 
 }  // namespace
 
 int Offload(SignFunc sign_func, const char *cert, SSL_CTX *ctx) {
-  printf("calling c++ offload function \n");
+  char * val = getenv("GOOGLE_AUTH_TLS_OFFLOAD_LOGGING");
+  EnableLogging = (val == nullptr)? false : true;
+  LogInfo("entering offload function");
   if (!InitEngine() ||
       !ServeTLS(sign_func, cert, ctx)) {
     ERR_print_errors_fp(stderr);
     return 0;
   }
-  printf("Offload function is done........\n");
+  LogInfo("offload function is done");
   return 1;
 }
