@@ -13,8 +13,17 @@
  
 #include <memory>
 #include <iostream>
+#include <stdlib.h>
 
 namespace {
+
+static bool EnableLogging = false;
+
+void LogInfo(const std::string& message) {
+  if (EnableLogging) {
+    std::cout << "tls_offload.cpp: " << message << "...." << std::endl;
+  }
+}
 
 typedef int (*SignFunc)(unsigned char *sig, size_t *sig_len, const unsigned char *tbs, size_t tbs_len);
 
@@ -54,29 +63,20 @@ class CustomKey {
     return sign_func_(sig, sig_len, tbs, tbs_len);
   }
  
- private:
+ public:
   SignFunc sign_func_;
 };
 
-static int rsa_ex_index = -1, ec_ex_index = -1;
- 
 void FreeExData(void *parent, void *ptr, CRYPTO_EX_DATA *ad, int idx, long argl,
                 void *argp) {
+  LogInfo("calling FreeExData");
   delete static_cast<CustomKey *>(ptr);
 }
- 
-bool InitExData() {
-  rsa_ex_index = RSA_get_ex_new_index(0, nullptr, nullptr, nullptr, FreeExData);
-  ec_ex_index =
-      EC_KEY_get_ex_new_index(0, nullptr, nullptr, nullptr, FreeExData);
-  if (rsa_ex_index < 0 || ec_ex_index < 0) {
-    fprintf(stderr, "Error allocating ex data.\n");
-    return false;
-  }
-  return true;
-}
+static int rsa_ex_index = RSA_get_ex_new_index(0, nullptr, nullptr, nullptr, FreeExData);
+static int ec_ex_index = EC_KEY_get_ex_new_index(0, nullptr, nullptr, nullptr, FreeExData);
  
 bool SetCustomKey(RSA *rsa, std::unique_ptr<CustomKey> key) {
+  LogInfo("setting RSA custom key");
   if (!RSA_set_ex_data(rsa, rsa_ex_index, key.get())) {
     return false;
   }
@@ -85,7 +85,8 @@ bool SetCustomKey(RSA *rsa, std::unique_ptr<CustomKey> key) {
 }
  
 bool SetCustomKey(EC_KEY *ec_key, std::unique_ptr<CustomKey> key) {
-  if (!EC_KEY_set_ex_data(ec_key, rsa_ex_index, key.get())) {
+  LogInfo("setting EC custom key");
+  if (!EC_KEY_set_ex_data(ec_key, ec_ex_index, key.get())) {
     return false;
   }
   (void)key.release();
@@ -105,20 +106,32 @@ bool SetCustomKey(EVP_PKEY *pkey, std::unique_ptr<CustomKey> key) {
 }
  
 CustomKey *GetCustomKey(const RSA *rsa) {
+  LogInfo("getting RSA custom key");
   return static_cast<CustomKey*>(RSA_get_ex_data(rsa, rsa_ex_index));
 }
  
 CustomKey *GetCustomKey(const EC_KEY *ec_key) {
+  LogInfo("getting EC custom key");
   return static_cast<CustomKey*>(EC_KEY_get_ex_data(ec_key, ec_ex_index));
 }
  
 CustomKey *GetCustomKey(EVP_PKEY *pkey) {
   if (EVP_PKEY_id(pkey) == EVP_PKEY_RSA) {
     const RSA *rsa = EVP_PKEY_get0_RSA(pkey);
+    if (rsa) {
+      LogInfo("rsa exists in GetCustomKey");
+    } else {
+      LogInfo("rsa doesn't exist in GetCustomKey");
+    }
     return rsa ? GetCustomKey(rsa) : nullptr;
   }
   if (EVP_PKEY_id(pkey) == EVP_PKEY_EC) {
     const EC_KEY *ec_key = EVP_PKEY_get0_EC_KEY(pkey);
+    if (ec_key) {
+      LogInfo("ec_key exists in GetCustomKey");
+    } else {
+      LogInfo("ec_key doesn't exist in GetCustomKey");
+    }
     return ec_key ? GetCustomKey(ec_key) : nullptr;
   }
   return nullptr;
@@ -126,6 +139,7 @@ CustomKey *GetCustomKey(EVP_PKEY *pkey) {
 
 int CustomDigestSign(EVP_MD_CTX *ctx, unsigned char *sig, size_t *sig_len,
                      const unsigned char *tbs, size_t tbs_len) {
+  LogInfo("calling CustomDigestSign");
   EVP_PKEY_CTX *pctx = EVP_MD_CTX_pkey_ctx(ctx);
   EVP_PKEY *pkey = EVP_PKEY_CTX_get0_pkey(pctx);
   if (!pkey) {
@@ -137,10 +151,14 @@ int CustomDigestSign(EVP_MD_CTX *ctx, unsigned char *sig, size_t *sig_len,
     fprintf(stderr, "Could not get CustomKey from EVP_PKEY.\n");
     return 0;
   }
-  printf("sig len is: %ld\n", *sig_len);
-  printf("tbs len is: %ld\n", tbs_len);
-  int res = key->Sign(sig, sig_len, tbs, tbs_len);
-  printf("sig len is: %ld\n", *sig_len);
+  if (EnableLogging) {
+    std::cout << "tls_offload.cpp: " << "before calling key->Sign, " << "sig len: " << *sig_len << std::endl;
+  }
+  int res = key->sign_func_(sig, sig_len, tbs, tbs_len);
+  if (EnableLogging) {
+    std::cout << "tls_offload.cpp: " << "after calling key->Sign, " << "sig len: " << *sig_len 
+      << "\nsignature: " << *sig << "\nkey->sign_func result: " << res << std::endl;
+  }
   return res;  
 }
 
@@ -172,7 +190,7 @@ OwnedEVP_PKEY_METHOD MakeCustomMethod(int nid) {
  
 static EVP_PKEY_METHOD *custom_rsa_pkey_method, *custom_ec_pkey_method;
 static ENGINE *custom_engine;
- 
+
 static int EngineGetMethods(ENGINE *e, EVP_PKEY_METHOD **out_method,
                             const int **out_nids, int nid) {
   if (!out_method) {
@@ -241,15 +259,27 @@ static OwnedX509 CertFromPEM(const char *pem) {
 }
 
 static bool ServeTLS(SignFunc sign_func, const char *cert, SSL_CTX *ctx) {
-  fprintf(stderr, "Using the tls offloading...\n");
- 
+  LogInfo("calling ServeTLS");
+
+  LogInfo("create x509 using CertFromPEM");
   OwnedX509 x509 = CertFromPEM(cert);
+  LogInfo("create custom key");
   OwnedEVP_PKEY wrapped_key = MakeCustomKey(
       std::make_unique<CustomKey>(sign_func), x509.get());
-  if (!wrapped_key ||
-      !SSL_CTX_use_certificate(ctx, x509.get()) ||
-      !SSL_CTX_use_PrivateKey(ctx, wrapped_key.get()) ||
-      !SSL_CTX_set_min_proto_version(ctx, TLS1_3_VERSION)) {
+  if (!wrapped_key) {
+    LogInfo("failed to create custom key");
+    return false;
+  }
+  if (!SSL_CTX_use_PrivateKey(ctx, wrapped_key.get())) {
+    LogInfo("SSL_CTX_use_PrivateKey failed");
+    return false;
+  }
+  if (!SSL_CTX_use_certificate(ctx, x509.get())) {
+    LogInfo("SSL_CTX_use_certificate failed");
+    return false;
+  }
+  if (!SSL_CTX_set_min_proto_version(ctx, TLS1_3_VERSION)) {
+    LogInfo("SSL_CTX_set_min_proto_version failed");
     return false;
   }
   return true;
@@ -257,13 +287,15 @@ static bool ServeTLS(SignFunc sign_func, const char *cert, SSL_CTX *ctx) {
 
 }  // namespace
 
-int Offload(SignFunc sign_func, const char *cert, SSL_CTX *ctx) { 
-  if (!OPENSSL_init_ssl(0, NULL) ||  //
-      !InitExData() ||               //
-      !InitEngine() ||
+int Offload(SignFunc sign_func, const char *cert, SSL_CTX *ctx) {
+  char * val = getenv("GOOGLE_AUTH_TLS_OFFLOAD_LOGGING");
+  EnableLogging = (val == nullptr)? false : true;
+  LogInfo("entering offload function");
+  if (!InitEngine() ||
       !ServeTLS(sign_func, cert, ctx)) {
     ERR_print_errors_fp(stderr);
-    return 1;
+    return 0;
   }
-  return 0;
+  LogInfo("offload function is done");
+  return 1;
 }
