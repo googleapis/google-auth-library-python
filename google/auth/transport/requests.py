@@ -269,9 +269,11 @@ class _MutualTlsOffloadAdapter(requests.adapters.HTTPAdapter):
             )
         type = parts[1]
         key_info_json = parts[2]
-        #key_info = json.loads(key_info_json)
+        # key_info = json.loads(key_info_json)
         if type != "pkcs11":
-            raise exceptions.MutualTLSChannelError("currently only pkcs11 type is supported")
+            raise exceptions.MutualTLSChannelError(
+                "currently only pkcs11 type is supported"
+            )
 
         # Load the PKCS#11 extension shared library.
         tls_offload_ext = None
@@ -280,23 +282,23 @@ class _MutualTlsOffloadAdapter(requests.adapters.HTTPAdapter):
             if re.match("tls_offload_ext*", filename):
                 tls_offload_ext = ctypes.CDLL(os.path.join(root_path, filename))
         if not tls_offload_ext:
-            raise exceptions.MutualTLSChannelError("tls_offload_ext shared library is not found")
+            raise exceptions.MutualTLSChannelError(
+                "tls_offload_ext shared library is not found"
+            )
         offload_func = tls_offload_ext._Z7OffloadPFiPhPmPKhmEPKcP10ssl_ctx_st
         from google.auth.transport.pkcs11_sign import callback_type
+
         if key_info_json == "gecc":
             print("using gecc key/cert")
             self.sign_callback = pkcs11_sign.create_sign_callback(
                 "/usr/lib/x86_64-linux-gnu/pkcs11/libcredentialkit_pkcs11.so.0",
                 "gecc",
-                "gecc"
+                "gecc",
             )
         else:
             print("using softhsm key/cert")
             self.sign_callback = pkcs11_sign.create_sign_callback(
-                "/usr/local/lib/softhsm/libsofthsm2.so",
-                "token1",
-                "mtlskey",
-                "mynewpin"
+                "/usr/local/lib/softhsm/libsofthsm2.so", "token1", "mtlskey", "mynewpin"
             )
         self.wrapped_sign_callback = callback_type(self.sign_callback)
 
@@ -306,14 +308,8 @@ class _MutualTlsOffloadAdapter(requests.adapters.HTTPAdapter):
             int(cffi.FFI().cast("intptr_t", ctx_poolmanager._ctx._context)),
             ctypes.c_void_p,
         )
-        if not offload_func(
-            self.wrapped_sign_callback,
-            ctypes.c_char_p(cert),
-            ctx_ptr
-        ):
-            raise exceptions.MutualTLSChannelError(
-                "failed to offload"
-            )
+        if not offload_func(self.wrapped_sign_callback, ctypes.c_char_p(cert), ctx_ptr):
+            raise exceptions.MutualTLSChannelError("failed to offload")
         self._ctx_poolmanager = ctx_poolmanager
 
         ctx_proxymanager = create_urllib3_context()
@@ -322,14 +318,8 @@ class _MutualTlsOffloadAdapter(requests.adapters.HTTPAdapter):
             int(cffi.FFI().cast("intptr_t", ctx_proxymanager._ctx._context)),
             ctypes.c_void_p,
         )
-        if not offload_func(
-            self.wrapped_sign_callback,
-            ctypes.c_char_p(cert),
-            ctx_ptr
-        ):
-            raise exceptions.MutualTLSChannelError(
-                "failed to offload"
-            )
+        if not offload_func(self.wrapped_sign_callback, ctypes.c_char_p(cert), ctx_ptr):
+            raise exceptions.MutualTLSChannelError("failed to offload")
         self._ctx_proxymanager = ctx_proxymanager
 
         super(_MutualTlsOffloadAdapter, self).__init__()

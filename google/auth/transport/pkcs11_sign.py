@@ -1,6 +1,13 @@
 import ctypes
 
-callback_type = ctypes.CFUNCTYPE(ctypes.c_int, ctypes.POINTER(ctypes.c_ubyte), ctypes.POINTER(ctypes.c_size_t), ctypes.POINTER(ctypes.c_ubyte), ctypes.c_size_t)
+callback_type = ctypes.CFUNCTYPE(
+    ctypes.c_int,
+    ctypes.POINTER(ctypes.c_ubyte),
+    ctypes.POINTER(ctypes.c_size_t),
+    ctypes.POINTER(ctypes.c_ubyte),
+    ctypes.c_size_t,
+)
+
 
 def sign_test(data, module_path, token_label, key_label, user_pin=None):
     import pkcs11
@@ -18,9 +25,10 @@ def sign_test(data, module_path, token_label, key_label, user_pin=None):
 
         digest = session.digest(data, mechanism=Mechanism.SHA256)
         if key.key_type == KeyType.RSA:
-            signature = key.sign(digest, 
+            signature = key.sign(
+                digest,
                 mechanism=Mechanism.RSA_PKCS_PSS,
-                mechanism_param=(Mechanism.SHA256, MGF.SHA256, len(digest))
+                mechanism_param=(Mechanism.SHA256, MGF.SHA256, len(digest)),
             )
         else:
             signature = key.sign(digest, mechanism=Mechanism.ECDSA)
@@ -35,7 +43,6 @@ def sign_test(data, module_path, token_label, key_label, user_pin=None):
 
 
 def create_sign_callback(module_path, token_label, key_label, user_pin=None):
-
     def sign_callback(sig, sig_len, tbs, tbs_len):
         import ctypes
         import pkcs11
@@ -45,7 +52,7 @@ def create_sign_callback(module_path, token_label, key_label, user_pin=None):
         import pkcs11.util.ec
         from cryptography.hazmat.primitives import hashes
 
-        print("calling sign_callback....\n");
+        print("calling sign_callback....\n")
 
         lib = pkcs11.lib(module_path)
         token = lib.get_token(token_label=token_label)
@@ -58,9 +65,10 @@ def create_sign_callback(module_path, token_label, key_label, user_pin=None):
             hash.update(data)
             digest = hash.finalize()
             if key.key_type == KeyType.RSA:
-                signature = key.sign(digest, 
+                signature = key.sign(
+                    digest,
                     mechanism=Mechanism.RSA_PKCS_PSS,
-                    mechanism_param=(Mechanism.SHA256, MGF.SHA256, len(digest))
+                    mechanism_param=(Mechanism.SHA256, MGF.SHA256, len(digest)),
                 )
             else:
                 signature = key.sign(digest, mechanism=Mechanism.ECDSA)
@@ -79,6 +87,7 @@ def create_sign_callback(module_path, token_label, key_label, user_pin=None):
 
     return sign_callback
 
+
 @callback_type
 def sign_callback(sig, sig_len, tbs, tbs_len):
     import ctypes
@@ -88,7 +97,7 @@ def sign_callback(sig, sig_len, tbs, tbs_len):
     from pkcs11.constants import ObjectClass
     import pkcs11.util.ec
 
-    print("calling sign_callback....\n");
+    print("calling sign_callback....\n")
 
     lib = pkcs11.lib("/usr/local/lib/softhsm/libsofthsm2.so")
     token = lib.get_token(token_label="token1")
@@ -101,9 +110,10 @@ def sign_callback(sig, sig_len, tbs, tbs_len):
         print(data)
         digest = session.digest(data, mechanism=Mechanism.SHA256)
         if key.key_type == KeyType.RSA:
-            signature = key.sign(digest, 
+            signature = key.sign(
+                digest,
                 mechanism=Mechanism.RSA_PKCS_PSS,
-                mechanism_param=(Mechanism.SHA256, MGF.SHA256, len(digest))
+                mechanism_param=(Mechanism.SHA256, MGF.SHA256, len(digest)),
             )
         else:
             signature = key.sign(digest, mechanism=Mechanism.ECDSA)
@@ -121,7 +131,11 @@ def sign_callback(sig, sig_len, tbs, tbs_len):
 
     return 1
 
-callback_type2 = ctypes.CFUNCTYPE(ctypes.POINTER(ctypes.c_ubyte), ctypes.POINTER(ctypes.c_ubyte), ctypes.c_size_t)
+
+callback_type2 = ctypes.CFUNCTYPE(
+    ctypes.POINTER(ctypes.c_ubyte), ctypes.POINTER(ctypes.c_ubyte), ctypes.c_size_t
+)
+
 
 def sign(tbs, tbs_len):
     import ctypes
@@ -142,9 +156,10 @@ def sign(tbs, tbs_len):
         key = session.get_key(label="rsaclient", object_class=ObjectClass.PRIVATE_KEY)
         digest = session.digest(data, mechanism=Mechanism.SHA256)
         if key.key_type == KeyType.RSA:
-            signature = key.sign(digest, 
+            signature = key.sign(
+                digest,
                 mechanism=Mechanism.RSA_PKCS_PSS,
-                mechanism_param=(Mechanism.SHA256, MGF.SHA256, len(digest))
+                mechanism_param=(Mechanism.SHA256, MGF.SHA256, len(digest)),
             )
         else:
             signature = key.sign(digest, mechanism=Mechanism.ECDSA)
@@ -157,7 +172,10 @@ def sign(tbs, tbs_len):
 
         return signature
 
+
 if __name__ == "__main__":
     data = b"1234"
-    sign_test(data, "/usr/local/lib/softhsm/libsofthsm2.so", "token1", "rsaclient", "mynewpin")
-    #sign(data, "/usr/lib/x86_64-linux-gnu/pkcs11/libcredentialkit_pkcs11.so.0", "gecc", "gecc")
+    sign_test(
+        data, "/usr/local/lib/softhsm/libsofthsm2.so", "token1", "rsaclient", "mynewpin"
+    )
+    # sign(data, "/usr/lib/x86_64-linux-gnu/pkcs11/libcredentialkit_pkcs11.so.0", "gecc", "gecc")
