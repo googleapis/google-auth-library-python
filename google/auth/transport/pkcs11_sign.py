@@ -43,6 +43,7 @@ def create_sign_callback(module_path, token_label, key_label, user_pin=None):
         from pkcs11.constants import Attribute
         from pkcs11.constants import ObjectClass
         import pkcs11.util.ec
+        from cryptography.hazmat.primitives import hashes
 
         print("calling sign_callback....\n");
 
@@ -53,7 +54,9 @@ def create_sign_callback(module_path, token_label, key_label, user_pin=None):
         with token.open(user_pin=user_pin) as session:
             key = session.get_key(label=key_label, object_class=ObjectClass.PRIVATE_KEY)
             data = ctypes.string_at(tbs, tbs_len)
-            digest = session.digest(data, mechanism=Mechanism.SHA256)
+            hash = hashes.Hash(hashes.SHA256())
+            hash.update(data)
+            digest = hash.finalize()
             if key.key_type == KeyType.RSA:
                 signature = key.sign(digest, 
                     mechanism=Mechanism.RSA_PKCS_PSS,

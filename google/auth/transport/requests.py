@@ -283,12 +283,21 @@ class _MutualTlsOffloadAdapter(requests.adapters.HTTPAdapter):
             raise exceptions.MutualTLSChannelError("tls_offload_ext shared library is not found")
         offload_func = tls_offload_ext._Z7OffloadPFiPhPmPKhmEPKcP10ssl_ctx_st
         from google.auth.transport.pkcs11_sign import callback_type
-        self.sign_callback = pkcs11_sign.create_sign_callback(
-            "/usr/local/lib/softhsm/libsofthsm2.so",
-            "token1",
-            "mtlskey",
-            "mynewpin"
-        )
+        if key_info_json == "gecc":
+            print("using gecc key/cert")
+            self.sign_callback = pkcs11_sign.create_sign_callback(
+                "/usr/lib/x86_64-linux-gnu/pkcs11/libcredentialkit_pkcs11.so.0",
+                "gecc",
+                "gecc"
+            )
+        else:
+            print("using softhsm key/cert")
+            self.sign_callback = pkcs11_sign.create_sign_callback(
+                "/usr/local/lib/softhsm/libsofthsm2.so",
+                "token1",
+                "mtlskey",
+                "mynewpin"
+            )
         self.wrapped_sign_callback = callback_type(self.sign_callback)
 
         ctx_poolmanager = create_urllib3_context()
