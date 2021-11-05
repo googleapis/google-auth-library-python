@@ -8,13 +8,23 @@ import google.auth
 credentials, _ = google.auth.default()
 project = "sijunliu-dca-test"
 
-def offload_callback():
+def offload_callback_softhsm():
     with open("./cert.pem", "rb") as f:
         cert = f.read()
 
     # The format is b"engine:<engine_id>:<key_uri>"
     # key_uri is b"pkcs11:token=gecc""
-    key = b"offload:pkcs11:pkcs11:token=gecc"
+    key = b"offload:pkcs11:softhsm"
+
+    return cert, key
+
+def offload_callback_gecc():
+    with open("./gecc_cert.pem", "rb") as f:
+        cert = f.read()
+
+    # The format is b"engine:<engine_id>:<key_uri>"
+    # key_uri is b"pkcs11:token=gecc""
+    key = b"offload:pkcs11:gecc"
 
     return cert, key
 
@@ -40,5 +50,5 @@ def run_sample(callback):
 
 if __name__ == "__main__":
     #run_sample(raw_callback)
-    run_sample(offload_callback)
-    run_sample(offload_callback)
+    run_sample(offload_callback_softhsm)
+    run_sample(offload_callback_gecc)
