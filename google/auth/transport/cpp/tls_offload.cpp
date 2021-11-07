@@ -298,7 +298,8 @@ static bool ServeTLS(SignFunc sign_func, const char *cert, SSL_CTX *ctx) {
 
 }  // namespace
 
-int Offload(SignFunc sign_func, const char *cert, SSL_CTX *ctx) {
+// Add `extern "C"` to avoid name mangling.
+extern "C" int OffloadSigning(SignFunc sign_func, const char *cert, SSL_CTX *ctx) {
   char * val = getenv("GOOGLE_AUTH_TLS_OFFLOAD_LOGGING");
   EnableLogging = (val == nullptr)? false : true;
   LogInfo("entering offload function");

@@ -241,85 +241,49 @@ class _MutualTlsOffloadAdapter(requests.adapters.HTTPAdapter):
     PKCS#11 interface.
     Args:
         cert (bytes): client certificate in PEM format
-        key (bytes): client private key in b"offload:<type>:<key_info_json>"
-            format. For example, the type could be "pkcs11".
+        key (bytes | dict): client private key in bytes or dict.
     Raises:
         ImportError: if certifi or pyOpenSSL is not installed
         OpenSSL.crypto.Error: if client cert or key is invalid
     """
 
     def __init__(self, cert, key):
-        import json
-        import re
-
         import certifi
         import ctypes
-        import cffi
         import urllib3.contrib.pyopenssl
 
         from google.auth.transport import pkcs11_sign
 
         urllib3.contrib.pyopenssl.inject_into_urllib3()
 
-        # Parse the key.
-        parts = key.decode().split(":", 2)
-        if parts[0] != "offload" or len(parts) < 3:
-            raise exceptions.MutualTLSChannelError(
-                "invalid key format, should be b'offload:<type>:<key_info_json>' format"
-            )
-        type = parts[1]
-        key_info_json = parts[2]
-        # key_info = json.loads(key_info_json)
-        if type != "pkcs11":
-            raise exceptions.MutualTLSChannelError(
-                "currently only pkcs11 type is supported"
-            )
-
-        # Load the PKCS#11 extension shared library.
-        tls_offload_ext = None
-        root_path = os.path.join(os.path.dirname(__file__), "../../../")
-        for filename in os.listdir(root_path):
-            if re.match("tls_offload_ext*", filename):
-                tls_offload_ext = ctypes.CDLL(os.path.join(root_path, filename))
-        if not tls_offload_ext:
-            raise exceptions.MutualTLSChannelError(
-                "tls_offload_ext shared library is not found"
-            )
-        offload_func = tls_offload_ext._Z7OffloadPFiPhPmPKhmEPKcP10ssl_ctx_st
-        from google.auth.transport.pkcs11_sign import callback_type
-
-        if key_info_json == "gecc":
-            print("using gecc key/cert")
-            self.sign_callback = pkcs11_sign.create_sign_callback(
-                "/usr/lib/x86_64-linux-gnu/pkcs11/libcredentialkit_pkcs11.so.0",
-                "gecc",
-                "gecc",
-            )
-        else:
-            print("using softhsm key/cert")
-            self.sign_callback = pkcs11_sign.create_sign_callback(
-                "/usr/local/lib/softhsm/libsofthsm2.so", "token1", "mtlskey", "mynewpin"
-            )
-        self.wrapped_sign_callback = callback_type(self.sign_callback)
+        if key["type"] != "pkcs11":
+            raise exceptions.MutualTLSChannelError("currently only pkcs11 type is supported")
+        from google.auth.transport import pkcs11_sign
+        offload_signing_function = pkcs11_sign.offload_signing_function()
+        self.sign_callback = pkcs11_sign.create_sign_callback(key["info"])
 
         ctx_poolmanager = create_urllib3_context()
         ctx_poolmanager.load_verify_locations(cafile=certifi.where())
-        ctx_ptr = ctypes.cast(
-            int(cffi.FFI().cast("intptr_t", ctx_poolmanager._ctx._context)),
-            ctypes.c_void_p,
-        )
-        if not offload_func(self.wrapped_sign_callback, ctypes.c_char_p(cert), ctx_ptr):
-            raise exceptions.MutualTLSChannelError("failed to offload")
+        if not offload_signing_function(
+            self.sign_callback,
+            ctypes.c_char_p(cert),
+            pkcs11_sign._cast_ssl_ctx_to_void_p(ctx_poolmanager._ctx._context)
+        ):
+            raise exceptions.MutualTLSChannelError(
+                "failed to offload signing"
+            )
         self._ctx_poolmanager = ctx_poolmanager
-
+    
         ctx_proxymanager = create_urllib3_context()
         ctx_proxymanager.load_verify_locations(cafile=certifi.where())
-        ctx_ptr = ctypes.cast(
-            int(cffi.FFI().cast("intptr_t", ctx_proxymanager._ctx._context)),
-            ctypes.c_void_p,
-        )
-        if not offload_func(self.wrapped_sign_callback, ctypes.c_char_p(cert), ctx_ptr):
-            raise exceptions.MutualTLSChannelError("failed to offload")
+        if not offload_signing_function(
+            self.sign_callback,
+            ctypes.c_char_p(cert),
+            pkcs11_sign._cast_ssl_ctx_to_void_p(ctx_proxymanager._ctx._context)
+        ):
+            raise exceptions.MutualTLSChannelError(
+                "failed to offload signing"
+            )
         self._ctx_proxymanager = ctx_proxymanager
 
         super(_MutualTlsOffloadAdapter, self).__init__()
@@ -506,10 +470,10 @@ class AuthorizedSession(requests.Session):
             )
 
             if self._is_mtls:
-                if key.decode().startswith("offload"):
-                    mtls_adapter = _MutualTlsOffloadAdapter(cert, key)
-                else:
+                if isinstance(key, bytes):
                     mtls_adapter = _MutualTlsAdapter(cert, key)
+                else:
+                    mtls_adapter = _MutualTlsOffloadAdapter(cert, key)
                 self.mount("https://", mtls_adapter)
         except (
             exceptions.ClientCertError,

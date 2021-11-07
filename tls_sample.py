@@ -12,9 +12,15 @@ def offload_callback_softhsm():
     with open("./cert.pem", "rb") as f:
         cert = f.read()
 
-    # The format is b"engine:<engine_id>:<key_uri>"
-    # key_uri is b"pkcs11:token=gecc""
-    key = b"offload:pkcs11:softhsm"
+    key = {
+        "type": "pkcs11",
+        "info": {
+            "module_path": "/usr/local/lib/softhsm/libsofthsm2.so",
+            "token_label": "token1",
+            "key_label": "mtlskey",
+            "user_pin": "mynewpin",
+        }
+    }
 
     return cert, key
 
@@ -22,9 +28,14 @@ def offload_callback_gecc():
     with open("./gecc_cert.pem", "rb") as f:
         cert = f.read()
 
-    # The format is b"engine:<engine_id>:<key_uri>"
-    # key_uri is b"pkcs11:token=gecc""
-    key = b"offload:pkcs11:gecc"
+    key = {
+        "type": "pkcs11",
+        "info": {
+            "module_path": "/usr/lib/x86_64-linux-gnu/pkcs11/libcredentialkit_pkcs11.so.0",
+            "token_label": "gecc",
+            "key_label": "gecc",
+        }
+    }
 
     return cert, key
 
@@ -49,6 +60,6 @@ def run_sample(callback):
 
 
 if __name__ == "__main__":
-    #run_sample(raw_callback)
+    run_sample(raw_callback)
     run_sample(offload_callback_softhsm)
     run_sample(offload_callback_gecc)
