@@ -9,6 +9,7 @@ from google.auth import exceptions
 def _cast_ssl_ctx_to_void_p(ssl_ctx):
     return ctypes.cast(int(cffi.FFI().cast("intptr_t", ssl_ctx)), ctypes.c_void_p)
 
+
 def offload_signing_function():
     tls_offload_ext = None
     root_path = os.path.join(os.path.dirname(__file__), "../../../")
@@ -16,8 +17,11 @@ def offload_signing_function():
         if re.match("tls_offload_ext*", filename):
             tls_offload_ext = ctypes.CDLL(os.path.join(root_path, filename))
     if not tls_offload_ext:
-        raise exceptions.MutualTLSChannelError("tls_offload_ext shared library is not found")
+        raise exceptions.MutualTLSChannelError(
+            "tls_offload_ext shared library is not found"
+        )
     return tls_offload_ext.OffloadSigning
+
 
 def create_sign_callback(key_info):
     callback_type = ctypes.CFUNCTYPE(
@@ -25,7 +29,7 @@ def create_sign_callback(key_info):
         ctypes.POINTER(ctypes.c_ubyte),
         ctypes.POINTER(ctypes.c_size_t),
         ctypes.POINTER(ctypes.c_ubyte),
-        ctypes.c_size_t
+        ctypes.c_size_t,
     )
 
     def sign_callback(sig, sig_len, tbs, tbs_len):
@@ -44,8 +48,7 @@ def create_sign_callback(key_info):
         # Open a session on our token
         with token.open(user_pin=user_pin) as session:
             key = session.get_key(
-                label=key_info["key_label"],
-                object_class=ObjectClass.PRIVATE_KEY
+                label=key_info["key_label"], object_class=ObjectClass.PRIVATE_KEY
             )
             data = ctypes.string_at(tbs, tbs_len)
             hash = hashes.Hash(hashes.SHA256())

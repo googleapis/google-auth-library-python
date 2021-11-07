@@ -257,8 +257,11 @@ class _MutualTlsOffloadAdapter(requests.adapters.HTTPAdapter):
         urllib3.contrib.pyopenssl.inject_into_urllib3()
 
         if key["type"] != "pkcs11":
-            raise exceptions.MutualTLSChannelError("currently only pkcs11 type is supported")
+            raise exceptions.MutualTLSChannelError(
+                "currently only pkcs11 type is supported"
+            )
         from google.auth.transport import pkcs11_sign
+
         offload_signing_function = pkcs11_sign.offload_signing_function()
         self.sign_callback = pkcs11_sign.create_sign_callback(key["info"])
 
@@ -267,23 +270,19 @@ class _MutualTlsOffloadAdapter(requests.adapters.HTTPAdapter):
         if not offload_signing_function(
             self.sign_callback,
             ctypes.c_char_p(cert),
-            pkcs11_sign._cast_ssl_ctx_to_void_p(ctx_poolmanager._ctx._context)
+            pkcs11_sign._cast_ssl_ctx_to_void_p(ctx_poolmanager._ctx._context),
         ):
-            raise exceptions.MutualTLSChannelError(
-                "failed to offload signing"
-            )
+            raise exceptions.MutualTLSChannelError("failed to offload signing")
         self._ctx_poolmanager = ctx_poolmanager
-    
+
         ctx_proxymanager = create_urllib3_context()
         ctx_proxymanager.load_verify_locations(cafile=certifi.where())
         if not offload_signing_function(
             self.sign_callback,
             ctypes.c_char_p(cert),
-            pkcs11_sign._cast_ssl_ctx_to_void_p(ctx_proxymanager._ctx._context)
+            pkcs11_sign._cast_ssl_ctx_to_void_p(ctx_proxymanager._ctx._context),
         ):
-            raise exceptions.MutualTLSChannelError(
-                "failed to offload signing"
-            )
+            raise exceptions.MutualTLSChannelError("failed to offload signing")
         self._ctx_proxymanager = ctx_proxymanager
 
         super(_MutualTlsOffloadAdapter, self).__init__()
