@@ -23,7 +23,7 @@ def offload_signing_function():
     return tls_offload_ext.OffloadSigning
 
 
-def create_sign_callback(key_info):
+def _create_pkcs11_sign_callback(key_info):
     callback_type = ctypes.CFUNCTYPE(
         ctypes.c_int,
         ctypes.POINTER(ctypes.c_ubyte),
@@ -74,3 +74,10 @@ def create_sign_callback(key_info):
             return 1
 
     return callback_type(sign_callback)
+
+def get_sign_callback(key):
+    if key["type"] == "pkc11":
+        return _create_pkcs11_sign_callback(key["info"])
+    raise exceptions.MutualTLSChannelError(
+        "currently only pkcs11 type is supported"
+    )
