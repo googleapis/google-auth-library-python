@@ -75,6 +75,7 @@ def _create_pkcs11_sign_callback(key_info):
 
     return callback_type(sign_callback)
 
+
 def _create_raw_sign_callback(key_info):
     callback_type = ctypes.CFUNCTYPE(
         ctypes.c_int,
@@ -94,8 +95,7 @@ def _create_raw_sign_callback(key_info):
 
         with open(key_info["pem_path"], "rb") as key_file:
             private_key = serialization.load_pem_private_key(
-                key_file.read(),
-                password=None,
+                key_file.read(), password=None
             )
 
         data = ctypes.string_at(tbs, tbs_len)
@@ -106,11 +106,8 @@ def _create_raw_sign_callback(key_info):
         if isinstance(private_key, rsa.RSAPrivateKey):
             signature = private_key.sign(
                 data,
-                padding.PSS(
-                    mgf=padding.MGF1(hashes.SHA256()),
-                    salt_length=len(digest)
-                ),
-                hashes.SHA256()
+                padding.PSS(mgf=padding.MGF1(hashes.SHA256()), salt_length=len(digest)),
+                hashes.SHA256(),
             )
         else:
             signature = private_key.sign(data)
@@ -122,6 +119,7 @@ def _create_raw_sign_callback(key_info):
         return 1
 
     return callback_type(sign_callback)
+
 
 def get_sign_callback(key):
     if key["type"] == "pkc11":
