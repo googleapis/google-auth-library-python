@@ -254,10 +254,6 @@ class _MutualTlsOffloadAdapter(requests.adapters.HTTPAdapter):
 
         urllib3.contrib.pyopenssl.inject_into_urllib3()
 
-        if key["type"] != "pkcs11":
-            raise exceptions.MutualTLSChannelError(
-                "currently only pkcs11 type is supported"
-            )
         from google.auth.transport import tls_sign
 
         offload_signing_function = tls_sign.offload_signing_function()

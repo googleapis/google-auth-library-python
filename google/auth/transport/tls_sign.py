@@ -75,8 +75,59 @@ def _create_pkcs11_sign_callback(key_info):
 
     return callback_type(sign_callback)
 
+def _create_raw_sign_callback(key_info):
+    callback_type = ctypes.CFUNCTYPE(
+        ctypes.c_int,
+        ctypes.POINTER(ctypes.c_ubyte),
+        ctypes.POINTER(ctypes.c_size_t),
+        ctypes.POINTER(ctypes.c_ubyte),
+        ctypes.c_size_t,
+    )
+
+    def sign_callback(sig, sig_len, tbs, tbs_len):
+        print("calling sign_callback for raw key....\n")
+
+        from cryptography.hazmat.primitives import hashes
+        from cryptography.hazmat.primitives import serialization
+        from cryptography.hazmat.primitives.asymmetric import padding
+        from cryptography.hazmat.primitives.asymmetric import rsa
+
+        with open(key_info["pem_path"], "rb") as key_file:
+            private_key = serialization.load_pem_private_key(
+                key_file.read(),
+                password=None,
+            )
+
+        data = ctypes.string_at(tbs, tbs_len)
+        hash = hashes.Hash(hashes.SHA256())
+        hash.update(data)
+        digest = hash.finalize()
+
+        if isinstance(private_key, rsa.RSAPrivateKey):
+            signature = private_key.sign(
+                data,
+                padding.PSS(
+                    mgf=padding.MGF1(hashes.SHA256()),
+                    salt_length=len(digest)
+                ),
+                hashes.SHA256()
+            )
+        else:
+            signature = private_key.sign(data)
+        sig_len[0] = len(signature)
+        if sig:
+            for i in range(len(signature)):
+                sig[i] = signature[i]
+
+        return 1
+
+    return callback_type(sign_callback)
 
 def get_sign_callback(key):
     if key["type"] == "pkc11":
         return _create_pkcs11_sign_callback(key["info"])
-    raise exceptions.MutualTLSChannelError("currently only pkcs11 type is supported")
+    elif key["type"] == "raw":
+        return _create_raw_sign_callback(key["info"])
+    raise exceptions.MutualTLSChannelError(
+        "currently only pkcs11 and raw type are supported"
+    )
