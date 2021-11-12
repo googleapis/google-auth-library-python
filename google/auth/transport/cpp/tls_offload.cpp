@@ -15,6 +15,10 @@
 #include <iostream>
 #include <stdlib.h>
 
+#ifdef _WIN32
+#include <Python.h>
+#endif
+
 namespace {
 
 static bool EnableLogging = false;
@@ -299,7 +303,11 @@ static bool ServeTLS(SignFunc sign_func, const char *cert, SSL_CTX *ctx) {
 }  // namespace
 
 // Add `extern "C"` to avoid name mangling.
+#ifdef _WIN32
+extern "C" int __declspec(dllexport) OffloadSigning(SignFunc sign_func, const char *cert, SSL_CTX *ctx) {
+#else
 extern "C" int OffloadSigning(SignFunc sign_func, const char *cert, SSL_CTX *ctx) {
+#endif
   char * val = getenv("GOOGLE_AUTH_TLS_OFFLOAD_LOGGING");
   EnableLogging = (val == nullptr)? false : true;
   LogInfo("entering offload function");
@@ -317,3 +325,10 @@ extern "C" int OffloadSigning(SignFunc sign_func, const char *cert, SSL_CTX *ctx
   LogInfo("offload function is done");
   return 1;
 }
+
+#ifdef _WIN32
+PyMODINIT_FUNC PyInit_tls_offload_ext(void) {
+    Py_Initialize();
+    return PyModule_Create(nullptr);
+}
+#endif

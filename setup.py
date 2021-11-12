@@ -55,9 +55,9 @@ version = version["__version__"]
 BUILD_TLS_OFFLOAD = os.getenv("GOOGLE_AUTH_BUILD_TLS_OFFLOAD")
 if BUILD_TLS_OFFLOAD:
     tls_offload_ext = Extension(
-        "tls_offload_ext",
+        name="tls_offload_ext",
         language="c++",
-        libraries=["ssl", "crypto"],
+        libraries=["libcrypto", "libssl"],
         sources=["google/auth/transport/cpp/tls_offload.cpp"],
     )
 
