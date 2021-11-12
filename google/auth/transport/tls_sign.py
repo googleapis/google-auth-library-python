@@ -75,9 +75,8 @@ def _create_pkcs11_sign_callback(key_info):
 
     return callback_type(sign_callback)
 
+
 def get_sign_callback(key):
     if key["type"] == "pkc11":
         return _create_pkcs11_sign_callback(key["info"])
-    raise exceptions.MutualTLSChannelError(
-        "currently only pkcs11 type is supported"
-    )
+    raise exceptions.MutualTLSChannelError("currently only pkcs11 type is supported")
