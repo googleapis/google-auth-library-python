@@ -321,6 +321,47 @@ class Credentials(credentials.CredentialsWithQuotaProject, credentials.Signing):
             iam_endpoint_override=self._iam_endpoint_override,
         )
 
+    @classmethod
+    def from_authorized_user_info(cls, source_credentials, info, scopes=None):
+        """Creates a Credentials instance from parsed authorized user info.
+
+        Args:
+            source_credentials (google.oauth2.credentials.Credentials): The source
+                credentials required to impersonate the given principal.
+            info (Mapping[str, str]): The authorized user info in Google
+                format.
+            scopes (Sequence[str]): Optional list of scopes to include in the
+                credentials.
+
+        Returns:
+            google.impersonated_credentials.Credentials: The constructed
+                credentials.
+
+        Raises:
+            ValueError: If the info is not in the expected format.
+        """
+        import re
+
+        keys_needed = {"delegates", "service_account_impersonation_url", "source_credentials"}
+        missing = keys_needed.difference(six.iterkeys(info))
+
+        if missing:
+            raise ValueError(
+                "Authorized user info was not in the expected format, missing "
+                "fields {}.".format(", ".join(missing))
+            )
+
+        iam_endpoint_parser = re.search(pattern=r"(?P<service_account>[a-zA-Z-0-9]+)@(?P<project_id>[a-zA-Z-0-9]+)",
+                                        string=info.get("service_account_impersonation_url"))
+
+        return cls(
+            source_credentials=source_credentials,
+            target_principal=iam_endpoint_parser.group("service_account"),
+            target_scopes=["https://www.googleapis.com/auth/cloud-platform"],
+            delegates=info.get("delegates"),
+            iam_endpoint_override=info.get("service_account_impersonation_url")
+        ), iam_endpoint_parser.group("project_id")
+
 
 class IDTokenCredentials(credentials.CredentialsWithQuotaProject):
     """Open ID Connect ID Token-based service account credentials.

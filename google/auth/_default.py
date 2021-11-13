@@ -35,7 +35,8 @@ _LOGGER = logging.getLogger(__name__)
 _AUTHORIZED_USER_TYPE = "authorized_user"
 _SERVICE_ACCOUNT_TYPE = "service_account"
 _EXTERNAL_ACCOUNT_TYPE = "external_account"
-_VALID_TYPES = (_AUTHORIZED_USER_TYPE, _SERVICE_ACCOUNT_TYPE, _EXTERNAL_ACCOUNT_TYPE)
+_IMPERSONATED_SERVICE_ACCOUNT_TYPE = "impersonated_service_account"
+_VALID_TYPES = (_AUTHORIZED_USER_TYPE, _SERVICE_ACCOUNT_TYPE, _EXTERNAL_ACCOUNT_TYPE, _IMPERSONATED_SERVICE_ACCOUNT_TYPE)
 
 # Help message when no credentials can be found.
 _HELP_MESSAGE = """\
@@ -155,6 +156,24 @@ def load_credentials_from_file(
         if quota_project_id:
             credentials = credentials.with_quota_project(quota_project_id)
         return credentials, info.get("project_id")
+
+    elif credential_type == _IMPERSONATED_SERVICE_ACCOUNT_TYPE:
+        from google.auth import impersonated_credentials
+        from google.oauth2 import credentials
+
+        try:
+            source_credentials = credentials.Credentials.from_authorized_user_info(
+                info.get("source_credentials"), scopes=scopes
+            )
+            credentials, project_id = impersonated_credentials.Credentials.from_authorized_user_info(
+                source_credentials, info, scopes=scopes
+            )
+            return credentials, project_id
+
+        except ValueError as caught_exc:
+            msg = "Failed to load authorized impersonated credentials from {}".format(filename)
+            new_exc = exceptions.DefaultCredentialsError(msg, caught_exc)
+            six.raise_from(new_exc, caught_exc)
 
     elif credential_type == _EXTERNAL_ACCOUNT_TYPE:
         credentials, project_id = _get_external_account_credentials(
