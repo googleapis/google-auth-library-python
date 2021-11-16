@@ -47,5 +47,4 @@ pytype_output/
 cert_path
 key_path
 *.so
-*.pem
 env/
