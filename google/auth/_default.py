@@ -159,17 +159,11 @@ def load_credentials_from_file(
 
     elif credential_type == _IMPERSONATED_SERVICE_ACCOUNT_TYPE:
         from google.auth import impersonated_credentials
-        from google.oauth2 import credentials
 
         try:
-            source_credentials = credentials.Credentials.from_authorized_user_info(
-                info.get("source_credentials"), scopes=scopes
+            return impersonated_credentials.Credentials.from_impersonated_credentials_info(
+                info, scopes=scopes, default_scopes=default_scopes
             )
-            credentials, project_id = impersonated_credentials.Credentials.from_authorized_user_info(
-                source_credentials, info, scopes=scopes
-            )
-            return credentials, project_id
-
         except ValueError as caught_exc:
             msg = "Failed to load authorized impersonated credentials from {}".format(filename)
             new_exc = exceptions.DefaultCredentialsError(msg, caught_exc)

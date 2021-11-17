@@ -27,8 +27,8 @@ service account.
 
 import base64
 import copy
-from datetime import datetime
 import json
+from datetime import datetime
 
 import six
 from six.moves import http_client
@@ -44,18 +44,18 @@ _DEFAULT_TOKEN_LIFETIME_SECS = 3600  # 1 hour in seconds
 _IAM_SCOPE = ["https://www.googleapis.com/auth/iam"]
 
 _IAM_ENDPOINT = (
-    "https://iamcredentials.googleapis.com/v1/projects/-"
-    + "/serviceAccounts/{}:generateAccessToken"
+        "https://iamcredentials.googleapis.com/v1/projects/-"
+        + "/serviceAccounts/{}:generateAccessToken"
 )
 
 _IAM_SIGN_ENDPOINT = (
-    "https://iamcredentials.googleapis.com/v1/projects/-"
-    + "/serviceAccounts/{}:signBlob"
+        "https://iamcredentials.googleapis.com/v1/projects/-"
+        + "/serviceAccounts/{}:signBlob"
 )
 
 _IAM_IDTOKEN_ENDPOINT = (
-    "https://iamcredentials.googleapis.com/v1/"
-    + "projects/-/serviceAccounts/{}:generateIdToken"
+        "https://iamcredentials.googleapis.com/v1/"
+        + "projects/-/serviceAccounts/{}:generateIdToken"
 )
 
 _REFRESH_ERROR = "Unable to acquire impersonated credentials"
@@ -66,7 +66,7 @@ _DEFAULT_TOKEN_URI = "https://oauth2.googleapis.com/token"
 
 
 def _make_iam_token_request(
-    request, principal, headers, body, iam_endpoint_override=None
+        request, principal, headers, body, iam_endpoint_override=None
 ):
     """Makes a request to the Google Cloud IAM service for an access token.
     Args:
@@ -183,14 +183,14 @@ class Credentials(credentials.CredentialsWithQuotaProject, credentials.Signing):
     """
 
     def __init__(
-        self,
-        source_credentials,
-        target_principal,
-        target_scopes,
-        delegates=None,
-        lifetime=_DEFAULT_TOKEN_LIFETIME_SECS,
-        quota_project_id=None,
-        iam_endpoint_override=None,
+            self,
+            source_credentials,
+            target_principal,
+            target_scopes,
+            delegates=None,
+            lifetime=_DEFAULT_TOKEN_LIFETIME_SECS,
+            quota_project_id=None,
+            iam_endpoint_override=None,
     ):
         """
         Args:
@@ -322,35 +322,57 @@ class Credentials(credentials.CredentialsWithQuotaProject, credentials.Signing):
         )
 
     @classmethod
-    def from_authorized_user_info(cls, source_credentials, info, scopes=None):
+    def from_impersonated_credentials_info(cls, info, scopes=None, default_scopes=None):
         """Creates a Credentials instance from parsed authorized user info.
 
         Args:
-            source_credentials (google.oauth2.credentials.Credentials): The source
-                credentials required to impersonate the given principal.
             info (Mapping[str, str]): The authorized user info in Google
                 format.
             scopes (Sequence[str]): Optional list of scopes to include in the
                 credentials.
+            default_scopes (Optional[Sequence[str]]): Default scopes passed by a
+                Google client library. Use 'scopes' for user-defined scopes.
 
         Returns:
-            google.impersonated_credentials.Credentials: The constructed
-                credentials.
+            Tuple[google.impersonated_credentials.Credentials, str]: Constructed
+                credentials and the project ID.
 
         Raises:
-            ValueError: If the info is not in the expected format.
+            ValueError: If the info is not in the expected format or if the source credentials
+            type is not supported.
         """
         import re
+        from google.oauth2 import credentials, service_account
 
         keys_needed = {"delegates", "service_account_impersonation_url", "source_credentials"}
         missing = keys_needed.difference(six.iterkeys(info))
 
         if missing:
             raise ValueError(
-                "Authorized user info was not in the expected format, missing "
+                "Impersonated service account info was not in the expected format, missing "
                 "fields {}.".format(", ".join(missing))
             )
 
+        source_credentials_data = info.get("source_credentials")
+        source_credentials_type = source_credentials_data.get("type")
+
+        # TODO: put this in a constant file + also in _default
+        if source_credentials_type == "authorized_user":
+            source_credentials = credentials.Credentials.from_authorized_user_info(
+                source_credentials_data, scopes=scopes
+            )
+        # TODO: put this in a constant file + also in _default
+        elif source_credentials_type == "service_account":
+            source_credentials = service_account.Credentials.from_service_account_info(
+                source_credentials_data, scopes=scopes, default_scopes=default_scopes
+            )
+        else:
+            # TODO: raise custom exception type?
+            raise ValueError(
+                "source credentials type is not in a supported format: [authorized_user, service_account]"
+            )
+
+        # TODO: extract the parsing in a more general place
         iam_endpoint_parser = re.search(pattern=r"(?P<service_account>[a-zA-Z-0-9]+)@(?P<project_id>[a-zA-Z-0-9]+)",
                                         string=info.get("service_account_impersonation_url"))
 
@@ -369,11 +391,11 @@ class IDTokenCredentials(credentials.CredentialsWithQuotaProject):
     """
 
     def __init__(
-        self,
-        target_credentials,
-        target_audience=None,
-        include_email=False,
-        quota_project_id=None,
+            self,
+            target_credentials,
+            target_audience=None,
+            include_email=False,
+            quota_project_id=None,
     ):
         """
         Args:
@@ -430,7 +452,6 @@ class IDTokenCredentials(credentials.CredentialsWithQuotaProject):
 
     @_helpers.copy_docstring(credentials.Credentials)
     def refresh(self, request):
-
         iam_sign_endpoint = _IAM_IDTOKEN_ENDPOINT.format(
             self._target_credentials.signer_email
         )
