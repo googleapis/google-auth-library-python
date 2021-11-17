@@ -27,8 +27,8 @@ service account.
 
 import base64
 import copy
-import json
 from datetime import datetime
+import json
 
 import six
 from six.moves import http_client
@@ -44,18 +44,18 @@ _DEFAULT_TOKEN_LIFETIME_SECS = 3600  # 1 hour in seconds
 _IAM_SCOPE = ["https://www.googleapis.com/auth/iam"]
 
 _IAM_ENDPOINT = (
-        "https://iamcredentials.googleapis.com/v1/projects/-"
-        + "/serviceAccounts/{}:generateAccessToken"
+    "https://iamcredentials.googleapis.com/v1/projects/-"
+    + "/serviceAccounts/{}:generateAccessToken"
 )
 
 _IAM_SIGN_ENDPOINT = (
-        "https://iamcredentials.googleapis.com/v1/projects/-"
-        + "/serviceAccounts/{}:signBlob"
+    "https://iamcredentials.googleapis.com/v1/projects/-"
+    + "/serviceAccounts/{}:signBlob"
 )
 
 _IAM_IDTOKEN_ENDPOINT = (
-        "https://iamcredentials.googleapis.com/v1/"
-        + "projects/-/serviceAccounts/{}:generateIdToken"
+    "https://iamcredentials.googleapis.com/v1/"
+    + "projects/-/serviceAccounts/{}:generateIdToken"
 )
 
 _REFRESH_ERROR = "Unable to acquire impersonated credentials"
@@ -66,7 +66,7 @@ _DEFAULT_TOKEN_URI = "https://oauth2.googleapis.com/token"
 
 
 def _make_iam_token_request(
-        request, principal, headers, body, iam_endpoint_override=None
+    request, principal, headers, body, iam_endpoint_override=None
 ):
     """Makes a request to the Google Cloud IAM service for an access token.
     Args:
@@ -183,14 +183,14 @@ class Credentials(credentials.CredentialsWithQuotaProject, credentials.Signing):
     """
 
     def __init__(
-            self,
-            source_credentials,
-            target_principal,
-            target_scopes,
-            delegates=None,
-            lifetime=_DEFAULT_TOKEN_LIFETIME_SECS,
-            quota_project_id=None,
-            iam_endpoint_override=None,
+        self,
+        source_credentials,
+        target_principal,
+        target_scopes,
+        delegates=None,
+        lifetime=_DEFAULT_TOKEN_LIFETIME_SECS,
+        quota_project_id=None,
+        iam_endpoint_override=None,
     ):
         """
         Args:
@@ -391,11 +391,11 @@ class IDTokenCredentials(credentials.CredentialsWithQuotaProject):
     """
 
     def __init__(
-            self,
-            target_credentials,
-            target_audience=None,
-            include_email=False,
-            quota_project_id=None,
+        self,
+        target_credentials,
+        target_audience=None,
+        include_email=False,
+        quota_project_id=None,
     ):
         """
         Args:
@@ -452,6 +452,7 @@ class IDTokenCredentials(credentials.CredentialsWithQuotaProject):
 
     @_helpers.copy_docstring(credentials.Credentials)
     def refresh(self, request):
+
         iam_sign_endpoint = _IAM_IDTOKEN_ENDPOINT.format(
             self._target_credentials.signer_email
         )
