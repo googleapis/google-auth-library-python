@@ -53,6 +53,7 @@ with open(os.path.join(package_root, "google/auth/version.py")) as fp:
 version = version["__version__"]
 
 BUILD_TLS_OFFLOAD = os.getenv("GOOGLE_AUTH_BUILD_TLS_OFFLOAD")
+ext_module = None
 if BUILD_TLS_OFFLOAD:
     tls_offload_ext = Extension(
         name="tls_offload_ext",
@@ -60,6 +61,13 @@ if BUILD_TLS_OFFLOAD:
         libraries=["libcrypto", "libssl"],
         sources=["google/auth/transport/cpp/tls_offload.cpp"],
     )
+    windows_signer_ext = Extension(
+        name="windows_signer_ext",
+        language="c++",
+        libraries=["crypt32"],
+        sources=["google/auth/transport/cpp/windows_signer.cpp"],
+    )
+    ext_module = [windows_signer_ext]
 
 setup(
     name="google-auth",
@@ -77,7 +85,7 @@ setup(
     license="Apache 2.0",
     keywords="google auth oauth client",
     # GOOGLE_AUTH_BUILD_TLS_OFFLOAD=1 CC=g++ python -m pip install -e .
-    ext_modules=[tls_offload_ext] if BUILD_TLS_OFFLOAD else None,
+    ext_modules=ext_module,
     classifiers=[
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.6",

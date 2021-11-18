@@ -114,3 +114,19 @@ python tls_sample.py
 ```
 
 You should see `Called /foo` from server side and `Call succeeded!` from curl.
+
+# Windows signer
+
+## Install cert/key to Windows cert store
+
+```
+openssl pkcs12 -inkey key.pem -in cert.pem -export -out mtls.pfx
+```
+Enter `12345` as the password, then double click the `mtls.pfx` file to install it
+to both local user and current machine.
+
+## Install `pywin32`
+
+```
+python -m pip install pywin32
+```
