@@ -64,7 +64,7 @@ if BUILD_TLS_OFFLOAD:
     windows_signer_ext = Extension(
         name="windows_signer_ext",
         language="c++",
-        libraries=["crypt32", "bcrypt"],
+        libraries=["crypt32", "bcrypt", "ncrypt"],
         sources=["google/auth/transport/cpp/signer.cpp"],
     )
     ext_module = [windows_signer_ext]

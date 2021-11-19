@@ -7,10 +7,13 @@
 #include <conio.h>
 #include <tchar.h>
 #include <bcrypt.h>
+#include <ncrypt.h>
 
 #define MY_ENCODING_TYPE  (PKCS_7_ASN_ENCODING | X509_ASN_ENCODING)
 #define SIGNER_NAME L"localhost"
 #define CERT_STORE_NAME  L"MY"
+#define NT_SUCCESS(Status) (((NTSTATUS)(Status)) >= 0)
+#define STATUS_UNSUCCESSFUL ((NTSTATUS)0xC0000001L)
 
 class WindowsSigner {
     public:
@@ -20,6 +23,7 @@ class WindowsSigner {
         void Sign();
         void GetPrivateKey();
         void CreateHash();
+        void NCryptSign();
     private:
         void Cleanup();
         void HandleError(LPTSTR psz);
@@ -181,9 +185,6 @@ void WindowsSigner::GetPrivateKey() {
 }
 
 void WindowsSigner::CreateHash() {
-    #define NT_SUCCESS(Status) (((NTSTATUS)(Status)) >= 0)
-    #define STATUS_UNSUCCESSFUL ((NTSTATUS)0xC0000001L)
-
     static const BYTE rgbMsg[] = {0x61, 0x62, 0x63};
     NTSTATUS                status          = STATUS_UNSUCCESSFUL;
     DWORD                   cbData          = 0,
@@ -255,12 +256,54 @@ Cleanup:
     return;
 }
 
+void WindowsSigner::NCryptSign() {
+    BCRYPT_ALG_HANDLE hSignAlg = NULL;
+    NTSTATUS status = STATUS_UNSUCCESSFUL;
+    if(!NT_SUCCESS(status = BCryptOpenAlgorithmProvider(&hSignAlg, BCRYPT_ECDSA_P256_ALGORITHM, NULL,0)))
+    {
+        wprintf(L"**** Error 0x%x returned by BCryptOpenAlgorithmProvider\n", status);
+        goto Cleanup;
+    }
+    
+    //sign the hash
+    DWORD cbSignature = 0;
+    SECURITY_STATUS secStatus = ERROR_SUCCESS;
+    if(FAILED(secStatus = NCryptSignHash(hCryptProv,NULL,pbHash,cbHash,NULL, 0,&cbSignature,0)))
+    {
+        wprintf(L"**** Error 0x%x returned by NCryptSignHash\n", secStatus);
+        goto Cleanup;
+    } else {
+        printf("First call to NCryptSignHash succeeded, sig len %lu\n", cbSignature);
+    }
+
+    //allocate the signature buffer
+    PBYTE pbSignature = NULL;
+    pbSignature = (PBYTE)HeapAlloc(GetProcessHeap (), 0, cbSignature);
+    if(NULL == pbSignature)
+    {
+        wprintf(L"**** memory allocation failed\n");
+        goto Cleanup;
+    }
+
+    if(FAILED(secStatus = NCryptSignHash(hCryptProv,NULL,pbHash,cbHash,pbSignature,cbSignature,&cbSignature,0)))
+    {
+        wprintf(L"**** Error 0x%x returned by NCryptSignHash\n", secStatus);
+        goto Cleanup;
+    } else {
+        printf("Sign succeeded!\n");
+    }
+
+    Cleanup:
+        return;
+}
+
 static PyObject* sign(PyObject *self, PyObject *args) {
     printf("calling sign\n");
     WindowsSigner signer;
     signer.GetSignerCert();
     signer.GetPrivateKey();
     signer.CreateHash();
+    signer.NCryptSign();
     Py_INCREF(Py_None);
     return Py_None; 
 }
