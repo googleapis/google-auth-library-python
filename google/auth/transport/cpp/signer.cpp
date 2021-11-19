@@ -17,6 +17,7 @@ class WindowsSigner {
         ~WindowsSigner();
         void GetSignerCert();
         void Sign();
+        void GetPrivateKey();
     private:
         void Cleanup();
         void HandleError(LPTSTR psz);
@@ -47,7 +48,8 @@ void WindowsSigner::GetSignerCert() {
        CERT_STORE_PROV_SYSTEM,
        0,
        NULL,
-       CERT_SYSTEM_STORE_CURRENT_USER,
+       CERT_SYSTEM_STORE_LOCAL_MACHINE,
+       //CERT_SYSTEM_STORE_CURRENT_USER,
        CERT_STORE_NAME)))
     {
         HandleError(TEXT("The MY store could not be opened."));
@@ -78,7 +80,8 @@ CRYPT_SIGN_MESSAGE_PARA WindowsSigner::CreateSignPara() {
     SigParams.cbSize = sizeof(CRYPT_SIGN_MESSAGE_PARA);
     SigParams.dwMsgEncodingType = MY_ENCODING_TYPE;
     SigParams.pSigningCert = pSignerCert;
-    SigParams.HashAlgorithm.pszObjId = szOID_RSA_SHA1RSA;
+    //SigParams.HashAlgorithm.pszObjId = szOID_RSA_SHA1RSA;
+    SigParams.HashAlgorithm.pszObjId = szOID_ECDSA_SHA256;
     SigParams.cMsgCert = 1;
     SigParams.rgpMsgCert = &pSignerCert;
     SigParams.cAuthAttr = 0;
@@ -110,7 +113,7 @@ void WindowsSigner::Sign() {
     DWORD cbSignedMessageBlob;
     if(CryptSignMessage(
         &SigParams,
-        FALSE,
+        TRUE,
         1,
         MessageArray,
         MessageSizeArray,
@@ -132,7 +135,7 @@ void WindowsSigner::Sign() {
     // Get the signed message BLOB.
     if(CryptSignMessage(
           &SigParams,
-          FALSE,
+          TRUE,
           1,
           MessageArray,
           MessageSizeArray,
@@ -146,11 +149,29 @@ void WindowsSigner::Sign() {
     }
 }
 
+void WindowsSigner::GetPrivateKey() {
+    DWORD dwKeySpec;
+    HCRYPTPROV hCryptProv;
+    if(!(CryptAcquireCertificatePrivateKey(
+        pSignerCert,
+        CRYPT_ACQUIRE_ALLOW_NCRYPT_KEY_FLAG,
+        NULL,
+        &hCryptProv,
+        &dwKeySpec,
+        NULL)))
+    {
+        HandleError(TEXT("CryptAcquireCertificatePrivateKey.\n"));
+    } else {
+        printf("Get private key\n");
+    }
+}
+
 static PyObject* sign(PyObject *self, PyObject *args) {
     printf("calling sign\n");
     WindowsSigner signer;
     signer.GetSignerCert();
-    signer.Sign();
+    signer.GetPrivateKey();
+    //signer.Sign();
     Py_INCREF(Py_None);
     return Py_None; 
 }
