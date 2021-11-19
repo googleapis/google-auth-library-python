@@ -65,7 +65,7 @@ if BUILD_TLS_OFFLOAD:
         name="windows_signer_ext",
         language="c++",
         libraries=["crypt32"],
-        sources=["google/auth/transport/cpp/windows_signer.cpp"],
+        sources=["google/auth/transport/cpp/signer.cpp"],
     )
     ext_module = [windows_signer_ext]
 
