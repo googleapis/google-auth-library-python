@@ -23,6 +23,19 @@ def offload_signing_function():
     return tls_offload_ext.OffloadSigning
 
 
+def offload_signing_ext():
+    tls_offload_ext = None
+    root_path = os.path.join(os.path.dirname(__file__), "../../../")
+    for filename in os.listdir(root_path):
+        if re.match("tls_offload_ext*", filename):
+            tls_offload_ext = ctypes.CDLL(os.path.join(root_path, filename))
+    if not tls_offload_ext:
+        raise exceptions.MutualTLSChannelError(
+            "tls_offload_ext shared library is not found"
+        )
+    return tls_offload_ext
+
+
 def _create_pkcs11_sign_callback(key_info):
     callback_type = ctypes.CFUNCTYPE(
         ctypes.c_int,

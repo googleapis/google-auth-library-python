@@ -1,8 +1,9 @@
 #include <iostream>
 #include <Python.h>
 
-#include <Windows.h>
-#include <wincrypt.h>
+// #include <Windows.h>
+// #include <wincrypt.h>
+#include "signer.h"
 #include <stdio.h>
 #include <conio.h>
 #include <tchar.h>
@@ -15,33 +16,33 @@
 #define NT_SUCCESS(Status) (((NTSTATUS)(Status)) >= 0)
 #define STATUS_UNSUCCESSFUL ((NTSTATUS)0xC0000001L)
 
-class WindowsSigner {
-    public:
-        WindowsSigner() {}
-        ~WindowsSigner();
-        void GetSignerCert();
-        void Sign();
-        void GetPrivateKey();
-        void CreateHash();
-        void NCryptSign();
-    private:
-        void Cleanup();
-        void HandleError(LPTSTR psz);
-        CRYPT_SIGN_MESSAGE_PARA CreateSignPara();
+// class WindowsSigner {
+//     public:
+//         WindowsSigner() {}
+//         ~WindowsSigner();
+//         void GetSignerCert();
+//         void Sign();
+//         void GetPrivateKey();
+//         void CreateHash();
+//         void NCryptSign();
+//     private:
+//         void Cleanup();
+//         void HandleError(LPTSTR psz);
+//         CRYPT_SIGN_MESSAGE_PARA CreateSignPara();
 
-        // cert store / cert
-        HCERTSTORE hCertStore = NULL;   
-        PCCERT_CONTEXT pSignerCert = NULL;
-        // private key
-        HCRYPTPROV hCryptProv = NULL;
-        DWORD dwKeySpec;
-        // hash
-        BCRYPT_ALG_HANDLE hAlg = NULL;
-        BCRYPT_HASH_HANDLE hHash = NULL;
-        PBYTE pbHashObject = NULL;
-        PBYTE pbHash = NULL;
-        DWORD cbHash = 0;
-};
+//         // cert store / cert
+//         HCERTSTORE hCertStore = NULL;   
+//         PCCERT_CONTEXT pSignerCert = NULL;
+//         // private key
+//         HCRYPTPROV hCryptProv = NULL;
+//         DWORD dwKeySpec;
+//         // hash
+//         BCRYPT_ALG_HANDLE hAlg = NULL;
+//         BCRYPT_HASH_HANDLE hHash = NULL;
+//         PBYTE pbHashObject = NULL;
+//         PBYTE pbHash = NULL;
+//         DWORD cbHash = 0;
+// };
 
 void WindowsSigner::Cleanup() {
     if(pSignerCert) CertFreeCertificateContext(pSignerCert);
@@ -184,8 +185,7 @@ void WindowsSigner::GetPrivateKey() {
     }
 }
 
-void WindowsSigner::CreateHash() {
-    static const BYTE rgbMsg[] = {0x61, 0x62, 0x63};
+void WindowsSigner::CreateHash(PBYTE pbToSign, DWORD cbToSign) {
     NTSTATUS                status          = STATUS_UNSUCCESSFUL;
     DWORD                   cbData          = 0,
                             cbHashObject    = 0;
@@ -236,7 +236,7 @@ void WindowsSigner::CreateHash() {
     
 
     //hash some data
-    if(!NT_SUCCESS(status = BCryptHashData(hHash, (PBYTE)rgbMsg, sizeof(rgbMsg), 0)))
+    if(!NT_SUCCESS(status = BCryptHashData(hHash, pbToSign, cbToSign, 0)))
     {
         wprintf(L"**** Error 0x%x returned by BCryptHashData\n", status);
         goto Cleanup;
@@ -256,7 +256,7 @@ Cleanup:
     return;
 }
 
-void WindowsSigner::NCryptSign() {
+void WindowsSigner::NCryptSign(PBYTE pbSignatureOut, PDWORD cbSignatureOut) {
     BCRYPT_ALG_HANDLE hSignAlg = NULL;
     NTSTATUS status = STATUS_UNSUCCESSFUL;
     if(!NT_SUCCESS(status = BCryptOpenAlgorithmProvider(&hSignAlg, BCRYPT_ECDSA_P256_ALGORITHM, NULL,0)))
@@ -291,6 +291,14 @@ void WindowsSigner::NCryptSign() {
         goto Cleanup;
     } else {
         printf("Sign succeeded!\n");
+        printf("Signature length is: %lu\n", cbSignature);
+        if (pbSignatureOut && cbSignatureOut) {
+            //int sig_size = (int)cbSignature;
+            for (int i = 0; i < cbSignature; i++) {
+                pbSignatureOut[i] = pbSignature[i];
+            }
+            *cbSignatureOut = cbSignature;
+        }
     }
 
     Cleanup:
@@ -302,8 +310,9 @@ static PyObject* sign(PyObject *self, PyObject *args) {
     WindowsSigner signer;
     signer.GetSignerCert();
     signer.GetPrivateKey();
-    signer.CreateHash();
-    signer.NCryptSign();
+    static const BYTE rgbMsg[] = {0x61, 0x62, 0x63};
+    signer.CreateHash((PBYTE)rgbMsg, sizeof(rgbMsg));
+    signer.NCryptSign(NULL, NULL);
     Py_INCREF(Py_None);
     return Py_None; 
 }

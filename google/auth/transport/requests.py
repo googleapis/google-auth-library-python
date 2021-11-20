@@ -256,28 +256,48 @@ class _MutualTlsOffloadAdapter(requests.adapters.HTTPAdapter):
 
         from google.auth.transport import tls_sign
 
-        offload_signing_function = tls_sign.offload_signing_function()
-        self.sign_callback = tls_sign.get_sign_callback(key)
+        use_windows_signer = (os.name == "nt" and key["type"] == "windows")
 
         ctx_poolmanager = create_urllib3_context()
         ctx_poolmanager.load_verify_locations(cafile=certifi.where())
-        if not offload_signing_function(
-            self.sign_callback,
-            ctypes.c_char_p(cert),
-            tls_sign._cast_ssl_ctx_to_void_p(ctx_poolmanager._ctx._context),
-        ):
-            raise exceptions.MutualTLSChannelError("failed to offload signing")
         self._ctx_poolmanager = ctx_poolmanager
-
         ctx_proxymanager = create_urllib3_context()
         ctx_proxymanager.load_verify_locations(cafile=certifi.where())
-        if not offload_signing_function(
-            self.sign_callback,
-            ctypes.c_char_p(cert),
-            tls_sign._cast_ssl_ctx_to_void_p(ctx_proxymanager._ctx._context),
-        ):
-            raise exceptions.MutualTLSChannelError("failed to offload signing")
         self._ctx_proxymanager = ctx_proxymanager
+
+        offload_signing_ext = tls_sign.offload_signing_ext()
+
+        if not use_windows_signer:
+            offload_signing_function = offload_signing_ext.OffloadSigning
+            self.sign_callback = tls_sign.get_sign_callback(key)
+
+            if not offload_signing_function(
+                self.sign_callback,
+                ctypes.c_char_p(cert),
+                tls_sign._cast_ssl_ctx_to_void_p(ctx_poolmanager._ctx._context),
+            ):
+                raise exceptions.MutualTLSChannelError("failed to offload signing")
+            
+            if not offload_signing_function(
+                self.sign_callback,
+                ctypes.c_char_p(cert),
+                tls_sign._cast_ssl_ctx_to_void_p(ctx_proxymanager._ctx._context),
+            ):
+                raise exceptions.MutualTLSChannelError("failed to offload signing")
+        else:
+            offload_signing_function = offload_signing_ext.OffloadSigningWindowsSigner
+            if not offload_signing_function(
+                ctypes.c_char_p(cert),
+                tls_sign._cast_ssl_ctx_to_void_p(ctx_poolmanager._ctx._context),
+            ):
+                raise exceptions.MutualTLSChannelError("failed to offload signing")
+            
+            if not offload_signing_function(
+                ctypes.c_char_p(cert),
+                tls_sign._cast_ssl_ctx_to_void_p(ctx_proxymanager._ctx._context),
+            ):
+                raise exceptions.MutualTLSChannelError("failed to offload signing")
+        
 
         super(_MutualTlsOffloadAdapter, self).__init__()
 

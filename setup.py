@@ -55,19 +55,28 @@ version = version["__version__"]
 BUILD_TLS_OFFLOAD = os.getenv("GOOGLE_AUTH_BUILD_TLS_OFFLOAD")
 ext_module = None
 if BUILD_TLS_OFFLOAD:
-    tls_offload_ext = Extension(
-        name="tls_offload_ext",
-        language="c++",
-        libraries=["libcrypto", "libssl"],
-        sources=["google/auth/transport/cpp/tls_offload.cpp"],
-    )
-    windows_signer_ext = Extension(
-        name="windows_signer_ext",
-        language="c++",
-        libraries=["crypt32", "bcrypt", "ncrypt"],
-        sources=["google/auth/transport/cpp/signer.cpp"],
-    )
-    ext_module = [windows_signer_ext]
+    if os.name == "nt":
+        tls_offload_ext = Extension(
+            name="tls_offload_ext",
+            language="c++",
+            libraries=["libcrypto", "libssl", "crypt32", "bcrypt", "ncrypt"],
+            sources=["google/auth/transport/cpp/tls_offload.cpp", "google/auth/transport/cpp/signer.cpp"],
+        )
+        windows_signer_ext = Extension(
+            name="windows_signer_ext",
+            language="c++",
+            libraries=["crypt32", "bcrypt", "ncrypt"],
+            sources=["google/auth/transport/cpp/signer.cpp"],
+        )
+        ext_module = [tls_offload_ext, windows_signer_ext]
+    else:
+        tls_offload_ext = Extension(
+            name="tls_offload_ext",
+            language="c++",
+            libraries=["libcrypto", "libssl"],
+            sources=["google/auth/transport/cpp/tls_offload.cpp"],
+        )
+        ext_module = [tls_offload_ext]
 
 setup(
     name="google-auth",
