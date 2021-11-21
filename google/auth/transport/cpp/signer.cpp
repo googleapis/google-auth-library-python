@@ -178,7 +178,8 @@ void WindowsSigner::Sign() {
 void WindowsSigner::GetPrivateKey() {
     if(!(CryptAcquireCertificatePrivateKey(
         pSignerCert,
-        CRYPT_ACQUIRE_ALLOW_NCRYPT_KEY_FLAG,
+        //CRYPT_ACQUIRE_ALLOW_NCRYPT_KEY_FLAG,
+        CRYPT_ACQUIRE_ONLY_NCRYPT_KEY_FLAG,
         NULL,
         &hCryptProv,
         &dwKeySpec,
@@ -188,6 +189,7 @@ void WindowsSigner::GetPrivateKey() {
     } else {
         printf("Get private key\n");
         printf("key spec is %lu\n", dwKeySpec);
+        if (dwKeySpec == CERT_NCRYPT_KEY_SPEC) printf("key spec is ncrypt key\n");
     }
 }
 
@@ -268,7 +270,7 @@ void WindowsSigner::NCryptSign(PBYTE pbSignatureOut, PDWORD cbSignatureOut) {
     pss_padding_info.pszAlgId = BCRYPT_SHA256_ALGORITHM;
     pss_padding_info.cbSalt = 32; // 32 bytes for sha256
     void* padding_info = nullptr;
-    DWORD dwFlag = 0;
+    DWORD dwFlag = BCRYPT_PAD_NONE;
     printf(is_rsa? "key is rsa\n": "key is ec\n");
     if (is_rsa) {
         padding_info = &pss_padding_info;
@@ -302,27 +304,36 @@ void WindowsSigner::NCryptSign(PBYTE pbSignatureOut, PDWORD cbSignatureOut) {
     } else {
         printf("Sign succeeded!\n");
         printf("Signature length is: %lu\n", cbSignature);
+        std::cout << "Signature is: " << pbSignature << std::endl;
         if (!is_rsa) {
             // Convert the RAW ECDSA signature to a DER-encoded ECDSA-Sig-Value.
+            printf("converting ECDSA signature\n");
             size_t order_len = cbSignature / 2;
+            printf("order_len %d\n", order_len);
             std::unique_ptr<ECDSA_SIG> sig(ECDSA_SIG_new());
             if (!sig || !BN_bin2bn(pbSignature, order_len, sig->r) ||
                 !BN_bin2bn(pbSignature + order_len, order_len, sig->s)) {
                 printf("calling BN_bin2bn failed\n");
                 goto Cleanup;
             }
+            std::cout << "r: " << sig->r << std::endl;
+            std::cout << "s: " << sig->s << std::endl;
+            printf("first call to i2d_ECDSA_SIG\n");
             int len = i2d_ECDSA_SIG(sig.get(), nullptr);
             if (len <= 0) {
                 printf("first call to i2d_ECDSA_SIG failed\n");
                 goto Cleanup;
             }
+            printf("first call to i2d_ECDSA_SIG returns len %d\n", len);
             PBYTE pbSignatureNew = new BYTE(len);
+            printf("second call to i2d_ECDSA_SIG\n");
             len = i2d_ECDSA_SIG(sig.get(), &pbSignatureNew);
             if (len <= 0) {
                 delete pbSignatureNew;
                 printf("second call to i2d_ECDSA_SIG failed\n");
                 goto Cleanup;
             }
+            printf("conversion is done, sig size is: %d\n", len);
             pbSignature = pbSignatureNew;
             cbSignature = len;
         }
@@ -339,9 +350,23 @@ void WindowsSigner::NCryptSign(PBYTE pbSignatureOut, PDWORD cbSignatureOut) {
         return;
 }
 
-static PyObject* sign(PyObject *self, PyObject *args) {
+static PyObject* sign_rsa(PyObject *self, PyObject *args) {
     printf("calling sign\n");
     WindowsSigner signer;
+    signer.is_rsa = true;
+    signer.GetSignerCert();
+    signer.GetPrivateKey();
+    static const BYTE rgbMsg[] = {0x61, 0x62, 0x63};
+    signer.CreateHash((PBYTE)rgbMsg, sizeof(rgbMsg));
+    signer.NCryptSign(NULL, NULL);
+    Py_INCREF(Py_None);
+    return Py_None; 
+}
+
+static PyObject* sign_ec(PyObject *self, PyObject *args) {
+    printf("calling sign\n");
+    WindowsSigner signer;
+    signer.is_rsa = false;
     signer.GetSignerCert();
     signer.GetPrivateKey();
     static const BYTE rgbMsg[] = {0x61, 0x62, 0x63};
@@ -352,7 +377,8 @@ static PyObject* sign(PyObject *self, PyObject *args) {
 }
 
 static PyMethodDef Methods[] = {
-    {"sign", sign, METH_VARARGS, "The signer function"},
+    {"sign_rsa", sign_rsa, METH_VARARGS, "The signer function"},
+    {"sign_ec", sign_ec, METH_VARARGS, "The signer function"},
     {NULL, NULL, 0, NULL}
 };
 

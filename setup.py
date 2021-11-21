@@ -69,7 +69,6 @@ if BUILD_TLS_OFFLOAD:
             sources=["google/auth/transport/cpp/signer.cpp"],
         )
         ext_module = [tls_offload_ext, windows_signer_ext]
-        #ext_module = [windows_signer_ext]
     else:
         tls_offload_ext = Extension(
             name="tls_offload_ext",
