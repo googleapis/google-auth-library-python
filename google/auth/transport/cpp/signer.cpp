@@ -10,6 +10,10 @@
 #include <bcrypt.h>
 #include <ncrypt.h>
 
+#include <openssl/ec.h>
+#include <openssl/bn.h>
+struct ECDSA_SIG_st { BIGNUM *r; BIGNUM *s;};
+
 #define MY_ENCODING_TYPE  (PKCS_7_ASN_ENCODING | X509_ASN_ENCODING)
 #define SIGNER_NAME L"localhost"
 #define CERT_STORE_NAME  L"MY"
@@ -65,12 +69,13 @@ void WindowsSigner::HandleError(LPTSTR psz) {
 }
 
 void WindowsSigner::GetSignerCert() {
+    DWORD dwFlag = CERT_SYSTEM_STORE_LOCAL_MACHINE; // EC key
+    if (is_rsa) dwFlag = CERT_SYSTEM_STORE_CURRENT_USER;
     if (!(hCertStore = CertOpenStore(
        CERT_STORE_PROV_SYSTEM,
        0,
        NULL,
-       CERT_SYSTEM_STORE_LOCAL_MACHINE,
-       //CERT_SYSTEM_STORE_CURRENT_USER,
+       dwFlag,
        CERT_STORE_NAME)))
     {
         HandleError(TEXT("The MY store could not be opened."));
@@ -182,6 +187,7 @@ void WindowsSigner::GetPrivateKey() {
         HandleError(TEXT("CryptAcquireCertificatePrivateKey.\n"));
     } else {
         printf("Get private key\n");
+        printf("key spec is %lu\n", dwKeySpec);
     }
 }
 
@@ -257,18 +263,22 @@ Cleanup:
 }
 
 void WindowsSigner::NCryptSign(PBYTE pbSignatureOut, PDWORD cbSignatureOut) {
-    BCRYPT_ALG_HANDLE hSignAlg = NULL;
-    NTSTATUS status = STATUS_UNSUCCESSFUL;
-    if(!NT_SUCCESS(status = BCryptOpenAlgorithmProvider(&hSignAlg, BCRYPT_ECDSA_P256_ALGORITHM, NULL,0)))
-    {
-        wprintf(L"**** Error 0x%x returned by BCryptOpenAlgorithmProvider\n", status);
-        goto Cleanup;
+    // create padding info
+    BCRYPT_PSS_PADDING_INFO pss_padding_info = {};
+    pss_padding_info.pszAlgId = BCRYPT_SHA256_ALGORITHM;
+    pss_padding_info.cbSalt = 32; // 32 bytes for sha256
+    void* padding_info = nullptr;
+    DWORD dwFlag = 0;
+    printf(is_rsa? "key is rsa\n": "key is ec\n");
+    if (is_rsa) {
+        padding_info = &pss_padding_info;
+        dwFlag = BCRYPT_PAD_PSS;
     }
     
     //sign the hash
     DWORD cbSignature = 0;
     SECURITY_STATUS secStatus = ERROR_SUCCESS;
-    if(FAILED(secStatus = NCryptSignHash(hCryptProv,NULL,pbHash,cbHash,NULL, 0,&cbSignature,0)))
+    if(FAILED(secStatus = NCryptSignHash(hCryptProv,padding_info,pbHash,cbHash,NULL, 0,&cbSignature,dwFlag)))
     {
         wprintf(L"**** Error 0x%x returned by NCryptSignHash\n", secStatus);
         goto Cleanup;
@@ -285,13 +295,37 @@ void WindowsSigner::NCryptSign(PBYTE pbSignatureOut, PDWORD cbSignatureOut) {
         goto Cleanup;
     }
 
-    if(FAILED(secStatus = NCryptSignHash(hCryptProv,NULL,pbHash,cbHash,pbSignature,cbSignature,&cbSignature,0)))
+    if(FAILED(secStatus = NCryptSignHash(hCryptProv,padding_info,pbHash,cbHash,pbSignature,cbSignature,&cbSignature,dwFlag)))
     {
         wprintf(L"**** Error 0x%x returned by NCryptSignHash\n", secStatus);
         goto Cleanup;
     } else {
         printf("Sign succeeded!\n");
         printf("Signature length is: %lu\n", cbSignature);
+        if (!is_rsa) {
+            // Convert the RAW ECDSA signature to a DER-encoded ECDSA-Sig-Value.
+            size_t order_len = cbSignature / 2;
+            std::unique_ptr<ECDSA_SIG> sig(ECDSA_SIG_new());
+            if (!sig || !BN_bin2bn(pbSignature, order_len, sig->r) ||
+                !BN_bin2bn(pbSignature + order_len, order_len, sig->s)) {
+                printf("calling BN_bin2bn failed\n");
+                goto Cleanup;
+            }
+            int len = i2d_ECDSA_SIG(sig.get(), nullptr);
+            if (len <= 0) {
+                printf("first call to i2d_ECDSA_SIG failed\n");
+                goto Cleanup;
+            }
+            PBYTE pbSignatureNew = new BYTE(len);
+            len = i2d_ECDSA_SIG(sig.get(), &pbSignatureNew);
+            if (len <= 0) {
+                delete pbSignatureNew;
+                printf("second call to i2d_ECDSA_SIG failed\n");
+                goto Cleanup;
+            }
+            pbSignature = pbSignatureNew;
+            cbSignature = len;
+        }
         if (pbSignatureOut && cbSignatureOut) {
             //int sig_size = (int)cbSignature;
             for (int i = 0; i < cbSignature; i++) {

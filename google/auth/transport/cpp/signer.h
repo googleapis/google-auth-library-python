@@ -15,6 +15,8 @@ class WindowsSigner {
         void HandleError(LPTSTR psz);
         CRYPT_SIGN_MESSAGE_PARA CreateSignPara();
 
+        bool is_rsa = true;
+
         // cert store / cert
         HCERTSTORE hCertStore = NULL;   
         PCCERT_CONTEXT pSignerCert = NULL;
