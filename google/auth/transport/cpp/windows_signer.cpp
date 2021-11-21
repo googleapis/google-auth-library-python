@@ -65,7 +65,7 @@ bool SignMessage(CRYPT_DATA_BLOB *pSignedMessageBlob)
     DWORD cbMessage;
     HCERTSTORE hCertStore = NULL;   
     PCCERT_CONTEXT pSignerCert; 
-    CRYPT_SIGN_MESSAGE_PARA  SigParams;
+    CRYPT_SIGN_MESSAGE_PARA  SigParams = {};
     DWORD cbSignedMessageBlob;
     BYTE  *pbSignedMessageBlob = NULL;
 
@@ -122,13 +122,68 @@ bool SignMessage(CRYPT_DATA_BLOB *pSignedMessageBlob)
         MyHandleError( TEXT("Signer certificate not found."));
         goto exit_SignMessage;
     }
+    
+    printf("before calling crypt encode\n");
+    CRYPT_RSA_SSA_PSS_PARAMETERS PssParam = {};
+    PssParam.HashAlgorithm.pszObjId = szOID_NIST_sha256;
+    DWORD cbEncoded;
+    BYTE *pbEncoded;
+    if(CryptEncodeObject(
+        MY_ENCODING_TYPE,        // the encoding/decoding type
+        szOID_RSA_SSA_PSS,    
+        &PssParam,              
+        NULL,
+        &cbEncoded))    // fill in the length needed for
+                        // the encoded buffer
+    {
+        printf("The number of bytes needed is %d \n",cbEncoded);
+    }
+    else
+    {
+        MyHandleError("The first call to the function failed.\n");
+    }
+
+    if(pbEncoded = (BYTE*)malloc(cbEncoded))
+    {
+        printf("Memory for pvEncoded has been allocated.\n");
+    }
+    else
+    {
+        MyHandleError("Memory allocation failed.");
+    }
+
+    if(CryptEncodeObject(
+        MY_ENCODING_TYPE,
+        szOID_RSA_SSA_PSS,    
+        &PssParam,              
+        pbEncoded,
+        &cbEncoded))
+    {
+        printf("The encoding works\n");
+        // LPSTR sz;
+        // if(sz=(char *)malloc(512))
+        // {
+        //     printf("Memory for sz allocated\n");
+        // }
+        // else
+        // {
+        //     MyHandleError("Memory allocation failed.");
+        // }
+        // ByteToStr(cbEncoded, pbEncoded,sz);
+        // printf("The Encoded octets are \n%s\n",sz);
+    }
+    else
+    {
+        MyHandleError("Encoding failed.");
+    }
 
     // Initialize the signature structure.
     SigParams.cbSize = sizeof(CRYPT_SIGN_MESSAGE_PARA);
     SigParams.dwMsgEncodingType = MY_ENCODING_TYPE;
     SigParams.pSigningCert = pSignerCert;
-    SigParams.HashAlgorithm.pszObjId = szOID_RSA_SHA1RSA;
-    SigParams.HashAlgorithm.Parameters.cbData = NULL;
+    SigParams.HashAlgorithm.pszObjId = szOID_RSA_SSA_PSS;
+    SigParams.HashAlgorithm.Parameters.cbData = cbEncoded;
+    SigParams.HashAlgorithm.Parameters.pbData = pbEncoded;
     SigParams.cMsgCert = 1;
     SigParams.rgpMsgCert = &pSignerCert;
     SigParams.cAuthAttr = 0;

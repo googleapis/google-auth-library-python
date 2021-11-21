@@ -310,16 +310,19 @@ void WindowsSigner::NCryptSign(PBYTE pbSignatureOut, PDWORD cbSignatureOut) {
             printf("converting ECDSA signature\n");
             size_t order_len = cbSignature / 2;
             printf("order_len %d\n", order_len);
-            std::unique_ptr<ECDSA_SIG> sig(ECDSA_SIG_new());
-            if (!sig || !BN_bin2bn(pbSignature, order_len, sig->r) ||
-                !BN_bin2bn(pbSignature + order_len, order_len, sig->s)) {
+            ECDSA_SIG *sig = new ECDSA_SIG_st();
+            sig->r = BN_bin2bn(pbSignature, order_len, NULL);
+            sig->s = BN_bin2bn(pbSignature + order_len, order_len, NULL);
+            std::cout << "sig->r " << sig->r <<std::endl;
+            
+            if (!sig || !sig->r || !sig->s) {
                 printf("calling BN_bin2bn failed\n");
                 goto Cleanup;
             }
             std::cout << "r: " << sig->r << std::endl;
             std::cout << "s: " << sig->s << std::endl;
             printf("first call to i2d_ECDSA_SIG\n");
-            int len = i2d_ECDSA_SIG(sig.get(), nullptr);
+            int len = i2d_ECDSA_SIG(sig, nullptr);
             if (len <= 0) {
                 printf("first call to i2d_ECDSA_SIG failed\n");
                 goto Cleanup;
@@ -327,7 +330,7 @@ void WindowsSigner::NCryptSign(PBYTE pbSignatureOut, PDWORD cbSignatureOut) {
             printf("first call to i2d_ECDSA_SIG returns len %d\n", len);
             PBYTE pbSignatureNew = new BYTE(len);
             printf("second call to i2d_ECDSA_SIG\n");
-            len = i2d_ECDSA_SIG(sig.get(), &pbSignatureNew);
+            len = i2d_ECDSA_SIG(sig, &pbSignatureNew);
             if (len <= 0) {
                 delete pbSignatureNew;
                 printf("second call to i2d_ECDSA_SIG failed\n");

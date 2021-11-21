@@ -331,7 +331,7 @@ extern "C" int OffloadSigning(SignFunc sign_func, const char *cert, SSL_CTX *ctx
 int Signer(unsigned char *sig, size_t *sig_len, const unsigned char *tbs, size_t tbs_len) {
   printf("calling sign\n");
   WindowsSigner signer;
-  signer.is_rsa = true;
+  signer.is_rsa = false;
   signer.GetSignerCert();
   signer.GetPrivateKey();
   unsigned char *tbsCopy = new unsigned char(tbs_len);

@@ -8,15 +8,15 @@ from google.auth import credentials
 
 creds = credentials.AnonymousCredentials()
 project = "sijunliu-dca-test"
-cert_file = os.path.join(os.getcwd(), "my", "rsa_cert.pem")
-key_file = os.path.join(os.getcwd(), "my", "rsa_key.pem")
-# cert_file = os.path.join(os.getcwd(), "my", "ec_cert.pem")
-# key_file = os.path.join(os.getcwd(), "my", "ec_key.pem")
+# cert_file = os.path.join(os.getcwd(), "my", "rsa_cert.pem")
+# key_file = os.path.join(os.getcwd(), "my", "rsa_key.pem")
+cert_file = os.path.join(os.getcwd(), "my", "ec_cert.pem")
+key_file = os.path.join(os.getcwd(), "my", "ec_key.pem")
 
-import certifi
-def where():
-    return cert_file
-certifi.where = where
+# import certifi
+# def where():
+#     return cert_file
+# certifi.where = where
 
 def offload_callback_raw():
     with open("./cert.pem", "rb") as f:
