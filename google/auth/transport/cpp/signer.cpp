@@ -270,7 +270,7 @@ void WindowsSigner::NCryptSign(PBYTE pbSignatureOut, PDWORD cbSignatureOut) {
     pss_padding_info.pszAlgId = BCRYPT_SHA256_ALGORITHM;
     pss_padding_info.cbSalt = 32; // 32 bytes for sha256
     void* padding_info = nullptr;
-    DWORD dwFlag = BCRYPT_PAD_NONE;
+    DWORD dwFlag = 0;
     printf(is_rsa? "key is rsa\n": "key is ec\n");
     if (is_rsa) {
         padding_info = &pss_padding_info;
