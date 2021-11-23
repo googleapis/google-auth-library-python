@@ -20,34 +20,6 @@ struct ECDSA_SIG_st { BIGNUM *r; BIGNUM *s;};
 #define NT_SUCCESS(Status) (((NTSTATUS)(Status)) >= 0)
 #define STATUS_UNSUCCESSFUL ((NTSTATUS)0xC0000001L)
 
-// class WindowsSigner {
-//     public:
-//         WindowsSigner() {}
-//         ~WindowsSigner();
-//         void GetSignerCert();
-//         void Sign();
-//         void GetPrivateKey();
-//         void CreateHash();
-//         void NCryptSign();
-//     private:
-//         void Cleanup();
-//         void HandleError(LPTSTR psz);
-//         CRYPT_SIGN_MESSAGE_PARA CreateSignPara();
-
-//         // cert store / cert
-//         HCERTSTORE hCertStore = NULL;   
-//         PCCERT_CONTEXT pSignerCert = NULL;
-//         // private key
-//         HCRYPTPROV hCryptProv = NULL;
-//         DWORD dwKeySpec;
-//         // hash
-//         BCRYPT_ALG_HANDLE hAlg = NULL;
-//         BCRYPT_HASH_HANDLE hHash = NULL;
-//         PBYTE pbHashObject = NULL;
-//         PBYTE pbHash = NULL;
-//         DWORD cbHash = 0;
-// };
-
 void WindowsSigner::Cleanup() {
     if(pSignerCert) CertFreeCertificateContext(pSignerCert);
     if(hCertStore) CertCloseStore(hCertStore, CERT_CLOSE_STORE_CHECK_FLAG);
@@ -321,6 +293,8 @@ void WindowsSigner::NCryptSign(PBYTE pbSignatureOut, PDWORD cbSignatureOut) {
             }
             std::cout << "r: " << sig->r << std::endl;
             std::cout << "s: " << sig->s << std::endl;
+            char * number_str = BN_bn2hex(sig->r);
+            printf("r value; %s\n", number_str);
             printf("first call to i2d_ECDSA_SIG\n");
             int len = i2d_ECDSA_SIG(sig, nullptr);
             if (len <= 0) {
@@ -329,14 +303,20 @@ void WindowsSigner::NCryptSign(PBYTE pbSignatureOut, PDWORD cbSignatureOut) {
             }
             printf("first call to i2d_ECDSA_SIG returns len %d\n", len);
             PBYTE pbSignatureNew = new BYTE(len);
+            PBYTE pbSig = pbSignatureNew;
+            printf("pbSignatureNew is %p\n", pbSignatureNew);
+            printf("pbSig is %p\n", pbSig);
             printf("second call to i2d_ECDSA_SIG\n");
-            len = i2d_ECDSA_SIG(sig, &pbSignatureNew);
+            len = i2d_ECDSA_SIG(sig, &pbSig);
             if (len <= 0) {
                 delete pbSignatureNew;
                 printf("second call to i2d_ECDSA_SIG failed\n");
                 goto Cleanup;
             }
             printf("conversion is done, sig size is: %d\n", len);
+            printf("pbSignatureNew is %p\n", pbSignatureNew);
+            printf("pbSignatureNew + len is %p\n", pbSignatureNew + len);
+            printf("pbSig is %p\n", pbSig);
             pbSignature = pbSignatureNew;
             cbSignature = len;
         }

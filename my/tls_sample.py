@@ -19,13 +19,13 @@ key_file = os.path.join(os.getcwd(), "my", "ec_key.pem")
 # certifi.where = where
 
 def offload_callback_raw():
-    with open("./cert.pem", "rb") as f:
+    with open(cert_file, "rb") as f:
         cert = f.read()
 
     key = {
         "type": "raw",
         "info": {
-            "pem_path": "./key.pem"
+            "pem_path": key_file
         } 
     }
 
@@ -62,5 +62,5 @@ def run_sample(callback):
 
 if __name__ == "__main__":
     # run_sample(raw_callback)
-    # run_sample(offload_callback_raw)
+    #run_sample(offload_callback_raw)
     run_sample(offload_callback_windows)

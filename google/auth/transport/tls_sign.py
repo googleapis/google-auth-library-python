@@ -105,6 +105,7 @@ def _create_raw_sign_callback(key_info):
         from cryptography.hazmat.primitives import serialization
         from cryptography.hazmat.primitives.asymmetric import padding
         from cryptography.hazmat.primitives.asymmetric import rsa
+        from cryptography.hazmat.primitives.asymmetric import ec
 
         with open(key_info["pem_path"], "rb") as key_file:
             private_key = serialization.load_pem_private_key(
@@ -123,7 +124,7 @@ def _create_raw_sign_callback(key_info):
                 hashes.SHA256(),
             )
         else:
-            signature = private_key.sign(data)
+            signature = private_key.sign(data, ec.ECDSA(hashes.SHA256()))
         sig_len[0] = len(signature)
         if sig:
             for i in range(len(signature)):
