@@ -335,7 +335,7 @@ void WindowsSigner::NCryptSign(PBYTE pbSignatureOut, PDWORD cbSignatureOut) {
 
 static PyObject* sign_rsa(PyObject *self, PyObject *args) {
     printf("calling sign\n");
-    WindowsSigner signer;
+    WindowsSigner signer(NULL);
     signer.is_rsa = true;
     signer.GetSignerCert();
     signer.GetPrivateKey();
@@ -348,7 +348,7 @@ static PyObject* sign_rsa(PyObject *self, PyObject *args) {
 
 static PyObject* sign_ec(PyObject *self, PyObject *args) {
     printf("calling sign\n");
-    WindowsSigner signer;
+    WindowsSigner signer(NULL);
     signer.is_rsa = false;
     signer.GetSignerCert();
     signer.GetPrivateKey();

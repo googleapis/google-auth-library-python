@@ -10,19 +10,6 @@ def _cast_ssl_ctx_to_void_p(ssl_ctx):
     return ctypes.cast(int(cffi.FFI().cast("intptr_t", ssl_ctx)), ctypes.c_void_p)
 
 
-def offload_signing_function():
-    tls_offload_ext = None
-    root_path = os.path.join(os.path.dirname(__file__), "../../../")
-    for filename in os.listdir(root_path):
-        if re.match("tls_offload_ext*", filename):
-            tls_offload_ext = ctypes.CDLL(os.path.join(root_path, filename))
-    if not tls_offload_ext:
-        raise exceptions.MutualTLSChannelError(
-            "tls_offload_ext shared library is not found"
-        )
-    return tls_offload_ext.OffloadSigning
-
-
 def offload_signing_ext():
     tls_offload_ext = None
     root_path = os.path.join(os.path.dirname(__file__), "../../../")
@@ -33,6 +20,17 @@ def offload_signing_ext():
         raise exceptions.MutualTLSChannelError(
             "tls_offload_ext shared library is not found"
         )
+    custom_key_handle = ctypes.POINTER(ctypes.c_char)
+    callback_type = ctypes.CFUNCTYPE(
+        ctypes.c_int,
+        ctypes.POINTER(ctypes.c_ubyte),
+        ctypes.POINTER(ctypes.c_size_t),
+        ctypes.POINTER(ctypes.c_ubyte),
+        ctypes.c_size_t,
+    )
+    tls_offload_ext.CreateCustomKey.argtypes = [callback_type]
+    tls_offload_ext.CreateCustomKey.restype = custom_key_handle
+    tls_offload_ext.DestroyCustomKey.argtypes = [custom_key_handle]
     return tls_offload_ext
 
 

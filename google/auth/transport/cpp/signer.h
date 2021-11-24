@@ -3,7 +3,7 @@
 
 class WindowsSigner {
     public:
-        //WindowsSigner() {}
+        explicit WindowsSigner(void *sign_func_opts) {}
         ~WindowsSigner();
         void GetSignerCert();
         void Sign();

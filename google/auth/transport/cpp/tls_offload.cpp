@@ -1,3 +1,5 @@
+#include "tls_offload.h"
+
 #include <openssl/crypto.h>
 #include <openssl/bio.h>
 #include <openssl/ec.h>
@@ -17,7 +19,7 @@
 
 #ifdef _WIN32
 #include <Python.h>
-#include "signer.h"
+// #include "signer.h"
 #endif
 
 namespace {
@@ -29,8 +31,6 @@ void LogInfo(const std::string& message) {
     std::cout << "tls_offload.cpp: " << message << "...." << std::endl;
   }
 }
-
-typedef int (*SignFunc)(unsigned char *sig, size_t *sig_len, const unsigned char *tbs, size_t tbs_len);
 
 template <typename T, typename Ret, Ret (*Deleter)(T *)>
 struct OpenSSLDeleter {
@@ -59,23 +59,9 @@ using OwnedX509_PUBKEY = OwnedOpenSSLPtr<X509_PUBKEY, X509_PUBKEY_free>;
 using OwnedX509 = OwnedOpenSSLPtr<X509, X509_free>;
 using OwnedOpenSSLBuffer = std::unique_ptr<uint8_t, OpenSSLFreeDeleter>;
 
-class CustomKey {
- public:
-  explicit CustomKey(SignFunc sign_func): sign_func_(sign_func) {}
- 
-  bool Sign(unsigned char *sig, size_t *sig_len,
-            const unsigned char *tbs, size_t tbs_len) {
-    return sign_func_(sig, sig_len, tbs, tbs_len);
-  }
- 
- public:
-  SignFunc sign_func_;
-};
-
 void FreeExData(void *parent, void *ptr, CRYPTO_EX_DATA *ad, int idx, long argl,
                 void *argp) {
   LogInfo("calling FreeExData");
-  delete static_cast<CustomKey *>(ptr);
 }
 
 static int rsa_ex_index = -1, ec_ex_index = -1;
@@ -91,32 +77,30 @@ bool InitExData() {
   return true;
 }
  
-bool SetCustomKey(RSA *rsa, std::unique_ptr<CustomKey> key) {
+bool SetCustomKey(RSA *rsa, CustomKey *key) {
   LogInfo("setting RSA custom key");
-  if (!RSA_set_ex_data(rsa, rsa_ex_index, key.get())) {
+  if (!RSA_set_ex_data(rsa, rsa_ex_index, key)) {
     return false;
   }
-  (void)key.release();
   return true;
 }
  
-bool SetCustomKey(EC_KEY *ec_key, std::unique_ptr<CustomKey> key) {
+bool SetCustomKey(EC_KEY *ec_key, CustomKey *key) {
   LogInfo("setting EC custom key");
-  if (!EC_KEY_set_ex_data(ec_key, ec_ex_index, key.get())) {
+  if (!EC_KEY_set_ex_data(ec_key, ec_ex_index, key)) {
     return false;
   }
-  (void)key.release();
   return true;
 }
  
-bool SetCustomKey(EVP_PKEY *pkey, std::unique_ptr<CustomKey> key) {
+bool SetCustomKey(EVP_PKEY *pkey, CustomKey *key) {
   if (EVP_PKEY_id(pkey) == EVP_PKEY_RSA) {
     RSA *rsa = EVP_PKEY_get0_RSA(pkey);
-    return rsa && SetCustomKey(rsa, std::move(key));
+    return rsa && SetCustomKey(rsa, key);
   }
   if (EVP_PKEY_id(pkey) == EVP_PKEY_EC) {
     EC_KEY *ec_key = EVP_PKEY_get0_EC_KEY(pkey);
-    return ec_key && SetCustomKey(ec_key, std::move(key));
+    return ec_key && SetCustomKey(ec_key, key);
   }
   return false;
 }
@@ -170,7 +154,7 @@ int CustomDigestSign(EVP_MD_CTX *ctx, unsigned char *sig, size_t *sig_len,
   if (EnableLogging) {
     std::cout << "tls_offload.cpp: " << "before calling key->Sign, " << "sig len: " << *sig_len << std::endl;
   }
-  int res = key->sign_func_(sig, sig_len, tbs, tbs_len);
+  int res = key->Sign(sig, sig_len, tbs, tbs_len);
   if (EnableLogging) {
     std::cout << "tls_offload.cpp: " << "after calling key->Sign, " << "sig len: " << *sig_len 
       << "\nsignature: " << *sig << "\nkey->sign_func result: " << res << std::endl;
@@ -242,7 +226,7 @@ static bool InitEngine() {
   return true;
 }
 
-OwnedEVP_PKEY MakeCustomKey(std::unique_ptr<CustomKey> custom_key, X509 *cert) {
+OwnedEVP_PKEY ConfigureCertAndCustomKey(CustomKey *custom_key, X509 *cert) {
   unsigned char *spki = nullptr;
   int spki_len = i2d_X509_PUBKEY(X509_get_X509_PUBKEY(cert), &spki);
   if (spki_len < 0) {
@@ -259,7 +243,7 @@ OwnedEVP_PKEY MakeCustomKey(std::unique_ptr<CustomKey> custom_key, X509 *cert) {
   OwnedEVP_PKEY wrapped(X509_PUBKEY_get(pubkey.get()));
   if (!wrapped ||
       !EVP_PKEY_set1_engine(wrapped.get(), custom_engine) ||
-      !SetCustomKey(wrapped.get(), std::move(custom_key))) {
+      !SetCustomKey(wrapped.get(), custom_key)) {
     return nullptr;
   }
   return wrapped;
@@ -274,14 +258,13 @@ static OwnedX509 CertFromPEM(const char *pem) {
       PEM_read_bio_X509(bio.get(), nullptr, nullptr, nullptr));
 }
 
-static bool ServeTLS(SignFunc sign_func, const char *cert, SSL_CTX *ctx) {
+static bool ServeTLS(CustomKey *custom_key, const char *cert, SSL_CTX *ctx) {
   LogInfo("calling ServeTLS");
 
   LogInfo("create x509 using CertFromPEM");
   OwnedX509 x509 = CertFromPEM(cert);
   LogInfo("create custom key");
-  OwnedEVP_PKEY wrapped_key = MakeCustomKey(
-      std::make_unique<CustomKey>(sign_func), x509.get());
+  OwnedEVP_PKEY wrapped_key = ConfigureCertAndCustomKey(custom_key, x509.get());
   if (!wrapped_key) {
     LogInfo("failed to create custom key");
     return false;
@@ -303,12 +286,12 @@ static bool ServeTLS(SignFunc sign_func, const char *cert, SSL_CTX *ctx) {
 
 }  // namespace
 
-// Add `extern "C"` to avoid name mangling.
+// Add `extern "C"` to avoid name mangling. 
+extern "C"
 #ifdef _WIN32
-extern "C" int __declspec(dllexport) OffloadSigning(SignFunc sign_func, const char *cert, SSL_CTX *ctx) {
-#else
-extern "C" int OffloadSigning(SignFunc sign_func, const char *cert, SSL_CTX *ctx) {
+__declspec(dllexport)
 #endif
+int OffloadSigning(CustomKey *custom_key, const char *cert, SSL_CTX *ctx) {
   char * val = getenv("GOOGLE_AUTH_TLS_OFFLOAD_LOGGING");
   EnableLogging = (val == nullptr)? false : true;
   LogInfo("entering offload function");
@@ -319,7 +302,7 @@ extern "C" int OffloadSigning(SignFunc sign_func, const char *cert, SSL_CTX *ctx
       return 0;
     }
   }
-  if (!ServeTLS(sign_func, cert, ctx)) {
+  if (!ServeTLS(custom_key, cert, ctx)) {
     ERR_print_errors_fp(stderr);
     return 0;
   }
@@ -327,25 +310,48 @@ extern "C" int OffloadSigning(SignFunc sign_func, const char *cert, SSL_CTX *ctx
   return 1;
 }
 
+extern "C"
 #ifdef _WIN32
-int Signer(unsigned char *sig, size_t *sig_len, const unsigned char *tbs, size_t tbs_len) {
-  printf("calling sign\n");
-  WindowsSigner signer;
-  signer.is_rsa = false;
-  signer.GetSignerCert();
-  signer.GetPrivateKey();
-  unsigned char *tbsCopy = new unsigned char(tbs_len);
-  for (int i = 0; i < tbs_len; i++) tbsCopy[i] = tbs[i];
-  signer.CreateHash(tbsCopy, tbs_len);
-  delete tbsCopy;
-  DWORD len;
-  signer.NCryptSign(sig, &len);
-  *sig_len = (size_t)len;
-  return 1;
+__declspec(dllexport)
+#endif
+CustomKey* CreateCustomKey(SignFunc sign_func) {
+  // creating custom key
+  CustomKey *key = new CustomKey(sign_func);
+  printf("In CreateCustomKey\n");
+  return key;
 }
-extern "C" int __declspec(dllexport) OffloadSigningWindowsSigner(const char *cert, SSL_CTX *ctx) {
-  return OffloadSigning(&Signer, cert, ctx);
+
+extern "C"
+#ifdef _WIN32
+__declspec(dllexport)
+#endif
+void DestroyCustomKey(CustomKey *key) {
+  // deleting custom key
+  printf("In DestroyCustomKey\n");
+  delete key;
 }
+
+#ifdef _WIN32
+// int WindowsSignerFunc(unsigned char *sig, size_t *sig_len, const unsigned char *tbs, size_t tbs_len, void *sign_func_opts) {
+//   printf("calling sign\n");
+//   WindowsSigner signer(sign_func_opts);
+//   signer.is_rsa = true;
+//   signer.GetSignerCert();
+//   signer.GetPrivateKey();
+//   unsigned char *tbsCopy = new unsigned char(tbs_len);
+//   for (int i = 0; i < tbs_len; i++) tbsCopy[i] = tbs[i];
+//   signer.CreateHash(tbsCopy, tbs_len);
+//   delete tbsCopy;
+//   DWORD len;
+//   signer.NCryptSign(sig, &len);
+//   *sig_len = (size_t)len;
+//   return 1;
+// }
+
+// extern "C" int __declspec(dllexport) OffloadSigningWindowsSigner(void *sign_func_opts, const char *cert, SSL_CTX *ctx) {
+//   printf("sign_func_opts is %p\n", sign_func_opts);
+//   return OffloadSigning(&WindowsSignerFunc, sign_func_opts, cert, ctx);
+// }
 
 PyMODINIT_FUNC PyInit_tls_offload_ext(void) {
     Py_Initialize();
