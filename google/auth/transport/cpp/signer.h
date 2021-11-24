@@ -1,15 +1,17 @@
 #include <Windows.h>
 #include <wincrypt.h>
 
-class WindowsSigner {
+#include "tls_offload.h"
+
+class WinCertStoreKey : public CustomKey {
     public:
-        explicit WindowsSigner(void *sign_func_opts) {}
-        ~WindowsSigner();
+        WinCertStoreKey() : CustomKey(NULL) {}
+        ~WinCertStoreKey();
         void GetSignerCert();
-        void Sign();
         void GetPrivateKey();
         void CreateHash(PBYTE pbToSign, DWORD cbToSign);
         void NCryptSign(PBYTE pbSignatureOut, PDWORD cbSignatureOut);
+        bool Sign(unsigned char *sig, size_t *sig_len, const unsigned char *tbs, size_t tbs_len) override;
         bool is_rsa;
     private:
         void Cleanup();

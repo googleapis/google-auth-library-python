@@ -1,8 +1,6 @@
 #include <iostream>
 #include <Python.h>
 
-// #include <Windows.h>
-// #include <wincrypt.h>
 #include "signer.h"
 #include <stdio.h>
 #include <conio.h>
@@ -20,7 +18,7 @@ struct ECDSA_SIG_st { BIGNUM *r; BIGNUM *s;};
 #define NT_SUCCESS(Status) (((NTSTATUS)(Status)) >= 0)
 #define STATUS_UNSUCCESSFUL ((NTSTATUS)0xC0000001L)
 
-void WindowsSigner::Cleanup() {
+void WinCertStoreKey::Cleanup() {
     if(pSignerCert) CertFreeCertificateContext(pSignerCert);
     if(hCertStore) CertCloseStore(hCertStore, CERT_CLOSE_STORE_CHECK_FLAG);
     if(hAlg) BCryptCloseAlgorithmProvider(hAlg,0);
@@ -29,18 +27,18 @@ void WindowsSigner::Cleanup() {
     if(pbHash) HeapFree(GetProcessHeap(), 0, pbHash);
 }
 
-WindowsSigner::~WindowsSigner() {
+WinCertStoreKey::~WinCertStoreKey() {
     Cleanup();
 }
 
-void WindowsSigner::HandleError(LPTSTR psz) {
+void WinCertStoreKey::HandleError(LPTSTR psz) {
     _ftprintf(stderr, TEXT("An error occurred in the program. \n"));
     _ftprintf(stderr, TEXT("%s\n"), psz);
     _ftprintf(stderr, TEXT("Error number %x.\n"), GetLastError());
     Cleanup();
 }
 
-void WindowsSigner::GetSignerCert() {
+void WinCertStoreKey::GetSignerCert() {
     DWORD dwFlag = CERT_SYSTEM_STORE_LOCAL_MACHINE; // EC key
     if (is_rsa) dwFlag = CERT_SYSTEM_STORE_CURRENT_USER;
     if (!(hCertStore = CertOpenStore(
@@ -73,81 +71,7 @@ void WindowsSigner::GetSignerCert() {
     }
 }
 
-CRYPT_SIGN_MESSAGE_PARA WindowsSigner::CreateSignPara() {
-    CRYPT_SIGN_MESSAGE_PARA SigParams = {};
-    SigParams.cbSize = sizeof(CRYPT_SIGN_MESSAGE_PARA);
-    SigParams.dwMsgEncodingType = MY_ENCODING_TYPE;
-    SigParams.pSigningCert = pSignerCert;
-    //SigParams.HashAlgorithm.pszObjId = szOID_RSA_SHA1RSA;
-    SigParams.HashAlgorithm.pszObjId = szOID_ECDSA_SHA256;
-    SigParams.cMsgCert = 1;
-    SigParams.rgpMsgCert = &pSignerCert;
-    SigParams.cAuthAttr = 0;
-    SigParams.dwInnerContentType = 0;
-    SigParams.cMsgCrl = 0;
-    SigParams.cUnauthAttr = 0;
-    SigParams.dwFlags = 0;
-    SigParams.pvHashAuxInfo = NULL;
-    SigParams.rgAuthAttr = NULL;
-    return SigParams;
-}
-
-void WindowsSigner::Sign() {
-    // Calculate the size of the message to sign, and make arrays
-    // for the message and message size.
-    BYTE *pbMessage = (BYTE*)TEXT("The message to sign");
-    DWORD cbMessage = (lstrlen((TCHAR*) pbMessage) + 1) * sizeof(TCHAR);
-    const BYTE* MessageArray[] = {pbMessage};
-    DWORD MessageSizeArray[1];
-    MessageSizeArray[0] = cbMessage;
-    _tprintf(TEXT("The message to be signed is \"%s\".\n"), pbMessage);
-
-    CRYPT_SIGN_MESSAGE_PARA SigParams = CreateSignPara();
-
-    // We need to call CryptSignMessage twice. First time set pcSignedBlob parameter
-    // to NULL to calculate the signed Blob size; then allocate the memory the signed
-    // Blob and do the actual signing.
-    // First, get the size of the signed BLOB.
-    DWORD cbSignedMessageBlob;
-    if(CryptSignMessage(
-        &SigParams,
-        TRUE,
-        1,
-        MessageArray,
-        MessageSizeArray,
-        NULL,
-        &cbSignedMessageBlob)) {
-        _tprintf(TEXT("%d bytes needed for the encoded BLOB.\n"), cbSignedMessageBlob);
-    } else {
-        HandleError(TEXT("Getting signed BLOB size failed"));
-        return;
-    }
-
-    // Allocate memory for the signed BLOB.
-    BYTE *pbSignedMessageBlob = NULL;
-    if(!(pbSignedMessageBlob = (BYTE*)malloc(cbSignedMessageBlob))) {
-        HandleError(TEXT("Memory allocation error while signing."));
-        return;
-    }
-
-    // Get the signed message BLOB.
-    if(CryptSignMessage(
-          &SigParams,
-          TRUE,
-          1,
-          MessageArray,
-          MessageSizeArray,
-          pbSignedMessageBlob,
-          &cbSignedMessageBlob)) {
-        // pbSignedMessageBlob now contains the signed BLOB.
-        _tprintf(TEXT("The message was signed successfully. \n"));
-    } else {
-        HandleError(TEXT("Error getting signed BLOB"));
-        free(pbSignedMessageBlob);
-    }
-}
-
-void WindowsSigner::GetPrivateKey() {
+void WinCertStoreKey::GetPrivateKey() {
     if(!(CryptAcquireCertificatePrivateKey(
         pSignerCert,
         //CRYPT_ACQUIRE_ALLOW_NCRYPT_KEY_FLAG,
@@ -165,7 +89,7 @@ void WindowsSigner::GetPrivateKey() {
     }
 }
 
-void WindowsSigner::CreateHash(PBYTE pbToSign, DWORD cbToSign) {
+void WinCertStoreKey::CreateHash(PBYTE pbToSign, DWORD cbToSign) {
     NTSTATUS                status          = STATUS_UNSUCCESSFUL;
     DWORD                   cbData          = 0,
                             cbHashObject    = 0;
@@ -236,7 +160,7 @@ Cleanup:
     return;
 }
 
-void WindowsSigner::NCryptSign(PBYTE pbSignatureOut, PDWORD cbSignatureOut) {
+void WinCertStoreKey::NCryptSign(PBYTE pbSignatureOut, PDWORD cbSignatureOut) {
     // create padding info
     BCRYPT_PSS_PADDING_INFO pss_padding_info = {};
     pss_padding_info.pszAlgId = BCRYPT_SHA256_ALGORITHM;
@@ -333,9 +257,41 @@ void WindowsSigner::NCryptSign(PBYTE pbSignatureOut, PDWORD cbSignatureOut) {
         return;
 }
 
+bool WinCertStoreKey::Sign(unsigned char *sig, size_t *sig_len, const unsigned char *tbs, size_t tbs_len) {
+    GetSignerCert();
+    GetPrivateKey();
+    CreateHash((PBYTE) tbs, tbs_len);
+    DWORD len;
+    NCryptSign(sig, &len);
+    *sig_len = len;
+    return 1;
+}
+
+extern "C"
+#ifdef _WIN32
+__declspec(dllexport)
+#endif
+WinCertStoreKey* CreateCustomKey(SignFunc sign_func) {
+  // creating custom key
+  WinCertStoreKey *key = new WinCertStoreKey();
+  key->is_rsa = true;
+  printf("In CreateCustomKey\n");
+  return key;
+}
+
+extern "C"
+#ifdef _WIN32
+__declspec(dllexport)
+#endif
+void DestroyCustomKey(WinCertStoreKey *key) {
+  // deleting custom key
+  printf("In DestroyCustomKey\n");
+  delete key;
+}
+
 static PyObject* sign_rsa(PyObject *self, PyObject *args) {
     printf("calling sign\n");
-    WindowsSigner signer(NULL);
+    WinCertStoreKey signer;
     signer.is_rsa = true;
     signer.GetSignerCert();
     signer.GetPrivateKey();
@@ -348,7 +304,7 @@ static PyObject* sign_rsa(PyObject *self, PyObject *args) {
 
 static PyObject* sign_ec(PyObject *self, PyObject *args) {
     printf("calling sign\n");
-    WindowsSigner signer(NULL);
+    WinCertStoreKey signer;
     signer.is_rsa = false;
     signer.GetSignerCert();
     signer.GetPrivateKey();

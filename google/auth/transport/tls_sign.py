@@ -34,6 +34,28 @@ def offload_signing_ext():
     tls_offload_ext.DestroyCustomKey.argtypes = [custom_key_handle]
     return tls_offload_ext
 
+def windows_signer_ext():
+    windows_signer_ext = None
+    root_path = os.path.join(os.path.dirname(__file__), "../../../")
+    for filename in os.listdir(root_path):
+        if re.match("windows_signer_ext*", filename):
+            windows_signer_ext = ctypes.CDLL(os.path.join(root_path, filename))
+    if not windows_signer_ext:
+        raise exceptions.MutualTLSChannelError(
+            "windows_signer_ext shared library is not found"
+        )
+    custom_key_handle = ctypes.POINTER(ctypes.c_char)
+    callback_type = ctypes.CFUNCTYPE(
+        ctypes.c_int,
+        ctypes.POINTER(ctypes.c_ubyte),
+        ctypes.POINTER(ctypes.c_size_t),
+        ctypes.POINTER(ctypes.c_ubyte),
+        ctypes.c_size_t,
+    )
+    windows_signer_ext.CreateCustomKey.restype = custom_key_handle
+    windows_signer_ext.DestroyCustomKey.argtypes = [custom_key_handle]
+    return windows_signer_ext
+
 
 def _create_pkcs11_sign_callback(key_info):
     callback_type = ctypes.CFUNCTYPE(
@@ -145,16 +167,26 @@ def get_sign_callback(key):
 
 class CustomSigner(object):
     def __init__(self, key):
-        self.offload_signing_ext = offload_signing_ext()
-        self.offload_signing_function = self.offload_signing_ext.OffloadSigning
-        self.sign_callback = get_sign_callback(key)
-        self.signer = self.offload_signing_ext.CreateCustomKey(self.sign_callback)
-        atexit.register(self.cleanup)
+        if os.name == "nt" and key["type"] == "windows":
+            self.offload_signing_ext = offload_signing_ext()
+            self.offload_signing_function = self.offload_signing_ext.OffloadSigning
+            self.windows_signer_ext = windows_signer_ext()
+            self.signer = self.windows_signer_ext.CreateCustomKey()
+            atexit.register(self.cleanup)
+        else:
+            self.offload_signing_ext = offload_signing_ext()
+            self.offload_signing_function = self.offload_signing_ext.OffloadSigning
+            self.sign_callback = get_sign_callback(key)
+            self.signer = self.offload_signing_ext.CreateCustomKey(self.sign_callback)
+            atexit.register(self.cleanup)
     
     def cleanup(self):
         if self.signer:
             print("calling self.offload_signing_ext.DestroyCustomKey")
-            self.offload_signing_ext.DestroyCustomKey(self.signer)
+            if os.name == "nt":
+                self.windows_signer_ext.DestroyCustomKey(self.signer)
+            else:
+                self.offload_signing_ext.DestroyCustomKey(self.signer)
 
 def configure_tls_offload(signer, cert, ctx):
     if not signer.offload_signing_function(

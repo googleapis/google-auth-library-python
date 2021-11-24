@@ -332,27 +332,6 @@ void DestroyCustomKey(CustomKey *key) {
 }
 
 #ifdef _WIN32
-// int WindowsSignerFunc(unsigned char *sig, size_t *sig_len, const unsigned char *tbs, size_t tbs_len, void *sign_func_opts) {
-//   printf("calling sign\n");
-//   WindowsSigner signer(sign_func_opts);
-//   signer.is_rsa = true;
-//   signer.GetSignerCert();
-//   signer.GetPrivateKey();
-//   unsigned char *tbsCopy = new unsigned char(tbs_len);
-//   for (int i = 0; i < tbs_len; i++) tbsCopy[i] = tbs[i];
-//   signer.CreateHash(tbsCopy, tbs_len);
-//   delete tbsCopy;
-//   DWORD len;
-//   signer.NCryptSign(sig, &len);
-//   *sig_len = (size_t)len;
-//   return 1;
-// }
-
-// extern "C" int __declspec(dllexport) OffloadSigningWindowsSigner(void *sign_func_opts, const char *cert, SSL_CTX *ctx) {
-//   printf("sign_func_opts is %p\n", sign_func_opts);
-//   return OffloadSigning(&WindowsSignerFunc, sign_func_opts, cert, ctx);
-// }
-
 PyMODINIT_FUNC PyInit_tls_offload_ext(void) {
     Py_Initialize();
     return PyModule_Create(nullptr);

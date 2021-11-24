@@ -62,5 +62,5 @@ def run_sample(callback):
 
 if __name__ == "__main__":
     # run_sample(raw_callback)
-    run_sample(offload_callback_raw)
-    #run_sample(offload_callback_windows)
+    #run_sample(offload_callback_raw)
+    run_sample(offload_callback_windows)
