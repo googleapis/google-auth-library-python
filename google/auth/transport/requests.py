@@ -16,7 +16,6 @@
 
 from __future__ import absolute_import
 
-import atexit
 import functools
 import logging
 import numbers
@@ -266,24 +265,9 @@ class _MutualTlsOffloadAdapter(requests.adapters.HTTPAdapter):
         ctx_proxymanager.load_verify_locations(cafile=certifi.where())
         self._ctx_proxymanager = ctx_proxymanager
 
-        self.offload_signing_ext = tls_sign.offload_signing_ext()
-        self.sign_callback = tls_sign.get_sign_callback(key)
-        self.custom_signer = self.offload_signing_ext.CreateCustomKey(self.sign_callback)
-        atexit.register(self.delete_custom_signer)
-        offload_signing_function = self.offload_signing_ext.OffloadSigning
-        if not offload_signing_function(
-            self.custom_signer,
-            ctypes.c_char_p(cert),
-            tls_sign._cast_ssl_ctx_to_void_p(ctx_poolmanager._ctx._context),
-        ):
-            raise exceptions.MutualTLSChannelError("failed to offload signing")
-            
-        if not offload_signing_function(
-            self.custom_signer,
-            ctypes.c_char_p(cert),
-            tls_sign._cast_ssl_ctx_to_void_p(ctx_proxymanager._ctx._context),
-        ):
-            raise exceptions.MutualTLSChannelError("failed to offload signing")
+        self.signer = tls_sign.CustomSigner(key)
+        tls_sign.configure_tls_offload(self.signer, cert, ctx_poolmanager)
+        tls_sign.configure_tls_offload(self.signer, cert, ctx_proxymanager)
 
         # if not use_windows_signer:
         #     offload_signing_function = offload_signing_ext.OffloadSigning

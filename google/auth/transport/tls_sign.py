@@ -1,3 +1,4 @@
+import atexit
 import cffi
 import ctypes
 import os
@@ -141,3 +142,24 @@ def get_sign_callback(key):
     raise exceptions.MutualTLSChannelError(
         "currently only pkcs11 and raw type are supported"
     )
+
+class CustomSigner(object):
+    def __init__(self, key):
+        self.offload_signing_ext = offload_signing_ext()
+        self.offload_signing_function = self.offload_signing_ext.OffloadSigning
+        self.sign_callback = get_sign_callback(key)
+        self.signer = self.offload_signing_ext.CreateCustomKey(self.sign_callback)
+        atexit.register(self.cleanup)
+    
+    def cleanup(self):
+        if self.signer:
+            print("calling self.offload_signing_ext.DestroyCustomKey")
+            self.offload_signing_ext.DestroyCustomKey(self.signer)
+
+def configure_tls_offload(signer, cert, ctx):
+    if not signer.offload_signing_function(
+        signer.signer,
+        ctypes.c_char_p(cert),
+        _cast_ssl_ctx_to_void_p(ctx._ctx._context),
+    ):
+        raise exceptions.MutualTLSChannelError("failed to offload signing")
