@@ -1,7 +1,7 @@
 #include <iostream>
 #include <Python.h>
 
-#include "signer.h"
+#include "windows_signer.h"
 #include <stdio.h>
 #include <conio.h>
 #include <tchar.h>
