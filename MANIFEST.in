@@ -1,3 +1,3 @@
-include README.rst LICENSE CHANGELOG.rst google/auth/transport/cpp/tls_offload.h
+include README.rst LICENSE CHANGELOG.rst google/auth/transport/cpp/*.h
 recursive-include tests *
 global-exclude *.pyc __pycache__

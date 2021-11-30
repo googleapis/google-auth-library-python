@@ -3,7 +3,6 @@ package main
 import (
 	"crypto/tls"
 	"crypto/x509"
-	"flag"
 	"io"
 	"io/ioutil"
 	"log"
@@ -18,23 +17,8 @@ func printMessage(w http.ResponseWriter, r *http.Request) {
 func main() {
 	http.HandleFunc("/foo", printMessage)
 
-	var certType string
-	var cert string
-	var key string
-	flag.StringVar(&certType, "certType", "rsa", "cert/key type to use, rsa or ec, default is rsa")
-	flag.Parse()
-	if certType == "ec" {
-		log.Println(("using EC cert/key\n"))
-		cert = "ec_cert.pem"
-		key = "ec_key.pem"
-	} else {
-		log.Println(("using RSA cert/key\n"))
-		cert = "rsa_cert.pem"
-		key = "rsa_key.pem"
-	}
-
 	// CA cert
-	caCert, err := ioutil.ReadFile(cert)
+	caCert, err := ioutil.ReadFile("ca_cert.pem")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -53,5 +37,5 @@ func main() {
 		TLSConfig: config,
 	}
 	// Use server side cert and key
-	log.Fatal(server.ListenAndServeTLS(cert, key))
+	log.Fatal(server.ListenAndServeTLS("rsa_cert.pem", "rsa_key.pem"))
 }

@@ -263,7 +263,7 @@ class _MutualTlsOffloadAdapter(requests.adapters.HTTPAdapter):
         ctx_proxymanager.load_verify_locations(cafile=certifi.where())
         self._ctx_proxymanager = ctx_proxymanager
 
-        self.signer = tls_sign.CustomSigner(key)
+        self.signer = tls_sign.CustomSigner(cert, key)
         tls_sign.configure_tls_offload(self.signer, cert, ctx_poolmanager)
         tls_sign.configure_tls_offload(self.signer, cert, ctx_proxymanager)        
 

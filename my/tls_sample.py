@@ -1,24 +1,25 @@
 import faulthandler
 import os
 
-#faulthandler.enable()
+faulthandler.enable()
 
 from google.auth.transport.requests import AuthorizedSession
 from google.auth import credentials
 
 creds = credentials.AnonymousCredentials()
 project = "sijunliu-dca-test"
-cert_file = os.path.join(os.getcwd(), "my", "rsa_cert.pem")
-key_file = os.path.join(os.getcwd(), "my", "rsa_key.pem")
-# cert_file = os.path.join(os.getcwd(), "my", "ec_cert.pem")
-# key_file = os.path.join(os.getcwd(), "my", "ec_key.pem")
+ca_cert_file = os.path.join(os.getcwd(), "my", "ca_cert.pem")
+rsa_cert_file = os.path.join(os.getcwd(), "my", "rsa_cert.pem")
+rsa_key_file = os.path.join(os.getcwd(), "my", "rsa_key.pem")
+ec_cert_file = os.path.join(os.getcwd(), "my", "ec_cert.pem")
+ec_key_file = os.path.join(os.getcwd(), "my", "ec_key.pem")
 
 import certifi
 def where():
-    return cert_file
+    return ca_cert_file
 certifi.where = where
 
-def offload_callback_raw():
+def offload_callback_raw(cert_file, key_file):
     with open(cert_file, "rb") as f:
         cert = f.read()
 
@@ -29,38 +30,71 @@ def offload_callback_raw():
         } 
     }
 
-    return cert, key
+    def callback():
+        return cert, key
+    return callback
 
-def offload_callback_windows():
-    with open(cert_file, "rb") as f:
+def offload_callback_windows_rsa():
+    with open(rsa_cert_file, "rb") as f:
         cert = f.read()
 
     key = {
         "type": "windows",
+        "provider": "current_user",
+        "store_name": "MY",
+        "subject": "localhost"
     }
 
     return cert, key
 
-def raw_callback():
+def offload_callback_windows_ec():
+    with open(ec_cert_file, "rb") as f:
+        cert = f.read()
+
+    key = {
+        "type": "windows",
+        "provider": "local_machine",
+        "store_name": "MY",
+        "subject": "localhost"
+    }
+
+    return cert, key
+
+def callback_raw(cert_file, key_file):
     with open(cert_file, "rb") as f:
         cert = f.read()
 
     with open(key_file, "rb") as f:
         key = f.read()
 
-    return cert, key
+    def callback():
+        return cert, key
+    return callback
 
 def run_sample(callback):
     authed_session = AuthorizedSession(creds)
+    print("=== before configure_mtls_channel===")
     authed_session.configure_mtls_channel(callback)
+    print("=== after configure_mtls_channel===")
     print(authed_session.is_mtls)
 
+    print("=== before calling request===")
     response = authed_session.request('GET', "https://localhost:3000/foo")
+    print("=== finished calling request===")
     print(response.status_code)
     print(response.text)
 
 
 if __name__ == "__main__":
-    # run_sample(raw_callback)
-    #run_sample(offload_callback_raw)
-    run_sample(offload_callback_windows)
+    print("================= using offload + raw rsa key")
+    run_sample(offload_callback_raw(rsa_cert_file, rsa_key_file))
+    print("================= using offload + raw ec key")
+    run_sample(offload_callback_raw(ec_cert_file, ec_key_file))
+    print("================= using offload + windows rsa key")
+    run_sample(offload_callback_windows_rsa)
+    print("================= using offload + windows ec key")
+    run_sample(offload_callback_windows_ec)
+    print("================= using raw rsa key")
+    run_sample(callback_raw(rsa_cert_file, rsa_key_file))
+    print("================= using raw ec key")
+    run_sample(callback_raw(ec_cert_file, ec_key_file))

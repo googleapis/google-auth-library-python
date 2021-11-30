@@ -153,6 +153,7 @@ int CustomDigestSign(EVP_MD_CTX *ctx, unsigned char *sig, size_t *sig_len,
   }
   if (EnableLogging) {
     std::cout << "tls_offload.cpp: " << "before calling key->Sign, " << "sig len: " << *sig_len << std::endl;
+    printf("key address: %p\n", key);
   }
   int res = key->Sign(sig, sig_len, tbs, tbs_len);
   if (EnableLogging) {

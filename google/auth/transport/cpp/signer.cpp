@@ -13,12 +13,11 @@
 struct ECDSA_SIG_st { BIGNUM *r; BIGNUM *s;};
 
 #define MY_ENCODING_TYPE  (PKCS_7_ASN_ENCODING | X509_ASN_ENCODING)
-#define SIGNER_NAME L"localhost"
-#define CERT_STORE_NAME  L"MY"
 #define NT_SUCCESS(Status) (((NTSTATUS)(Status)) >= 0)
 #define STATUS_UNSUCCESSFUL ((NTSTATUS)0xC0000001L)
 
 void WinCertStoreKey::Cleanup() {
+    printf("Cleanup is called\n");
     if(pSignerCert) CertFreeCertificateContext(pSignerCert);
     if(hCertStore) CertCloseStore(hCertStore, CERT_CLOSE_STORE_CHECK_FLAG);
     if(hAlg) BCryptCloseAlgorithmProvider(hAlg,0);
@@ -39,14 +38,18 @@ void WinCertStoreKey::HandleError(LPTSTR psz) {
 }
 
 void WinCertStoreKey::GetSignerCert() {
-    DWORD dwFlag = CERT_SYSTEM_STORE_LOCAL_MACHINE; // EC key
-    if (is_rsa) dwFlag = CERT_SYSTEM_STORE_CURRENT_USER;
+    std::cout << "is_rsa_type: " << is_rsa_type << std::endl;
+    std::cout << "cert_store_name: " << cert_store_name << std::endl;
+    std::cout << "cert_subject: " << cert_subject << std::endl;
+    std::wstring w_cert_store_name = std::wstring(cert_store_name.begin(), cert_store_name.end());
+    std::wstring w_cert_subject = std::wstring(cert_subject.begin(), cert_subject.end());
+
     if (!(hCertStore = CertOpenStore(
        CERT_STORE_PROV_SYSTEM,
        0,
        NULL,
-       dwFlag,
-       CERT_STORE_NAME)))
+       cert_store_provider,
+       w_cert_store_name.c_str())))
     {
         HandleError(TEXT("The MY store could not be opened."));
         return;
@@ -59,7 +62,7 @@ void WinCertStoreKey::GetSignerCert() {
        MY_ENCODING_TYPE,
        0,
        CERT_FIND_SUBJECT_STR,
-       SIGNER_NAME,
+       w_cert_subject.c_str(),
        NULL))
     {
        _tprintf(TEXT("The signer's certificate was found.\n"));
@@ -74,7 +77,6 @@ void WinCertStoreKey::GetSignerCert() {
 void WinCertStoreKey::GetPrivateKey() {
     if(!(CryptAcquireCertificatePrivateKey(
         pSignerCert,
-        //CRYPT_ACQUIRE_ALLOW_NCRYPT_KEY_FLAG,
         CRYPT_ACQUIRE_ONLY_NCRYPT_KEY_FLAG,
         NULL,
         &hCryptProv,
@@ -167,8 +169,8 @@ void WinCertStoreKey::NCryptSign(PBYTE pbSignatureOut, PDWORD cbSignatureOut) {
     pss_padding_info.cbSalt = 32; // 32 bytes for sha256
     void* padding_info = nullptr;
     DWORD dwFlag = 0;
-    printf(is_rsa? "key is rsa\n": "key is ec\n");
-    if (is_rsa) {
+    printf(is_rsa_type? "key is rsa\n": "key is ec\n");
+    if (is_rsa_type) {
         padding_info = &pss_padding_info;
         dwFlag = BCRYPT_PAD_PSS;
     }
@@ -201,12 +203,12 @@ void WinCertStoreKey::NCryptSign(PBYTE pbSignatureOut, PDWORD cbSignatureOut) {
         printf("Sign succeeded!\n");
         printf("Signature length is: %lu\n", cbSignature);
         std::cout << "Signature is: " << pbSignature << std::endl;
-        if (!is_rsa) {
+        if (!is_rsa_type) {
             // Convert the RAW ECDSA signature to a DER-encoded ECDSA-Sig-Value.
             printf("converting ECDSA signature\n");
             size_t order_len = cbSignature / 2;
             printf("order_len %d\n", order_len);
-            ECDSA_SIG *sig = new ECDSA_SIG_st();
+            ECDSA_SIG_st *sig = (ECDSA_SIG_st*)HeapAlloc (GetProcessHeap(), 0, sizeof(ECDSA_SIG_st));
             sig->r = BN_bin2bn(pbSignature, order_len, NULL);
             sig->s = BN_bin2bn(pbSignature + order_len, order_len, NULL);
             std::cout << "sig->r " << sig->r <<std::endl;
@@ -226,14 +228,14 @@ void WinCertStoreKey::NCryptSign(PBYTE pbSignatureOut, PDWORD cbSignatureOut) {
                 goto Cleanup;
             }
             printf("first call to i2d_ECDSA_SIG returns len %d\n", len);
-            PBYTE pbSignatureNew = new BYTE(len);
+            PBYTE pbSignatureNew = (PBYTE)HeapAlloc (GetProcessHeap(), 0, len);
             PBYTE pbSig = pbSignatureNew;
             printf("pbSignatureNew is %p\n", pbSignatureNew);
             printf("pbSig is %p\n", pbSig);
             printf("second call to i2d_ECDSA_SIG\n");
             len = i2d_ECDSA_SIG(sig, &pbSig);
             if (len <= 0) {
-                delete pbSignatureNew;
+                HeapFree(GetProcessHeap(), 0, pbSignatureNew);
                 printf("second call to i2d_ECDSA_SIG failed\n");
                 goto Cleanup;
             }
@@ -271,10 +273,13 @@ extern "C"
 #ifdef _WIN32
 __declspec(dllexport)
 #endif
-WinCertStoreKey* CreateCustomKey(SignFunc sign_func) {
+WinCertStoreKey* CreateCustomKey(bool is_rsa_type, bool local_machine_store, const char *store_name, const char *subject) {
   // creating custom key
-  WinCertStoreKey *key = new WinCertStoreKey();
-  key->is_rsa = true;
+  std::cout << "is_rsa_type: " << is_rsa_type << std::endl;
+  std::cout << "local_machine_store: " << local_machine_store << std::endl;
+  std::cout << "store_name: " << store_name << std::endl;
+  std::cout << "subject: " << subject << std::endl;
+  WinCertStoreKey *key = new WinCertStoreKey(is_rsa_type, local_machine_store, store_name, subject);
   printf("In CreateCustomKey\n");
   return key;
 }
@@ -291,8 +296,8 @@ void DestroyCustomKey(WinCertStoreKey *key) {
 
 static PyObject* sign_rsa(PyObject *self, PyObject *args) {
     printf("calling sign\n");
-    WinCertStoreKey signer;
-    signer.is_rsa = true;
+    std::string store_name = "MY", subject = "localhost";
+    WinCertStoreKey signer(true, false, store_name.c_str(), subject.c_str());
     signer.GetSignerCert();
     signer.GetPrivateKey();
     static const BYTE rgbMsg[] = {0x61, 0x62, 0x63};
@@ -304,8 +309,8 @@ static PyObject* sign_rsa(PyObject *self, PyObject *args) {
 
 static PyObject* sign_ec(PyObject *self, PyObject *args) {
     printf("calling sign\n");
-    WinCertStoreKey signer;
-    signer.is_rsa = false;
+    std::string store_name = "MY", subject = "localhost";
+    WinCertStoreKey signer(false, true, store_name.c_str(), subject.c_str());
     signer.GetSignerCert();
     signer.GetPrivateKey();
     static const BYTE rgbMsg[] = {0x61, 0x62, 0x63};

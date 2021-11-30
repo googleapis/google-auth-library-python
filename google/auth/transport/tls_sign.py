@@ -166,27 +166,37 @@ def get_sign_callback(key):
     )
 
 class CustomSigner(object):
-    def __init__(self, key):
+    def __init__(self, cert, key):
         if os.name == "nt" and key["type"] == "windows":
+            from cryptography import x509
+            from cryptography.hazmat.primitives.asymmetric import rsa
+            public_key = x509.load_pem_x509_certificate(cert).public_key()
+            is_rsa = (isinstance(public_key, rsa.RSAPublicKey))
+            print(f"is_rsa is: {is_rsa}")
+            is_local_machine_store = (key["provider"] == "local_machine")
             self.offload_signing_ext = offload_signing_ext()
             self.offload_signing_function = self.offload_signing_ext.OffloadSigning
             self.windows_signer_ext = windows_signer_ext()
-            self.signer = self.windows_signer_ext.CreateCustomKey()
+            self.signer = self.windows_signer_ext.CreateCustomKey(
+                ctypes.c_bool(is_rsa),
+                ctypes.c_bool(is_local_machine_store),
+                ctypes.c_char_p(key["store_name"].encode()),
+                ctypes.c_char_p(key["subject"].encode())
+            )
+            self.cleanup_func = self.windows_signer_ext.DestroyCustomKey
             atexit.register(self.cleanup)
         else:
             self.offload_signing_ext = offload_signing_ext()
             self.offload_signing_function = self.offload_signing_ext.OffloadSigning
             self.sign_callback = get_sign_callback(key)
             self.signer = self.offload_signing_ext.CreateCustomKey(self.sign_callback)
+            self.cleanup_func = self.offload_signing_ext.DestroyCustomKey
             atexit.register(self.cleanup)
     
     def cleanup(self):
         if self.signer:
             print("calling self.offload_signing_ext.DestroyCustomKey")
-            if os.name == "nt":
-                self.windows_signer_ext.DestroyCustomKey(self.signer)
-            else:
-                self.offload_signing_ext.DestroyCustomKey(self.signer)
+            self.cleanup_func(self.signer)
 
 def configure_tls_offload(signer, cert, ctx):
     if not signer.offload_signing_function(
