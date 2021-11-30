@@ -103,6 +103,10 @@ openssl pkcs12 -inkey ec_key.pem -in ec_cert.pem -export -out ec_mtls.pfx
 Enter `12345` as the password, then double click the `ec_mtls.pfx` file to install it
 to the local machine.
 
+### CA cert
+
+Create a `ca_cert.pem` file, and copy both the `rsa_cert.pem` and `ec_cert.pem` content into this file.
+
 ## run the server 
 
 Open a new terminal and navigate to the same folder, run
@@ -111,10 +115,9 @@ Open a new terminal and navigate to the same folder, run
 go run -v server.go 
 ```
 
-By default it uses the RSA cert/key. To use the EC cert/key, run
-```
-go run -v server.go -certType=ec
-```
+The server uses the RSA cert/key as server side cert/key, and `ca_cert.pem` as the CA file. Since the
+`ca_cert.pem` contains both the RSA and EC cert, the client side can use either RSA or EC cert/key as
+the client side cert/key.
 
 ## test the server
 
@@ -128,13 +131,13 @@ You should see the server prints out
 http: TLS handshake error from 127.0.0.1:55064: tls: client didn't provide a certificate
 ```
 
-If the server uses RSA, run 
+Test RSA key
 ```
 curl -k https://localhost:3000/foo --cert rsa_cert.pem --key rsa_key.pem 
 ```
-If the server uses EC cert/key, run
+Test EC key
 ```
-curl -k https://localhost:3000/foo --cert rsa_cert.pem --key rsa_key.pem
+curl -k https://localhost:3000/foo --cert ec_cert.pem --key ec_key.pem
 ```
 You should see `Called /foo` from server side and `Call succeeded!` from curl.
 
@@ -148,11 +151,3 @@ python tls_sample.py
 ```
 
 You should see `Called /foo` from server side and `Call succeeded!` from curl.
-
-# Windows signer
-
-## Install `pywin32`
-
-```
-python -m pip install pywin32
-```
