@@ -264,8 +264,8 @@ class _MutualTlsOffloadAdapter(requests.adapters.HTTPAdapter):
         self._ctx_proxymanager = ctx_proxymanager
 
         self.signer = tls_sign.CustomSigner(cert, key)
-        tls_sign.configure_tls_offload(self.signer, cert, ctx_poolmanager)
-        tls_sign.configure_tls_offload(self.signer, cert, ctx_proxymanager)        
+        tls_sign.attach_signer_and_cert_to_ssl_context(self.signer, cert, ctx_poolmanager)
+        tls_sign.attach_signer_and_cert_to_ssl_context(self.signer, cert, ctx_proxymanager)        
 
         super(_MutualTlsOffloadAdapter, self).__init__()
 

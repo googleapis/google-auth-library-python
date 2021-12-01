@@ -10,7 +10,14 @@
 
 #include <openssl/ec.h>
 #include <openssl/bn.h>
-struct ECDSA_SIG_st { BIGNUM *r; BIGNUM *s;};
+#include <openssl/opensslv.h>
+
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+typedef struct ECDSA_SIG_st {
+    BIGNUM *r;
+    BIGNUM *s;
+} ECDSA_SIG;
+#endif
 
 #define MY_ENCODING_TYPE  (PKCS_7_ASN_ENCODING | X509_ASN_ENCODING)
 #define NT_SUCCESS(Status) (((NTSTATUS)(Status)) >= 0)
@@ -269,11 +276,9 @@ bool WinCertStoreKey::Sign(unsigned char *sig, size_t *sig_len, const unsigned c
     return 1;
 }
 
-extern "C"
-#ifdef _WIN32
-__declspec(dllexport)
-#endif
-WinCertStoreKey* CreateCustomKey(bool is_rsa_type, bool local_machine_store, const char *store_name, const char *subject) {
+extern "C" {
+
+__declspec(dllexport) WinCertStoreKey* CreateCustomKey(bool is_rsa_type, bool local_machine_store, const char *store_name, const char *subject) {
   // creating custom key
   std::cout << "is_rsa_type: " << is_rsa_type << std::endl;
   std::cout << "local_machine_store: " << local_machine_store << std::endl;
@@ -284,45 +289,19 @@ WinCertStoreKey* CreateCustomKey(bool is_rsa_type, bool local_machine_store, con
   return key;
 }
 
-extern "C"
-#ifdef _WIN32
-__declspec(dllexport)
-#endif
-void DestroyCustomKey(WinCertStoreKey *key) {
+__declspec(dllexport) void DestroyCustomKey(WinCertStoreKey *key) {
   // deleting custom key
   printf("In DestroyCustomKey\n");
   delete key;
 }
 
-static PyObject* sign_rsa(PyObject *self, PyObject *args) {
-    printf("calling sign\n");
-    std::string store_name = "MY", subject = "localhost";
-    WinCertStoreKey signer(true, false, store_name.c_str(), subject.c_str());
-    signer.GetSignerCert();
-    signer.GetPrivateKey();
-    static const BYTE rgbMsg[] = {0x61, 0x62, 0x63};
-    signer.CreateHash((PBYTE)rgbMsg, sizeof(rgbMsg));
-    signer.NCryptSign(NULL, NULL);
-    Py_INCREF(Py_None);
-    return Py_None; 
+__declspec(dllexport) bool Sign(WinCertStoreKey *key, unsigned char *sig, size_t *sig_len, const unsigned char *tbs, size_t tbs_len) {
+  return key->Sign(sig, sig_len, tbs, tbs_len);
 }
 
-static PyObject* sign_ec(PyObject *self, PyObject *args) {
-    printf("calling sign\n");
-    std::string store_name = "MY", subject = "localhost";
-    WinCertStoreKey signer(false, true, store_name.c_str(), subject.c_str());
-    signer.GetSignerCert();
-    signer.GetPrivateKey();
-    static const BYTE rgbMsg[] = {0x61, 0x62, 0x63};
-    signer.CreateHash((PBYTE)rgbMsg, sizeof(rgbMsg));
-    signer.NCryptSign(NULL, NULL);
-    Py_INCREF(Py_None);
-    return Py_None; 
 }
 
 static PyMethodDef Methods[] = {
-    {"sign_rsa", sign_rsa, METH_VARARGS, "The signer function"},
-    {"sign_ec", sign_ec, METH_VARARGS, "The signer function"},
     {NULL, NULL, 0, NULL}
 };
 

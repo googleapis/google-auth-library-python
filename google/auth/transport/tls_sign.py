@@ -1,17 +1,28 @@
 import atexit
+import base64
 import cffi
+import copy
 import ctypes
 import os
 import re
 
 from google.auth import exceptions
+import requests
 
+callback_type = ctypes.CFUNCTYPE(
+    ctypes.c_int,
+    ctypes.POINTER(ctypes.c_ubyte),
+    ctypes.POINTER(ctypes.c_size_t),
+    ctypes.POINTER(ctypes.c_ubyte),
+    ctypes.c_size_t,
+)
+custom_key_handle_type = ctypes.POINTER(ctypes.c_char)
 
 def _cast_ssl_ctx_to_void_p(ssl_ctx):
     return ctypes.cast(int(cffi.FFI().cast("intptr_t", ssl_ctx)), ctypes.c_void_p)
 
 
-def offload_signing_ext():
+def _load_offload_signing_ext():
     tls_offload_ext = None
     root_path = os.path.join(os.path.dirname(__file__), "../../../")
     for filename in os.listdir(root_path):
@@ -21,20 +32,13 @@ def offload_signing_ext():
         raise exceptions.MutualTLSChannelError(
             "tls_offload_ext shared library is not found"
         )
-    custom_key_handle = ctypes.POINTER(ctypes.c_char)
-    callback_type = ctypes.CFUNCTYPE(
-        ctypes.c_int,
-        ctypes.POINTER(ctypes.c_ubyte),
-        ctypes.POINTER(ctypes.c_size_t),
-        ctypes.POINTER(ctypes.c_ubyte),
-        ctypes.c_size_t,
-    )
     tls_offload_ext.CreateCustomKey.argtypes = [callback_type]
-    tls_offload_ext.CreateCustomKey.restype = custom_key_handle
-    tls_offload_ext.DestroyCustomKey.argtypes = [custom_key_handle]
+    tls_offload_ext.CreateCustomKey.restype = custom_key_handle_type
+    tls_offload_ext.DestroyCustomKey.argtypes = [custom_key_handle_type]
     return tls_offload_ext
 
-def windows_signer_ext():
+
+def _load_windows_signer_ext():
     windows_signer_ext = None
     root_path = os.path.join(os.path.dirname(__file__), "../../../")
     for filename in os.listdir(root_path):
@@ -44,28 +48,12 @@ def windows_signer_ext():
         raise exceptions.MutualTLSChannelError(
             "windows_signer_ext shared library is not found"
         )
-    custom_key_handle = ctypes.POINTER(ctypes.c_char)
-    callback_type = ctypes.CFUNCTYPE(
-        ctypes.c_int,
-        ctypes.POINTER(ctypes.c_ubyte),
-        ctypes.POINTER(ctypes.c_size_t),
-        ctypes.POINTER(ctypes.c_ubyte),
-        ctypes.c_size_t,
-    )
-    windows_signer_ext.CreateCustomKey.restype = custom_key_handle
-    windows_signer_ext.DestroyCustomKey.argtypes = [custom_key_handle]
+    windows_signer_ext.CreateCustomKey.restype = custom_key_handle_type
+    windows_signer_ext.DestroyCustomKey.argtypes = [custom_key_handle_type]
     return windows_signer_ext
 
 
 def _create_pkcs11_sign_callback(key_info):
-    callback_type = ctypes.CFUNCTYPE(
-        ctypes.c_int,
-        ctypes.POINTER(ctypes.c_ubyte),
-        ctypes.POINTER(ctypes.c_size_t),
-        ctypes.POINTER(ctypes.c_ubyte),
-        ctypes.c_size_t,
-    )
-
     def sign_callback(sig, sig_len, tbs, tbs_len):
         import pkcs11
         from pkcs11 import KeyType, Mechanism, MGF
@@ -111,14 +99,6 @@ def _create_pkcs11_sign_callback(key_info):
 
 
 def _create_raw_sign_callback(key_info):
-    callback_type = ctypes.CFUNCTYPE(
-        ctypes.c_int,
-        ctypes.POINTER(ctypes.c_ubyte),
-        ctypes.POINTER(ctypes.c_size_t),
-        ctypes.POINTER(ctypes.c_ubyte),
-        ctypes.c_size_t,
-    )
-
     def sign_callback(sig, sig_len, tbs, tbs_len):
         print("calling sign_callback for raw key....\n")
 
@@ -156,28 +136,47 @@ def _create_raw_sign_callback(key_info):
     return callback_type(sign_callback)
 
 
-def get_sign_callback(key):
-    if key["type"] == "pkc11":
-        return _create_pkcs11_sign_callback(key["key_info"])
-    elif key["type"] == "raw":
-        return _create_raw_sign_callback(key["key_info"])
-    raise exceptions.MutualTLSChannelError(
-        "currently only pkcs11 and raw type are supported"
-    )
+def _create_daemon_sign_callback(key_info):
+    def sign_callback(sig, sig_len, tbs, tbs_len):
+        print("calling sign_callback using daemon....\n")
+
+        body = copy.deepcopy(key_info)
+        data = ctypes.string_at(tbs, tbs_len)
+        body["data"] = base64.encodebytes(data).decode('ascii')
+        print(body)
+        daemon_sign_endpoint = os.getenv("DAEMON_SIGN_ENDPOINT")
+
+        res = requests.post(daemon_sign_endpoint, json=body)
+        if not res.ok:
+            print(res.json())
+            return 0
+        
+        signature = res.json()["signature"]
+        signature = base64.b64decode(signature)
+
+        sig_len[0] = len(signature)
+        if sig:
+            for i in range(len(signature)):
+                sig[i] = signature[i]
+
+        return 1
+
+    return callback_type(sign_callback)
+
 
 class CustomSigner(object):
     def __init__(self, cert, key):
+        key_info = key["key_info"]
+        self.offload_signing_ext = _load_offload_signing_ext()
         if os.name == "nt" and key["type"] == "windows":
             from cryptography import x509
             from cryptography.hazmat.primitives.asymmetric import rsa
             public_key = x509.load_pem_x509_certificate(cert).public_key()
             is_rsa = (isinstance(public_key, rsa.RSAPublicKey))
             print(f"is_rsa is: {is_rsa}")
-            key_info = key["key_info"]
             is_local_machine_store = (key_info["provider"] == "local_machine")
-            self.offload_signing_ext = offload_signing_ext()
             self.offload_signing_function = self.offload_signing_ext.OffloadSigning
-            self.windows_signer_ext = windows_signer_ext()
+            self.windows_signer_ext = _load_windows_signer_ext()
             self.signer = self.windows_signer_ext.CreateCustomKey(
                 ctypes.c_bool(is_rsa),
                 ctypes.c_bool(is_local_machine_store),
@@ -187,9 +186,17 @@ class CustomSigner(object):
             self.cleanup_func = self.windows_signer_ext.DestroyCustomKey
             atexit.register(self.cleanup)
         else:
-            self.offload_signing_ext = offload_signing_ext()
             self.offload_signing_function = self.offload_signing_ext.OffloadSigning
-            self.sign_callback = get_sign_callback(key)
+            if key["type"] == "pkc11":
+                self.sign_callback = _create_pkcs11_sign_callback(key_info)
+            elif key["type"] == "raw":
+                self.sign_callback = _create_raw_sign_callback(key_info)
+            elif key["type"] == "daemon":
+                self.sign_callback = _create_daemon_sign_callback(key_info)
+            else:
+                raise exceptions.MutualTLSChannelError(
+                    "currently only pkcs11 and raw type are supported"
+                )
             self.signer = self.offload_signing_ext.CreateCustomKey(self.sign_callback)
             self.cleanup_func = self.offload_signing_ext.DestroyCustomKey
             atexit.register(self.cleanup)
@@ -199,7 +206,8 @@ class CustomSigner(object):
             print("calling self.offload_signing_ext.DestroyCustomKey")
             self.cleanup_func(self.signer)
 
-def configure_tls_offload(signer, cert, ctx):
+
+def attach_signer_and_cert_to_ssl_context(signer, cert, ctx):
     if not signer.offload_signing_function(
         signer.signer,
         ctypes.c_char_p(cert),

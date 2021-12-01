@@ -75,6 +75,24 @@ def callback_raw(cert_file, key_file):
         return cert, key
     return callback
 
+def callback_daemon_windows_rsa():
+    with open(rsa_cert_file, "rb") as f:
+        cert = f.read()
+
+    key = {
+        "type": "daemon",
+        "key_info": {
+            "type": "windows",
+            "key_info": {
+                "provider": "local_machine",
+                "store_name": "MY",
+                "subject": "localhost"
+            }
+        }
+    }
+
+    return cert, key
+
 def run_sample(callback):
     authed_session = AuthorizedSession(creds)
     print("=== before configure_mtls_channel===")
@@ -102,3 +120,5 @@ if __name__ == "__main__":
     run_sample(callback_raw(rsa_cert_file, rsa_key_file))
     print("================= using raw ec key")
     run_sample(callback_raw(ec_cert_file, ec_key_file))
+
+    # run_sample(callback_daemon_windows_rsa)
