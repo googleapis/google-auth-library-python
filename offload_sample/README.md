@@ -67,7 +67,7 @@ You should see a `.pyd` file like `tls_offload_ext.cp37-win_amd64.pyd`.
 
 # Run the sample
 
-First navigate to `my` folder.
+First navigate to `offload_sample` folder.
 
 ## generate cert/key
 
@@ -121,7 +121,7 @@ the client side cert/key.
 
 ## test the server
 
-Open a new Git Bash terminal and change directory to `my` folder, run 
+Open a new Git Bash terminal and change directory to `offload_sample` folder, run 
 
 ```
 curl -k https://localhost:3000/foo 
@@ -147,7 +147,7 @@ In the current terminal, run
 
 ```
 $env:GOOGLE_API_USE_CLIENT_CERTIFICATE='true'
-python tls_sample.py
+python sample.py
 ```
 
 You should see `Called /foo` from server side and `Call succeeded!` from curl.

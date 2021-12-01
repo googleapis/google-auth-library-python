@@ -8,11 +8,11 @@ from google.auth import credentials
 
 creds = credentials.AnonymousCredentials()
 project = "sijunliu-dca-test"
-ca_cert_file = os.path.join(os.getcwd(), "my", "ca_cert.pem")
-rsa_cert_file = os.path.join(os.getcwd(), "my", "rsa_cert.pem")
-rsa_key_file = os.path.join(os.getcwd(), "my", "rsa_key.pem")
-ec_cert_file = os.path.join(os.getcwd(), "my", "ec_cert.pem")
-ec_key_file = os.path.join(os.getcwd(), "my", "ec_key.pem")
+ca_cert_file = os.path.join(os.getcwd(), "offload_sample", "ca_cert.pem")
+rsa_cert_file = os.path.join(os.getcwd(), "offload_sample", "rsa_cert.pem")
+rsa_key_file = os.path.join(os.getcwd(), "offload_sample", "rsa_key.pem")
+ec_cert_file = os.path.join(os.getcwd(), "offload_sample", "ec_cert.pem")
+ec_key_file = os.path.join(os.getcwd(), "offload_sample", "ec_key.pem")
 
 import certifi
 def where():
