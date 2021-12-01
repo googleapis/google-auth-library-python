@@ -158,9 +158,9 @@ def _create_raw_sign_callback(key_info):
 
 def get_sign_callback(key):
     if key["type"] == "pkc11":
-        return _create_pkcs11_sign_callback(key["info"])
+        return _create_pkcs11_sign_callback(key["key_info"])
     elif key["type"] == "raw":
-        return _create_raw_sign_callback(key["info"])
+        return _create_raw_sign_callback(key["key_info"])
     raise exceptions.MutualTLSChannelError(
         "currently only pkcs11 and raw type are supported"
     )
@@ -173,15 +173,16 @@ class CustomSigner(object):
             public_key = x509.load_pem_x509_certificate(cert).public_key()
             is_rsa = (isinstance(public_key, rsa.RSAPublicKey))
             print(f"is_rsa is: {is_rsa}")
-            is_local_machine_store = (key["provider"] == "local_machine")
+            key_info = key["key_info"]
+            is_local_machine_store = (key_info["provider"] == "local_machine")
             self.offload_signing_ext = offload_signing_ext()
             self.offload_signing_function = self.offload_signing_ext.OffloadSigning
             self.windows_signer_ext = windows_signer_ext()
             self.signer = self.windows_signer_ext.CreateCustomKey(
                 ctypes.c_bool(is_rsa),
                 ctypes.c_bool(is_local_machine_store),
-                ctypes.c_char_p(key["store_name"].encode()),
-                ctypes.c_char_p(key["subject"].encode())
+                ctypes.c_char_p(key_info["store_name"].encode()),
+                ctypes.c_char_p(key_info["subject"].encode())
             )
             self.cleanup_func = self.windows_signer_ext.DestroyCustomKey
             atexit.register(self.cleanup)

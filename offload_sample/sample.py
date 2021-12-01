@@ -25,7 +25,7 @@ def offload_callback_raw(cert_file, key_file):
 
     key = {
         "type": "raw",
-        "info": {
+        "key_info": {
             "pem_path": key_file
         } 
     }
@@ -40,9 +40,11 @@ def offload_callback_windows_rsa():
 
     key = {
         "type": "windows",
-        "provider": "current_user",
-        "store_name": "MY",
-        "subject": "localhost"
+        "key_info": {
+            "provider": "current_user",
+            "store_name": "MY",
+            "subject": "localhost"
+        }
     }
 
     return cert, key
@@ -53,9 +55,11 @@ def offload_callback_windows_ec():
 
     key = {
         "type": "windows",
-        "provider": "local_machine",
-        "store_name": "MY",
-        "subject": "localhost"
+        "key_info": {
+            "provider": "local_machine",
+            "store_name": "MY",
+            "subject": "localhost"
+        }
     }
 
     return cert, key
