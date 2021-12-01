@@ -169,14 +169,17 @@ class CustomSigner(object):
         key_info = key["key_info"]
         self.offload_signing_ext = _load_offload_signing_ext()
         if os.name == "nt" and key["type"] == "windows":
+            if not key_info["provider"] in ["local_machine", "current_user"]:
+                raise exceptions.MutualTLSChannelError(key_info["provider"] + " is not supported")
             from cryptography import x509
             from cryptography.hazmat.primitives.asymmetric import rsa
-            public_key = x509.load_pem_x509_certificate(cert).public_key()
-            is_rsa = (isinstance(public_key, rsa.RSAPublicKey))
-            print(f"is_rsa is: {is_rsa}")
-            is_local_machine_store = (key_info["provider"] == "local_machine")
+
             self.offload_signing_function = self.offload_signing_ext.OffloadSigning
             self.windows_signer_ext = _load_windows_signer_ext()
+
+            public_key = x509.load_pem_x509_certificate(cert).public_key()
+            is_rsa = (isinstance(public_key, rsa.RSAPublicKey))
+            is_local_machine_store = (key_info["provider"] == "local_machine")
             self.signer = self.windows_signer_ext.CreateCustomKey(
                 ctypes.c_bool(is_rsa),
                 ctypes.c_bool(is_local_machine_store),
