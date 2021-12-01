@@ -168,7 +168,7 @@ class CustomSigner(object):
     def __init__(self, cert, key):
         key_info = key["key_info"]
         self.offload_signing_ext = _load_offload_signing_ext()
-        if os.name == "nt" and key["type"] == "windows":
+        if os.name == "nt" and key["type"] == "windows_cert_store":
             if not key_info["provider"] in ["local_machine", "current_user"]:
                 raise exceptions.MutualTLSChannelError(key_info["provider"] + " is not supported")
             from cryptography import x509

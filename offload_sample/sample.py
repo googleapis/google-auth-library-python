@@ -39,7 +39,7 @@ def offload_callback_windows_rsa():
         cert = f.read()
 
     key = {
-        "type": "windows",
+        "type": "windows_cert_store",
         "key_info": {
             "provider": "current_user",
             "store_name": "MY",
@@ -54,7 +54,7 @@ def offload_callback_windows_ec():
         cert = f.read()
 
     key = {
-        "type": "windows",
+        "type": "windows_cert_store",
         "key_info": {
             "provider": "local_machine",
             "store_name": "MY",
@@ -82,7 +82,7 @@ def callback_daemon_windows_rsa():
     key = {
         "type": "daemon",
         "key_info": {
-            "type": "windows",
+            "type": "windows_cert_store",
             "key_info": {
                 "provider": "local_machine",
                 "store_name": "MY",
