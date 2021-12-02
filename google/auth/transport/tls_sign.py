@@ -61,8 +61,6 @@ def _create_pkcs11_sign_callback(key_info):
         import pkcs11.util.ec
         from cryptography.hazmat.primitives import hashes
 
-        print("calling sign_callback....\n")
-
         lib = pkcs11.lib(key_info["module_path"])
         token = lib.get_token(token_label=key_info["token_label"])
         user_pin = key_info["user_pin"] if "user_pin" in key_info else None
@@ -206,7 +204,6 @@ class CustomSigner(object):
     
     def cleanup(self):
         if self.signer:
-            print("calling self.offload_signing_ext.DestroyCustomKey")
             self.cleanup_func(self.signer)
 
 

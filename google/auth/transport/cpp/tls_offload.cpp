@@ -265,7 +265,7 @@ __declspec(dllexport)
 CustomKey* CreateCustomKey(SignFunc sign_func) {
   // creating custom key
   CustomKey *key = new CustomKey(sign_func);
-  printf("In CreateCustomKey\n");
+  if (EnableLogging) LogInfo("In CreateCustomKey\n");
   return key;
 }
 
@@ -275,7 +275,7 @@ __declspec(dllexport)
 #endif
 void DestroyCustomKey(CustomKey *key) {
   // deleting custom key
-  printf("In DestroyCustomKey\n");
+  if (EnableLogging) LogInfo("In DestroyCustomKey\n");
   delete key;
 }
 
