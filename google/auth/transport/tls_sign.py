@@ -190,7 +190,7 @@ class CustomSigner(object):
             atexit.register(self.cleanup)
         else:
             self.offload_signing_function = self.offload_signing_ext.OffloadSigning
-            if key["type"] == "pkc11":
+            if key["type"] == "pkcs11":
                 self.sign_callback = _create_pkcs11_sign_callback(key_info)
             elif key["type"] == "raw":
                 self.sign_callback = _create_raw_sign_callback(key_info)

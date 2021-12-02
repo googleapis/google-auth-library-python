@@ -73,7 +73,7 @@ if BUILD_TLS_OFFLOAD:
         tls_offload_ext = Extension(
             name="tls_offload_ext",
             language="c++",
-            libraries=["libcrypto", "libssl"],
+            libraries=["crypto", "ssl"],
             sources=["google/auth/transport/cpp/tls_offload.cpp"],
         )
         ext_module = [tls_offload_ext]

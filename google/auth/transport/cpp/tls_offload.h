@@ -1,3 +1,5 @@
+#include <cstddef>
+
 typedef int (*SignFunc)(unsigned char *sig, size_t *sig_len, const unsigned char *tbs, size_t tbs_len);
 
 class CustomKey {
