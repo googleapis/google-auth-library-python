@@ -55,6 +55,12 @@ version = version["__version__"]
 BUILD_TLS_OFFLOAD = os.getenv("GOOGLE_AUTH_BUILD_TLS_OFFLOAD")
 ext_module = None
 if BUILD_TLS_OFFLOAD:
+    # To build this extension,
+    # On Linux, run
+    #     GOOGLE_AUTH_BUILD_TLS_OFFLOAD=1 python -m pip install .
+    # On Windows, run
+    #     $env:GOOGLE_AUTH_BUILD_TLS_OFFLOAD=1
+    #     python -m pip install .
     if os.name == "nt":
         tls_offload_ext = Extension(
             name="tls_offload_ext",
@@ -93,7 +99,6 @@ setup(
     python_requires=">=2.7,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,!=3.5.*",
     license="Apache 2.0",
     keywords="google auth oauth client",
-    # GOOGLE_AUTH_BUILD_TLS_OFFLOAD=1 CC=g++ python -m pip install -e .
     ext_modules=ext_module,
     classifiers=[
         "Programming Language :: Python :: 3",
