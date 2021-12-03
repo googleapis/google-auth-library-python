@@ -101,7 +101,6 @@ void WinCertStoreKey::GetPrivateKey() {
         HandleError(TEXT("CryptAcquireCertificatePrivateKey.\n"));
     } else {
         LogInfo("Get private key\n");
-        LogInfo("key spec is %lu\n", dwKeySpec);
         if (dwKeySpec == CERT_NCRYPT_KEY_SPEC) LogInfo("key spec is ncrypt key\n");
     }
 }
