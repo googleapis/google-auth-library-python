@@ -23,8 +23,16 @@ typedef struct ECDSA_SIG_st {
 #define NT_SUCCESS(Status) (((NTSTATUS)(Status)) >= 0)
 #define STATUS_UNSUCCESSFUL ((NTSTATUS)0xC0000001L)
 
+static bool EnableLogging = false;
+
+void LogInfo(const std::string& message) {
+  if (EnableLogging) {
+    std::cout << "tls_offload.cpp: " << message << "...." << std::endl;
+  }
+}
+
 void WinCertStoreKey::Cleanup() {
-    printf("Cleanup is called\n");
+    LogInfo("Cleanup is called\n");
     if(pSignerCert) CertFreeCertificateContext(pSignerCert);
     if(hCertStore) CertCloseStore(hCertStore, CERT_CLOSE_STORE_CHECK_FLAG);
     if(hAlg) BCryptCloseAlgorithmProvider(hAlg,0);
@@ -92,9 +100,9 @@ void WinCertStoreKey::GetPrivateKey() {
     {
         HandleError(TEXT("CryptAcquireCertificatePrivateKey.\n"));
     } else {
-        printf("Get private key\n");
-        printf("key spec is %lu\n", dwKeySpec);
-        if (dwKeySpec == CERT_NCRYPT_KEY_SPEC) printf("key spec is ncrypt key\n");
+        LogInfo("Get private key\n");
+        LogInfo("key spec is %lu\n", dwKeySpec);
+        if (dwKeySpec == CERT_NCRYPT_KEY_SPEC) LogInfo("key spec is ncrypt key\n");
     }
 }
 
@@ -162,8 +170,7 @@ void WinCertStoreKey::CreateHash(PBYTE pbToSign, DWORD cbToSign) {
         goto Cleanup;
     }
 
-    printf("Hash size is: %lu\n", cbHash);
-    printf("Success!\n");
+    if (EnableLogging) printf("Hash size is: %lu\n", cbHash);
 
 Cleanup:
     return;
@@ -176,7 +183,7 @@ void WinCertStoreKey::NCryptSign(PBYTE pbSignatureOut, PDWORD cbSignatureOut) {
     pss_padding_info.cbSalt = 32; // 32 bytes for sha256
     void* padding_info = nullptr;
     DWORD dwFlag = 0;
-    printf(is_rsa_type? "key is rsa\n": "key is ec\n");
+    LogInfo(is_rsa_type? "key is rsa\n": "key is ec\n");
     if (is_rsa_type) {
         padding_info = &pss_padding_info;
         dwFlag = BCRYPT_PAD_PSS;
@@ -190,7 +197,7 @@ void WinCertStoreKey::NCryptSign(PBYTE pbSignatureOut, PDWORD cbSignatureOut) {
         wprintf(L"**** Error 0x%x returned by NCryptSignHash\n", secStatus);
         goto Cleanup;
     } else {
-        printf("First call to NCryptSignHash succeeded, sig len %lu\n", cbSignature);
+        if (EnableLogging) printf("First call to NCryptSignHash succeeded, sig len %lu\n", cbSignature);
     }
 
     //allocate the signature buffer
@@ -207,49 +214,54 @@ void WinCertStoreKey::NCryptSign(PBYTE pbSignatureOut, PDWORD cbSignatureOut) {
         wprintf(L"**** Error 0x%x returned by NCryptSignHash\n", secStatus);
         goto Cleanup;
     } else {
-        printf("Sign succeeded!\n");
-        printf("Signature length is: %lu\n", cbSignature);
+        if (EnableLogging) {
+            printf("Sign succeeded!\n");
+            printf("Signature length is: %lu\n", cbSignature);
+        }
         std::cout << "Signature is: " << pbSignature << std::endl;
         if (!is_rsa_type) {
             // Convert the RAW ECDSA signature to a DER-encoded ECDSA-Sig-Value.
-            printf("converting ECDSA signature\n");
+            LogInfo("converting ECDSA signature\n");
             size_t order_len = cbSignature / 2;
-            printf("order_len %d\n", order_len);
             ECDSA_SIG_st *sig = (ECDSA_SIG_st*)HeapAlloc (GetProcessHeap(), 0, sizeof(ECDSA_SIG_st));
             sig->r = BN_bin2bn(pbSignature, order_len, NULL);
             sig->s = BN_bin2bn(pbSignature + order_len, order_len, NULL);
-            std::cout << "sig->r " << sig->r <<std::endl;
+            if (EnableLogging) std::cout << "sig->r " << sig->r <<std::endl;
             
             if (!sig || !sig->r || !sig->s) {
-                printf("calling BN_bin2bn failed\n");
+                LogInfo("calling BN_bin2bn failed\n");
                 goto Cleanup;
             }
-            std::cout << "r: " << sig->r << std::endl;
-            std::cout << "s: " << sig->s << std::endl;
+            if (EnableLogging) {
+                std::cout << "r: " << sig->r << std::endl;
+                std::cout << "s: " << sig->s << std::endl;
+            }
             char * number_str = BN_bn2hex(sig->r);
-            printf("r value; %s\n", number_str);
-            printf("first call to i2d_ECDSA_SIG\n");
             int len = i2d_ECDSA_SIG(sig, nullptr);
             if (len <= 0) {
                 printf("first call to i2d_ECDSA_SIG failed\n");
                 goto Cleanup;
             }
-            printf("first call to i2d_ECDSA_SIG returns len %d\n", len);
+            if (EnableLogging) printf("first call to i2d_ECDSA_SIG returns len %d\n", len);
             PBYTE pbSignatureNew = (PBYTE)HeapAlloc (GetProcessHeap(), 0, len);
             PBYTE pbSig = pbSignatureNew;
-            printf("pbSignatureNew is %p\n", pbSignatureNew);
-            printf("pbSig is %p\n", pbSig);
-            printf("second call to i2d_ECDSA_SIG\n");
+            if (EnableLogging) {
+                printf("pbSignatureNew is %p\n", pbSignatureNew);
+                printf("pbSig is %p\n", pbSig);
+                printf("second call to i2d_ECDSA_SIG\n");
+            }
             len = i2d_ECDSA_SIG(sig, &pbSig);
             if (len <= 0) {
                 HeapFree(GetProcessHeap(), 0, pbSignatureNew);
                 printf("second call to i2d_ECDSA_SIG failed\n");
                 goto Cleanup;
             }
-            printf("conversion is done, sig size is: %d\n", len);
-            printf("pbSignatureNew is %p\n", pbSignatureNew);
-            printf("pbSignatureNew + len is %p\n", pbSignatureNew + len);
-            printf("pbSig is %p\n", pbSig);
+            if (EnableLogging) {
+                printf("conversion is done, sig size is: %d\n", len);
+                printf("pbSignatureNew is %p\n", pbSignatureNew);
+                printf("pbSignatureNew + len is %p\n", pbSignatureNew + len);
+                printf("pbSig is %p\n", pbSig);
+            }
             pbSignature = pbSignatureNew;
             cbSignature = len;
         }
@@ -280,18 +292,22 @@ extern "C" {
 
 __declspec(dllexport) WinCertStoreKey* CreateCustomKey(bool is_rsa_type, bool local_machine_store, const char *store_name, const char *subject) {
   // creating custom key
-  std::cout << "is_rsa_type: " << is_rsa_type << std::endl;
-  std::cout << "local_machine_store: " << local_machine_store << std::endl;
-  std::cout << "store_name: " << store_name << std::endl;
-  std::cout << "subject: " << subject << std::endl;
+  char * val = getenv("GOOGLE_AUTH_TLS_OFFLOAD_LOGGING");
+  EnableLogging = (val == nullptr)? false : true;
+  if (EnableLogging) {
+    printf("In CreateCustomKey\n");
+    std::cout << "is_rsa_type: " << is_rsa_type << std::endl;
+    std::cout << "local_machine_store: " << local_machine_store << std::endl;
+    std::cout << "store_name: " << store_name << std::endl;
+    std::cout << "subject: " << subject << std::endl;
+  }
   WinCertStoreKey *key = new WinCertStoreKey(is_rsa_type, local_machine_store, store_name, subject);
-  printf("In CreateCustomKey\n");
   return key;
 }
 
 __declspec(dllexport) void DestroyCustomKey(WinCertStoreKey *key) {
   // deleting custom key
-  printf("In DestroyCustomKey\n");
+  if (EnableLogging) printf("In DestroyCustomKey\n");
   delete key;
 }
 
