@@ -55,6 +55,8 @@ def _load_windows_signer_ext():
 
 def _create_pkcs11_sign_callback(key_info):
     def sign_callback(sig, sig_len, tbs, tbs_len):
+        print("calling pkcs11 signer....")
+
         import pkcs11
         from pkcs11 import KeyType, Mechanism, MGF
         from pkcs11.constants import ObjectClass
@@ -98,7 +100,7 @@ def _create_pkcs11_sign_callback(key_info):
 
 def _create_raw_sign_callback(key_info):
     def sign_callback(sig, sig_len, tbs, tbs_len):
-        print("calling sign_callback for raw key....\n")
+        print("calling raw key signer....")
 
         from cryptography.hazmat.primitives import hashes
         from cryptography.hazmat.primitives import serialization
@@ -136,17 +138,15 @@ def _create_raw_sign_callback(key_info):
 
 def _create_daemon_sign_callback(key_info):
     def sign_callback(sig, sig_len, tbs, tbs_len):
-        print("calling sign_callback using daemon....\n")
+        print("calling daemon signer....")
 
         body = copy.deepcopy(key_info)
         data = ctypes.string_at(tbs, tbs_len)
         body["data"] = base64.encodebytes(data).decode('ascii')
-        print(body)
         daemon_sign_endpoint = os.getenv("DAEMON_SIGN_ENDPOINT")
 
         res = requests.post(daemon_sign_endpoint, json=body)
         if not res.ok:
-            print(res.json())
             return 0
         
         signature = res.json()["signature"]
