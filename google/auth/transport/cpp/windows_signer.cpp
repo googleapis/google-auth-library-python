@@ -53,9 +53,11 @@ void WinCertStoreKey::HandleError(LPTSTR psz) {
 }
 
 void WinCertStoreKey::GetSignerCert() {
-    std::cout << "is_rsa_type: " << is_rsa_type << std::endl;
-    std::cout << "cert_store_name: " << cert_store_name << std::endl;
-    std::cout << "cert_subject: " << cert_subject << std::endl;
+    if (EnableLogging) {
+        std::cout << "is_rsa_type: " << is_rsa_type << std::endl;
+        std::cout << "cert_store_name: " << cert_store_name << std::endl;
+        std::cout << "cert_subject: " << cert_subject << std::endl;
+    }
     std::wstring w_cert_store_name = std::wstring(cert_store_name.begin(), cert_store_name.end());
     std::wstring w_cert_subject = std::wstring(cert_subject.begin(), cert_subject.end());
 
@@ -80,7 +82,7 @@ void WinCertStoreKey::GetSignerCert() {
        w_cert_subject.c_str(),
        NULL))
     {
-       _tprintf(TEXT("The signer's certificate was found.\n"));
+       LogInfo("The signer's certificate was found");
     }
     else
     {
@@ -217,7 +219,6 @@ void WinCertStoreKey::NCryptSign(PBYTE pbSignatureOut, PDWORD cbSignatureOut) {
             printf("Sign succeeded!\n");
             printf("Signature length is: %lu\n", cbSignature);
         }
-        std::cout << "Signature is: " << pbSignature << std::endl;
         if (!is_rsa_type) {
             // Convert the RAW ECDSA signature to a DER-encoded ECDSA-Sig-Value.
             LogInfo("converting ECDSA signature\n");
