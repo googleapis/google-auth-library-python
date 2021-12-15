@@ -27,16 +27,10 @@ import six
 
 from google.auth import environment_vars
 from google.auth import exceptions
+from google.auth.credentials import CredentialsType
 import google.auth.transport._http_client
 
 _LOGGER = logging.getLogger(__name__)
-
-# Valid types accepted for file-based credentials.
-_AUTHORIZED_USER_TYPE = "authorized_user"
-_SERVICE_ACCOUNT_TYPE = "service_account"
-_EXTERNAL_ACCOUNT_TYPE = "external_account"
-_IMPERSONATED_SERVICE_ACCOUNT_TYPE = "impersonated_service_account"
-_VALID_TYPES = (_AUTHORIZED_USER_TYPE, _SERVICE_ACCOUNT_TYPE, _EXTERNAL_ACCOUNT_TYPE, _IMPERSONATED_SERVICE_ACCOUNT_TYPE)
 
 # Help message when no credentials can be found.
 _HELP_MESSAGE = """\
@@ -125,7 +119,7 @@ def load_credentials_from_file(
     # credentials file or an authorized user credentials file.
     credential_type = info.get("type")
 
-    if credential_type == _AUTHORIZED_USER_TYPE:
+    if credential_type == CredentialsType.AUTHORIZED_USER_TYPE:
         from google.oauth2 import credentials
 
         try:
@@ -142,7 +136,7 @@ def load_credentials_from_file(
             _warn_about_problematic_credentials(credentials)
         return credentials, None
 
-    elif credential_type == _SERVICE_ACCOUNT_TYPE:
+    elif credential_type == CredentialsType.SERVICE_ACCOUNT_TYPE:
         from google.oauth2 import service_account
 
         try:
@@ -157,7 +151,7 @@ def load_credentials_from_file(
             credentials = credentials.with_quota_project(quota_project_id)
         return credentials, info.get("project_id")
 
-    elif credential_type == _IMPERSONATED_SERVICE_ACCOUNT_TYPE:
+    elif credential_type == CredentialsType.IMPERSONATED_SERVICE_ACCOUNT_TYPE:
         from google.auth import impersonated_credentials
 
         try:
@@ -165,11 +159,13 @@ def load_credentials_from_file(
                 info, scopes=scopes, default_scopes=default_scopes
             )
         except ValueError as caught_exc:
-            msg = "Failed to load authorized impersonated credentials from {}".format(filename)
+            msg = "Failed to load authorized impersonated credentials from {}".format(
+                filename
+            )
             new_exc = exceptions.DefaultCredentialsError(msg, caught_exc)
             six.raise_from(new_exc, caught_exc)
 
-    elif credential_type == _EXTERNAL_ACCOUNT_TYPE:
+    elif credential_type == CredentialsType.EXTERNAL_ACCOUNT_TYPE:
         credentials, project_id = _get_external_account_credentials(
             info,
             filename,
@@ -185,7 +181,9 @@ def load_credentials_from_file(
         raise exceptions.DefaultCredentialsError(
             "The file {file} does not have a valid type. "
             "Type is {type}, expected one of {valid_types}.".format(
-                file=filename, type=credential_type, valid_types=_VALID_TYPES
+                file=filename,
+                type=credential_type,
+                valid_types=CredentialsType.valid_types(),
             )
         )
 

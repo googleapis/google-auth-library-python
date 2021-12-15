@@ -16,10 +16,25 @@
 """Interfaces for credentials."""
 
 import abc
+from enum import Enum
+from typing import Set
 
 import six
 
 from google.auth import _helpers
+
+
+class CredentialsType(str, Enum):
+    """Valid types accepted for file-based credentials."""
+
+    AUTHORIZED_USER_TYPE = "authorized_user"
+    SERVICE_ACCOUNT_TYPE = "service_account"
+    EXTERNAL_ACCOUNT_TYPE = "external_account"
+    IMPERSONATED_SERVICE_ACCOUNT_TYPE = "impersonated_service_account"
+
+    @classmethod
+    def valid_types(cls) -> Set[str]:
+        return set(cls._member_names_)
 
 
 @six.add_metaclass(abc.ABCMeta)

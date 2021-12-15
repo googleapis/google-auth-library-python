@@ -26,6 +26,7 @@ import six
 from google.auth import _default
 from google.auth import environment_vars
 from google.auth import exceptions
+from google.auth.credentials import CredentialsType
 
 
 def load_credentials_from_file(filename, scopes=None, quota_project_id=None):
@@ -69,7 +70,7 @@ def load_credentials_from_file(filename, scopes=None, quota_project_id=None):
     # credentials file or an authorized user credentials file.
     credential_type = info.get("type")
 
-    if credential_type == _default._AUTHORIZED_USER_TYPE:
+    if credential_type == CredentialsType.AUTHORIZED_USER_TYPE:
         from google.oauth2 import _credentials_async as credentials
 
         try:
@@ -86,7 +87,7 @@ def load_credentials_from_file(filename, scopes=None, quota_project_id=None):
             _default._warn_about_problematic_credentials(credentials)
         return credentials, None
 
-    elif credential_type == _default._SERVICE_ACCOUNT_TYPE:
+    elif credential_type == CredentialsType.SERVICE_ACCOUNT_TYPE:
         from google.oauth2 import _service_account_async as service_account
 
         try:
@@ -103,7 +104,9 @@ def load_credentials_from_file(filename, scopes=None, quota_project_id=None):
         raise exceptions.DefaultCredentialsError(
             "The file {file} does not have a valid type. "
             "Type is {type}, expected one of {valid_types}.".format(
-                file=filename, type=credential_type, valid_types=_default._VALID_TYPES
+                file=filename,
+                type=credential_type,
+                valid_types=CredentialsType.valid_types(),
             )
         )
 
