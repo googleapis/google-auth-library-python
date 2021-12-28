@@ -7,6 +7,5 @@
     "language": "python",
     "library_type": "AUTH",
     "repo": "googleapis/google-auth-library-python",
-    "distribution_name": "google-auth",
-    "api_shortname": "google-auth"
+    "distribution_name": "google-auth"
 }
