@@ -4,6 +4,18 @@
 
 [1]: https://pypi.org/project/google-auth/#history
 
+### [2.3.4](https://www.github.com/googleapis/google-auth-library-python/compare/v2.3.3...v2.3.4) (2022-01-06)
+
+
+### Bug Fixes
+
+* fix the message format for metadata server exception ([#916](https://www.github.com/googleapis/google-auth-library-python/issues/916)) ([e756f08](https://www.github.com/googleapis/google-auth-library-python/commit/e756f08dc78616040ab8fbd7db20903137ccf0c7))
+
+
+### Documentation
+
+* fix intersphinx link for 'requests-oauthlib' ([#921](https://www.github.com/googleapis/google-auth-library-python/issues/921)) ([967be4f](https://www.github.com/googleapis/google-auth-library-python/commit/967be4f4e2a43ba7e240d7acb01b6b992d40e6ec))
+
 ### [2.3.3](https://www.github.com/googleapis/google-auth-library-python/compare/v2.3.2...v2.3.3) (2021-11-01)
 
 
