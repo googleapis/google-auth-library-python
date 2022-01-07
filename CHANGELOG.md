@@ -4,6 +4,24 @@
 
 [1]: https://pypi.org/project/google-auth/#history
 
+## [2.4.0](https://www.github.com/googleapis/google-auth-library-python/compare/v2.3.3...v2.4.0) (2022-01-07)
+
+
+### Features
+
+* add 'py.typed' declaration ([#919](https://www.github.com/googleapis/google-auth-library-python/issues/919)) ([c993504](https://www.github.com/googleapis/google-auth-library-python/commit/c99350455d0f7fd3aab950ac47b43000c73dd312))
+
+
+### Bug Fixes
+
+* fix the message format for metadata server exception ([#916](https://www.github.com/googleapis/google-auth-library-python/issues/916)) ([e756f08](https://www.github.com/googleapis/google-auth-library-python/commit/e756f08dc78616040ab8fbd7db20903137ccf0c7))
+
+
+### Documentation
+
+* fix intersphinx link for 'requests-oauthlib' ([#921](https://www.github.com/googleapis/google-auth-library-python/issues/921)) ([967be4f](https://www.github.com/googleapis/google-auth-library-python/commit/967be4f4e2a43ba7e240d7acb01b6b992d40e6ec))
+* note ValueError in `verify_oauth2_token` ([#928](https://www.github.com/googleapis/google-auth-library-python/issues/928)) ([82bc5f0](https://www.github.com/googleapis/google-auth-library-python/commit/82bc5f08111de78a2b475b0310d3f35470680dbe))
+
 ### [2.3.3](https://www.github.com/googleapis/google-auth-library-python/compare/v2.3.2...v2.3.3) (2021-11-01)
 
 
