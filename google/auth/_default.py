@@ -480,7 +480,7 @@ def default(scopes=None, request=None, quota_project_id=None, default_scopes=Non
         environment_vars.CREDENTIALS
     ):
         raise exceptions.DefaultCredentialsError(
-            "GOOGLE_API_KEY and GOOGLE_APPLICATION_CREDENTIALS are mutually exclusive"
+            "Environment variables GOOGLE_API_KEY and GOOGLE_APPLICATION_CREDENTIALS are mutually exclusive"
         )
 
     checkers = (
