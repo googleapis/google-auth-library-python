@@ -364,6 +364,13 @@ def _get_api_key_credentials(quota_project_id=None):
         return None, None
 
 
+def get_api_key_credentials(api_key_value):
+    """Gets API key credentials using the given api key value."""
+    from google.auth import api_key
+
+    return api_key.Credentials(api_key_value)
+
+
 def default(scopes=None, request=None, quota_project_id=None, default_scopes=None):
     """Gets the default credentials for the current environment.
 

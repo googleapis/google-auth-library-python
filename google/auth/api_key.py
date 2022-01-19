@@ -45,12 +45,10 @@ class Credentials(credentials.Credentials):
         self.token = token
 
     @property
-    @_helpers.copy_docstring(credentials.Credentials)
     def expired(self):
         return False
 
     @property
-    @_helpers.copy_docstring(credentials.Credentials)
     def valid(self):
         return True
 

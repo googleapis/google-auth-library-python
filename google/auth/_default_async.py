@@ -172,6 +172,13 @@ def _get_api_key_credentials(quota_project_id=None):
         return None, None
 
 
+def get_api_key_credentials(api_key_value):
+    """Gets API key credentials using the given api key value."""
+    from google.auth import api_key
+
+    return api_key.Credentials(api_key_value)
+
+
 def _get_gce_credentials(request=None):
     """Gets credentials and project ID from the GCE Metadata Service."""
     # Ping requires a transport, but we want application default credentials

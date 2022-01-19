@@ -1032,3 +1032,9 @@ def test_default_api_key_from_env_var():
         assert isinstance(cred, api_key.Credentials)
         assert cred.token == "api-key"
         assert project_id is None
+
+
+def test_get_api_key_credentials():
+    cred = _default.get_api_key_credentials("api-key")
+    assert isinstance(cred, api_key.Credentials)
+    assert cred.token == "api-key"
