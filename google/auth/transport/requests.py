@@ -37,7 +37,7 @@ except ImportError as caught_exc:  # pragma: NO COVER
 import requests.adapters  # pylint: disable=ungrouped-imports
 import requests.exceptions  # pylint: disable=ungrouped-imports
 import six  # pylint: disable=ungrouped-imports
-from urllib3.util.ssl_ import (
+from requests.packages.urllib3.util.ssl_ import (
     create_urllib3_context,
 )  # pylint: disable=ungrouped-imports
 
