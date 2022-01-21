@@ -25,6 +25,7 @@ import warnings
 
 import six
 
+from google.auth import constants
 from google.auth import environment_vars
 from google.auth import exceptions
 import google.auth.transport._http_client
@@ -35,7 +36,13 @@ _LOGGER = logging.getLogger(__name__)
 _AUTHORIZED_USER_TYPE = "authorized_user"
 _SERVICE_ACCOUNT_TYPE = "service_account"
 _EXTERNAL_ACCOUNT_TYPE = "external_account"
-_VALID_TYPES = (_AUTHORIZED_USER_TYPE, _SERVICE_ACCOUNT_TYPE, _EXTERNAL_ACCOUNT_TYPE)
+_IMPERSONATED_SERVICE_ACCOUNT_TYPE = "impersonated_service_account"
+_VALID_TYPES = (
+    _AUTHORIZED_USER_TYPE,
+    _SERVICE_ACCOUNT_TYPE,
+    _EXTERNAL_ACCOUNT_TYPE,
+    _IMPERSONATED_SERVICE_ACCOUNT_TYPE,
+)
 
 # Help message when no credentials can be found.
 _HELP_MESSAGE = """\
@@ -79,7 +86,8 @@ def load_credentials_from_file(
     """Loads Google credentials from a file.
 
     The credentials file must be a service account key, stored authorized
-    user credentials or external account credentials.
+    user credentials, external account credentials, or impersonated service account
+    credentials.
 
     Args:
         filename (str): The full path to the credentials file.
@@ -119,42 +127,33 @@ def load_credentials_from_file(
                 "File {} is not a valid json file.".format(filename), caught_exc
             )
             six.raise_from(new_exc, caught_exc)
+    return _load_credentials_from_info(
+        filename, info, scopes, default_scopes, quota_project_id, request
+    )
+
+
+def _load_credentials_from_info(
+    filename,
+    info,
+    scopes=None,
+    default_scopes=None,
+    quota_project_id=None,
+    request=None,
+):
 
     # The type key should indicate that the file is either a service account
     # credentials file or an authorized user credentials file.
     credential_type = info.get("type")
 
     if credential_type == _AUTHORIZED_USER_TYPE:
-        from google.oauth2 import credentials
-
-        try:
-            credentials = credentials.Credentials.from_authorized_user_info(
-                info, scopes=scopes
-            )
-        except ValueError as caught_exc:
-            msg = "Failed to load authorized user credentials from {}".format(filename)
-            new_exc = exceptions.DefaultCredentialsError(msg, caught_exc)
-            six.raise_from(new_exc, caught_exc)
-        if quota_project_id:
-            credentials = credentials.with_quota_project(quota_project_id)
-        if not credentials.quota_project_id:
-            _warn_about_problematic_credentials(credentials)
-        return credentials, None
+        credentials, project_id = _get_authorize_user_credentials(
+            filename, info, scopes
+        )
 
     elif credential_type == _SERVICE_ACCOUNT_TYPE:
-        from google.oauth2 import service_account
-
-        try:
-            credentials = service_account.Credentials.from_service_account_info(
-                info, scopes=scopes, default_scopes=default_scopes
-            )
-        except ValueError as caught_exc:
-            msg = "Failed to load service account credentials from {}".format(filename)
-            new_exc = exceptions.DefaultCredentialsError(msg, caught_exc)
-            six.raise_from(new_exc, caught_exc)
-        if quota_project_id:
-            credentials = credentials.with_quota_project(quota_project_id)
-        return credentials, info.get("project_id")
+        credentials, project_id = _get_service_account_credentials(
+            filename, info, scopes, default_scopes
+        )
 
     elif credential_type == _EXTERNAL_ACCOUNT_TYPE:
         credentials, project_id = _get_external_account_credentials(
@@ -164,10 +163,10 @@ def load_credentials_from_file(
             default_scopes=default_scopes,
             request=request,
         )
-        if quota_project_id:
-            credentials = credentials.with_quota_project(quota_project_id)
-        return credentials, project_id
-
+    elif credential_type == _IMPERSONATED_SERVICE_ACCOUNT_TYPE:
+        credentials, project_id = _get_impersonated_service_account_credentials(
+            filename, info, scopes
+        )
     else:
         raise exceptions.DefaultCredentialsError(
             "The file {file} does not have a valid type. "
@@ -175,6 +174,8 @@ def load_credentials_from_file(
                 file=filename, type=credential_type, valid_types=_VALID_TYPES
             )
         )
+    credentials = _apply_quota_project_id(credentials, quota_project_id)
+    return credentials, project_id
 
 
 def _get_gcloud_sdk_credentials(quota_project_id=None):
@@ -353,22 +354,84 @@ def _get_external_account_credentials(
     return credentials, credentials.get_project_id(request=request)
 
 
-def _get_api_key_credentials(quota_project_id=None):
-    """Gets API key credentials and project ID."""
-    from google.auth import api_key
+def _get_authorize_user_credentials(filename, info, scopes=None):
+    from google.oauth2 import credentials
 
-    api_key_value = os.environ.get(environment_vars.API_KEY)
-    if api_key_value:
-        return api_key.Credentials(api_key_value), quota_project_id
-    else:
-        return None, None
+    try:
+        credentials = credentials.Credentials.from_authorized_user_info(
+            info, scopes=scopes
+        )
+    except ValueError as caught_exc:
+        msg = "Failed to load authorized user credentials from {}".format(filename)
+        new_exc = exceptions.DefaultCredentialsError(msg, caught_exc)
+        six.raise_from(new_exc, caught_exc)
+    return credentials, None
 
 
-def get_api_key_credentials(api_key_value):
-    """Gets API key credentials using the given api key value."""
-    from google.auth import api_key
+def _get_service_account_credentials(filename, info, scopes=None, default_scopes=None):
+    from google.oauth2 import service_account
 
-    return api_key.Credentials(api_key_value)
+    try:
+        credentials = service_account.Credentials.from_service_account_info(
+            info, scopes=scopes, default_scopes=default_scopes
+        )
+    except ValueError as caught_exc:
+        msg = "Failed to load service account credentials from {}".format(filename)
+        new_exc = exceptions.DefaultCredentialsError(msg, caught_exc)
+        six.raise_from(new_exc, caught_exc)
+    return credentials, info.get("project_id")
+
+
+def _get_impersonated_service_account_credentials(filename, info, scopes):
+    from google.auth import impersonated_credentials
+
+    try:
+        source_credentials_info = info.get("source_credentials")
+        source_credentials_type = source_credentials_info.get("type")
+        if source_credentials_type == _AUTHORIZED_USER_TYPE:
+            source_credentials, _ = _get_authorize_user_credentials(
+                filename, source_credentials_info
+            )
+        elif source_credentials_type == _SERVICE_ACCOUNT_TYPE:
+            source_credentials, _ = _get_service_account_credentials(
+                filename, source_credentials_info
+            )
+        else:
+            raise ValueError(
+                "source credential of type: {} is not supported.".format(
+                    source_credentials_type
+                )
+            )
+        impersonation_url = info.get("service_account_impersonation_url")
+        start_index = impersonation_url.rfind("/")
+        end_index = impersonation_url.find(":generateAccessToken")
+        target_principal = impersonation_url[start_index:end_index]
+        delegates = info.get("delegates")
+        quota_project_id = info.get("quota_project_id")
+        credentials = impersonated_credentials.Credentials(
+            source_credentials,
+            target_principal,
+            scopes,
+            delegates,
+            quota_project_id=quota_project_id,
+        )
+    except ValueError as caught_exc:
+        msg = "Failed to load service account credentials from {}".format(filename)
+        new_exc = exceptions.DefaultCredentialsError(msg, caught_exc)
+        six.raise_from(new_exc, caught_exc)
+    return credentials, None
+
+
+def _apply_quota_project_id(credentials, quota_project_id):
+    from google.oauth2 import credentials as authorized_user_credentials
+
+    if quota_project_id:
+        credentials.with_quota_project(quota_project_id)
+    if isinstance(credentials, authorized_user_credentials.Credentials) and (
+        not credentials.quota_project_id
+    ):
+        _warn_about_problematic_credentials(credentials)
+    return credentials
 
 
 def default(scopes=None, request=None, quota_project_id=None, default_scopes=None):
