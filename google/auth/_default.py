@@ -25,7 +25,6 @@ import warnings
 
 import six
 
-from google.auth import constants
 from google.auth import environment_vars
 from google.auth import exceptions
 import google.auth.transport._http_client
@@ -133,12 +132,7 @@ def load_credentials_from_file(
 
 
 def _load_credentials_from_info(
-    filename,
-    info,
-    scopes=None,
-    default_scopes=None,
-    quota_project_id=None,
-    request=None,
+    filename, info, scopes, default_scopes, quota_project_id, request
 ):
 
     # The type key should indicate that the file is either a service account
@@ -354,6 +348,24 @@ def _get_external_account_credentials(
     return credentials, credentials.get_project_id(request=request)
 
 
+def _get_api_key_credentials(quota_project_id=None):
+    """Gets API key credentials and project ID."""
+    from google.auth import api_key
+
+    api_key_value = os.environ.get(environment_vars.API_KEY)
+    if api_key_value:
+        return api_key.Credentials(api_key_value), quota_project_id
+    else:
+        return None, None
+
+
+def get_api_key_credentials(api_key_value):
+    """Gets API key credentials using the given api key value."""
+    from google.auth import api_key
+
+    return api_key.Credentials(api_key_value)
+
+
 def _get_authorize_user_credentials(filename, info, scopes=None):
     from google.oauth2 import credentials
 
@@ -398,14 +410,18 @@ def _get_impersonated_service_account_credentials(filename, info, scopes):
             )
         else:
             raise ValueError(
-                "source credential of type: {} is not supported.".format(
+                "source credential of type {} is not supported.".format(
                     source_credentials_type
                 )
             )
         impersonation_url = info.get("service_account_impersonation_url")
         start_index = impersonation_url.rfind("/")
         end_index = impersonation_url.find(":generateAccessToken")
-        target_principal = impersonation_url[start_index:end_index]
+        if start_index == -1 or end_index == -1 or start_index > end_index:
+            raise ValueError(
+                "Cannot extract target principal from {}".format(impersonation_url)
+            )
+        target_principal = impersonation_url[start_index + 1 : end_index]
         delegates = info.get("delegates")
         quota_project_id = info.get("quota_project_id")
         credentials = impersonated_credentials.Credentials(
@@ -423,10 +439,11 @@ def _get_impersonated_service_account_credentials(filename, info, scopes):
 
 
 def _apply_quota_project_id(credentials, quota_project_id):
+    if quota_project_id:
+        credentials = credentials.with_quota_project(quota_project_id)
+
     from google.oauth2 import credentials as authorized_user_credentials
 
-    if quota_project_id:
-        credentials.with_quota_project(quota_project_id)
     if isinstance(credentials, authorized_user_credentials.Credentials) and (
         not credentials.quota_project_id
     ):
