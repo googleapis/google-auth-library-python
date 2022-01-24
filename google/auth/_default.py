@@ -85,8 +85,8 @@ def load_credentials_from_file(
     """Loads Google credentials from a file.
 
     The credentials file must be a service account key, stored authorized
-    user credentials, external account credentials, or impersonated service account
-    credentials.
+    user credentials, external account credentials, or impersonated service
+    account credentials.
 
     Args:
         filename (str): The full path to the credentials file.
@@ -134,13 +134,10 @@ def load_credentials_from_file(
 def _load_credentials_from_info(
     filename, info, scopes, default_scopes, quota_project_id, request
 ):
-
-    # The type key should indicate that the file is either a service account
-    # credentials file or an authorized user credentials file.
     credential_type = info.get("type")
 
     if credential_type == _AUTHORIZED_USER_TYPE:
-        credentials, project_id = _get_authorize_user_credentials(
+        credentials, project_id = _get_authorized_user_credentials(
             filename, info, scopes
         )
 
@@ -366,7 +363,7 @@ def get_api_key_credentials(api_key_value):
     return api_key.Credentials(api_key_value)
 
 
-def _get_authorize_user_credentials(filename, info, scopes=None):
+def _get_authorized_user_credentials(filename, info, scopes=None):
     from google.oauth2 import credentials
 
     try:
@@ -401,7 +398,7 @@ def _get_impersonated_service_account_credentials(filename, info, scopes):
         source_credentials_info = info.get("source_credentials")
         source_credentials_type = source_credentials_info.get("type")
         if source_credentials_type == _AUTHORIZED_USER_TYPE:
-            source_credentials, _ = _get_authorize_user_credentials(
+            source_credentials, _ = _get_authorized_user_credentials(
                 filename, source_credentials_info
             )
         elif source_credentials_type == _SERVICE_ACCOUNT_TYPE:
@@ -432,7 +429,9 @@ def _get_impersonated_service_account_credentials(filename, info, scopes):
             quota_project_id=quota_project_id,
         )
     except ValueError as caught_exc:
-        msg = "Failed to load service account credentials from {}".format(filename)
+        msg = "Failed to load impersonated service account credentials from {}".format(
+            filename
+        )
         new_exc = exceptions.DefaultCredentialsError(msg, caught_exc)
         six.raise_from(new_exc, caught_exc)
     return credentials, None
