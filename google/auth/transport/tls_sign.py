@@ -18,6 +18,7 @@ callback_type = ctypes.CFUNCTYPE(
 )
 custom_key_handle_type = ctypes.POINTER(ctypes.c_char)
 
+
 def _cast_ssl_ctx_to_void_p(ssl_ctx):
     return ctypes.cast(int(cffi.FFI().cast("intptr_t", ssl_ctx)), ctypes.c_void_p)
 
@@ -142,13 +143,13 @@ def _create_daemon_sign_callback(key_info):
 
         body = copy.deepcopy(key_info)
         data = ctypes.string_at(tbs, tbs_len)
-        body["data"] = base64.encodebytes(data).decode('ascii')
+        body["data"] = base64.encodebytes(data).decode("ascii")
         daemon_sign_endpoint = os.getenv("DAEMON_SIGN_ENDPOINT")
 
         res = requests.post(daemon_sign_endpoint, json=body)
         if not res.ok:
             return 0
-        
+
         signature = res.json()["signature"]
         signature = base64.b64decode(signature)
 
@@ -168,7 +169,9 @@ class CustomSigner(object):
         self.offload_signing_ext = _load_offload_signing_ext()
         if os.name == "nt" and key["type"] == "windows_cert_store":
             if not key_info["provider"] in ["local_machine", "current_user"]:
-                raise exceptions.MutualTLSChannelError(key_info["provider"] + " is not supported")
+                raise exceptions.MutualTLSChannelError(
+                    key_info["provider"] + " is not supported"
+                )
             from cryptography import x509
             from cryptography.hazmat.primitives.asymmetric import rsa
 
@@ -176,13 +179,13 @@ class CustomSigner(object):
             self.windows_signer_ext = _load_windows_signer_ext()
 
             public_key = x509.load_pem_x509_certificate(cert).public_key()
-            is_rsa = (isinstance(public_key, rsa.RSAPublicKey))
-            is_local_machine_store = (key_info["provider"] == "local_machine")
+            is_rsa = isinstance(public_key, rsa.RSAPublicKey)
+            is_local_machine_store = key_info["provider"] == "local_machine"
             self.signer = self.windows_signer_ext.CreateCustomKey(
                 ctypes.c_bool(is_rsa),
                 ctypes.c_bool(is_local_machine_store),
                 ctypes.c_char_p(key_info["store_name"].encode()),
-                ctypes.c_char_p(key_info["subject"].encode())
+                ctypes.c_char_p(key_info["subject"].encode()),
             )
             self.cleanup_func = self.windows_signer_ext.DestroyCustomKey
             atexit.register(self.cleanup)
@@ -201,7 +204,7 @@ class CustomSigner(object):
             self.signer = self.offload_signing_ext.CreateCustomKey(self.sign_callback)
             self.cleanup_func = self.offload_signing_ext.DestroyCustomKey
             atexit.register(self.cleanup)
-    
+
     def cleanup(self):
         if self.signer:
             self.cleanup_func(self.signer)
@@ -209,8 +212,6 @@ class CustomSigner(object):
 
 def attach_signer_and_cert_to_ssl_context(signer, cert, ctx):
     if not signer.offload_signing_function(
-        signer.signer,
-        ctypes.c_char_p(cert),
-        _cast_ssl_ctx_to_void_p(ctx._ctx._context),
+        signer.signer, ctypes.c_char_p(cert), _cast_ssl_ctx_to_void_p(ctx._ctx._context)
     ):
         raise exceptions.MutualTLSChannelError("failed to offload signing")
