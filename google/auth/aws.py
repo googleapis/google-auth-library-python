@@ -460,13 +460,15 @@ class Credentials(external_account.Credentials):
             str: The retrieved subject token.
         """
         # Fetch the session token required to make meta data endpoint calls to aws
-        headers={"X-aws-ec2-metadata-token-ttl-seconds": "21600"}
         if request is not None:
+            headers = {"X-aws-ec2-metadata-token-ttl-seconds": "21600"}
             session_token = request(
                 url=self._aws_token_url,
                 method="PUT",
                 headers=headers,
             )
+        else:
+            session_token = None
 
         # Initialize the request signer if not yet initialized after determining
         # the current AWS region.
