@@ -1095,7 +1095,7 @@ def test_default_no_warning_with_quota_project_id_for_user_creds(get_adc_path):
 def test_default_impersonated_service_account(get_adc_path):
     get_adc_path.return_value = IMPERSONATED_SERVICE_ACCOUNT_AUTHORIZED_USER_SOURCE_FILE
 
-    credentials, project_id = _default.default()
+    credentials, _ = _default.default()
 
     assert isinstance(credentials, impersonated_credentials.Credentials)
     assert isinstance(
