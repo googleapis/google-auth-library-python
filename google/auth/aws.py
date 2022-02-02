@@ -406,7 +406,7 @@ class Credentials(external_account.Credentials):
         self._cred_verification_url = credential_source.get(
             "regional_cred_verification_url"
         )
-        self._aws_token_url = credential_source.get("aws_token_url")
+        self._aws_session_token_url = credential_source.get("aws_session_token_url")
         self._region = None
         self._request_signer = None
         self._target_resource = audience
@@ -460,13 +460,21 @@ class Credentials(external_account.Credentials):
             str: The retrieved subject token.
         """
         # Fetch the session token required to make meta data endpoint calls to aws
-        if request is not None:
+        if request is not None and self._aws_session_token_url is not None:
             headers = {"X-aws-ec2-metadata-token-ttl-seconds": "21600"}
-            session_token = request(
-                url=self._aws_token_url,
+
+            session_token_response = request(
+                url=self._aws_session_token_url,
                 method="PUT",
                 headers=headers,
             )
+
+            if session_token_response.status != 200:
+                raise exceptions.RefreshError(
+                    "Unable to retrieve AWS Session Token",
+                    session_token_response.data)
+
+            session_token = session_token_response.data
         else:
             session_token = None
 
@@ -555,11 +563,14 @@ class Credentials(external_account.Credentials):
         if not self._region_url:
             raise exceptions.RefreshError("Unable to determine AWS region")
 
-        headers = {"X-aws-ec2-metadata-token": session_token}
+        headers = None
+        if session_token is not None:
+            headers = {"X-aws-ec2-metadata-token": session_token}
+
         response = request(
             url=self._region_url,
             method="GET",
-            headers=headers,
+            #headers=headers,
         )
 
         # Support both string and bytes type response.data.
@@ -645,9 +656,10 @@ class Credentials(external_account.Credentials):
             google.auth.exceptions.RefreshError: If an error occurs while
                 retrieving the AWS security credentials.
         """
-        headers = {
-            "Content-Type": "application/json",
-            "X-aws-ec2-metadata-token": session_token}
+        headers = {"Content-Type": "application/json"}
+        if session_token is not None:
+            headers["X-aws-ec2-metadata-token"] = session_token
+
         response = request(
             url="{}/{}".format(self._security_credentials_url, role_name),
             method="GET",
@@ -694,7 +706,10 @@ class Credentials(external_account.Credentials):
                 "Unable to determine the AWS metadata server security credentials endpoint"
             )
 
-        headers = {"X-aws-ec2-metadata-token": session_token}
+        headers = None
+        if session_token is not None:
+            headers = {"X-aws-ec2-metadata-token": session_token}
+
         response = request(
             url=self._security_credentials_url,
             method="GET",
