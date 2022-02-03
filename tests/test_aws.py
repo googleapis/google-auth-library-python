@@ -669,8 +669,7 @@ class TestCredentials(object):
             #AWS session token request
             session_response = mock.create_autospec(transport.Response, instance=True)
             session_response.status = session_token_status
-            if session_token_data:
-                session_response.data = session_token_data
+            session_response.data = session_token_data
             responses.append(session_response)
 
         if region_status:
