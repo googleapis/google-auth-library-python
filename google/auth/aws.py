@@ -570,7 +570,7 @@ class Credentials(external_account.Credentials):
         response = request(
             url=self._region_url,
             method="GET",
-            #headers=headers,
+            headers=headers,
         )
 
         # Support both string and bytes type response.data.

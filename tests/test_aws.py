@@ -587,13 +587,6 @@ class TestCredentials(object):
         "url": SECURITY_CREDS_URL,
         "regional_cred_verification_url": CRED_VERIFICATION_URL,
     }
-    CREDENTIAL_SOURCE_AWS_SESSION = {
-        "environment_id": "aws1",
-        "region_url": REGION_URL,
-        "url": SECURITY_CREDS_URL,
-        "aws_session_token_url": AWS_SESSION_TOKEN_URL,
-        "regional_cred_verification_url": CRED_VERIFICATION_URL,
-    }
     SUCCESS_RESPONSE = {
         "access_token": "ACCESS_TOKEN",
         "issued_token_type": "urn:ietf:params:oauth:token-type:access_token",
@@ -1028,6 +1021,96 @@ class TestCredentials(object):
             new_request.call_args_list[1][1],
             "{}/{}".format(SECURITY_CREDS_URL, self.AWS_ROLE),
             {"Content-Type": "application/json"},
+        )
+
+    @mock.patch("google.auth._helpers.utcnow")
+    def test_retrieve_subject_token_success_temp_creds_no_environment_vars_idmsv2(
+        self, utcnow
+    ):
+        utcnow.return_value = datetime.datetime.strptime(
+            self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
+        )
+        request = self.make_mock_request(
+            region_status=http_client.OK,
+            region_name=self.AWS_REGION,
+            role_status=http_client.OK,
+            role_name=self.AWS_ROLE,
+            security_credentials_status=http_client.OK,
+            security_credentials_data=self.AWS_SECURITY_CREDENTIALS_RESPONSE,
+            session_token_status=http_client.OK,
+            session_token_data=self.AWS_SESSION_TOKEN,
+        )
+        credential_source_token_url = self.CREDENTIAL_SOURCE.copy()
+        credential_source_token_url["aws_session_token_url"] = AWS_SESSION_TOKEN_URL
+        credentials = self.make_credentials(credential_source=credential_source_token_url)
+
+        subject_token = credentials.retrieve_subject_token(request)
+
+        assert subject_token == self.make_serialized_aws_signed_request(
+            {
+                "access_key_id": ACCESS_KEY_ID,
+                "secret_access_key": SECRET_ACCESS_KEY,
+                "security_token": TOKEN,
+            }
+        )
+        # Assert session token request
+        self.assert_aws_metadata_request_kwargs(
+            request.call_args_list[0][1],
+            AWS_SESSION_TOKEN_URL,
+            {"X-aws-ec2-metadata-token-ttl-seconds": "21600"},
+            "PUT"
+        )
+        # Assert region request.
+        self.assert_aws_metadata_request_kwargs(
+            request.call_args_list[1][1],
+            REGION_URL,
+            {"X-aws-ec2-metadata-token": self.AWS_SESSION_TOKEN}
+        )
+        # Assert role request.
+        self.assert_aws_metadata_request_kwargs(
+            request.call_args_list[2][1],
+            SECURITY_CREDS_URL,
+            {"X-aws-ec2-metadata-token": self.AWS_SESSION_TOKEN}
+        )
+        # Assert security credentials request.
+        self.assert_aws_metadata_request_kwargs(
+            request.call_args_list[3][1],
+            "{}/{}".format(SECURITY_CREDS_URL, self.AWS_ROLE),
+            {"Content-Type": "application/json", "X-aws-ec2-metadata-token": self.AWS_SESSION_TOKEN},
+        )
+
+        # Retrieve subject_token again. Region should not be queried again.
+        new_request = self.make_mock_request(
+            role_status=http_client.OK,
+            role_name=self.AWS_ROLE,
+            security_credentials_status=http_client.OK,
+            security_credentials_data=self.AWS_SECURITY_CREDENTIALS_RESPONSE,
+            session_token_status=http_client.OK,
+            session_token_data=self.AWS_SESSION_TOKEN,
+        )
+
+        credentials.retrieve_subject_token(new_request)
+
+        # Only 3 requests should be sent as the region is cached.
+        assert len(new_request.call_args_list) == 3
+        # Assert session token request
+        self.assert_aws_metadata_request_kwargs(
+            request.call_args_list[0][1],
+            AWS_SESSION_TOKEN_URL,
+            {"X-aws-ec2-metadata-token-ttl-seconds": "21600"},
+            "PUT"
+        )
+        # Assert role request.
+        self.assert_aws_metadata_request_kwargs(
+            new_request.call_args_list[1][1],
+            SECURITY_CREDS_URL,
+            {"X-aws-ec2-metadata-token": self.AWS_SESSION_TOKEN}
+        )
+        # Assert security credentials request.
+        self.assert_aws_metadata_request_kwargs(
+            new_request.call_args_list[2][1],
+            "{}/{}".format(SECURITY_CREDS_URL, self.AWS_ROLE),
+            {"Content-Type": "application/json", "X-aws-ec2-metadata-token": self.AWS_SESSION_TOKEN},
         )
 
     @mock.patch("google.auth._helpers.utcnow")
