@@ -666,7 +666,7 @@ class TestCredentials(object):
         """
         responses = []
         if session_token_status:
-            #AWS session token request
+            # AWS session token request
             session_response = mock.create_autospec(transport.Response, instance=True)
             session_response.status = session_token_status
             session_response.data = session_token_data
@@ -746,14 +746,16 @@ class TestCredentials(object):
         )
 
     @classmethod
-    def assert_aws_metadata_request_kwargs(cls, request_kwargs, url, headers=None, method="GET"):
+    def assert_aws_metadata_request_kwargs(
+        cls, request_kwargs, url, headers=None, method="GET"
+    ):
         assert request_kwargs["url"] == url
         # All used AWS metadata server endpoints use GET HTTP method.
         assert request_kwargs["method"] == method
         if headers:
             assert request_kwargs["headers"] == headers
         else:
-            assert "headers" not in request_kwargs or request_kwargs["headers"] == None
+            assert "headers" not in request_kwargs or request_kwargs["headers"] is None
         # None of the endpoints used require any data in request.
         assert "body" not in request_kwargs
 
@@ -983,13 +985,11 @@ class TestCredentials(object):
         )
         # Assert region request.
         self.assert_aws_metadata_request_kwargs(
-            request.call_args_list[0][1],
-            REGION_URL
+            request.call_args_list[0][1], REGION_URL
         )
         # Assert role request.
         self.assert_aws_metadata_request_kwargs(
-            request.call_args_list[1][1],
-            SECURITY_CREDS_URL
+            request.call_args_list[1][1], SECURITY_CREDS_URL
         )
         # Assert security credentials request.
         self.assert_aws_metadata_request_kwargs(
@@ -1012,8 +1012,7 @@ class TestCredentials(object):
         assert len(new_request.call_args_list) == 2
         # Assert role request.
         self.assert_aws_metadata_request_kwargs(
-            new_request.call_args_list[0][1],
-            SECURITY_CREDS_URL
+            new_request.call_args_list[0][1], SECURITY_CREDS_URL
         )
         # Assert security credentials request.
         self.assert_aws_metadata_request_kwargs(
@@ -1041,7 +1040,9 @@ class TestCredentials(object):
         )
         credential_source_token_url = self.CREDENTIAL_SOURCE.copy()
         credential_source_token_url["aws_session_token_url"] = AWS_SESSION_TOKEN_URL
-        credentials = self.make_credentials(credential_source=credential_source_token_url)
+        credentials = self.make_credentials(
+            credential_source=credential_source_token_url
+        )
 
         subject_token = credentials.retrieve_subject_token(request)
 
@@ -1057,25 +1058,28 @@ class TestCredentials(object):
             request.call_args_list[0][1],
             AWS_SESSION_TOKEN_URL,
             {"X-aws-ec2-metadata-token-ttl-seconds": "21600"},
-            "PUT"
+            "PUT",
         )
         # Assert region request.
         self.assert_aws_metadata_request_kwargs(
             request.call_args_list[1][1],
             REGION_URL,
-            {"X-aws-ec2-metadata-token": self.AWS_SESSION_TOKEN}
+            {"X-aws-ec2-metadata-token": self.AWS_SESSION_TOKEN},
         )
         # Assert role request.
         self.assert_aws_metadata_request_kwargs(
             request.call_args_list[2][1],
             SECURITY_CREDS_URL,
-            {"X-aws-ec2-metadata-token": self.AWS_SESSION_TOKEN}
+            {"X-aws-ec2-metadata-token": self.AWS_SESSION_TOKEN},
         )
         # Assert security credentials request.
         self.assert_aws_metadata_request_kwargs(
             request.call_args_list[3][1],
             "{}/{}".format(SECURITY_CREDS_URL, self.AWS_ROLE),
-            {"Content-Type": "application/json", "X-aws-ec2-metadata-token": self.AWS_SESSION_TOKEN},
+            {
+                "Content-Type": "application/json",
+                "X-aws-ec2-metadata-token": self.AWS_SESSION_TOKEN,
+            },
         )
 
         # Retrieve subject_token again. Region should not be queried again.
@@ -1097,25 +1101,26 @@ class TestCredentials(object):
             request.call_args_list[0][1],
             AWS_SESSION_TOKEN_URL,
             {"X-aws-ec2-metadata-token-ttl-seconds": "21600"},
-            "PUT"
+            "PUT",
         )
         # Assert role request.
         self.assert_aws_metadata_request_kwargs(
             new_request.call_args_list[1][1],
             SECURITY_CREDS_URL,
-            {"X-aws-ec2-metadata-token": self.AWS_SESSION_TOKEN}
+            {"X-aws-ec2-metadata-token": self.AWS_SESSION_TOKEN},
         )
         # Assert security credentials request.
         self.assert_aws_metadata_request_kwargs(
             new_request.call_args_list[2][1],
             "{}/{}".format(SECURITY_CREDS_URL, self.AWS_ROLE),
-            {"Content-Type": "application/json", "X-aws-ec2-metadata-token": self.AWS_SESSION_TOKEN},
+            {
+                "Content-Type": "application/json",
+                "X-aws-ec2-metadata-token": self.AWS_SESSION_TOKEN,
+            },
         )
 
     @mock.patch("google.auth._helpers.utcnow")
-    def test_retrieve_subject_token_session_error_idmsv2(
-        self, utcnow
-    ):
+    def test_retrieve_subject_token_session_error_idmsv2(self, utcnow):
         utcnow.return_value = datetime.datetime.strptime(
             self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
         )
@@ -1125,7 +1130,9 @@ class TestCredentials(object):
         )
         credential_source_token_url = self.CREDENTIAL_SOURCE.copy()
         credential_source_token_url["aws_session_token_url"] = AWS_SESSION_TOKEN_URL
-        credentials = self.make_credentials(credential_source=credential_source_token_url)
+        credentials = self.make_credentials(
+            credential_source=credential_source_token_url
+        )
 
         with pytest.raises(exceptions.RefreshError) as excinfo:
             credentials.retrieve_subject_token(request)
@@ -1137,7 +1144,7 @@ class TestCredentials(object):
             request.call_args_list[0][1],
             AWS_SESSION_TOKEN_URL,
             {"X-aws-ec2-metadata-token-ttl-seconds": "21600"},
-            "PUT"
+            "PUT",
         )
 
     @mock.patch("google.auth._helpers.utcnow")
@@ -1268,8 +1275,7 @@ class TestCredentials(object):
         )
         # Region will be queried since it is not found in envvars.
         request = self.make_mock_request(
-            region_status=http_client.OK,
-            region_name=self.AWS_REGION,
+            region_status=http_client.OK, region_name=self.AWS_REGION
         )
         credentials = self.make_credentials(credential_source=self.CREDENTIAL_SOURCE)
 
@@ -1285,8 +1291,7 @@ class TestCredentials(object):
 
     def test_retrieve_subject_token_error_determining_aws_region(self):
         # Simulate error in retrieving the AWS region.
-        request = self.make_mock_request(
-            region_status=http_client.BAD_REQUEST,)
+        request = self.make_mock_request(region_status=http_client.BAD_REQUEST)
         credentials = self.make_credentials(credential_source=self.CREDENTIAL_SOURCE)
 
         with pytest.raises(exceptions.RefreshError) as excinfo:
@@ -1314,8 +1319,7 @@ class TestCredentials(object):
         credential_source = self.CREDENTIAL_SOURCE.copy()
         credential_source.pop("url")
         request = self.make_mock_request(
-            region_status=http_client.OK,
-            region_name=self.AWS_REGION,
+            region_status=http_client.OK, region_name=self.AWS_REGION
         )
         credentials = self.make_credentials(credential_source=credential_source)
 
@@ -1623,8 +1627,7 @@ class TestCredentials(object):
         assert credentials.default_scopes == SCOPES
 
     def test_refresh_with_retrieve_subject_token_error(self):
-        request = self.make_mock_request(
-            region_status=http_client.BAD_REQUEST,)
+        request = self.make_mock_request(region_status=http_client.BAD_REQUEST)
         credentials = self.make_credentials(credential_source=self.CREDENTIAL_SOURCE)
 
         with pytest.raises(exceptions.RefreshError) as excinfo:
