@@ -137,6 +137,41 @@ def _create_raw_sign_callback(key_info):
     return callback_type(sign_callback)
 
 
+def _create_win_golang_sign_callback(key_info):
+    def sign_callback(sig, sig_len, tbs, tbs_len):
+        print("calling golang key signer....")
+
+        from cryptography.hazmat.primitives import hashes
+
+        data = ctypes.string_at(tbs, tbs_len)
+        hash = hashes.Hash(hashes.SHA256())
+        hash.update(data)
+        digest = hash.finalize()
+
+        lib = ctypes.CDLL("C:/workspace/wincert-sign-golang/main.dll")
+        if not lib:
+            raise exceptions.MutualTLSChannelError(
+                "main.dll is not found"
+            )
+        lib.SignForPython.restype = ctypes.c_int
+        lib.SignForPython.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_int]
+
+        issuer = b"localhost"
+        sigHolder = ctypes.create_string_buffer(1000)
+        sigLen = lib.SignForPython(ctypes.c_char_p(issuer), ctypes.c_char_p(digest), sigHolder, 1000)
+        print(f"the signature from golang has size {sigLen}")
+        
+        sig_len[0] = sigLen
+        if sig:
+            bs = bytearray(sigHolder)
+            for i in range(sigLen):
+                sig[i] = bs[i]
+
+        return 1
+
+    return callback_type(sign_callback)
+
+
 def _create_daemon_sign_callback(key_info):
     def sign_callback(sig, sig_len, tbs, tbs_len):
         print("calling daemon signer....")
@@ -197,6 +232,8 @@ class CustomSigner(object):
                 self.sign_callback = _create_raw_sign_callback(key_info)
             elif key["type"] == "daemon":
                 self.sign_callback = _create_daemon_sign_callback(key_info)
+            elif key["type"] == "windows_go":
+                self.sign_callback = _create_win_golang_sign_callback(key_info)
             else:
                 raise exceptions.MutualTLSChannelError(
                     "currently only pkcs11 and raw type are supported"
