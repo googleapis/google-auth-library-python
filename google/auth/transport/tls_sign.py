@@ -252,3 +252,18 @@ def attach_signer_and_cert_to_ssl_context(signer, cert, ctx):
         signer.signer, ctypes.c_char_p(cert), _cast_ssl_ctx_to_void_p(ctx._ctx._context)
     ):
         raise exceptions.MutualTLSChannelError("failed to offload signing")
+
+
+def get_cert_from_store(key):
+    if os.name == "nt" and key["type"] == "windows_go":
+        issuer = b"localhost"
+        lib = ctypes.CDLL("C:/workspace/wincert-sign-golang/main.dll")
+        if not lib:
+            raise exceptions.MutualTLSChannelError(
+                "main.dll is not found"
+            )
+        lib.GetCertPemForPython.argtypes = [ctypes.c_char_p]
+        lib.GetCertPemForPython.restype = ctypes.c_char_p
+        ptr = lib.GetCertPemForPython(ctypes.c_char_p(issuer))
+        return ctypes.string_at(ptr)
+    return None
