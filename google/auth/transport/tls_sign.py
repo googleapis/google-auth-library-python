@@ -147,19 +147,19 @@ def _create_win_golang_sign_callback(key_info):
         hash = hashes.Hash(hashes.SHA256())
         hash.update(data)
         digest = hash.finalize()
+        digestArray = ctypes.c_char * len(digest)
 
-        lib = ctypes.CDLL("C:/workspace/wincert-sign-golang/main.dll")
+        lib = ctypes.CDLL("C:/workspace/wincert-sign-golang/wincert_sign.dll")
         if not lib:
             raise exceptions.MutualTLSChannelError(
-                "main.dll is not found"
+                "wincert_sign.dll is not found"
             )
         lib.SignForPython.restype = ctypes.c_int
-        lib.SignForPython.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_int]
+        lib.SignForPython.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_int, ctypes.c_char_p, ctypes.c_int]
 
         issuer = b"localhost"
-        sigHolder = ctypes.create_string_buffer(1000)
-        sigLen = lib.SignForPython(ctypes.c_char_p(issuer), ctypes.c_char_p(digest), sigHolder, 1000)
-        print(f"the signature from golang has size {sigLen}")
+        sigHolder = ctypes.create_string_buffer(2000)
+        sigLen = lib.SignForPython(ctypes.c_char_p(issuer), digestArray.from_buffer(bytearray(digest)), len(digest), sigHolder, 2000)
         
         sig_len[0] = sigLen
         if sig:
@@ -202,45 +202,48 @@ class CustomSigner(object):
     def __init__(self, cert, key):
         key_info = key["key_info"]
         self.offload_signing_ext = _load_offload_signing_ext()
-        if os.name == "nt" and key["type"] == "windows_cert_store":
-            if not key_info["provider"] in ["local_machine", "current_user"]:
-                raise exceptions.MutualTLSChannelError(
-                    key_info["provider"] + " is not supported"
-                )
-            from cryptography import x509
-            from cryptography.hazmat.primitives.asymmetric import rsa
+        self.offload_signing_function = self.offload_signing_ext.OffloadSigning
 
-            self.offload_signing_function = self.offload_signing_ext.OffloadSigning
-            self.windows_signer_ext = _load_windows_signer_ext()
-
-            public_key = x509.load_pem_x509_certificate(cert).public_key()
-            is_rsa = isinstance(public_key, rsa.RSAPublicKey)
-            is_local_machine_store = key_info["provider"] == "local_machine"
-            self.signer = self.windows_signer_ext.CreateCustomKey(
-                ctypes.c_bool(is_rsa),
-                ctypes.c_bool(is_local_machine_store),
-                ctypes.c_char_p(key_info["store_name"].encode()),
-                ctypes.c_char_p(key_info["subject"].encode()),
-            )
-            self.cleanup_func = self.windows_signer_ext.DestroyCustomKey
-            atexit.register(self.cleanup)
+        # Select the right signer based on the key type
+        if key["type"] == "pkcs11":
+            self.sign_callback = _create_pkcs11_sign_callback(key_info)
+        elif key["type"] == "raw":
+            self.sign_callback = _create_raw_sign_callback(key_info)
+        elif key["type"] == "daemon":
+            self.sign_callback = _create_daemon_sign_callback(key_info)
+        elif key["type"] == "windows_cert_store":
+            self.sign_callback = _create_win_golang_sign_callback(key_info)
         else:
-            self.offload_signing_function = self.offload_signing_ext.OffloadSigning
-            if key["type"] == "pkcs11":
-                self.sign_callback = _create_pkcs11_sign_callback(key_info)
-            elif key["type"] == "raw":
-                self.sign_callback = _create_raw_sign_callback(key_info)
-            elif key["type"] == "daemon":
-                self.sign_callback = _create_daemon_sign_callback(key_info)
-            elif key["type"] == "windows_go":
-                self.sign_callback = _create_win_golang_sign_callback(key_info)
-            else:
-                raise exceptions.MutualTLSChannelError(
-                    "currently only pkcs11 and raw type are supported"
-                )
-            self.signer = self.offload_signing_ext.CreateCustomKey(self.sign_callback)
-            self.cleanup_func = self.offload_signing_ext.DestroyCustomKey
-            atexit.register(self.cleanup)
+            raise exceptions.MutualTLSChannelError(
+                "currently only pkcs11, raw, daemon and windows_go type are supported"
+            )
+        self.signer = self.offload_signing_ext.CreateCustomKey(self.sign_callback)
+        self.cleanup_func = self.offload_signing_ext.DestroyCustomKey
+        atexit.register(self.cleanup)
+
+        # # old C++ code
+        # if key["type"] == "windows_cert_store":
+        #     if not key_info["provider"] in ["local_machine", "current_user"]:
+        #         raise exceptions.MutualTLSChannelError(
+        #             key_info["provider"] + " is not supported"
+        #         )
+        #     from cryptography import x509
+        #     from cryptography.hazmat.primitives.asymmetric import rsa
+
+        #     self.offload_signing_function = self.offload_signing_ext.OffloadSigning
+        #     self.windows_signer_ext = _load_windows_signer_ext()
+
+        #     public_key = x509.load_pem_x509_certificate(cert).public_key()
+        #     is_rsa = isinstance(public_key, rsa.RSAPublicKey)
+        #     is_local_machine_store = key_info["provider"] == "local_machine"
+        #     self.signer = self.windows_signer_ext.CreateCustomKey(
+        #         ctypes.c_bool(is_rsa),
+        #         ctypes.c_bool(is_local_machine_store),
+        #         ctypes.c_char_p(key_info["store_name"].encode()),
+        #         ctypes.c_char_p(key_info["subject"].encode()),
+        #     )
+        #     self.cleanup_func = self.windows_signer_ext.DestroyCustomKey
+        #     atexit.register(self.cleanup)
 
     def cleanup(self):
         if self.signer:
@@ -255,15 +258,21 @@ def attach_signer_and_cert_to_ssl_context(signer, cert, ctx):
 
 
 def get_cert_from_store(key):
-    if os.name == "nt" and key["type"] == "windows_go":
+    if key["type"] == "windows_cert_store":
         issuer = b"localhost"
-        lib = ctypes.CDLL("C:/workspace/wincert-sign-golang/main.dll")
+        lib = ctypes.CDLL("C:/workspace/wincert-sign-golang/wincert_sign.dll")
         if not lib:
             raise exceptions.MutualTLSChannelError(
-                "main.dll is not found"
+                "wincert_sign.dll is not found"
             )
-        lib.GetCertPemForPython.argtypes = [ctypes.c_char_p]
-        lib.GetCertPemForPython.restype = ctypes.c_char_p
-        ptr = lib.GetCertPemForPython(ctypes.c_char_p(issuer))
-        return ctypes.string_at(ptr)
+        lib.GetCertPemForPython.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_int]
+        lib.GetCertPemForPython.restype = ctypes.c_int
+
+        # First call to calculate the cert length
+        certLen = lib.GetCertPemForPython(ctypes.c_char_p(issuer), None, 0)
+        if certLen>0:
+            # Then we create an array to hold the cert, and call again to fill the cert
+            certHolder = ctypes.create_string_buffer(certLen)
+            lib.GetCertPemForPython(ctypes.c_char_p(issuer), certHolder, certLen)
+            return bytes(certHolder)
     return None

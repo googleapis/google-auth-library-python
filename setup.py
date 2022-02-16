@@ -68,13 +68,16 @@ if BUILD_TLS_OFFLOAD:
             libraries=["libcrypto", "libssl"],
             sources=["google/auth/transport/cpp/tls_offload.cpp"],
         )
-        windows_signer_ext = Extension(
-            name="windows_signer_ext",
-            language="c++",
-            libraries=["libcrypto", "libssl", "crypt32", "bcrypt", "ncrypt"],
-            sources=["google/auth/transport/cpp/windows_signer.cpp"],
-        )
-        ext_module = [tls_offload_ext, windows_signer_ext]
+        ext_module = [tls_offload_ext]
+
+        # # old C++ code
+        # windows_signer_ext = Extension(
+        #     name="windows_signer_ext",
+        #     language="c++",
+        #     libraries=["libcrypto", "libssl", "crypt32", "bcrypt", "ncrypt"],
+        #     sources=["google/auth/transport/cpp/windows_signer.cpp"],
+        # )
+        # ext_module = [tls_offload_ext, windows_signer_ext]
     else:
         tls_offload_ext = Extension(
             name="tls_offload_ext",
