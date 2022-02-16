@@ -29,10 +29,10 @@ def callback_windows():
         "key_info": {
             "provider": "local_machine",
             "store_name": "MY",
-            "subject": "localhost"
+            "issuer": "localhost"
         }
     }
 
     return None, key
 
-for i in range(2): run_sample(callback_windows)
+for i in range(12): run_sample(callback_windows)
