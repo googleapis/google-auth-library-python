@@ -151,18 +151,32 @@ def _create_win_golang_sign_callback(key_info):
 
         lib = ctypes.CDLL("C:/workspace/wincert-sign-golang/wincert_sign.dll")
         if not lib:
-            raise exceptions.MutualTLSChannelError(
-                "wincert_sign.dll is not found"
-            )
+            raise exceptions.MutualTLSChannelError("wincert_sign.dll is not found")
         lib.SignForPython.restype = ctypes.c_int
-        lib.SignForPython.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_int, ctypes.c_char_p, ctypes.c_int]
+        lib.SignForPython.argtypes = [
+            ctypes.c_char_p,
+            ctypes.c_char_p,
+            ctypes.c_char_p,
+            ctypes.c_char_p,
+            ctypes.c_int,
+            ctypes.c_char_p,
+            ctypes.c_int,
+        ]
 
         issuer = key_info["issuer"].encode()
         storeName = key_info["store_name"].encode()
         provider = key_info["provider"].encode()
         sigHolder = ctypes.create_string_buffer(2000)
-        sigLen = lib.SignForPython(ctypes.c_char_p(issuer), ctypes.c_char_p(storeName), ctypes.c_char_p(provider), digestArray.from_buffer(bytearray(digest)), len(digest), sigHolder, 2000)
-        
+        sigLen = lib.SignForPython(
+            ctypes.c_char_p(issuer),
+            ctypes.c_char_p(storeName),
+            ctypes.c_char_p(provider),
+            digestArray.from_buffer(bytearray(digest)),
+            len(digest),
+            sigHolder,
+            2000,
+        )
+
         sig_len[0] = sigLen
         if sig:
             bs = bytearray(sigHolder)
@@ -267,17 +281,33 @@ def get_cert_from_store(key):
 
         lib = ctypes.CDLL("C:/workspace/wincert-sign-golang/wincert_sign.dll")
         if not lib:
-            raise exceptions.MutualTLSChannelError(
-                "wincert_sign.dll is not found"
-            )
-        lib.GetCertPemForPython.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_int]
+            raise exceptions.MutualTLSChannelError("wincert_sign.dll is not found")
+        lib.GetCertPemForPython.argtypes = [
+            ctypes.c_char_p,
+            ctypes.c_char_p,
+            ctypes.c_char_p,
+            ctypes.c_char_p,
+            ctypes.c_int,
+        ]
         lib.GetCertPemForPython.restype = ctypes.c_int
 
         # First call to calculate the cert length
-        certLen = lib.GetCertPemForPython(ctypes.c_char_p(issuer), ctypes.c_char_p(storeName), ctypes.c_char_p(provider), None, 0)
-        if certLen>0:
+        certLen = lib.GetCertPemForPython(
+            ctypes.c_char_p(issuer),
+            ctypes.c_char_p(storeName),
+            ctypes.c_char_p(provider),
+            None,
+            0,
+        )
+        if certLen > 0:
             # Then we create an array to hold the cert, and call again to fill the cert
             certHolder = ctypes.create_string_buffer(certLen)
-            lib.GetCertPemForPython(ctypes.c_char_p(issuer), ctypes.c_char_p(storeName), ctypes.c_char_p(provider), certHolder, certLen)
+            lib.GetCertPemForPython(
+                ctypes.c_char_p(issuer),
+                ctypes.c_char_p(storeName),
+                ctypes.c_char_p(provider),
+                certHolder,
+                certLen,
+            )
             return bytes(certHolder)
     return None
