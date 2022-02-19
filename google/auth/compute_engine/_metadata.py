@@ -148,8 +148,6 @@ def get(
     while retries < retry_count:
         try:
             response = request(url=url, method="GET", headers=_METADATA_HEADERS)
-            break
-
         except exceptions.TransportError as e:
             _LOGGER.warning(
                 "Compute Engine Metadata server unavailable on "
@@ -159,32 +157,44 @@ def get(
                 e,
             )
             retries += 1
+            continue
+
+        if response.status == http_client.OK:
+            content = _helpers.from_bytes(response.data)
+            if response.headers["content-type"] == "application/json":
+                try:
+                    return json.loads(content)
+                except ValueError as caught_exc:
+                    new_exc = exceptions.TransportError(
+                        "Received invalid JSON from the Google Compute Engine "
+                        "metadata service: {:.20}".format(content)
+                    )
+                    six.raise_from(new_exc, caught_exc)
+            else:
+                return content
+        elif response.status == http_client.INTERNAL_SERVER_ERROR or \
+            response.status == http_client.SERVICE_UNAVAILABLE:
+            # 503 UNAVAILABLE and 500 INTERNAL ERROR can be retried.
+            _LOGGER.warning(
+                "Compute Engine Metadata server unavailable on "
+                "attempt %s of %s. Status: %s",
+                retries + 1,
+                retry_count,
+                response.status)
+            retries += 1
+            continue
+        else:
+            raise exceptions.TransportError(
+                "Failed to retrieve {} from the Google Compute Engine "
+                "metadata service. Status: {} Response:\n{}".format(
+                    url, response.status, response.data
+                ),
+                response,
+            )
     else:
         raise exceptions.TransportError(
             "Failed to retrieve {} from the Google Compute Engine "
             "metadata service. Compute Engine Metadata server unavailable".format(url)
-        )
-
-    if response.status == http_client.OK:
-        content = _helpers.from_bytes(response.data)
-        if response.headers["content-type"] == "application/json":
-            try:
-                return json.loads(content)
-            except ValueError as caught_exc:
-                new_exc = exceptions.TransportError(
-                    "Received invalid JSON from the Google Compute Engine "
-                    "metadata service: {:.20}".format(content)
-                )
-                six.raise_from(new_exc, caught_exc)
-        else:
-            return content
-    else:
-        raise exceptions.TransportError(
-            "Failed to retrieve {} from the Google Compute Engine "
-            "metadata service. Status: {} Response:\n{}".format(
-                url, response.status, response.data
-            ),
-            response,
         )
 
 
