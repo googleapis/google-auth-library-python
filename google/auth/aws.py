@@ -471,7 +471,8 @@ class Credentials(external_account.Credentials):
 
             if imdsv2_session_token_response.status != 200:
                 raise exceptions.RefreshError(
-                    "Unable to retrieve AWS Session Token", imdsv2_session_token_response.data
+                    "Unable to retrieve AWS Session Token",
+                    imdsv2_session_token_response.data,
                 )
 
             imdsv2_session_token = imdsv2_session_token_response.data
@@ -481,7 +482,9 @@ class Credentials(external_account.Credentials):
         # Initialize the request signer if not yet initialized after determining
         # the current AWS region.
         if self._request_signer is None:
-            self._region = self._get_region(request, self._region_url, imdsv2_session_token)
+            self._region = self._get_region(
+                request, self._region_url, imdsv2_session_token
+            )
             self._request_signer = RequestSigner(self._region)
 
         # Retrieve the AWS security credentials needed to generate the signed
@@ -635,7 +638,9 @@ class Credentials(external_account.Credentials):
             "security_token": credentials.get("Token"),
         }
 
-    def _get_metadata_security_credentials(self, request, role_name, imdsv2_session_token):
+    def _get_metadata_security_credentials(
+        self, request, role_name, imdsv2_session_token
+    ):
         """Retrieves the AWS security credentials required for signing AWS
         requests from the AWS metadata server.
 
