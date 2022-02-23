@@ -6,6 +6,7 @@ import ctypes
 import os
 import re
 
+from google.auth import environment_vars
 from google.auth import exceptions
 import requests
 
@@ -139,7 +140,7 @@ def _create_raw_sign_callback(key_info):
 
 def _create_win_golang_sign_callback(key_info):
     def sign_callback(sig, sig_len, tbs, tbs_len):
-        print("calling golang key signer....")
+        print("calling golang windows key signer....")
 
         from cryptography.hazmat.primitives import hashes
 
@@ -149,9 +150,11 @@ def _create_win_golang_sign_callback(key_info):
         digest = hash.finalize()
         digestArray = ctypes.c_char * len(digest)
 
-        lib = ctypes.CDLL("C:/workspace/wincert-sign-golang/wincert_sign.dll")
+        import os
+        dll_path = os.getenv(environment_vars.GOOGLE_AUTH_SIGNER_LIBRARY_PATH)
+        lib = ctypes.CDLL(dll_path)
         if not lib:
-            raise exceptions.MutualTLSChannelError("wincert_sign.dll is not found")
+            raise exceptions.MutualTLSChannelError("GOOGLE_AUTH_SIGNER_LIBRARY_PATH dll is not found")
         lib.SignForPython.restype = ctypes.c_int
         lib.SignForPython.argtypes = [
             ctypes.c_char_p,
@@ -171,6 +174,53 @@ def _create_win_golang_sign_callback(key_info):
             ctypes.c_char_p(issuer),
             ctypes.c_char_p(storeName),
             ctypes.c_char_p(provider),
+            digestArray.from_buffer(bytearray(digest)),
+            len(digest),
+            sigHolder,
+            2000,
+        )
+
+        sig_len[0] = sigLen
+        if sig:
+            bs = bytearray(sigHolder)
+            for i in range(sigLen):
+                sig[i] = bs[i]
+
+        return 1
+
+    return callback_type(sign_callback)
+
+
+def _create_mac_golang_sign_callback(key_info):
+    def sign_callback(sig, sig_len, tbs, tbs_len):
+        print("calling golang MacOS key signer....")
+
+        from cryptography.hazmat.primitives import hashes
+
+        data = ctypes.string_at(tbs, tbs_len)
+        hash = hashes.Hash(hashes.SHA256())
+        hash.update(data)
+        digest = hash.finalize()
+        digestArray = ctypes.c_char * len(digest)
+
+        import os
+        dll_path = os.getenv(environment_vars.GOOGLE_AUTH_SIGNER_LIBRARY_PATH)
+        lib = ctypes.CDLL(dll_path)
+        if not lib:
+            raise exceptions.MutualTLSChannelError("GOOGLE_AUTH_SIGNER_LIBRARY_PATH is not set or doesn't exist")
+        lib.SignForPython.restype = ctypes.c_int
+        lib.SignForPython.argtypes = [
+            ctypes.c_char_p,
+            ctypes.c_char_p,
+            ctypes.c_int,
+            ctypes.c_char_p,
+            ctypes.c_int,
+        ]
+
+        issuer = key_info["issuer"].encode()
+        sigHolder = ctypes.create_string_buffer(2000)
+        sigLen = lib.SignForPython(
+            ctypes.c_char_p(issuer),
             digestArray.from_buffer(bytearray(digest)),
             len(digest),
             sigHolder,
@@ -229,9 +279,11 @@ class CustomSigner(object):
             self.sign_callback = _create_daemon_sign_callback(key_info)
         elif key["type"] == "windows_cert_store":
             self.sign_callback = _create_win_golang_sign_callback(key_info)
+        elif key["type"] == "macos_keychain":
+            self.sign_callback = _create_mac_golang_sign_callback(key_info)
         else:
             raise exceptions.MutualTLSChannelError(
-                "currently only pkcs11, raw, daemon and windows_go type are supported"
+                "currently only pkcs11, raw, daemon, macos_keychain and windows_cert_store type are supported"
             )
         self.signer = self.offload_signing_ext.CreateCustomKey(self.sign_callback)
         self.cleanup_func = self.offload_signing_ext.DestroyCustomKey
@@ -274,14 +326,20 @@ def attach_signer_and_cert_to_ssl_context(signer, cert, ctx):
 
 
 def get_cert_from_store(key):
+    if key["type"] not in ["windows_cert_store", "macos_keychain"]:
+        return None
+
+    import os
+    dll_path = os.getenv(environment_vars.GOOGLE_AUTH_SIGNER_LIBRARY_PATH)
+    lib = ctypes.CDLL(dll_path)
+    if not lib:
+        raise exceptions.MutualTLSChannelError("GOOGLE_AUTH_SIGNER_LIBRARY_PATH is not set or doesn't exist")
+
     if key["type"] == "windows_cert_store":
         issuer = key["key_info"]["issuer"].encode()
         storeName = key["key_info"]["store_name"].encode()
         provider = key["key_info"]["provider"].encode()
 
-        lib = ctypes.CDLL("C:/workspace/wincert-sign-golang/wincert_sign.dll")
-        if not lib:
-            raise exceptions.MutualTLSChannelError("wincert_sign.dll is not found")
         lib.GetCertPemForPython.argtypes = [
             ctypes.c_char_p,
             ctypes.c_char_p,
@@ -306,6 +364,31 @@ def get_cert_from_store(key):
                 ctypes.c_char_p(issuer),
                 ctypes.c_char_p(storeName),
                 ctypes.c_char_p(provider),
+                certHolder,
+                certLen,
+            )
+            return bytes(certHolder)
+    else:
+        issuer = key["key_info"]["issuer"].encode()
+
+        lib.GetCertPemForPython.argtypes = [
+            ctypes.c_char_p,
+            ctypes.c_char_p,
+            ctypes.c_int,
+        ]
+        lib.GetCertPemForPython.restype = ctypes.c_int
+
+        # First call to calculate the cert length
+        certLen = lib.GetCertPemForPython(
+            ctypes.c_char_p(issuer),
+            None,
+            0,
+        )
+        if certLen > 0:
+            # Then we create an array to hold the cert, and call again to fill the cert
+            certHolder = ctypes.create_string_buffer(certLen)
+            lib.GetCertPemForPython(
+                ctypes.c_char_p(issuer),
                 certHolder,
                 certLen,
             )
