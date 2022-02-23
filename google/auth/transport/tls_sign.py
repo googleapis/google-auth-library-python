@@ -151,10 +151,13 @@ def _create_win_golang_sign_callback(key_info):
         digestArray = ctypes.c_char * len(digest)
 
         import os
+
         dll_path = os.getenv(environment_vars.GOOGLE_AUTH_SIGNER_LIBRARY_PATH)
         lib = ctypes.CDLL(dll_path)
         if not lib:
-            raise exceptions.MutualTLSChannelError("GOOGLE_AUTH_SIGNER_LIBRARY_PATH dll is not found")
+            raise exceptions.MutualTLSChannelError(
+                "GOOGLE_AUTH_SIGNER_LIBRARY_PATH dll is not found"
+            )
         lib.SignForPython.restype = ctypes.c_int
         lib.SignForPython.argtypes = [
             ctypes.c_char_p,
@@ -204,10 +207,13 @@ def _create_mac_golang_sign_callback(key_info):
         digestArray = ctypes.c_char * len(digest)
 
         import os
+
         dll_path = os.getenv(environment_vars.GOOGLE_AUTH_SIGNER_LIBRARY_PATH)
         lib = ctypes.CDLL(dll_path)
         if not lib:
-            raise exceptions.MutualTLSChannelError("GOOGLE_AUTH_SIGNER_LIBRARY_PATH is not set or doesn't exist")
+            raise exceptions.MutualTLSChannelError(
+                "GOOGLE_AUTH_SIGNER_LIBRARY_PATH is not set or doesn't exist"
+            )
         lib.SignForPython.restype = ctypes.c_int
         lib.SignForPython.argtypes = [
             ctypes.c_char_p,
@@ -330,10 +336,13 @@ def get_cert_from_store(key):
         return None
 
     import os
+
     dll_path = os.getenv(environment_vars.GOOGLE_AUTH_SIGNER_LIBRARY_PATH)
     lib = ctypes.CDLL(dll_path)
     if not lib:
-        raise exceptions.MutualTLSChannelError("GOOGLE_AUTH_SIGNER_LIBRARY_PATH is not set or doesn't exist")
+        raise exceptions.MutualTLSChannelError(
+            "GOOGLE_AUTH_SIGNER_LIBRARY_PATH is not set or doesn't exist"
+        )
 
     if key["type"] == "windows_cert_store":
         issuer = key["key_info"]["issuer"].encode()
@@ -379,18 +388,10 @@ def get_cert_from_store(key):
         lib.GetCertPemForPython.restype = ctypes.c_int
 
         # First call to calculate the cert length
-        certLen = lib.GetCertPemForPython(
-            ctypes.c_char_p(issuer),
-            None,
-            0,
-        )
+        certLen = lib.GetCertPemForPython(ctypes.c_char_p(issuer), None, 0)
         if certLen > 0:
             # Then we create an array to hold the cert, and call again to fill the cert
             certHolder = ctypes.create_string_buffer(certLen)
-            lib.GetCertPemForPython(
-                ctypes.c_char_p(issuer),
-                certHolder,
-                certLen,
-            )
+            lib.GetCertPemForPython(ctypes.c_char_p(issuer), certHolder, certLen)
             return bytes(certHolder)
     return None
