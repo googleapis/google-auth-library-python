@@ -41,11 +41,13 @@ except ImportError:  # pragma: NO COVER
 import io
 import json
 import os
+import subprocess
 
 from google.auth import _helpers
 from google.auth import exceptions
 from google.auth import external_account
 
+EXECUTABLE_SUPPORTED_MAX_VERSION = 1
 
 class Credentials(external_account.Credentials):
     """External account credentials sourced from files and URLs."""
@@ -130,114 +132,56 @@ class Credentials(external_account.Credentials):
             workforce_pool_user_project=workforce_pool_user_project,
         )
         if not isinstance(credential_source, Mapping):
-            self._credential_source_file = None
+            self._credential_source_executable = None
             self._credential_source_url = None
         else:
-            self._credential_source_file = credential_source.get("file")
-            self._credential_source_url = credential_source.get("url")
-            self._credential_source_headers = credential_source.get("headers")
-            credential_source_format = credential_source.get("format", {})
-            # Get credential_source format type. When not provided, this
-            # defaults to text.
-            self._credential_source_format_type = (
-                credential_source_format.get("type") or "text"
-            )
+            self._credential_source_executable = credential_source.get("executable")
+            self._credential_source_executable_command = self._credential_source_executable.get("command")
+            self._credential_source_executable_timeout_millis = self._credential_source_executable.get("timeout_millis")
+            self._credential_source_executable_output_file = self._credential_source_executable.get("output_file")
+
             # environment_id is only supported in AWS or dedicated future external
             # account credentials.
             if "environment_id" in credential_source:
                 raise ValueError(
                     "Invalid Identity Pool credential_source field 'environment_id'"
                 )
-            if self._credential_source_format_type not in ["text", "json"]:
-                raise ValueError(
-                    "Invalid credential_source format '{}'".format(
-                        self._credential_source_format_type
-                    )
-                )
-            # For JSON types, get the required subject_token field name.
-            if self._credential_source_format_type == "json":
-                self._credential_source_field_name = credential_source_format.get(
-                    "subject_token_field_name"
-                )
-                if self._credential_source_field_name is None:
-                    raise ValueError(
-                        "Missing subject_token_field_name for JSON credential_source format"
-                    )
-            else:
-                self._credential_source_field_name = None
 
-        if self._credential_source_file and self._credential_source_url:
+        if not self._credential_source_executable:
             raise ValueError(
-                "Ambiguous credential_source. 'file' is mutually exclusive with 'url'."
-            )
-        if not self._credential_source_file and not self._credential_source_url:
-            raise ValueError(
-                "Missing credential_source. A 'file' or 'url' must be provided."
+                "Missing credential_source. A 'excutable' must be provided."
             )
 
     @_helpers.copy_docstring(external_account.Credentials)
     def retrieve_subject_token(self, request):
-        return self._parse_token_data(
-            self._get_token_data(request),
-            self._credential_source_format_type,
-            self._credential_source_field_name,
-        )
-
-    def _get_token_data(self, request):
-        if self._credential_source_file:
-            return self._get_file_data(self._credential_source_file)
-        else:
-            return self._get_url_data(
-                request, self._credential_source_url, self._credential_source_headers
+        env_allow_executables = os.environ.get('GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES')
+        if env_allow_executables is None or env_allow_executables != '1':
+            raise ValueError(
+                "Executables need to be explicitly allowed to run."
             )
-
-    def _get_file_data(self, filename):
-        if not os.path.exists(filename):
-            raise exceptions.RefreshError("File '{}' was not found.".format(filename))
-
-        with io.open(filename, "r", encoding="utf-8") as file_obj:
-            return file_obj.read(), filename
-
-    def _get_url_data(self, request, url, headers):
-        response = request(url=url, method="GET", headers=headers)
-
-        # support both string and bytes type response.data
-        response_body = (
-            response.data.decode("utf-8")
-            if hasattr(response.data, "decode")
-            else response.data
-        )
-
-        if response.status != 200:
-            raise exceptions.RefreshError(
-                "Unable to retrieve Identity Pool subject token", response_body
-            )
-
-        return response_body, url
-
-    def _parse_token_data(
-        self, token_content, format_type="text", subject_token_field_name=None
-    ):
-        content, filename = token_content
-        if format_type == "text":
-            token = content
+        
+        os.environ["GOOGLE_EXTERNAL_ACCOUNT_AUDIENCE"] = self._audience
+        os.environ["GOOGLE_EXTERNAL_ACCOUNT_TOKEN_TYPE"] = self._subject_token_type
+        os.environ["GOOGLE_EXTERNAL_ACCOUNT_IMPERSONATED_EMAIL"] = "byoid-test@cicpclientproj.iam.gserviceaccount.com"
+        os.environ["GOOGLE_EXTERNAL_ACCOUNT_OUTPUT_FILE"] = self._credential_source_executable_output_file
+        os.environ["GOOGLE_EXTERNAL_ACCOUNT_INTERACTIVE"] = "0"
+        result = subprocess.run(self._credential_source_executable_command.split(), capture_output=True) # todo: inject envs
+        if result.returncode != 0:
+            # TODO: raise error
+            print("error")
         else:
-            try:
-                # Parse file content as JSON.
-                response_data = json.loads(content)
-                # Get the subject_token.
-                token = response_data[subject_token_field_name]
-            except (KeyError, ValueError):
-                raise exceptions.RefreshError(
-                    "Unable to parse subject_token from JSON file '{}' using key '{}'".format(
-                        filename, subject_token_field_name
-                    )
+            data = result.stdout.decode('utf-8')
+            response = json.loads(data)
+            if not response['success']:
+                raise ValueError(
+                    "TODO: response error."
                 )
-        if not token:
-            raise exceptions.RefreshError(
-                "Missing subject_token in the credential_source file"
-            )
-        return token
+            elif response['version'] > EXECUTABLE_SUPPORTED_MAX_VERSION:
+                raise ValueError(
+                    "Executable returned unsupported version {}.".format(response['version'])
+                )
+            else:
+                return response["id_token"]
 
     @classmethod
     def from_info(cls, info, **kwargs):
