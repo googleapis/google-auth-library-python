@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Identity Pool Credentials.
+"""Pluggable Credentials.
 
 This module provides credentials to access Google Cloud resources from on-prem
 or non-Google Cloud platforms which support external credentials (e.g. OIDC ID
@@ -24,13 +24,12 @@ These credentials are recommended over the use of service account credentials
 in on-prem/non-Google Cloud platforms as they do not involve the management of
 long-live service account private keys.
 
-Identity Pool Credentials are initialized using external_account
-arguments which are typically loaded from an external credentials file or
-an external credentials URL. Unlike other Credentials that can be initialized
-with a list of explicit arguments, secrets or credentials, external account
-clients use the environment and hints/guidelines provided by the
-external_account JSON file to retrieve credentials and exchange them for Google
-access tokens.
+Pluggable Credentials are initialized using external_account arguments which
+are typically loaded from third-party executables. Unlike other
+credentials that can be initialized with a list of explicit arguments, secrets
+or credentials, external account clients use the environment and hints/guidelines
+provided by the external_account JSON file to retrieve credentials and exchange
+them for Google access tokens.
 """
 
 try:
@@ -47,10 +46,11 @@ from google.auth import _helpers
 from google.auth import exceptions
 from google.auth import external_account
 
+# External account JSON type identifier.
 EXECUTABLE_SUPPORTED_MAX_VERSION = 1
 
 class Credentials(external_account.Credentials):
-    """External account credentials sourced from files and URLs."""
+    """External account credentials sourced from executables."""
 
     def __init__(
         self,
@@ -66,7 +66,7 @@ class Credentials(external_account.Credentials):
         default_scopes=None,
         workforce_pool_user_project=None,
     ):
-        """Instantiates an external account credentials object from a file/URL.
+        """Instantiates an external account credentials object from a executables.
 
         Args:
             audience (str): The STS audience field.
@@ -76,21 +76,13 @@ class Credentials(external_account.Credentials):
                 provide instructions on how to retrieve external credential to be
                 exchanged for Google access tokens.
 
-                Example credential_source for url-sourced credential::
+                Example credential_source for pluggable credential::
 
                     {
-                        "url": "http://www.example.com",
-                        "format": {
-                            "type": "json",
-                            "subject_token_field_name": "access_token",
-                        },
-                        "headers": {"foo": "bar"},
-                    }
-
-                Example credential_source for file-sourced credential::
-
-                    {
-                        "file": "/path/to/token/file.txt"
+                        "executable": {
+                        "command": "/path/to/get/credentials.sh --arg1=value1 --arg2=value2",
+                        "timeout_millis": 5000,
+                        "output_file": "/path/to/generated/cached/credentials"
                     }
 
             service_account_impersonation_url (Optional[str]): The optional service account
@@ -104,7 +96,7 @@ class Credentials(external_account.Credentials):
                 Google client library. Use 'scopes' for user-defined scopes.
             workforce_pool_user_project (Optona[str]): The optional workforce pool user
                 project number when the credential corresponds to a workforce pool and not
-                a workload identity pool. The underlying principal must still have
+                a workload Pluggable. The underlying principal must still have
                 serviceusage.services.use IAM permission to use the project for
                 billing/quota.
 
@@ -133,7 +125,6 @@ class Credentials(external_account.Credentials):
         )
         if not isinstance(credential_source, Mapping):
             self._credential_source_executable = None
-            self._credential_source_url = None
         else:
             self._credential_source_executable = credential_source.get("executable")
             self._credential_source_executable_command = self._credential_source_executable.get("command")
@@ -144,12 +135,20 @@ class Credentials(external_account.Credentials):
             # account credentials.
             if "environment_id" in credential_source:
                 raise ValueError(
-                    "Invalid Identity Pool credential_source field 'environment_id'"
+                    "Invalid Pluggable credential_source field 'environment_id'"
                 )
 
         if not self._credential_source_executable:
             raise ValueError(
-                "Missing credential_source. A 'excutable' must be provided."
+                "Missing credential_source. An 'excutable' must be provided."
+            )
+        if not self._credential_source_executable_command:
+            raise ValueError(
+                "Missing command. Excutable command must be provided."
+            )
+        if not self._credential_source_executable_timeout_millis:
+            raise ValueError(
+                "Missing timeout_millis. Excutable timeout millis must be provided."
             )
 
     @_helpers.copy_docstring(external_account.Credentials)
@@ -160,40 +159,51 @@ class Credentials(external_account.Credentials):
                 "Executables need to be explicitly allowed to run."
             )
         
+        # Inject env vars
         os.environ["GOOGLE_EXTERNAL_ACCOUNT_AUDIENCE"] = self._audience
         os.environ["GOOGLE_EXTERNAL_ACCOUNT_TOKEN_TYPE"] = self._subject_token_type
-        os.environ["GOOGLE_EXTERNAL_ACCOUNT_IMPERSONATED_EMAIL"] = "byoid-test@cicpclientproj.iam.gserviceaccount.com"
-        os.environ["GOOGLE_EXTERNAL_ACCOUNT_OUTPUT_FILE"] = self._credential_source_executable_output_file
-        os.environ["GOOGLE_EXTERNAL_ACCOUNT_INTERACTIVE"] = "0"
-        result = subprocess.run(self._credential_source_executable_command.split(), capture_output=True) # todo: inject envs
+        os.environ["GOOGLE_EXTERNAL_ACCOUNT_INTERACTIVE"] = "0" # Always set to 0 until interactive mode is implemented.
+        if self._service_account_impersonation_url is not None:
+            os.environ["GOOGLE_EXTERNAL_ACCOUNT_IMPERSONATED_EMAIL"] = self._service_account_impersonation_url
+        if self._credential_source_executable_output_file is not None:
+            os.environ["GOOGLE_EXTERNAL_ACCOUNT_OUTPUT_FILE"] = self._credential_source_executable_output_file
+        
+        result = subprocess.run(self._credential_source_executable_command.split(), capture_output=True)
         if result.returncode != 0:
-            # TODO: raise error
-            print("error")
+            raise exceptions.RefreshError(
+                "Excutable exited with non-zero return code {}.".format(result.returncode)
+            )
         else:
             data = result.stdout.decode('utf-8')
             response = json.loads(data)
             if not response['success']:
-                raise ValueError(
-                    "TODO: response error."
+                raise exceptions.RefreshError(
+                    "Excutable returned unsuccessful response: {}.".format(response)
                 )
             elif response['version'] > EXECUTABLE_SUPPORTED_MAX_VERSION:
-                raise ValueError(
+                raise exceptions.RefreshError(
                     "Executable returned unsupported version {}.".format(response['version'])
                 )
-            else:
+            elif response["token_type"] == "urn:ietf:params:oauth:token-type:jwt" or response["token_type"] == "urn:ietf:params:oauth:token-type:id_token": # OIDC
                 return response["id_token"]
+            elif response["token_type"] == "urn:ietf:params:oauth:token-type:saml2": # SAML
+                return response["saml_response"]
+            else:
+                raise exceptions.RefreshError(
+                    "Executable returned unsupported token type."
+                ) 
 
     @classmethod
     def from_info(cls, info, **kwargs):
-        """Creates an Identity Pool Credentials instance from parsed external account info.
+        """Creates a Pluggable Credentials instance from parsed external account info.
 
         Args:
-            info (Mapping[str, str]): The Identity Pool external account info in Google
+            info (Mapping[str, str]): The Pluggable external account info in Google
                 format.
             kwargs: Additional arguments to pass to the constructor.
 
         Returns:
-            google.auth.identity_pool.Credentials: The constructed
+            google.auth.pluggable.Credentials: The constructed
                 credentials.
 
         Raises:
@@ -216,14 +226,14 @@ class Credentials(external_account.Credentials):
 
     @classmethod
     def from_file(cls, filename, **kwargs):
-        """Creates an IdentityPool Credentials instance from an external account json file.
+        """Creates an Pluggable Credentials instance from an external account json file.
 
         Args:
-            filename (str): The path to the IdentityPool external account json file.
+            filename (str): The path to the Pluggable external account json file.
             kwargs: Additional arguments to pass to the constructor.
 
         Returns:
-            google.auth.identity_pool.Credentials: The constructed
+            google.auth.pluggable.Credentials: The constructed
                 credentials.
         """
         with io.open(filename, "r", encoding="utf-8") as json_file:
