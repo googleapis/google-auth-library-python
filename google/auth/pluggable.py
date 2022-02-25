@@ -125,8 +125,15 @@ class Credentials(external_account.Credentials):
         )
         if not isinstance(credential_source, Mapping):
             self._credential_source_executable = None
+            raise ValueError(
+                "Missing credential_source. The credential_source is not a dict."
+            )
         else:
             self._credential_source_executable = credential_source.get("executable")
+            if not self._credential_source_executable:
+                raise ValueError(
+                    "Missing credential_source. An 'executable' must be provided."
+                )
             self._credential_source_executable_command = self._credential_source_executable.get("command")
             self._credential_source_executable_timeout_millis = self._credential_source_executable.get("timeout_millis")
             self._credential_source_executable_output_file = self._credential_source_executable.get("output_file")
@@ -138,17 +145,13 @@ class Credentials(external_account.Credentials):
                     "Invalid Pluggable credential_source field 'environment_id'"
                 )
 
-        if not self._credential_source_executable:
-            raise ValueError(
-                "Missing credential_source. An 'excutable' must be provided."
-            )
         if not self._credential_source_executable_command:
             raise ValueError(
-                "Missing command. Excutable command must be provided."
+                "Missing command. Executable command must be provided."
             )
         if not self._credential_source_executable_timeout_millis:
             raise ValueError(
-                "Missing timeout_millis. Excutable timeout millis must be provided."
+                "Missing timeout_millis. Executable timeout millis must be provided."
             )
 
     @_helpers.copy_docstring(external_account.Credentials)
@@ -171,14 +174,14 @@ class Credentials(external_account.Credentials):
         result = subprocess.run(self._credential_source_executable_command.split(), timeout=self._credential_source_executable_timeout_millis/1000, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         if result.returncode != 0:
             raise exceptions.RefreshError(
-                "Excutable exited with non-zero return code {}. Error: {}".format(result.returncode, result.stdout)
+                "Executable exited with non-zero return code {}. Error: {}".format(result.returncode, result.stdout)
             )
         else:
             data = result.stdout.decode('utf-8')
             response = json.loads(data)
             if not response['success']:
                 raise exceptions.RefreshError(
-                    "Excutable returned unsuccessful response: {}.".format(response)
+                    "Executable returned unsuccessful response: {}.".format(response)
                 )
             elif response['version'] > EXECUTABLE_SUPPORTED_MAX_VERSION:
                 raise exceptions.RefreshError(

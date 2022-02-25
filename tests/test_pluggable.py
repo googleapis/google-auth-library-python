@@ -1,4 +1,4 @@
-# Copyright 2020 Google LLC
+# Copyright 2022 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,12 +18,15 @@ import os
 
 import mock
 import pytest  # type: ignore
+import subprocess
+import pytest_subprocess
 from six.moves import http_client
 from six.moves import urllib
 
 from google.auth import _helpers
 from google.auth import exceptions
 from google.auth import identity_pool
+from google.auth import pluggable
 from google.auth import transport
 
 
@@ -38,47 +41,52 @@ SERVICE_ACCOUNT_IMPERSONATION_URL = (
 )
 QUOTA_PROJECT_ID = "QUOTA_PROJECT_ID"
 SCOPES = ["scope1", "scope2"]
-DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
-SUBJECT_TOKEN_TEXT_FILE = os.path.join(DATA_DIR, "external_subject_token.txt")
-SUBJECT_TOKEN_JSON_FILE = os.path.join(DATA_DIR, "external_subject_token.json")
 SUBJECT_TOKEN_FIELD_NAME = "access_token"
-
-with open(SUBJECT_TOKEN_TEXT_FILE) as fh:
-    TEXT_FILE_SUBJECT_TOKEN = fh.read()
-
-with open(SUBJECT_TOKEN_JSON_FILE) as fh:
-    JSON_FILE_CONTENT = json.load(fh)
-    JSON_FILE_SUBJECT_TOKEN = JSON_FILE_CONTENT.get(SUBJECT_TOKEN_FIELD_NAME)
 
 TOKEN_URL = "https://sts.googleapis.com/v1/token"
 SUBJECT_TOKEN_TYPE = "urn:ietf:params:oauth:token-type:jwt"
 AUDIENCE = "//iam.googleapis.com/projects/123456/locations/global/workloadIdentityPools/POOL_ID/providers/PROVIDER_ID"
-WORKFORCE_AUDIENCE = (
-    "//iam.googleapis.com/locations/global/workforcePools/POOL_ID/providers/PROVIDER_ID"
-)
-WORKFORCE_SUBJECT_TOKEN_TYPE = "urn:ietf:params:oauth:token-type:id_token"
-WORKFORCE_POOL_USER_PROJECT = "WORKFORCE_POOL_USER_PROJECT_NUMBER"
-
 
 class TestCredentials(object):
-    CREDENTIAL_SOURCE_TEXT = {"file": SUBJECT_TOKEN_TEXT_FILE}
-    CREDENTIAL_SOURCE_JSON = {
-        "file": SUBJECT_TOKEN_JSON_FILE,
-        "format": {"type": "json", "subject_token_field_name": "access_token"},
+    CREDENTIAL_SOURCE_EXECUTABLE_COMMAND = "/fake/external/excutable --arg1=value1 --arg2=value2"
+    CREDENTIAL_SOURCE_EXECUTABLE = {
+        "command": CREDENTIAL_SOURCE_EXECUTABLE_COMMAND,
+        "timeout_millis": 5000,
+        "output_file": "/fake/output/file"
+    }
+    CREDENTIAL_SOURCE = {
+        "executable": CREDENTIAL_SOURCE_EXECUTABLE
+    }
+    EXECUTABLE_OIDC_TOKEN = "FAKE_ID_TOKEN"
+    EXECUTABLE_SUCCESSFUL_OIDC_RESPONSE_ID_TOKEN = {
+        "version": 1,
+        "success": True,
+        "token_type": "urn:ietf:params:oauth:token-type:id_token",
+        "id_token": EXECUTABLE_OIDC_TOKEN,
+        "expiration_time": 9999999999
+    }
+    EXECUTABLE_SUCCESSFUL_OIDC_RESPONSE_JWT = {
+        "version": 1,
+        "success": True,
+        "token_type": "urn:ietf:params:oauth:token-type:jwt",
+        "id_token": EXECUTABLE_OIDC_TOKEN,
+        "expiration_time": 9999999999
+    }
+    EXECUTABLE_SAML_TOKEN = "FAKE_SAML_RESPONSE"
+    EXECUTABLE_SUCCESSFUL_SAML_RESPONSE = {
+        "version": 1,
+        "success": True,
+        "token_type": "urn:ietf:params:oauth:token-type:saml2",
+        "saml_response": EXECUTABLE_SAML_TOKEN,
+        "expiration_time": 1620433341
+    }
+    EXECUTABLE_FAILED_RESPONSE = {
+        "version": 1,
+        "success": False,
+        "code": "401",
+        "message": "Permission denied. Caller not authorized"
     }
     CREDENTIAL_URL = "http://fakeurl.com"
-    CREDENTIAL_SOURCE_TEXT_URL = {"url": CREDENTIAL_URL}
-    CREDENTIAL_SOURCE_JSON_URL = {
-        "url": CREDENTIAL_URL,
-        "format": {"type": "json", "subject_token_field_name": "access_token"},
-    }
-    SUCCESS_RESPONSE = {
-        "access_token": "ACCESS_TOKEN",
-        "issued_token_type": "urn:ietf:params:oauth:token-type:access_token",
-        "token_type": "Bearer",
-        "expires_in": 3600,
-        "scope": " ".join(SCOPES),
-    }
 
     @classmethod
     def make_mock_response(cls, status, data):
@@ -258,7 +266,7 @@ class TestCredentials(object):
         assert credentials.default_scopes == default_scopes
 
     @classmethod
-    def make_credentials(
+    def make_pluggable(
         cls,
         audience=AUDIENCE,
         subject_token_type=SUBJECT_TOKEN_TYPE,
@@ -271,7 +279,7 @@ class TestCredentials(object):
         credential_source=None,
         workforce_pool_user_project=None,
     ):
-        return identity_pool.Credentials(
+        return pluggable.Credentials(
             audience=audience,
             subject_token_type=subject_token_type,
             token_url=TOKEN_URL,
@@ -284,10 +292,10 @@ class TestCredentials(object):
             default_scopes=default_scopes,
             workforce_pool_user_project=workforce_pool_user_project,
         )
-
-    @mock.patch.object(identity_pool.Credentials, "__init__", return_value=None)
+        
+    @mock.patch.object(pluggable.Credentials, "__init__", return_value=None)
     def test_from_info_full_options(self, mock_init):
-        credentials = identity_pool.Credentials.from_info(
+        credentials = pluggable.Credentials.from_info(
             {
                 "audience": AUDIENCE,
                 "subject_token_type": SUBJECT_TOKEN_TYPE,
@@ -296,12 +304,12 @@ class TestCredentials(object):
                 "client_id": CLIENT_ID,
                 "client_secret": CLIENT_SECRET,
                 "quota_project_id": QUOTA_PROJECT_ID,
-                "credential_source": self.CREDENTIAL_SOURCE_TEXT,
+                "credential_source": self.CREDENTIAL_SOURCE,
             }
         )
 
-        # Confirm identity_pool.Credentials instantiated with expected attributes.
-        assert isinstance(credentials, identity_pool.Credentials)
+        # Confirm pluggable.Credentials instantiated with expected attributes.
+        assert isinstance(credentials, pluggable.Credentials)
         mock_init.assert_called_once_with(
             audience=AUDIENCE,
             subject_token_type=SUBJECT_TOKEN_TYPE,
@@ -309,24 +317,24 @@ class TestCredentials(object):
             service_account_impersonation_url=SERVICE_ACCOUNT_IMPERSONATION_URL,
             client_id=CLIENT_ID,
             client_secret=CLIENT_SECRET,
-            credential_source=self.CREDENTIAL_SOURCE_TEXT,
+            credential_source=self.CREDENTIAL_SOURCE,
             quota_project_id=QUOTA_PROJECT_ID,
             workforce_pool_user_project=None,
         )
 
-    @mock.patch.object(identity_pool.Credentials, "__init__", return_value=None)
+    @mock.patch.object(pluggable.Credentials, "__init__", return_value=None)
     def test_from_info_required_options_only(self, mock_init):
-        credentials = identity_pool.Credentials.from_info(
+        credentials = pluggable.Credentials.from_info(
             {
                 "audience": AUDIENCE,
                 "subject_token_type": SUBJECT_TOKEN_TYPE,
                 "token_url": TOKEN_URL,
-                "credential_source": self.CREDENTIAL_SOURCE_TEXT,
+                "credential_source": self.CREDENTIAL_SOURCE,
             }
         )
 
-        # Confirm identity_pool.Credentials instantiated with expected attributes.
-        assert isinstance(credentials, identity_pool.Credentials)
+        # Confirm pluggable.Credentials instantiated with expected attributes.
+        assert isinstance(credentials, pluggable.Credentials)
         mock_init.assert_called_once_with(
             audience=AUDIENCE,
             subject_token_type=SUBJECT_TOKEN_TYPE,
@@ -334,38 +342,12 @@ class TestCredentials(object):
             service_account_impersonation_url=None,
             client_id=None,
             client_secret=None,
-            credential_source=self.CREDENTIAL_SOURCE_TEXT,
+            credential_source=self.CREDENTIAL_SOURCE,
             quota_project_id=None,
             workforce_pool_user_project=None,
         )
 
-    @mock.patch.object(identity_pool.Credentials, "__init__", return_value=None)
-    def test_from_info_workforce_pool(self, mock_init):
-        credentials = identity_pool.Credentials.from_info(
-            {
-                "audience": WORKFORCE_AUDIENCE,
-                "subject_token_type": WORKFORCE_SUBJECT_TOKEN_TYPE,
-                "token_url": TOKEN_URL,
-                "credential_source": self.CREDENTIAL_SOURCE_TEXT,
-                "workforce_pool_user_project": WORKFORCE_POOL_USER_PROJECT,
-            }
-        )
-
-        # Confirm identity_pool.Credentials instantiated with expected attributes.
-        assert isinstance(credentials, identity_pool.Credentials)
-        mock_init.assert_called_once_with(
-            audience=WORKFORCE_AUDIENCE,
-            subject_token_type=WORKFORCE_SUBJECT_TOKEN_TYPE,
-            token_url=TOKEN_URL,
-            service_account_impersonation_url=None,
-            client_id=None,
-            client_secret=None,
-            credential_source=self.CREDENTIAL_SOURCE_TEXT,
-            quota_project_id=None,
-            workforce_pool_user_project=WORKFORCE_POOL_USER_PROJECT,
-        )
-
-    @mock.patch.object(identity_pool.Credentials, "__init__", return_value=None)
+    @mock.patch.object(pluggable.Credentials, "__init__", return_value=None)
     def test_from_file_full_options(self, mock_init, tmpdir):
         info = {
             "audience": AUDIENCE,
@@ -375,14 +357,14 @@ class TestCredentials(object):
             "client_id": CLIENT_ID,
             "client_secret": CLIENT_SECRET,
             "quota_project_id": QUOTA_PROJECT_ID,
-            "credential_source": self.CREDENTIAL_SOURCE_TEXT,
+            "credential_source": self.CREDENTIAL_SOURCE,
         }
         config_file = tmpdir.join("config.json")
         config_file.write(json.dumps(info))
-        credentials = identity_pool.Credentials.from_file(str(config_file))
+        credentials = pluggable.Credentials.from_file(str(config_file))
 
-        # Confirm identity_pool.Credentials instantiated with expected attributes.
-        assert isinstance(credentials, identity_pool.Credentials)
+        # Confirm pluggable.Credentials instantiated with expected attributes.
+        assert isinstance(credentials, pluggable.Credentials)
         mock_init.assert_called_once_with(
             audience=AUDIENCE,
             subject_token_type=SUBJECT_TOKEN_TYPE,
@@ -390,25 +372,25 @@ class TestCredentials(object):
             service_account_impersonation_url=SERVICE_ACCOUNT_IMPERSONATION_URL,
             client_id=CLIENT_ID,
             client_secret=CLIENT_SECRET,
-            credential_source=self.CREDENTIAL_SOURCE_TEXT,
+            credential_source=self.CREDENTIAL_SOURCE,
             quota_project_id=QUOTA_PROJECT_ID,
             workforce_pool_user_project=None,
         )
 
-    @mock.patch.object(identity_pool.Credentials, "__init__", return_value=None)
+    @mock.patch.object(pluggable.Credentials, "__init__", return_value=None)
     def test_from_file_required_options_only(self, mock_init, tmpdir):
         info = {
             "audience": AUDIENCE,
             "subject_token_type": SUBJECT_TOKEN_TYPE,
             "token_url": TOKEN_URL,
-            "credential_source": self.CREDENTIAL_SOURCE_TEXT,
+            "credential_source": self.CREDENTIAL_SOURCE,
         }
         config_file = tmpdir.join("config.json")
         config_file.write(json.dumps(info))
-        credentials = identity_pool.Credentials.from_file(str(config_file))
+        credentials = pluggable.Credentials.from_file(str(config_file))
 
-        # Confirm identity_pool.Credentials instantiated with expected attributes.
-        assert isinstance(credentials, identity_pool.Credentials)
+        # Confirm pluggable.Credentials instantiated with expected attributes.
+        assert isinstance(credentials, pluggable.Credentials)
         mock_init.assert_called_once_with(
             audience=AUDIENCE,
             subject_token_type=SUBJECT_TOKEN_TYPE,
@@ -416,123 +398,38 @@ class TestCredentials(object):
             service_account_impersonation_url=None,
             client_id=None,
             client_secret=None,
-            credential_source=self.CREDENTIAL_SOURCE_TEXT,
+            credential_source=self.CREDENTIAL_SOURCE,
             quota_project_id=None,
             workforce_pool_user_project=None,
-        )
-
-    @mock.patch.object(identity_pool.Credentials, "__init__", return_value=None)
-    def test_from_file_workforce_pool(self, mock_init, tmpdir):
-        info = {
-            "audience": WORKFORCE_AUDIENCE,
-            "subject_token_type": WORKFORCE_SUBJECT_TOKEN_TYPE,
-            "token_url": TOKEN_URL,
-            "credential_source": self.CREDENTIAL_SOURCE_TEXT,
-            "workforce_pool_user_project": WORKFORCE_POOL_USER_PROJECT,
-        }
-        config_file = tmpdir.join("config.json")
-        config_file.write(json.dumps(info))
-        credentials = identity_pool.Credentials.from_file(str(config_file))
-
-        # Confirm identity_pool.Credentials instantiated with expected attributes.
-        assert isinstance(credentials, identity_pool.Credentials)
-        mock_init.assert_called_once_with(
-            audience=WORKFORCE_AUDIENCE,
-            subject_token_type=WORKFORCE_SUBJECT_TOKEN_TYPE,
-            token_url=TOKEN_URL,
-            service_account_impersonation_url=None,
-            client_id=None,
-            client_secret=None,
-            credential_source=self.CREDENTIAL_SOURCE_TEXT,
-            quota_project_id=None,
-            workforce_pool_user_project=WORKFORCE_POOL_USER_PROJECT,
-        )
-
-    def test_constructor_nonworkforce_with_workforce_pool_user_project(self):
-        with pytest.raises(ValueError) as excinfo:
-            self.make_credentials(
-                audience=AUDIENCE,
-                workforce_pool_user_project=WORKFORCE_POOL_USER_PROJECT,
-            )
-
-        assert excinfo.match(
-            "workforce_pool_user_project should not be set for non-workforce "
-            "pool credentials"
         )
 
     def test_constructor_invalid_options(self):
         credential_source = {"unsupported": "value"}
 
         with pytest.raises(ValueError) as excinfo:
-            self.make_credentials(credential_source=credential_source)
+            self.make_pluggable(credential_source=credential_source)
 
         assert excinfo.match(r"Missing credential_source")
 
-    def test_constructor_invalid_options_url_and_file(self):
-        credential_source = {
-            "url": self.CREDENTIAL_URL,
-            "file": SUBJECT_TOKEN_TEXT_FILE,
-        }
-
-        with pytest.raises(ValueError) as excinfo:
-            self.make_credentials(credential_source=credential_source)
-
-        assert excinfo.match(r"Ambiguous credential_source")
-
     def test_constructor_invalid_options_environment_id(self):
-        credential_source = {"url": self.CREDENTIAL_URL, "environment_id": "aws1"}
+        credential_source = {"executable": self.CREDENTIAL_SOURCE_EXECUTABLE, "environment_id": "aws1"}
 
         with pytest.raises(ValueError) as excinfo:
-            self.make_credentials(credential_source=credential_source)
+            self.make_pluggable(credential_source=credential_source)
 
         assert excinfo.match(
-            r"Invalid Identity Pool credential_source field 'environment_id'"
+            r"Invalid Pluggable credential_source field 'environment_id'"
         )
 
     def test_constructor_invalid_credential_source(self):
         with pytest.raises(ValueError) as excinfo:
-            self.make_credentials(credential_source="non-dict")
+            self.make_pluggable(credential_source="non-dict")
 
         assert excinfo.match(r"Missing credential_source")
 
-    def test_constructor_invalid_credential_source_format_type(self):
-        credential_source = {"format": {"type": "xml"}}
-
-        with pytest.raises(ValueError) as excinfo:
-            self.make_credentials(credential_source=credential_source)
-
-        assert excinfo.match(r"Invalid credential_source format 'xml'")
-
-    def test_constructor_missing_subject_token_field_name(self):
-        credential_source = {"format": {"type": "json"}}
-
-        with pytest.raises(ValueError) as excinfo:
-            self.make_credentials(credential_source=credential_source)
-
-        assert excinfo.match(
-            r"Missing subject_token_field_name for JSON credential_source format"
-        )
-
-    def test_info_with_workforce_pool_user_project(self):
-        credentials = self.make_credentials(
-            audience=WORKFORCE_AUDIENCE,
-            subject_token_type=WORKFORCE_SUBJECT_TOKEN_TYPE,
-            credential_source=self.CREDENTIAL_SOURCE_TEXT_URL.copy(),
-            workforce_pool_user_project=WORKFORCE_POOL_USER_PROJECT,
-        )
-
-        assert credentials.info == {
-            "type": "external_account",
-            "audience": WORKFORCE_AUDIENCE,
-            "subject_token_type": WORKFORCE_SUBJECT_TOKEN_TYPE,
-            "token_url": TOKEN_URL,
-            "credential_source": self.CREDENTIAL_SOURCE_TEXT_URL,
-            "workforce_pool_user_project": WORKFORCE_POOL_USER_PROJECT,
-        }
-
-    def test_info_with_file_credential_source(self):
-        credentials = self.make_credentials(
-            credential_source=self.CREDENTIAL_SOURCE_TEXT_URL.copy()
+    def test_info_with_credential_source(self):
+        credentials = self.make_pluggable(
+            credential_source=self.CREDENTIAL_SOURCE.copy()
         )
 
         assert credentials.info == {
@@ -540,569 +437,75 @@ class TestCredentials(object):
             "audience": AUDIENCE,
             "subject_token_type": SUBJECT_TOKEN_TYPE,
             "token_url": TOKEN_URL,
-            "credential_source": self.CREDENTIAL_SOURCE_TEXT_URL,
+            "credential_source": self.CREDENTIAL_SOURCE,
         }
 
-    def test_info_with_url_credential_source(self):
-        credentials = self.make_credentials(
-            credential_source=self.CREDENTIAL_SOURCE_JSON_URL.copy()
-        )
-
-        assert credentials.info == {
-            "type": "external_account",
-            "audience": AUDIENCE,
-            "subject_token_type": SUBJECT_TOKEN_TYPE,
-            "token_url": TOKEN_URL,
-            "credential_source": self.CREDENTIAL_SOURCE_JSON_URL,
-        }
-
-    def test_retrieve_subject_token_missing_subject_token(self, tmpdir):
-        # Provide empty text file.
-        empty_file = tmpdir.join("empty.txt")
-        empty_file.write("")
-        credential_source = {"file": str(empty_file)}
-        credentials = self.make_credentials(credential_source=credential_source)
-
-        with pytest.raises(exceptions.RefreshError) as excinfo:
-            credentials.retrieve_subject_token(None)
-
-        assert excinfo.match(r"Missing subject_token in the credential_source file")
-
-    def test_retrieve_subject_token_text_file(self):
-        credentials = self.make_credentials(
-            credential_source=self.CREDENTIAL_SOURCE_TEXT
+    def test_retrieve_subject_token_oidc_id_token(self, fp):
+        os.environ['GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES'] = '1'
+        fp.register(self.CREDENTIAL_SOURCE_EXECUTABLE_COMMAND.split(), stdout=json.dumps(self.EXECUTABLE_SUCCESSFUL_OIDC_RESPONSE_ID_TOKEN))
+    
+        credentials = self.make_pluggable(
+            credential_source=self.CREDENTIAL_SOURCE
         )
 
         subject_token = credentials.retrieve_subject_token(None)
 
-        assert subject_token == TEXT_FILE_SUBJECT_TOKEN
+        assert subject_token == self.EXECUTABLE_OIDC_TOKEN
 
-    def test_retrieve_subject_token_json_file(self):
-        credentials = self.make_credentials(
-            credential_source=self.CREDENTIAL_SOURCE_JSON
+    def test_retrieve_subject_token_oidc_jwt(self, fp):
+        os.environ['GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES'] = '1'
+        fp.register(self.CREDENTIAL_SOURCE_EXECUTABLE_COMMAND.split(), stdout=json.dumps(self.EXECUTABLE_SUCCESSFUL_OIDC_RESPONSE_JWT))
+    
+        credentials = self.make_pluggable(
+            credential_source=self.CREDENTIAL_SOURCE
         )
 
         subject_token = credentials.retrieve_subject_token(None)
 
-        assert subject_token == JSON_FILE_SUBJECT_TOKEN
+        assert subject_token == self.EXECUTABLE_OIDC_TOKEN
+        
+    def test_retrieve_subject_token_saml(self, fp):
+        os.environ['GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES'] = '1'
+        fp.register(self.CREDENTIAL_SOURCE_EXECUTABLE_COMMAND.split(), stdout=json.dumps(self.EXECUTABLE_SUCCESSFUL_SAML_RESPONSE))
+    
+        credentials = self.make_pluggable(
+            credential_source=self.CREDENTIAL_SOURCE
+        )
 
-    def test_retrieve_subject_token_json_file_invalid_field_name(self):
-        credential_source = {
-            "file": SUBJECT_TOKEN_JSON_FILE,
-            "format": {"type": "json", "subject_token_field_name": "not_found"},
+        subject_token = credentials.retrieve_subject_token(None)
+
+        assert subject_token == self.EXECUTABLE_SAML_TOKEN
+
+    def test_retrieve_subject_token_failed(self, fp):
+        os.environ['GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES'] = '1'
+        fp.register(self.CREDENTIAL_SOURCE_EXECUTABLE_COMMAND.split(), stdout=json.dumps(self.EXECUTABLE_FAILED_RESPONSE))
+    
+        credentials = self.make_pluggable(
+            credential_source=self.CREDENTIAL_SOURCE
+        )
+
+        with pytest.raises(exceptions.RefreshError) as excinfo:
+            subject_token = credentials.retrieve_subject_token(None)
+
+        assert excinfo.match(r"Executable returned unsuccessful response")
+        
+    def test_retrieve_subject_token_invalid_version(self, fp):
+        EXECUTABLE_SUCCESSFUL_OIDC_RESPONSE_VERSION_2 = {
+            "version": 2,
+            "success": True,
+            "token_type": "urn:ietf:params:oauth:token-type:id_token",
+            "id_token": self.EXECUTABLE_OIDC_TOKEN,
+            "expiration_time": 9999999999
         }
-        credentials = self.make_credentials(credential_source=credential_source)
-
-        with pytest.raises(exceptions.RefreshError) as excinfo:
-            credentials.retrieve_subject_token(None)
-
-        assert excinfo.match(
-            "Unable to parse subject_token from JSON file '{}' using key '{}'".format(
-                SUBJECT_TOKEN_JSON_FILE, "not_found"
-            )
-        )
-
-    def test_retrieve_subject_token_invalid_json(self, tmpdir):
-        # Provide JSON file. This should result in JSON parsing error.
-        invalid_json_file = tmpdir.join("invalid.json")
-        invalid_json_file.write("{")
-        credential_source = {
-            "file": str(invalid_json_file),
-            "format": {"type": "json", "subject_token_field_name": "access_token"},
-        }
-        credentials = self.make_credentials(credential_source=credential_source)
-
-        with pytest.raises(exceptions.RefreshError) as excinfo:
-            credentials.retrieve_subject_token(None)
-
-        assert excinfo.match(
-            "Unable to parse subject_token from JSON file '{}' using key '{}'".format(
-                str(invalid_json_file), "access_token"
-            )
-        )
-
-    def test_retrieve_subject_token_file_not_found(self):
-        credential_source = {"file": "./not_found.txt"}
-        credentials = self.make_credentials(credential_source=credential_source)
-
-        with pytest.raises(exceptions.RefreshError) as excinfo:
-            credentials.retrieve_subject_token(None)
-
-        assert excinfo.match(r"File './not_found.txt' was not found")
-
-    def test_refresh_text_file_success_without_impersonation_ignore_default_scopes(
-        self,
-    ):
-        credentials = self.make_credentials(
-            client_id=CLIENT_ID,
-            client_secret=CLIENT_SECRET,
-            # Test with text format type.
-            credential_source=self.CREDENTIAL_SOURCE_TEXT,
-            scopes=SCOPES,
-            # Default scopes should be ignored.
-            default_scopes=["ignored"],
-        )
-
-        self.assert_underlying_credentials_refresh(
-            credentials=credentials,
-            audience=AUDIENCE,
-            subject_token=TEXT_FILE_SUBJECT_TOKEN,
-            subject_token_type=SUBJECT_TOKEN_TYPE,
-            token_url=TOKEN_URL,
-            service_account_impersonation_url=None,
-            basic_auth_encoding=BASIC_AUTH_ENCODING,
-            quota_project_id=None,
-            used_scopes=SCOPES,
-            scopes=SCOPES,
-            default_scopes=["ignored"],
-        )
-
-    def test_refresh_workforce_success_with_client_auth_without_impersonation(self):
-        credentials = self.make_credentials(
-            audience=WORKFORCE_AUDIENCE,
-            subject_token_type=WORKFORCE_SUBJECT_TOKEN_TYPE,
-            client_id=CLIENT_ID,
-            client_secret=CLIENT_SECRET,
-            # Test with text format type.
-            credential_source=self.CREDENTIAL_SOURCE_TEXT,
-            scopes=SCOPES,
-            # This will be ignored in favor of client auth.
-            workforce_pool_user_project=WORKFORCE_POOL_USER_PROJECT,
-        )
-
-        self.assert_underlying_credentials_refresh(
-            credentials=credentials,
-            audience=WORKFORCE_AUDIENCE,
-            subject_token=TEXT_FILE_SUBJECT_TOKEN,
-            subject_token_type=WORKFORCE_SUBJECT_TOKEN_TYPE,
-            token_url=TOKEN_URL,
-            service_account_impersonation_url=None,
-            basic_auth_encoding=BASIC_AUTH_ENCODING,
-            quota_project_id=None,
-            used_scopes=SCOPES,
-            scopes=SCOPES,
-            workforce_pool_user_project=None,
-        )
-
-    def test_refresh_workforce_success_with_client_auth_and_no_workforce_project(self):
-        credentials = self.make_credentials(
-            audience=WORKFORCE_AUDIENCE,
-            subject_token_type=WORKFORCE_SUBJECT_TOKEN_TYPE,
-            client_id=CLIENT_ID,
-            client_secret=CLIENT_SECRET,
-            # Test with text format type.
-            credential_source=self.CREDENTIAL_SOURCE_TEXT,
-            scopes=SCOPES,
-            # This is not needed when client Auth is used.
-            workforce_pool_user_project=None,
-        )
-
-        self.assert_underlying_credentials_refresh(
-            credentials=credentials,
-            audience=WORKFORCE_AUDIENCE,
-            subject_token=TEXT_FILE_SUBJECT_TOKEN,
-            subject_token_type=WORKFORCE_SUBJECT_TOKEN_TYPE,
-            token_url=TOKEN_URL,
-            service_account_impersonation_url=None,
-            basic_auth_encoding=BASIC_AUTH_ENCODING,
-            quota_project_id=None,
-            used_scopes=SCOPES,
-            scopes=SCOPES,
-            workforce_pool_user_project=None,
-        )
-
-    def test_refresh_workforce_success_without_client_auth_without_impersonation(self):
-        credentials = self.make_credentials(
-            audience=WORKFORCE_AUDIENCE,
-            subject_token_type=WORKFORCE_SUBJECT_TOKEN_TYPE,
-            client_id=None,
-            client_secret=None,
-            # Test with text format type.
-            credential_source=self.CREDENTIAL_SOURCE_TEXT,
-            scopes=SCOPES,
-            # This will not be ignored as client auth is not used.
-            workforce_pool_user_project=WORKFORCE_POOL_USER_PROJECT,
-        )
-
-        self.assert_underlying_credentials_refresh(
-            credentials=credentials,
-            audience=WORKFORCE_AUDIENCE,
-            subject_token=TEXT_FILE_SUBJECT_TOKEN,
-            subject_token_type=WORKFORCE_SUBJECT_TOKEN_TYPE,
-            token_url=TOKEN_URL,
-            service_account_impersonation_url=None,
-            basic_auth_encoding=None,
-            quota_project_id=None,
-            used_scopes=SCOPES,
-            scopes=SCOPES,
-            workforce_pool_user_project=WORKFORCE_POOL_USER_PROJECT,
-        )
-
-    def test_refresh_workforce_success_without_client_auth_with_impersonation(self):
-        credentials = self.make_credentials(
-            audience=WORKFORCE_AUDIENCE,
-            subject_token_type=WORKFORCE_SUBJECT_TOKEN_TYPE,
-            client_id=None,
-            client_secret=None,
-            service_account_impersonation_url=SERVICE_ACCOUNT_IMPERSONATION_URL,
-            # Test with text format type.
-            credential_source=self.CREDENTIAL_SOURCE_TEXT,
-            scopes=SCOPES,
-            # This will not be ignored as client auth is not used.
-            workforce_pool_user_project=WORKFORCE_POOL_USER_PROJECT,
-        )
-
-        self.assert_underlying_credentials_refresh(
-            credentials=credentials,
-            audience=WORKFORCE_AUDIENCE,
-            subject_token=TEXT_FILE_SUBJECT_TOKEN,
-            subject_token_type=WORKFORCE_SUBJECT_TOKEN_TYPE,
-            token_url=TOKEN_URL,
-            service_account_impersonation_url=SERVICE_ACCOUNT_IMPERSONATION_URL,
-            basic_auth_encoding=None,
-            quota_project_id=None,
-            used_scopes=SCOPES,
-            scopes=SCOPES,
-            workforce_pool_user_project=WORKFORCE_POOL_USER_PROJECT,
-        )
-
-    def test_refresh_text_file_success_without_impersonation_use_default_scopes(self):
-        credentials = self.make_credentials(
-            client_id=CLIENT_ID,
-            client_secret=CLIENT_SECRET,
-            # Test with text format type.
-            credential_source=self.CREDENTIAL_SOURCE_TEXT,
-            scopes=None,
-            # Default scopes should be used since user specified scopes are none.
-            default_scopes=SCOPES,
-        )
-
-        self.assert_underlying_credentials_refresh(
-            credentials=credentials,
-            audience=AUDIENCE,
-            subject_token=TEXT_FILE_SUBJECT_TOKEN,
-            subject_token_type=SUBJECT_TOKEN_TYPE,
-            token_url=TOKEN_URL,
-            service_account_impersonation_url=None,
-            basic_auth_encoding=BASIC_AUTH_ENCODING,
-            quota_project_id=None,
-            used_scopes=SCOPES,
-            scopes=None,
-            default_scopes=SCOPES,
-        )
-
-    def test_refresh_text_file_success_with_impersonation_ignore_default_scopes(self):
-        # Initialize credentials with service account impersonation and basic auth.
-        credentials = self.make_credentials(
-            # Test with text format type.
-            credential_source=self.CREDENTIAL_SOURCE_TEXT,
-            service_account_impersonation_url=SERVICE_ACCOUNT_IMPERSONATION_URL,
-            scopes=SCOPES,
-            # Default scopes should be ignored.
-            default_scopes=["ignored"],
-        )
-
-        self.assert_underlying_credentials_refresh(
-            credentials=credentials,
-            audience=AUDIENCE,
-            subject_token=TEXT_FILE_SUBJECT_TOKEN,
-            subject_token_type=SUBJECT_TOKEN_TYPE,
-            token_url=TOKEN_URL,
-            service_account_impersonation_url=SERVICE_ACCOUNT_IMPERSONATION_URL,
-            basic_auth_encoding=None,
-            quota_project_id=None,
-            used_scopes=SCOPES,
-            scopes=SCOPES,
-            default_scopes=["ignored"],
-        )
-
-    def test_refresh_text_file_success_with_impersonation_use_default_scopes(self):
-        # Initialize credentials with service account impersonation, basic auth
-        # and default scopes (no user scopes).
-        credentials = self.make_credentials(
-            # Test with text format type.
-            credential_source=self.CREDENTIAL_SOURCE_TEXT,
-            service_account_impersonation_url=SERVICE_ACCOUNT_IMPERSONATION_URL,
-            scopes=None,
-            # Default scopes should be used since user specified scopes are none.
-            default_scopes=SCOPES,
-        )
-
-        self.assert_underlying_credentials_refresh(
-            credentials=credentials,
-            audience=AUDIENCE,
-            subject_token=TEXT_FILE_SUBJECT_TOKEN,
-            subject_token_type=SUBJECT_TOKEN_TYPE,
-            token_url=TOKEN_URL,
-            service_account_impersonation_url=SERVICE_ACCOUNT_IMPERSONATION_URL,
-            basic_auth_encoding=None,
-            quota_project_id=None,
-            used_scopes=SCOPES,
-            scopes=None,
-            default_scopes=SCOPES,
-        )
-
-    def test_refresh_json_file_success_without_impersonation(self):
-        credentials = self.make_credentials(
-            client_id=CLIENT_ID,
-            client_secret=CLIENT_SECRET,
-            # Test with JSON format type.
-            credential_source=self.CREDENTIAL_SOURCE_JSON,
-            scopes=SCOPES,
-        )
-
-        self.assert_underlying_credentials_refresh(
-            credentials=credentials,
-            audience=AUDIENCE,
-            subject_token=JSON_FILE_SUBJECT_TOKEN,
-            subject_token_type=SUBJECT_TOKEN_TYPE,
-            token_url=TOKEN_URL,
-            service_account_impersonation_url=None,
-            basic_auth_encoding=BASIC_AUTH_ENCODING,
-            quota_project_id=None,
-            used_scopes=SCOPES,
-            scopes=SCOPES,
-            default_scopes=None,
-        )
-
-    def test_refresh_json_file_success_with_impersonation(self):
-        # Initialize credentials with service account impersonation and basic auth.
-        credentials = self.make_credentials(
-            # Test with JSON format type.
-            credential_source=self.CREDENTIAL_SOURCE_JSON,
-            service_account_impersonation_url=SERVICE_ACCOUNT_IMPERSONATION_URL,
-            scopes=SCOPES,
-        )
-
-        self.assert_underlying_credentials_refresh(
-            credentials=credentials,
-            audience=AUDIENCE,
-            subject_token=JSON_FILE_SUBJECT_TOKEN,
-            subject_token_type=SUBJECT_TOKEN_TYPE,
-            token_url=TOKEN_URL,
-            service_account_impersonation_url=SERVICE_ACCOUNT_IMPERSONATION_URL,
-            basic_auth_encoding=None,
-            quota_project_id=None,
-            used_scopes=SCOPES,
-            scopes=SCOPES,
-            default_scopes=None,
-        )
-
-    def test_refresh_with_retrieve_subject_token_error(self):
-        credential_source = {
-            "file": SUBJECT_TOKEN_JSON_FILE,
-            "format": {"type": "json", "subject_token_field_name": "not_found"},
-        }
-        credentials = self.make_credentials(credential_source=credential_source)
-
-        with pytest.raises(exceptions.RefreshError) as excinfo:
-            credentials.refresh(None)
-
-        assert excinfo.match(
-            "Unable to parse subject_token from JSON file '{}' using key '{}'".format(
-                SUBJECT_TOKEN_JSON_FILE, "not_found"
-            )
-        )
-
-    def test_retrieve_subject_token_from_url(self):
-        credentials = self.make_credentials(
-            credential_source=self.CREDENTIAL_SOURCE_TEXT_URL
-        )
-        request = self.make_mock_request(token_data=TEXT_FILE_SUBJECT_TOKEN)
-        subject_token = credentials.retrieve_subject_token(request)
-
-        assert subject_token == TEXT_FILE_SUBJECT_TOKEN
-        self.assert_credential_request_kwargs(request.call_args_list[0][1], None)
-
-    def test_retrieve_subject_token_from_url_with_headers(self):
-        credentials = self.make_credentials(
-            credential_source={"url": self.CREDENTIAL_URL, "headers": {"foo": "bar"}}
-        )
-        request = self.make_mock_request(token_data=TEXT_FILE_SUBJECT_TOKEN)
-        subject_token = credentials.retrieve_subject_token(request)
-
-        assert subject_token == TEXT_FILE_SUBJECT_TOKEN
-        self.assert_credential_request_kwargs(
-            request.call_args_list[0][1], {"foo": "bar"}
-        )
-
-    def test_retrieve_subject_token_from_url_json(self):
-        credentials = self.make_credentials(
-            credential_source=self.CREDENTIAL_SOURCE_JSON_URL
-        )
-        request = self.make_mock_request(token_data=JSON_FILE_CONTENT)
-        subject_token = credentials.retrieve_subject_token(request)
-
-        assert subject_token == JSON_FILE_SUBJECT_TOKEN
-        self.assert_credential_request_kwargs(request.call_args_list[0][1], None)
-
-    def test_retrieve_subject_token_from_url_json_with_headers(self):
-        credentials = self.make_credentials(
-            credential_source={
-                "url": self.CREDENTIAL_URL,
-                "format": {"type": "json", "subject_token_field_name": "access_token"},
-                "headers": {"foo": "bar"},
-            }
-        )
-        request = self.make_mock_request(token_data=JSON_FILE_CONTENT)
-        subject_token = credentials.retrieve_subject_token(request)
-
-        assert subject_token == JSON_FILE_SUBJECT_TOKEN
-        self.assert_credential_request_kwargs(
-            request.call_args_list[0][1], {"foo": "bar"}
-        )
-
-    def test_retrieve_subject_token_from_url_not_found(self):
-        credentials = self.make_credentials(
-            credential_source=self.CREDENTIAL_SOURCE_TEXT_URL
-        )
-        with pytest.raises(exceptions.RefreshError) as excinfo:
-            credentials.retrieve_subject_token(
-                self.make_mock_request(token_status=404, token_data=JSON_FILE_CONTENT)
-            )
-
-        assert excinfo.match("Unable to retrieve Identity Pool subject token")
-
-    def test_retrieve_subject_token_from_url_json_invalid_field(self):
-        credential_source = {
-            "url": self.CREDENTIAL_URL,
-            "format": {"type": "json", "subject_token_field_name": "not_found"},
-        }
-        credentials = self.make_credentials(credential_source=credential_source)
-
-        with pytest.raises(exceptions.RefreshError) as excinfo:
-            credentials.retrieve_subject_token(
-                self.make_mock_request(token_data=JSON_FILE_CONTENT)
-            )
-
-        assert excinfo.match(
-            "Unable to parse subject_token from JSON file '{}' using key '{}'".format(
-                self.CREDENTIAL_URL, "not_found"
-            )
-        )
-
-    def test_retrieve_subject_token_from_url_json_invalid_format(self):
-        credentials = self.make_credentials(
-            credential_source=self.CREDENTIAL_SOURCE_JSON_URL
+            
+        os.environ['GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES'] = '1'
+        fp.register(self.CREDENTIAL_SOURCE_EXECUTABLE_COMMAND.split(), stdout=json.dumps(EXECUTABLE_SUCCESSFUL_OIDC_RESPONSE_VERSION_2))
+    
+        credentials = self.make_pluggable(
+            credential_source=self.CREDENTIAL_SOURCE
         )
 
         with pytest.raises(exceptions.RefreshError) as excinfo:
-            credentials.retrieve_subject_token(self.make_mock_request(token_data="{"))
+            subject_token = credentials.retrieve_subject_token(None)
 
-        assert excinfo.match(
-            "Unable to parse subject_token from JSON file '{}' using key '{}'".format(
-                self.CREDENTIAL_URL, "access_token"
-            )
-        )
-
-    def test_refresh_text_file_success_without_impersonation_url(self):
-        credentials = self.make_credentials(
-            client_id=CLIENT_ID,
-            client_secret=CLIENT_SECRET,
-            # Test with text format type.
-            credential_source=self.CREDENTIAL_SOURCE_TEXT_URL,
-            scopes=SCOPES,
-        )
-
-        self.assert_underlying_credentials_refresh(
-            credentials=credentials,
-            audience=AUDIENCE,
-            subject_token=TEXT_FILE_SUBJECT_TOKEN,
-            subject_token_type=SUBJECT_TOKEN_TYPE,
-            token_url=TOKEN_URL,
-            service_account_impersonation_url=None,
-            basic_auth_encoding=BASIC_AUTH_ENCODING,
-            quota_project_id=None,
-            used_scopes=SCOPES,
-            scopes=SCOPES,
-            default_scopes=None,
-            credential_data=TEXT_FILE_SUBJECT_TOKEN,
-        )
-
-    def test_refresh_text_file_success_with_impersonation_url(self):
-        # Initialize credentials with service account impersonation and basic auth.
-        credentials = self.make_credentials(
-            # Test with text format type.
-            credential_source=self.CREDENTIAL_SOURCE_TEXT_URL,
-            service_account_impersonation_url=SERVICE_ACCOUNT_IMPERSONATION_URL,
-            scopes=SCOPES,
-        )
-
-        self.assert_underlying_credentials_refresh(
-            credentials=credentials,
-            audience=AUDIENCE,
-            subject_token=TEXT_FILE_SUBJECT_TOKEN,
-            subject_token_type=SUBJECT_TOKEN_TYPE,
-            token_url=TOKEN_URL,
-            service_account_impersonation_url=SERVICE_ACCOUNT_IMPERSONATION_URL,
-            basic_auth_encoding=None,
-            quota_project_id=None,
-            used_scopes=SCOPES,
-            scopes=SCOPES,
-            default_scopes=None,
-            credential_data=TEXT_FILE_SUBJECT_TOKEN,
-        )
-
-    def test_refresh_json_file_success_without_impersonation_url(self):
-        credentials = self.make_credentials(
-            client_id=CLIENT_ID,
-            client_secret=CLIENT_SECRET,
-            # Test with JSON format type.
-            credential_source=self.CREDENTIAL_SOURCE_JSON_URL,
-            scopes=SCOPES,
-        )
-
-        self.assert_underlying_credentials_refresh(
-            credentials=credentials,
-            audience=AUDIENCE,
-            subject_token=JSON_FILE_SUBJECT_TOKEN,
-            subject_token_type=SUBJECT_TOKEN_TYPE,
-            token_url=TOKEN_URL,
-            service_account_impersonation_url=None,
-            basic_auth_encoding=BASIC_AUTH_ENCODING,
-            quota_project_id=None,
-            used_scopes=SCOPES,
-            scopes=SCOPES,
-            default_scopes=None,
-            credential_data=JSON_FILE_CONTENT,
-        )
-
-    def test_refresh_json_file_success_with_impersonation_url(self):
-        # Initialize credentials with service account impersonation and basic auth.
-        credentials = self.make_credentials(
-            # Test with JSON format type.
-            credential_source=self.CREDENTIAL_SOURCE_JSON_URL,
-            service_account_impersonation_url=SERVICE_ACCOUNT_IMPERSONATION_URL,
-            scopes=SCOPES,
-        )
-
-        self.assert_underlying_credentials_refresh(
-            credentials=credentials,
-            audience=AUDIENCE,
-            subject_token=JSON_FILE_SUBJECT_TOKEN,
-            subject_token_type=SUBJECT_TOKEN_TYPE,
-            token_url=TOKEN_URL,
-            service_account_impersonation_url=SERVICE_ACCOUNT_IMPERSONATION_URL,
-            basic_auth_encoding=None,
-            quota_project_id=None,
-            used_scopes=SCOPES,
-            scopes=SCOPES,
-            default_scopes=None,
-            credential_data=JSON_FILE_CONTENT,
-        )
-
-    def test_refresh_with_retrieve_subject_token_error_url(self):
-        credential_source = {
-            "url": self.CREDENTIAL_URL,
-            "format": {"type": "json", "subject_token_field_name": "not_found"},
-        }
-        credentials = self.make_credentials(credential_source=credential_source)
-
-        with pytest.raises(exceptions.RefreshError) as excinfo:
-            credentials.refresh(self.make_mock_request(token_data=JSON_FILE_CONTENT))
-
-        assert excinfo.match(
-            "Unable to parse subject_token from JSON file '{}' using key '{}'".format(
-                self.CREDENTIAL_URL, "not_found"
-            )
-        )
+        assert excinfo.match(r"Executable returned unsupported version")
