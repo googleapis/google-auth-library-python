@@ -80,9 +80,10 @@ class Credentials(external_account.Credentials):
 
                     {
                         "executable": {
-                        "command": "/path/to/get/credentials.sh --arg1=value1 --arg2=value2",
-                        "timeout_millis": 5000,
-                        "output_file": "/path/to/generated/cached/credentials"
+                            "command": "/path/to/get/credentials.sh --arg1=value1 --arg2=value2",
+                            "timeout_millis": 5000,
+                            "output_file": "/path/to/generated/cached/credentials"
+                        }
                     }
 
             service_account_impersonation_url (Optional[str]): The optional service account
@@ -157,21 +158,49 @@ class Credentials(external_account.Credentials):
     @_helpers.copy_docstring(external_account.Credentials)
     def retrieve_subject_token(self, request):
         env_allow_executables = os.environ.get('GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES')
-        if env_allow_executables is None or env_allow_executables != '1':
+        if env_allow_executables != '1':
             raise ValueError(
-                "Executables need to be explicitly allowed to run."
+                "Executables need to be explicitly allowed (set GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES to '1') to run."
             )
         
         # Inject env vars
+        original_audience = os.getenv("GOOGLE_EXTERNAL_ACCOUNT_AUDIENCE")
         os.environ["GOOGLE_EXTERNAL_ACCOUNT_AUDIENCE"] = self._audience
+        original_subject_token_type = os.getenv("GOOGLE_EXTERNAL_ACCOUNT_TOKEN_TYPE")
         os.environ["GOOGLE_EXTERNAL_ACCOUNT_TOKEN_TYPE"] = self._subject_token_type
+        original_interactive = os.getenv("GOOGLE_EXTERNAL_ACCOUNT_INTERACTIVE")
         os.environ["GOOGLE_EXTERNAL_ACCOUNT_INTERACTIVE"] = "0" # Always set to 0 until interactive mode is implemented.
+        original_service_account_impersonation_url = os.getenv("GOOGLE_EXTERNAL_ACCOUNT_IMPERSONATED_EMAIL")
         if self._service_account_impersonation_url is not None:
             os.environ["GOOGLE_EXTERNAL_ACCOUNT_IMPERSONATED_EMAIL"] = self._service_account_impersonation_url
+        original_credential_source_executable_output_file = os.getenv("GOOGLE_EXTERNAL_ACCOUNT_OUTPUT_FILE")
         if self._credential_source_executable_output_file is not None:
             os.environ["GOOGLE_EXTERNAL_ACCOUNT_OUTPUT_FILE"] = self._credential_source_executable_output_file
         
         result = subprocess.run(self._credential_source_executable_command.split(), timeout=self._credential_source_executable_timeout_millis/1000, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+
+        # Reset env vars
+        if original_audience is not None:
+            os.environ["GOOGLE_EXTERNAL_ACCOUNT_AUDIENCE"] = original_audience
+        else:
+            del os.environ["GOOGLE_EXTERNAL_ACCOUNT_AUDIENCE"]
+        if original_subject_token_type is not None:
+            os.environ["GOOGLE_EXTERNAL_ACCOUNT_TOKEN_TYPE"] = self.original_subject_token_type
+        else:
+            del os.environ["GOOGLE_EXTERNAL_ACCOUNT_TOKEN_TYPE"]
+        if original_interactive is not None:
+            os.environ["GOOGLE_EXTERNAL_ACCOUNT_INTERACTIVE"] = original_interactive
+        else:
+            del os.environ["GOOGLE_EXTERNAL_ACCOUNT_INTERACTIVE"]
+        if original_service_account_impersonation_url is not None:
+            os.environ["GOOGLE_EXTERNAL_ACCOUNT_IMPERSONATED_EMAIL"] = original_service_account_impersonation_url
+        elif os.getenv("GOOGLE_EXTERNAL_ACCOUNT_IMPERSONATED_EMAIL") is not None:
+            del os.environ["GOOGLE_EXTERNAL_ACCOUNT_IMPERSONATED_EMAIL"]
+        if original_credential_source_executable_output_file is not None:
+            os.environ["GOOGLE_EXTERNAL_ACCOUNT_OUTPUT_FILE"] = original_credential_source_executable_output_file
+        elif os.getenv("GOOGLE_EXTERNAL_ACCOUNT_OUTPUT_FILE") is not None:
+            del os.environ["GOOGLE_EXTERNAL_ACCOUNT_OUTPUT_FILE"]
+        
         if result.returncode != 0:
             raise exceptions.RefreshError(
                 "Executable exited with non-zero return code {}. Error: {}".format(result.returncode, result.stdout)

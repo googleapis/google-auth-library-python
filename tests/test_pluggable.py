@@ -440,8 +440,8 @@ class TestCredentials(object):
             "credential_source": self.CREDENTIAL_SOURCE,
         }
 
+    @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
     def test_retrieve_subject_token_oidc_id_token(self, fp):
-        os.environ['GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES'] = '1'
         fp.register(self.CREDENTIAL_SOURCE_EXECUTABLE_COMMAND.split(), stdout=json.dumps(self.EXECUTABLE_SUCCESSFUL_OIDC_RESPONSE_ID_TOKEN))
     
         credentials = self.make_pluggable(
@@ -452,8 +452,8 @@ class TestCredentials(object):
 
         assert subject_token == self.EXECUTABLE_OIDC_TOKEN
 
+    @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
     def test_retrieve_subject_token_oidc_jwt(self, fp):
-        os.environ['GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES'] = '1'
         fp.register(self.CREDENTIAL_SOURCE_EXECUTABLE_COMMAND.split(), stdout=json.dumps(self.EXECUTABLE_SUCCESSFUL_OIDC_RESPONSE_JWT))
     
         credentials = self.make_pluggable(
@@ -464,8 +464,8 @@ class TestCredentials(object):
 
         assert subject_token == self.EXECUTABLE_OIDC_TOKEN
         
+    @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
     def test_retrieve_subject_token_saml(self, fp):
-        os.environ['GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES'] = '1'
         fp.register(self.CREDENTIAL_SOURCE_EXECUTABLE_COMMAND.split(), stdout=json.dumps(self.EXECUTABLE_SUCCESSFUL_SAML_RESPONSE))
     
         credentials = self.make_pluggable(
@@ -476,8 +476,8 @@ class TestCredentials(object):
 
         assert subject_token == self.EXECUTABLE_SAML_TOKEN
 
+    @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
     def test_retrieve_subject_token_failed(self, fp):
-        os.environ['GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES'] = '1'
         fp.register(self.CREDENTIAL_SOURCE_EXECUTABLE_COMMAND.split(), stdout=json.dumps(self.EXECUTABLE_FAILED_RESPONSE))
     
         credentials = self.make_pluggable(
@@ -489,6 +489,7 @@ class TestCredentials(object):
 
         assert excinfo.match(r"Executable returned unsuccessful response")
         
+    @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
     def test_retrieve_subject_token_invalid_version(self, fp):
         EXECUTABLE_SUCCESSFUL_OIDC_RESPONSE_VERSION_2 = {
             "version": 2,
@@ -498,7 +499,6 @@ class TestCredentials(object):
             "expiration_time": 9999999999
         }
             
-        os.environ['GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES'] = '1'
         fp.register(self.CREDENTIAL_SOURCE_EXECUTABLE_COMMAND.split(), stdout=json.dumps(EXECUTABLE_SUCCESSFUL_OIDC_RESPONSE_VERSION_2))
     
         credentials = self.make_pluggable(
