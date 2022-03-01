@@ -13,7 +13,9 @@
 # limitations under the License.
 
 import io
+import json
 import os
+import platform
 
 from setuptools import Extension
 from setuptools import find_packages
@@ -52,40 +54,34 @@ with open(os.path.join(package_root, "google/auth/version.py")) as fp:
     exec(fp.read(), version)
 version = version["__version__"]
 
+# To build this extension,
+# On Linux/MacOS, run
+#     CC=g++ GOOGLE_AUTH_BUILD_TLS_OFFLOAD=1 python -m pip install .
+# On Windows, run
+#     $env:GOOGLE_AUTH_BUILD_TLS_OFFLOAD=1
+#     python -m pip install .
+# You may also need to provide the include/library path for OpenSSL.
+# The OpenSSL version has to be 1.1.
+#     GOOGLE_AUTH_BUILD_INCLUDE_DIR = '["/usr/local/opt/openssl@1.1/include"]'
+#     GOOGLE_AUTH_BUILD_LIB_DIR = '["/usr/local/opt/openssl@1.1/lib"]'
 BUILD_TLS_OFFLOAD = os.getenv("GOOGLE_AUTH_BUILD_TLS_OFFLOAD")
+BUILD_INC_DIR = os.getenv("GOOGLE_AUTH_BUILD_INCLUDE_DIR")
+BUILD_LIB_DIR = os.getenv("GOOGLE_AUTH_BUILD_LIB_DIR")
 ext_module = None
+extra_compile_args = None if platform.system() == "Windows" else ['-std=c++11']
+include_dirs = json.loads(BUILD_INC_DIR) if BUILD_INC_DIR else None
+library_dirs = json.loads(BUILD_LIB_DIR) if BUILD_LIB_DIR else None
 if BUILD_TLS_OFFLOAD:
-    # To build this extension,
-    # On Linux, run
-    #     GOOGLE_AUTH_BUILD_TLS_OFFLOAD=1 python -m pip install .
-    # On Windows, run
-    #     $env:GOOGLE_AUTH_BUILD_TLS_OFFLOAD=1
-    #     python -m pip install .
-    if os.name == "nt":
-        tls_offload_ext = Extension(
-            name="tls_offload_ext",
-            language="c++",
-            libraries=["libcrypto", "libssl"],
-            sources=["google/auth/transport/cpp/tls_offload.cpp"],
-        )
-        ext_module = [tls_offload_ext]
-
-        # # old C++ code
-        # windows_signer_ext = Extension(
-        #     name="windows_signer_ext",
-        #     language="c++",
-        #     libraries=["libcrypto", "libssl", "crypt32", "bcrypt", "ncrypt"],
-        #     sources=["google/auth/transport/cpp/windows_signer.cpp"],
-        # )
-        # ext_module = [tls_offload_ext, windows_signer_ext]
-    else:
-        tls_offload_ext = Extension(
-            name="tls_offload_ext",
-            language="c++",
-            libraries=["crypto", "ssl"],
-            sources=["google/auth/transport/cpp/tls_offload.cpp"],
-        )
-        ext_module = [tls_offload_ext]
+    tls_offload_ext = Extension(
+        name="tls_offload_ext",
+        language="c++",
+        libraries=["libcrypto", "libssl"],
+        sources=["google/auth/transport/cpp/tls_offload.cpp"],
+        include_dirs=include_dirs,
+        library_dirs=library_dirs,
+        extra_compile_args=extra_compile_args,
+    )
+    ext_module = [tls_offload_ext]
 
 setup(
     name="google-auth",
