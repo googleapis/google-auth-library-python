@@ -249,7 +249,6 @@ class _MutualTlsOffloadAdapter(requests.adapters.HTTPAdapter):
 
     def __init__(self, cert, key):
         import certifi
-        import ctypes
         import urllib3.contrib.pyopenssl
 
         urllib3.contrib.pyopenssl.inject_into_urllib3()

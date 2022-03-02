@@ -69,13 +69,14 @@ BUILD_INC_DIR = os.getenv("GOOGLE_AUTH_BUILD_INCLUDE_DIR")
 BUILD_LIB_DIR = os.getenv("GOOGLE_AUTH_BUILD_LIB_DIR")
 ext_module = None
 extra_compile_args = None if platform.system() == "Windows" else ['-std=c++11']
+libraries = ["libcrypto", "libssl"] if platform.system() == "Windows" else ["crypto", "ssl"]
 include_dirs = json.loads(BUILD_INC_DIR) if BUILD_INC_DIR else None
 library_dirs = json.loads(BUILD_LIB_DIR) if BUILD_LIB_DIR else None
 if BUILD_TLS_OFFLOAD:
     tls_offload_ext = Extension(
         name="tls_offload_ext",
         language="c++",
-        libraries=["libcrypto", "libssl"],
+        libraries=libraries,
         sources=["google/auth/transport/cpp/tls_offload.cpp"],
         include_dirs=include_dirs,
         library_dirs=library_dirs,

@@ -331,12 +331,97 @@ def attach_signer_and_cert_to_ssl_context(signer, cert, ctx):
         raise exceptions.MutualTLSChannelError("failed to offload signing")
 
 
+def _get_cert_from_pkcs11(key_info):
+    import pkcs11
+    from pkcs11.constants import Attribute
+    from pkcs11.constants import ObjectClass
+    import OpenSSL
+
+    lib = pkcs11.lib(key_info["module_path"])
+    token = lib.get_token(token_label=key_info["token_label"])
+
+    # Open a session on our token
+    with token.open() as session:
+        for cert in session.get_objects({
+            Attribute.CLASS: ObjectClass.CERTIFICATE,
+            Attribute.LABEL: key_info["key_label"]
+        }):
+            cert = OpenSSL.crypto.load_certificate(
+                OpenSSL.crypto.FILETYPE_ASN1,
+                cert[Attribute.VALUE],
+            )
+            cert = OpenSSL.crypto.dump_certificate(
+                OpenSSL.crypto.FILETYPE_PEM,
+                cert
+            )
+            return cert
+    return None
+
+
+def _get_cert_from_windows_cert_store(key_info, lib):
+    issuer = key_info["issuer"].encode()
+    storeName = key_info["store_name"].encode()
+    provider = key_info["provider"].encode()
+
+    lib.GetCertPemForPython.argtypes = [
+        ctypes.c_char_p,
+        ctypes.c_char_p,
+        ctypes.c_char_p,
+        ctypes.c_char_p,
+        ctypes.c_int,
+    ]
+    lib.GetCertPemForPython.restype = ctypes.c_int
+
+    # First call to calculate the cert length
+    certLen = lib.GetCertPemForPython(
+        ctypes.c_char_p(issuer),
+        ctypes.c_char_p(storeName),
+        ctypes.c_char_p(provider),
+        None,
+        0,
+    )
+    if certLen > 0:
+        # Then we create an array to hold the cert, and call again to fill the cert
+        certHolder = ctypes.create_string_buffer(certLen)
+        lib.GetCertPemForPython(
+            ctypes.c_char_p(issuer),
+            ctypes.c_char_p(storeName),
+            ctypes.c_char_p(provider),
+            certHolder,
+            certLen,
+        )
+        return bytes(certHolder)
+    return None
+
+
+def _get_cert_from_macos_keychain(key_info, lib):
+    issuer = key_info["issuer"].encode()
+
+    lib.GetCertPemForPython.argtypes = [
+        ctypes.c_char_p,
+        ctypes.c_char_p,
+        ctypes.c_int,
+    ]
+    lib.GetCertPemForPython.restype = ctypes.c_int
+
+    # First call to calculate the cert length
+    certLen = lib.GetCertPemForPython(ctypes.c_char_p(issuer), None, 0)
+    if certLen > 0:
+        # Then we create an array to hold the cert, and call again to fill the cert
+        certHolder = ctypes.create_string_buffer(certLen)
+        lib.GetCertPemForPython(ctypes.c_char_p(issuer), certHolder, certLen)
+        return bytes(certHolder)
+    return None
+
+
 def get_cert_from_store(key):
-    if key["type"] not in ["windows_cert_store", "macos_keychain"]:
+    if key["type"] not in ["windows_cert_store", "macos_keychain", "pkcs11"]:
         return None
+    
+    if key["type"] == "pkcs11":
+        return _get_cert_from_pkcs11(key["key_info"])
 
-    import os
-
+    # For Windows and MacOs we need to call methods from signer shared library. 
     dll_path = os.getenv(environment_vars.GOOGLE_AUTH_SIGNER_LIBRARY_PATH)
     lib = ctypes.CDLL(dll_path)
     if not lib:
@@ -345,53 +430,5 @@ def get_cert_from_store(key):
         )
 
     if key["type"] == "windows_cert_store":
-        issuer = key["key_info"]["issuer"].encode()
-        storeName = key["key_info"]["store_name"].encode()
-        provider = key["key_info"]["provider"].encode()
-
-        lib.GetCertPemForPython.argtypes = [
-            ctypes.c_char_p,
-            ctypes.c_char_p,
-            ctypes.c_char_p,
-            ctypes.c_char_p,
-            ctypes.c_int,
-        ]
-        lib.GetCertPemForPython.restype = ctypes.c_int
-
-        # First call to calculate the cert length
-        certLen = lib.GetCertPemForPython(
-            ctypes.c_char_p(issuer),
-            ctypes.c_char_p(storeName),
-            ctypes.c_char_p(provider),
-            None,
-            0,
-        )
-        if certLen > 0:
-            # Then we create an array to hold the cert, and call again to fill the cert
-            certHolder = ctypes.create_string_buffer(certLen)
-            lib.GetCertPemForPython(
-                ctypes.c_char_p(issuer),
-                ctypes.c_char_p(storeName),
-                ctypes.c_char_p(provider),
-                certHolder,
-                certLen,
-            )
-            return bytes(certHolder)
-    else:
-        issuer = key["key_info"]["issuer"].encode()
-
-        lib.GetCertPemForPython.argtypes = [
-            ctypes.c_char_p,
-            ctypes.c_char_p,
-            ctypes.c_int,
-        ]
-        lib.GetCertPemForPython.restype = ctypes.c_int
-
-        # First call to calculate the cert length
-        certLen = lib.GetCertPemForPython(ctypes.c_char_p(issuer), None, 0)
-        if certLen > 0:
-            # Then we create an array to hold the cert, and call again to fill the cert
-            certHolder = ctypes.create_string_buffer(certLen)
-            lib.GetCertPemForPython(ctypes.c_char_p(issuer), certHolder, certLen)
-            return bytes(certHolder)
-    return None
+        return _get_cert_from_windows_cert_store(key["key_info"], lib)
+    return _get_cert_from_macos_keychain(key["key_info"], lib)
