@@ -270,7 +270,6 @@ class Credentials(external_account.Credentials):
             return cls.from_info(data, **kwargs)
 
     def _parse_subject_token(self, response):
-        print(time.time())
         if not response['success']:
                 raise exceptions.RefreshError(
                     "Executable returned unsuccessful response: {}.".format(response)
