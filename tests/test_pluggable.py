@@ -547,11 +547,8 @@ class TestCredentials(object):
         
     @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
     def test_retrieve_subject_token_file_cache(self, fp):
-        # cache = json.dumps(EXECUTABLE_SUCCESSFUL_OIDC_RESPONSE_ID_TOKEN)
         with open(self.CREDENTIAL_SOURCE_EXECUTABLE_OUTPUT_FILE, 'w') as output_file:
             json.dump(self.EXECUTABLE_SUCCESSFUL_OIDC_RESPONSE_ID_TOKEN, output_file)
-        
-        # fp.register(self.CREDENTIAL_SOURCE_EXECUTABLE_COMMAND.split(), stdout=json.dumps(self.EXECUTABLE_SUCCESSFUL_OIDC_RESPONSE_ID_TOKEN))
     
         credentials = self.make_pluggable(
             credential_source=self.CREDENTIAL_SOURCE

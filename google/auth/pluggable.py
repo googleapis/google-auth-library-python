@@ -167,9 +167,9 @@ class Credentials(external_account.Credentials):
         # Check output file
         if self._credential_source_executable_output_file is not None:
             try:
-                output_file = open(self._credential_source_executable_output_file)
-                response = json.load(output_file)
-                subject_token = self._parse_subject_token(response)
+                with open(self._credential_source_executable_output_file) as output_file:
+                    response = json.load(output_file)
+                    subject_token = self._parse_subject_token(response)
             except:
                 pass
             else:
