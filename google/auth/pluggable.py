@@ -41,6 +41,7 @@ import io
 import json
 import os
 import subprocess
+import time
 
 from google.auth import _helpers
 from google.auth import exceptions
@@ -163,6 +164,17 @@ class Credentials(external_account.Credentials):
                 "Executables need to be explicitly allowed (set GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES to '1') to run."
             )
         
+        # Check output file
+        if self._credential_source_executable_output_file is not None:
+            try:
+                with open(self._credential_source_executable_output_file) as output_file:
+                    response = json.load(output_file)
+                    subject_token = self._parse_subject_token(response)
+            except:
+                pass
+            else:
+                return subject_token
+
         # Inject env vars
         original_audience = os.getenv("GOOGLE_EXTERNAL_ACCOUNT_AUDIENCE")
         os.environ["GOOGLE_EXTERNAL_ACCOUNT_AUDIENCE"] = self._audience
@@ -208,23 +220,8 @@ class Credentials(external_account.Credentials):
         else:
             data = result.stdout.decode('utf-8')
             response = json.loads(data)
-            if not response['success']:
-                raise exceptions.RefreshError(
-                    "Executable returned unsuccessful response: {}.".format(response)
-                )
-            elif response['version'] > EXECUTABLE_SUPPORTED_MAX_VERSION:
-                raise exceptions.RefreshError(
-                    "Executable returned unsupported version {}.".format(response['version'])
-                )
-            elif response["token_type"] == "urn:ietf:params:oauth:token-type:jwt" or response["token_type"] == "urn:ietf:params:oauth:token-type:id_token": # OIDC
-                return response["id_token"]
-            elif response["token_type"] == "urn:ietf:params:oauth:token-type:saml2": # SAML
-                return response["saml_response"]
-            else:
-                raise exceptions.RefreshError(
-                    "Executable returned unsupported token type."
-                ) 
-
+            return self._parse_subject_token(response)
+            
     @classmethod
     def from_info(cls, info, **kwargs):
         """Creates a Pluggable Credentials instance from parsed external account info.
@@ -271,3 +268,25 @@ class Credentials(external_account.Credentials):
         with io.open(filename, "r", encoding="utf-8") as json_file:
             data = json.load(json_file)
             return cls.from_info(data, **kwargs)
+
+    def _parse_subject_token(self, response):
+        if not response['success']:
+                raise exceptions.RefreshError(
+                    "Executable returned unsuccessful response: {}.".format(response)
+                )
+        elif response['version'] > EXECUTABLE_SUPPORTED_MAX_VERSION:
+            raise exceptions.RefreshError(
+                "Executable returned unsupported version {}.".format(response['version'])
+            )
+        elif response['expiration_time'] < time.time():
+            raise exceptions.RefreshError(
+                "The token returned by the executable is expired."
+            )
+        elif response["token_type"] == "urn:ietf:params:oauth:token-type:jwt" or response["token_type"] == "urn:ietf:params:oauth:token-type:id_token": # OIDC
+            return response["id_token"]
+        elif response["token_type"] == "urn:ietf:params:oauth:token-type:saml2": # SAML
+            return response["saml_response"]
+        else:
+            raise exceptions.RefreshError(
+                "Executable returned unsupported token type."
+            ) 
