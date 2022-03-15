@@ -26,10 +26,16 @@ def _cast_ssl_ctx_to_void_p(ssl_ctx):
 
 def _load_offload_signing_ext():
     tls_offload_ext = None
-    root_path = os.path.join(os.path.dirname(__file__), "../../../")
-    for filename in os.listdir(root_path):
-        if re.match("tls_offload_ext*", filename):
-            tls_offload_ext = ctypes.CDLL(os.path.join(root_path, filename))
+    winmode = 0 if os.name == "nt" else None
+    tls_offload_ext_path = os.getenv(environment_vars.GOOGLE_AUTH_OFFLOAD_LIBRARY_PATH)
+    if tls_offload_ext_path:
+        print(tls_offload_ext_path)
+        tls_offload_ext = ctypes.CDLL(tls_offload_ext_path, winmode=winmode)
+    else:
+        root_path = os.path.join(os.path.dirname(__file__), "../../../")
+        for filename in os.listdir(root_path):
+            if re.match("tls_offload_ext*", filename):
+                tls_offload_ext = ctypes.CDLL(os.path.join(root_path, filename), winmode=winmode)
     if not tls_offload_ext:
         raise exceptions.MutualTLSChannelError(
             "tls_offload_ext shared library is not found"
@@ -153,7 +159,7 @@ def _create_win_golang_sign_callback(key_info):
         import os
 
         dll_path = os.getenv(environment_vars.GOOGLE_AUTH_SIGNER_LIBRARY_PATH)
-        lib = ctypes.CDLL(dll_path)
+        lib = ctypes.CDLL(dll_path, winmode=0)
         if not lib:
             raise exceptions.MutualTLSChannelError(
                 "GOOGLE_AUTH_SIGNER_LIBRARY_PATH dll is not found"
@@ -423,6 +429,7 @@ def get_cert_from_store(key):
 
     # For Windows and MacOs we need to call methods from signer shared library. 
     dll_path = os.getenv(environment_vars.GOOGLE_AUTH_SIGNER_LIBRARY_PATH)
+    print(dll_path)
     lib = ctypes.CDLL(dll_path)
     if not lib:
         raise exceptions.MutualTLSChannelError(
