@@ -29,7 +29,7 @@ def _load_offload_signing_ext():
     winmode = 0 if os.name == "nt" else None
     tls_offload_ext_path = os.getenv(environment_vars.GOOGLE_AUTH_OFFLOAD_LIBRARY_PATH)
     if tls_offload_ext_path:
-        print(tls_offload_ext_path)
+        print("loading offload library from {}".format(tls_offload_ext_path))
         tls_offload_ext = ctypes.CDLL(tls_offload_ext_path, winmode=winmode)
     else:
         root_path = os.path.join(os.path.dirname(__file__), "../../../")
@@ -159,11 +159,11 @@ def _create_win_golang_sign_callback(key_info):
         import os
 
         dll_path = os.getenv(environment_vars.GOOGLE_AUTH_SIGNER_LIBRARY_PATH)
-        lib = ctypes.CDLL(dll_path, winmode=0)
-        if not lib:
+        if not dll_path:
             raise exceptions.MutualTLSChannelError(
-                "GOOGLE_AUTH_SIGNER_LIBRARY_PATH dll is not found"
+                "GOOGLE_AUTH_SIGNER_LIBRARY_PATH is not set"
             )
+        lib = ctypes.CDLL(dll_path, winmode=0)
         lib.SignForPython.restype = ctypes.c_int
         lib.SignForPython.argtypes = [
             ctypes.c_char_p,
@@ -215,11 +215,11 @@ def _create_mac_golang_sign_callback(key_info):
         import os
 
         dll_path = os.getenv(environment_vars.GOOGLE_AUTH_SIGNER_LIBRARY_PATH)
-        lib = ctypes.CDLL(dll_path)
-        if not lib:
+        if not dll_path:
             raise exceptions.MutualTLSChannelError(
-                "GOOGLE_AUTH_SIGNER_LIBRARY_PATH is not set or doesn't exist"
+                "GOOGLE_AUTH_SIGNER_LIBRARY_PATH is not set"
             )
+        lib = ctypes.CDLL(dll_path)
         lib.SignForPython.restype = ctypes.c_int
         lib.SignForPython.argtypes = [
             ctypes.c_char_p,
@@ -429,13 +429,11 @@ def get_cert_from_store(key):
 
     # For Windows and MacOs we need to call methods from signer shared library. 
     dll_path = os.getenv(environment_vars.GOOGLE_AUTH_SIGNER_LIBRARY_PATH)
-    print(dll_path)
-    lib = ctypes.CDLL(dll_path)
-    if not lib:
+    if not dll_path:
         raise exceptions.MutualTLSChannelError(
-            "GOOGLE_AUTH_SIGNER_LIBRARY_PATH is not set or doesn't exist"
+            "GOOGLE_AUTH_SIGNER_LIBRARY_PATH is not set"
         )
-
+    lib = ctypes.CDLL(dll_path)
     if key["type"] == "windows_cert_store":
         return _get_cert_from_windows_cert_store(key["key_info"], lib)
     return _get_cert_from_macos_keychain(key["key_info"], lib)
