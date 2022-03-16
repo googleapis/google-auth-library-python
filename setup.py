@@ -24,7 +24,7 @@ DEPENDENCIES = (
     "pyasn1-modules>=0.2.1",
     # rsa==4.5 is the last version to support 2.7
     # https://github.com/sybrenstuvel/python-rsa/issues/152#issuecomment-643470233
-    'rsa<4.6; python_version < "3.6"',
+    'rsa<4.8; python_version < "3.6"',
     'rsa>=3.1.4,<5; python_version >= "3.6"',
     # install enum34 to support 2.7. enum34 only works up to python version 3.3.
     'enum34>=1.1.10; python_version < "3.4"',
