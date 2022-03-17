@@ -47,31 +47,32 @@ TOKEN_URL = "https://sts.googleapis.com/v1/token"
 SUBJECT_TOKEN_TYPE = "urn:ietf:params:oauth:token-type:jwt"
 AUDIENCE = "//iam.googleapis.com/projects/123456/locations/global/workloadIdentityPools/POOL_ID/providers/PROVIDER_ID"
 
+
 class TestCredentials(object):
-    CREDENTIAL_SOURCE_EXECUTABLE_COMMAND = "/fake/external/excutable --arg1=value1 --arg2=value2"
+    CREDENTIAL_SOURCE_EXECUTABLE_COMMAND = (
+        "/fake/external/excutable --arg1=value1 --arg2=value2"
+    )
     CREDENTIAL_SOURCE_EXECUTABLE_OUTPUT_FILE = "fake_output_file"
     CREDENTIAL_SOURCE_EXECUTABLE = {
         "command": CREDENTIAL_SOURCE_EXECUTABLE_COMMAND,
         "timeout_millis": 5000,
-        "output_file": CREDENTIAL_SOURCE_EXECUTABLE_OUTPUT_FILE
+        "output_file": CREDENTIAL_SOURCE_EXECUTABLE_OUTPUT_FILE,
     }
-    CREDENTIAL_SOURCE = {
-        "executable": CREDENTIAL_SOURCE_EXECUTABLE
-    }
+    CREDENTIAL_SOURCE = {"executable": CREDENTIAL_SOURCE_EXECUTABLE}
     EXECUTABLE_OIDC_TOKEN = "FAKE_ID_TOKEN"
     EXECUTABLE_SUCCESSFUL_OIDC_RESPONSE_ID_TOKEN = {
         "version": 1,
         "success": True,
         "token_type": "urn:ietf:params:oauth:token-type:id_token",
         "id_token": EXECUTABLE_OIDC_TOKEN,
-        "expiration_time": 9999999999
+        "expiration_time": 9999999999,
     }
     EXECUTABLE_SUCCESSFUL_OIDC_RESPONSE_JWT = {
         "version": 1,
         "success": True,
         "token_type": "urn:ietf:params:oauth:token-type:jwt",
         "id_token": EXECUTABLE_OIDC_TOKEN,
-        "expiration_time": 9999999999
+        "expiration_time": 9999999999,
     }
     EXECUTABLE_SAML_TOKEN = "FAKE_SAML_RESPONSE"
     EXECUTABLE_SUCCESSFUL_SAML_RESPONSE = {
@@ -79,13 +80,13 @@ class TestCredentials(object):
         "success": True,
         "token_type": "urn:ietf:params:oauth:token-type:saml2",
         "saml_response": EXECUTABLE_SAML_TOKEN,
-        "expiration_time": 9999999999
+        "expiration_time": 9999999999,
     }
     EXECUTABLE_FAILED_RESPONSE = {
         "version": 1,
         "success": False,
         "code": "401",
-        "message": "Permission denied. Caller not authorized"
+        "message": "Permission denied. Caller not authorized",
     }
     CREDENTIAL_URL = "http://fakeurl.com"
 
@@ -293,7 +294,7 @@ class TestCredentials(object):
             default_scopes=default_scopes,
             workforce_pool_user_project=workforce_pool_user_project,
         )
-        
+
     @mock.patch.object(pluggable.Credentials, "__init__", return_value=None)
     def test_from_info_full_options(self, mock_init):
         credentials = pluggable.Credentials.from_info(
@@ -413,7 +414,10 @@ class TestCredentials(object):
         assert excinfo.match(r"Missing credential_source")
 
     def test_constructor_invalid_options_environment_id(self):
-        credential_source = {"executable": self.CREDENTIAL_SOURCE_EXECUTABLE, "environment_id": "aws1"}
+        credential_source = {
+            "executable": self.CREDENTIAL_SOURCE_EXECUTABLE,
+            "environment_id": "aws1",
+        }
 
         with pytest.raises(ValueError) as excinfo:
             self.make_pluggable(credential_source=credential_source)
@@ -443,11 +447,12 @@ class TestCredentials(object):
 
     @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
     def test_retrieve_subject_token_oidc_id_token(self, fp):
-        fp.register(self.CREDENTIAL_SOURCE_EXECUTABLE_COMMAND.split(), stdout=json.dumps(self.EXECUTABLE_SUCCESSFUL_OIDC_RESPONSE_ID_TOKEN))
-    
-        credentials = self.make_pluggable(
-            credential_source=self.CREDENTIAL_SOURCE
+        fp.register(
+            self.CREDENTIAL_SOURCE_EXECUTABLE_COMMAND.split(),
+            stdout=json.dumps(self.EXECUTABLE_SUCCESSFUL_OIDC_RESPONSE_ID_TOKEN),
         )
+
+        credentials = self.make_pluggable(credential_source=self.CREDENTIAL_SOURCE)
 
         subject_token = credentials.retrieve_subject_token(None)
 
@@ -455,23 +460,25 @@ class TestCredentials(object):
 
     @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
     def test_retrieve_subject_token_oidc_jwt(self, fp):
-        fp.register(self.CREDENTIAL_SOURCE_EXECUTABLE_COMMAND.split(), stdout=json.dumps(self.EXECUTABLE_SUCCESSFUL_OIDC_RESPONSE_JWT))
-    
-        credentials = self.make_pluggable(
-            credential_source=self.CREDENTIAL_SOURCE
+        fp.register(
+            self.CREDENTIAL_SOURCE_EXECUTABLE_COMMAND.split(),
+            stdout=json.dumps(self.EXECUTABLE_SUCCESSFUL_OIDC_RESPONSE_JWT),
         )
+
+        credentials = self.make_pluggable(credential_source=self.CREDENTIAL_SOURCE)
 
         subject_token = credentials.retrieve_subject_token(None)
 
         assert subject_token == self.EXECUTABLE_OIDC_TOKEN
-        
+
     @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
     def test_retrieve_subject_token_saml(self, fp):
-        fp.register(self.CREDENTIAL_SOURCE_EXECUTABLE_COMMAND.split(), stdout=json.dumps(self.EXECUTABLE_SUCCESSFUL_SAML_RESPONSE))
-    
-        credentials = self.make_pluggable(
-            credential_source=self.CREDENTIAL_SOURCE
+        fp.register(
+            self.CREDENTIAL_SOURCE_EXECUTABLE_COMMAND.split(),
+            stdout=json.dumps(self.EXECUTABLE_SUCCESSFUL_SAML_RESPONSE),
         )
+
+        credentials = self.make_pluggable(credential_source=self.CREDENTIAL_SOURCE)
 
         subject_token = credentials.retrieve_subject_token(None)
 
@@ -479,11 +486,12 @@ class TestCredentials(object):
 
     @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
     def test_retrieve_subject_token_failed(self, fp):
-        fp.register(self.CREDENTIAL_SOURCE_EXECUTABLE_COMMAND.split(), stdout=json.dumps(self.EXECUTABLE_FAILED_RESPONSE))
-    
-        credentials = self.make_pluggable(
-            credential_source=self.CREDENTIAL_SOURCE
+        fp.register(
+            self.CREDENTIAL_SOURCE_EXECUTABLE_COMMAND.split(),
+            stdout=json.dumps(self.EXECUTABLE_FAILED_RESPONSE),
         )
+
+        credentials = self.make_pluggable(credential_source=self.CREDENTIAL_SOURCE)
 
         with pytest.raises(exceptions.RefreshError) as excinfo:
             subject_token = credentials.retrieve_subject_token(None)
@@ -492,11 +500,12 @@ class TestCredentials(object):
 
     @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "0"})
     def test_retrieve_subject_token_not_allowd(self, fp):
-        fp.register(self.CREDENTIAL_SOURCE_EXECUTABLE_COMMAND.split(), stdout=json.dumps(self.EXECUTABLE_SUCCESSFUL_OIDC_RESPONSE_ID_TOKEN))
-    
-        credentials = self.make_pluggable(
-            credential_source=self.CREDENTIAL_SOURCE
+        fp.register(
+            self.CREDENTIAL_SOURCE_EXECUTABLE_COMMAND.split(),
+            stdout=json.dumps(self.EXECUTABLE_SUCCESSFUL_OIDC_RESPONSE_ID_TOKEN),
         )
+
+        credentials = self.make_pluggable(credential_source=self.CREDENTIAL_SOURCE)
 
         with pytest.raises(ValueError) as excinfo:
             subject_token = credentials.retrieve_subject_token(None)
@@ -510,14 +519,15 @@ class TestCredentials(object):
             "success": True,
             "token_type": "urn:ietf:params:oauth:token-type:id_token",
             "id_token": self.EXECUTABLE_OIDC_TOKEN,
-            "expiration_time": 9999999999
+            "expiration_time": 9999999999,
         }
 
-        fp.register(self.CREDENTIAL_SOURCE_EXECUTABLE_COMMAND.split(), stdout=json.dumps(EXECUTABLE_SUCCESSFUL_OIDC_RESPONSE_VERSION_2))
-    
-        credentials = self.make_pluggable(
-            credential_source=self.CREDENTIAL_SOURCE
+        fp.register(
+            self.CREDENTIAL_SOURCE_EXECUTABLE_COMMAND.split(),
+            stdout=json.dumps(EXECUTABLE_SUCCESSFUL_OIDC_RESPONSE_VERSION_2),
         )
+
+        credentials = self.make_pluggable(credential_source=self.CREDENTIAL_SOURCE)
 
         with pytest.raises(exceptions.RefreshError) as excinfo:
             subject_token = credentials.retrieve_subject_token(None)
@@ -526,37 +536,36 @@ class TestCredentials(object):
 
     @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
     def test_retrieve_subject_token_expired_token(self, fp):
-        EXECUTABLE_SUCCESSFUL_OIDC_RESPONSE_EXPIRED= {
+        EXECUTABLE_SUCCESSFUL_OIDC_RESPONSE_EXPIRED = {
             "version": 1,
             "success": True,
             "token_type": "urn:ietf:params:oauth:token-type:id_token",
             "id_token": self.EXECUTABLE_OIDC_TOKEN,
-            "expiration_time": 0
+            "expiration_time": 0,
         }
-            
-        fp.register(self.CREDENTIAL_SOURCE_EXECUTABLE_COMMAND.split(), stdout=json.dumps(EXECUTABLE_SUCCESSFUL_OIDC_RESPONSE_EXPIRED))
-    
-        credentials = self.make_pluggable(
-            credential_source=self.CREDENTIAL_SOURCE
+
+        fp.register(
+            self.CREDENTIAL_SOURCE_EXECUTABLE_COMMAND.split(),
+            stdout=json.dumps(EXECUTABLE_SUCCESSFUL_OIDC_RESPONSE_EXPIRED),
         )
+
+        credentials = self.make_pluggable(credential_source=self.CREDENTIAL_SOURCE)
 
         with pytest.raises(exceptions.RefreshError) as excinfo:
             subject_token = credentials.retrieve_subject_token(None)
 
         assert excinfo.match(r"The token returned by the executable is expired")
-        
+
     @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
     def test_retrieve_subject_token_file_cache(self, fp):
-        with open(self.CREDENTIAL_SOURCE_EXECUTABLE_OUTPUT_FILE, 'w') as output_file:
+        with open(self.CREDENTIAL_SOURCE_EXECUTABLE_OUTPUT_FILE, "w") as output_file:
             json.dump(self.EXECUTABLE_SUCCESSFUL_OIDC_RESPONSE_ID_TOKEN, output_file)
-    
-        credentials = self.make_pluggable(
-            credential_source=self.CREDENTIAL_SOURCE
-        )
+
+        credentials = self.make_pluggable(credential_source=self.CREDENTIAL_SOURCE)
 
         subject_token = credentials.retrieve_subject_token(None)
 
         assert subject_token == self.EXECUTABLE_OIDC_TOKEN
-        
+
         if os.path.exists(self.CREDENTIAL_SOURCE_EXECUTABLE_OUTPUT_FILE):
             os.remove(self.CREDENTIAL_SOURCE_EXECUTABLE_OUTPUT_FILE)

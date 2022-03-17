@@ -50,6 +50,7 @@ from google.auth import external_account
 # External account JSON type identifier.
 EXECUTABLE_SUPPORTED_MAX_VERSION = 1
 
+
 class Credentials(external_account.Credentials):
     """External account credentials sourced from executables."""
 
@@ -136,9 +137,15 @@ class Credentials(external_account.Credentials):
                 raise ValueError(
                     "Missing credential_source. An 'executable' must be provided."
                 )
-            self._credential_source_executable_command = self._credential_source_executable.get("command")
-            self._credential_source_executable_timeout_millis = self._credential_source_executable.get("timeout_millis")
-            self._credential_source_executable_output_file = self._credential_source_executable.get("output_file")
+            self._credential_source_executable_command = self._credential_source_executable.get(
+                "command"
+            )
+            self._credential_source_executable_timeout_millis = self._credential_source_executable.get(
+                "timeout_millis"
+            )
+            self._credential_source_executable_output_file = self._credential_source_executable.get(
+                "output_file"
+            )
 
             # environment_id is only supported in AWS or dedicated future external
             # account credentials.
@@ -148,9 +155,7 @@ class Credentials(external_account.Credentials):
                 )
 
         if not self._credential_source_executable_command:
-            raise ValueError(
-                "Missing command. Executable command must be provided."
-            )
+            raise ValueError("Missing command. Executable command must be provided.")
         if not self._credential_source_executable_timeout_millis:
             raise ValueError(
                 "Missing timeout_millis. Executable timeout millis must be provided."
@@ -158,16 +163,20 @@ class Credentials(external_account.Credentials):
 
     @_helpers.copy_docstring(external_account.Credentials)
     def retrieve_subject_token(self, request):
-        env_allow_executables = os.environ.get('GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES')
-        if env_allow_executables != '1':
+        env_allow_executables = os.environ.get(
+            "GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES"
+        )
+        if env_allow_executables != "1":
             raise ValueError(
                 "Executables need to be explicitly allowed (set GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES to '1') to run."
             )
-        
+
         # Check output file
         if self._credential_source_executable_output_file is not None:
             try:
-                with open(self._credential_source_executable_output_file) as output_file:
+                with open(
+                    self._credential_source_executable_output_file
+                ) as output_file:
                     response = json.load(output_file)
                     subject_token = self._parse_subject_token(response)
             except:
@@ -181,15 +190,30 @@ class Credentials(external_account.Credentials):
         original_subject_token_type = os.getenv("GOOGLE_EXTERNAL_ACCOUNT_TOKEN_TYPE")
         os.environ["GOOGLE_EXTERNAL_ACCOUNT_TOKEN_TYPE"] = self._subject_token_type
         original_interactive = os.getenv("GOOGLE_EXTERNAL_ACCOUNT_INTERACTIVE")
-        os.environ["GOOGLE_EXTERNAL_ACCOUNT_INTERACTIVE"] = "0" # Always set to 0 until interactive mode is implemented.
-        original_service_account_impersonation_url = os.getenv("GOOGLE_EXTERNAL_ACCOUNT_IMPERSONATED_EMAIL")
+        os.environ[
+            "GOOGLE_EXTERNAL_ACCOUNT_INTERACTIVE"
+        ] = "0"  # Always set to 0 until interactive mode is implemented.
+        original_service_account_impersonation_url = os.getenv(
+            "GOOGLE_EXTERNAL_ACCOUNT_IMPERSONATED_EMAIL"
+        )
         if self._service_account_impersonation_url is not None:
-            os.environ["GOOGLE_EXTERNAL_ACCOUNT_IMPERSONATED_EMAIL"] = self._service_account_impersonation_url
-        original_credential_source_executable_output_file = os.getenv("GOOGLE_EXTERNAL_ACCOUNT_OUTPUT_FILE")
+            os.environ[
+                "GOOGLE_EXTERNAL_ACCOUNT_IMPERSONATED_EMAIL"
+            ] = self._service_account_impersonation_url
+        original_credential_source_executable_output_file = os.getenv(
+            "GOOGLE_EXTERNAL_ACCOUNT_OUTPUT_FILE"
+        )
         if self._credential_source_executable_output_file is not None:
-            os.environ["GOOGLE_EXTERNAL_ACCOUNT_OUTPUT_FILE"] = self._credential_source_executable_output_file
-        
-        result = subprocess.run(self._credential_source_executable_command.split(), timeout=self._credential_source_executable_timeout_millis/1000, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+            os.environ[
+                "GOOGLE_EXTERNAL_ACCOUNT_OUTPUT_FILE"
+            ] = self._credential_source_executable_output_file
+
+        result = subprocess.run(
+            self._credential_source_executable_command.split(),
+            timeout=self._credential_source_executable_timeout_millis / 1000,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+        )
 
         # Reset env vars
         if original_audience is not None:
@@ -197,7 +221,9 @@ class Credentials(external_account.Credentials):
         else:
             del os.environ["GOOGLE_EXTERNAL_ACCOUNT_AUDIENCE"]
         if original_subject_token_type is not None:
-            os.environ["GOOGLE_EXTERNAL_ACCOUNT_TOKEN_TYPE"] = self.original_subject_token_type
+            os.environ[
+                "GOOGLE_EXTERNAL_ACCOUNT_TOKEN_TYPE"
+            ] = self.original_subject_token_type
         else:
             del os.environ["GOOGLE_EXTERNAL_ACCOUNT_TOKEN_TYPE"]
         if original_interactive is not None:
@@ -205,23 +231,29 @@ class Credentials(external_account.Credentials):
         else:
             del os.environ["GOOGLE_EXTERNAL_ACCOUNT_INTERACTIVE"]
         if original_service_account_impersonation_url is not None:
-            os.environ["GOOGLE_EXTERNAL_ACCOUNT_IMPERSONATED_EMAIL"] = original_service_account_impersonation_url
+            os.environ[
+                "GOOGLE_EXTERNAL_ACCOUNT_IMPERSONATED_EMAIL"
+            ] = original_service_account_impersonation_url
         elif os.getenv("GOOGLE_EXTERNAL_ACCOUNT_IMPERSONATED_EMAIL") is not None:
             del os.environ["GOOGLE_EXTERNAL_ACCOUNT_IMPERSONATED_EMAIL"]
         if original_credential_source_executable_output_file is not None:
-            os.environ["GOOGLE_EXTERNAL_ACCOUNT_OUTPUT_FILE"] = original_credential_source_executable_output_file
+            os.environ[
+                "GOOGLE_EXTERNAL_ACCOUNT_OUTPUT_FILE"
+            ] = original_credential_source_executable_output_file
         elif os.getenv("GOOGLE_EXTERNAL_ACCOUNT_OUTPUT_FILE") is not None:
             del os.environ["GOOGLE_EXTERNAL_ACCOUNT_OUTPUT_FILE"]
-        
+
         if result.returncode != 0:
             raise exceptions.RefreshError(
-                "Executable exited with non-zero return code {}. Error: {}".format(result.returncode, result.stdout)
+                "Executable exited with non-zero return code {}. Error: {}".format(
+                    result.returncode, result.stdout
+                )
             )
         else:
-            data = result.stdout.decode('utf-8')
+            data = result.stdout.decode("utf-8")
             response = json.loads(data)
             return self._parse_subject_token(response)
-            
+
     @classmethod
     def from_info(cls, info, **kwargs):
         """Creates a Pluggable Credentials instance from parsed external account info.
@@ -270,23 +302,26 @@ class Credentials(external_account.Credentials):
             return cls.from_info(data, **kwargs)
 
     def _parse_subject_token(self, response):
-        if not response['success']:
-                raise exceptions.RefreshError(
-                    "Executable returned unsuccessful response: {}.".format(response)
-                )
-        elif response['version'] > EXECUTABLE_SUPPORTED_MAX_VERSION:
+        if not response["success"]:
             raise exceptions.RefreshError(
-                "Executable returned unsupported version {}.".format(response['version'])
+                "Executable returned unsuccessful response: {}.".format(response)
             )
-        elif response['expiration_time'] < time.time():
+        elif response["version"] > EXECUTABLE_SUPPORTED_MAX_VERSION:
+            raise exceptions.RefreshError(
+                "Executable returned unsupported version {}.".format(
+                    response["version"]
+                )
+            )
+        elif response["expiration_time"] < time.time():
             raise exceptions.RefreshError(
                 "The token returned by the executable is expired."
             )
-        elif response["token_type"] == "urn:ietf:params:oauth:token-type:jwt" or response["token_type"] == "urn:ietf:params:oauth:token-type:id_token": # OIDC
+        elif (
+            response["token_type"] == "urn:ietf:params:oauth:token-type:jwt"
+            or response["token_type"] == "urn:ietf:params:oauth:token-type:id_token"
+        ):  # OIDC
             return response["id_token"]
-        elif response["token_type"] == "urn:ietf:params:oauth:token-type:saml2": # SAML
+        elif response["token_type"] == "urn:ietf:params:oauth:token-type:saml2":  # SAML
             return response["saml_response"]
         else:
-            raise exceptions.RefreshError(
-                "Executable returned unsupported token type."
-            ) 
+            raise exceptions.RefreshError("Executable returned unsupported token type.")
