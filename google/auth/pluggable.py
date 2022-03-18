@@ -13,23 +13,22 @@
 # limitations under the License.
 
 """Pluggable Credentials.
-
-This module provides credentials to access Google Cloud resources from on-prem
-or non-Google Cloud platforms which support external credentials (e.g. OIDC ID
-tokens) retrieved from local file locations or local servers. This includes
-Microsoft Azure and OIDC identity providers (e.g. K8s workloads registered with
-Hub with Hub workload identity enabled).
-
-These credentials are recommended over the use of service account credentials
-in on-prem/non-Google Cloud platforms as they do not involve the management of
-long-live service account private keys.
-
 Pluggable Credentials are initialized using external_account arguments which
 are typically loaded from third-party executables. Unlike other
 credentials that can be initialized with a list of explicit arguments, secrets
 or credentials, external account clients use the environment and hints/guidelines
 provided by the external_account JSON file to retrieve credentials and exchange
-them for Google access tokens.
+them for Google access tokens. 
+
+Example credential_source for pluggable credential::
+
+    {
+        "executable": {
+            "command": "/path/to/get/credentials.sh --arg1=value1 --arg2=value2",
+            "timeout_millis": 5000,
+            "output_file": "/path/to/generated/cached/credentials"
+        }
+    }
 """
 
 try:
@@ -47,9 +46,8 @@ from google.auth import _helpers
 from google.auth import exceptions
 from google.auth import external_account
 
-# External account JSON type identifier.
+# The max supported executable spec version.
 EXECUTABLE_SUPPORTED_MAX_VERSION = 1
-
 
 class Credentials(external_account.Credentials):
     """External account credentials sourced from executables."""
@@ -78,7 +76,7 @@ class Credentials(external_account.Credentials):
                 provide instructions on how to retrieve external credential to be
                 exchanged for Google access tokens.
 
-                Example credential_source for pluggable credential::
+                Example credential_source for pluggable credential:
 
                     {
                         "executable": {
@@ -126,40 +124,36 @@ class Credentials(external_account.Credentials):
             default_scopes=default_scopes,
             workforce_pool_user_project=workforce_pool_user_project,
         )
+        if workforce_pool_user_project is not None:
+            raise ValueError(
+                "Pluggable auth doesn't support Workforce poolyet."
+            )
         if not isinstance(credential_source, Mapping):
             self._credential_source_executable = None
             raise ValueError(
                 "Missing credential_source. The credential_source is not a dict."
             )
-        else:
-            self._credential_source_executable = credential_source.get("executable")
-            if not self._credential_source_executable:
-                raise ValueError(
-                    "Missing credential_source. An 'executable' must be provided."
-                )
-            self._credential_source_executable_command = self._credential_source_executable.get(
-                "command"
+        self._credential_source_executable = credential_source.get("executable")
+        if not self._credential_source_executable:
+            raise ValueError(
+                "Missing credential_source. An 'executable' must be provided."
             )
-            self._credential_source_executable_timeout_millis = self._credential_source_executable.get(
-                "timeout_millis"
-            )
-            self._credential_source_executable_output_file = self._credential_source_executable.get(
-                "output_file"
-            )
-
-            # environment_id is only supported in AWS or dedicated future external
-            # account credentials.
-            if "environment_id" in credential_source:
-                raise ValueError(
-                    "Invalid Pluggable credential_source field 'environment_id'"
-                )
+        self._credential_source_executable_command = self._credential_source_executable.get(
+            "command"
+        )
+        self._credential_source_executable_timeout_millis = self._credential_source_executable.get(
+            "timeout_millis"
+        )
+        self._credential_source_executable_output_file = self._credential_source_executable.get(
+            "output_file"
+        )
 
         if not self._credential_source_executable_command:
             raise ValueError("Missing command. Executable command must be provided.")
         if not self._credential_source_executable_timeout_millis:
-            raise ValueError(
-                "Missing timeout_millis. Executable timeout millis must be provided."
-            )
+            self._credential_source_executable_timeout_millis = 30 * 1000
+        elif self._credential_source_executable_timeout_millis < 0 or self._credential_source_executable_timeout_millis > 120:
+            raise ValueError("Timeout must be between 0 and 120 seconds.")
 
     @_helpers.copy_docstring(external_account.Credentials)
     def retrieve_subject_token(self, request):
@@ -171,20 +165,21 @@ class Credentials(external_account.Credentials):
                 "Executables need to be explicitly allowed (set GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES to '1') to run."
             )
 
-        # Check output file
+        # Check output file.
         if self._credential_source_executable_output_file is not None:
             try:
                 with open(
                     self._credential_source_executable_output_file
                 ) as output_file:
                     response = json.load(output_file)
+                    # If the cached response is expired, _parse_subject_token will raise an error which will be ignored and we will call the executable again.
                     subject_token = self._parse_subject_token(response)
             except:
                 pass
             else:
                 return subject_token
 
-        # Inject env vars
+        # Inject env vars.
         original_audience = os.getenv("GOOGLE_EXTERNAL_ACCOUNT_AUDIENCE")
         os.environ["GOOGLE_EXTERNAL_ACCOUNT_AUDIENCE"] = self._audience
         original_subject_token_type = os.getenv("GOOGLE_EXTERNAL_ACCOUNT_TOKEN_TYPE")
@@ -199,7 +194,7 @@ class Credentials(external_account.Credentials):
         if self._service_account_impersonation_url is not None:
             os.environ[
                 "GOOGLE_EXTERNAL_ACCOUNT_IMPERSONATED_EMAIL"
-            ] = self._service_account_impersonation_url
+            ] = self.service_account_email()
         original_credential_source_executable_output_file = os.getenv(
             "GOOGLE_EXTERNAL_ACCOUNT_OUTPUT_FILE"
         )
@@ -215,7 +210,7 @@ class Credentials(external_account.Credentials):
             stderr=subprocess.STDOUT,
         )
 
-        # Reset env vars
+        # Reset env vars.
         if original_audience is not None:
             os.environ["GOOGLE_EXTERNAL_ACCOUNT_AUDIENCE"] = original_audience
         else:
@@ -302,21 +297,23 @@ class Credentials(external_account.Credentials):
             return cls.from_info(data, **kwargs)
 
     def _parse_subject_token(self, response):
-        if not response["success"]:
-            raise exceptions.RefreshError(
-                "Executable returned unsuccessful response: {}.".format(response)
-            )
-        elif response["version"] > EXECUTABLE_SUPPORTED_MAX_VERSION:
+        if response["version"] > EXECUTABLE_SUPPORTED_MAX_VERSION:
             raise exceptions.RefreshError(
                 "Executable returned unsupported version {}.".format(
                     response["version"]
                 )
             )
-        elif response["expiration_time"] < time.time():
+        if not response["success"] or not response["success"]:
+            if not response["code"] or not response["message"]:
+                raise ValueError("Code and message are required in the response.")
+            raise exceptions.RefreshError(
+                "Executable returned unsuccessful response: code: {}, message: {}.".format(response["code"], response["message"])
+            )
+        if response["expiration_time"] < time.time():
             raise exceptions.RefreshError(
                 "The token returned by the executable is expired."
             )
-        elif (
+        if (
             response["token_type"] == "urn:ietf:params:oauth:token-type:jwt"
             or response["token_type"] == "urn:ietf:params:oauth:token-type:id_token"
         ):  # OIDC
