@@ -49,6 +49,7 @@ from google.auth import external_account
 # The max supported executable spec version.
 EXECUTABLE_SUPPORTED_MAX_VERSION = 1
 
+
 class Credentials(external_account.Credentials):
     """External account credentials sourced from executables."""
 
@@ -125,9 +126,7 @@ class Credentials(external_account.Credentials):
             workforce_pool_user_project=workforce_pool_user_project,
         )
         if workforce_pool_user_project is not None:
-            raise ValueError(
-                "Pluggable auth doesn't support Workforce poolyet."
-            )
+            raise ValueError("Pluggable auth doesn't support Workforce poolyet.")
         if not isinstance(credential_source, Mapping):
             self._credential_source_executable = None
             raise ValueError(
@@ -152,7 +151,10 @@ class Credentials(external_account.Credentials):
             raise ValueError("Missing command. Executable command must be provided.")
         if not self._credential_source_executable_timeout_millis:
             self._credential_source_executable_timeout_millis = 30 * 1000
-        elif self._credential_source_executable_timeout_millis < 0 or self._credential_source_executable_timeout_millis > 120:
+        elif (
+            self._credential_source_executable_timeout_millis < 0
+            or self._credential_source_executable_timeout_millis > 120
+        ):
             raise ValueError("Timeout must be between 0 and 120 seconds.")
 
     @_helpers.copy_docstring(external_account.Credentials)
@@ -307,7 +309,9 @@ class Credentials(external_account.Credentials):
             if not response["code"] or not response["message"]:
                 raise ValueError("Code and message are required in the response.")
             raise exceptions.RefreshError(
-                "Executable returned unsuccessful response: code: {}, message: {}.".format(response["code"], response["message"])
+                "Executable returned unsuccessful response: code: {}, message: {}.".format(
+                    response["code"], response["message"]
+                )
             )
         if response["expiration_time"] < time.time():
             raise exceptions.RefreshError(
