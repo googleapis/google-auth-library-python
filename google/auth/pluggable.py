@@ -126,7 +126,7 @@ class Credentials(external_account.Credentials):
             workforce_pool_user_project=workforce_pool_user_project,
         )
         if workforce_pool_user_project is not None:
-            raise ValueError("Pluggable auth doesn't support Workforce poolyet.")
+            raise ValueError("Workforce Pools are not yet supported with Pluggable Auth.")
         if not isinstance(credential_source, Mapping):
             self._credential_source_executable = None
             raise ValueError(
@@ -152,7 +152,7 @@ class Credentials(external_account.Credentials):
         if not self._credential_source_executable_timeout_millis:
             self._credential_source_executable_timeout_millis = 30 * 1000
         elif (
-            self._credential_source_executable_timeout_millis < 0
+            self._credential_source_executable_timeout_millis < 5
             or self._credential_source_executable_timeout_millis > 120
         ):
             raise ValueError("Timeout must be between 0 and 120 seconds.")
@@ -177,7 +177,7 @@ class Credentials(external_account.Credentials):
                     # If the cached response is expired, _parse_subject_token will raise an error which will be ignored and we will call the executable again.
                     subject_token = self._parse_subject_token(response)
             except:
-                pass
+                raise exceptions.RefreshError("Failed to load token from the output file of the executable. Please ensure your configuration is correct, remove the output file then try again.")
             else:
                 return subject_token
 
@@ -305,7 +305,7 @@ class Credentials(external_account.Credentials):
                     response["version"]
                 )
             )
-        if not response["success"] or not response["success"]:
+        if not response["success"]:
             if not response["code"] or not response["message"]:
                 raise ValueError("Code and message are required in the response.")
             raise exceptions.RefreshError(
