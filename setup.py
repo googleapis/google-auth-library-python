@@ -38,7 +38,7 @@ extras = {
     ],
     "pyopenssl": "pyopenssl>=20.0.0",
     "reauth": "pyu2f>=0.1.5",
-    "pytest_subprocess>=1.4.1"
+    "pytest_subprocess": "pytest_subprocess>=1.4.1",
 }
 
 with io.open("README.rst", "r") as fh:
