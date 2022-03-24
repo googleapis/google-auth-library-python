@@ -325,15 +325,6 @@ def _get_external_account_credentials(
         credentials = aws.Credentials.from_info(
             info, scopes=scopes, default_scopes=default_scopes
         )
-    elif (
-        info.get("credential_source") is not None
-        and info.get("credential_source").get("executable") is not None
-    ):
-        from google.auth import pluggable
-
-        credentials = pluggable.Credentials.from_info(
-            info, scopes=scopes, default_scopes=default_scopes
-        )
     else:
         try:
             # Check if configuration corresponds to an Identity Pool credentials.
