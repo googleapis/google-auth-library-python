@@ -153,7 +153,10 @@ class Credentials(external_account.Credentials):
             raise ValueError("Missing command. Executable command must be provided.")
         if not self._credential_source_executable_timeout_millis:
             self._credential_source_executable_timeout_millis = 30 * 1000
-        elif self._credential_source_executable_timeout_millis < 5 * 1000 or self._credential_source_executable_timeout_millis > 120 * 1000:
+        elif (
+            self._credential_source_executable_timeout_millis < 5 * 1000
+            or self._credential_source_executable_timeout_millis > 120 * 1000
+        ):
             raise ValueError("Timeout must be between 5 and 120 seconds.")
 
     @_helpers.copy_docstring(external_account.Credentials)
@@ -198,7 +201,7 @@ class Credentials(external_account.Credentials):
             timeout=self._credential_source_executable_timeout_millis / 1000,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
-            env = env,
+            env=env,
         )
 
         if result.returncode != 0:
