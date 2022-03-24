@@ -55,7 +55,7 @@ class TestCredentials(object):
     CREDENTIAL_SOURCE_EXECUTABLE_OUTPUT_FILE = "fake_output_file"
     CREDENTIAL_SOURCE_EXECUTABLE = {
         "command": CREDENTIAL_SOURCE_EXECUTABLE_COMMAND,
-        "timeout_millis": 5000,
+        "timeout_millis": 30000,
         "output_file": CREDENTIAL_SOURCE_EXECUTABLE_OUTPUT_FILE,
     }
     CREDENTIAL_SOURCE = {"executable": CREDENTIAL_SOURCE_EXECUTABLE}
@@ -412,19 +412,6 @@ class TestCredentials(object):
             self.make_pluggable(credential_source=credential_source)
 
         assert excinfo.match(r"Missing credential_source")
-
-    def test_constructor_invalid_options_environment_id(self):
-        credential_source = {
-            "executable": self.CREDENTIAL_SOURCE_EXECUTABLE,
-            "environment_id": "aws1",
-        }
-
-        with pytest.raises(ValueError) as excinfo:
-            self.make_pluggable(credential_source=credential_source)
-
-        assert excinfo.match(
-            r"Invalid Pluggable credential_source field 'environment_id'"
-        )
 
     def test_constructor_invalid_credential_source(self):
         with pytest.raises(ValueError) as excinfo:
