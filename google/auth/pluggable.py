@@ -176,9 +176,7 @@ class Credentials(external_account.Credentials):
                     # If the cached response is expired, _parse_subject_token will raise an error which will be ignored and we will call the executable again.
                     subject_token = self._parse_subject_token(response)
             except:
-                raise exceptions.RefreshError(
-                    "Failed to load token from the output file of the executable. Please ensure your configuration is correct, remove the output file then try again."
-                )
+                pass
             else:
                 return subject_token
 
