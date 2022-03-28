@@ -488,3 +488,34 @@ class UserAccessTokenCredentials(credentials.CredentialsWithQuotaProject):
     def before_request(self, request, method, url, headers):
         self.refresh(request)
         self.apply(headers)
+
+
+class FixedAccessTokenCredentials(credentials.CredentialsWithQuotaProject):
+    """Credentials with a fixed access token. The access token is treated
+    as never expired so users are responsible for the validity of the
+    access token.
+
+    Args:
+        access_token (str): The access token to be used.
+        quota_project_id (Optional[str]): The project ID used for quota
+            and billing.
+    """
+
+    def __init__(self, access_token, quota_project_id=None):
+        super(FixedAccessTokenCredentials, self).__init__()
+        self.token = access_token
+        self._quota_project_id = quota_project_id
+
+    @_helpers.copy_docstring(credentials.CredentialsWithQuotaProject)
+    def with_quota_project(self, quota_project_id):
+        return self.__class__(self.token, quota_project_id=quota_project_id)
+
+    def refresh(self, request):
+        """Refreshes the access token. This method does nothing since the
+        access token is treated as never expired.
+
+        Args:
+            request (google.auth.transport.Request): This argument is required
+                by the base class interface but not used in this implementation.
+        """
+        pass

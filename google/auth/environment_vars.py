@@ -30,8 +30,19 @@ situations (such as Google App Engine).
 """
 
 CREDENTIALS = "GOOGLE_APPLICATION_CREDENTIALS"
-"""Environment variable defining the location of Google application default
-credentials."""
+"""Environment variable defining the location or content of Google application default
+credentials. The format of the value is controlled by GOOGLE_ADC_FORMAT environment variable.
+The default format is "file_path", meaning the value is a file path. If the format is
+"token", then the value is an OAuth2 token string. If the format is "base64_json", then
+the value is base64 encoded json string. If the format is "api_key", then the value is
+an API key string. All other formats are invalid."""
+
+ADC_FORMAT = "GOOGLE_ADC_FORMAT"
+"""Environment variable defining the format of the GOOGLE_APPLICATION_CREDENTIALS value.
+The default format is "file_path", meaning the value is a file path. If the format is
+"token", then the value is an OAuth2 token string. If the format is "base64_json", then
+the value is base64 encoded json string. If the format is "api_key", then the value is
+an API key string. All other formats are invalid."""
 
 # The environment variable name which can replace ~/.config if set.
 CLOUD_SDK_CONFIG_DIR = "CLOUDSDK_CONFIG"

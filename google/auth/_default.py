@@ -17,6 +17,8 @@
 Implements application default credentials and project ID detection.
 """
 
+import base64
+import binascii
 import io
 import json
 import logging
@@ -132,37 +134,37 @@ def load_credentials_from_file(
 
 
 def _load_credentials_from_info(
-    filename, info, scopes, default_scopes, quota_project_id, request
+    credential_source, info, scopes, default_scopes, quota_project_id, request
 ):
     credential_type = info.get("type")
 
     if credential_type == _AUTHORIZED_USER_TYPE:
         credentials, project_id = _get_authorized_user_credentials(
-            filename, info, scopes
+            credential_source, info, scopes
         )
 
     elif credential_type == _SERVICE_ACCOUNT_TYPE:
         credentials, project_id = _get_service_account_credentials(
-            filename, info, scopes, default_scopes
+            credential_source, info, scopes, default_scopes
         )
 
     elif credential_type == _EXTERNAL_ACCOUNT_TYPE:
         credentials, project_id = _get_external_account_credentials(
             info,
-            filename,
+            credential_source,
             scopes=scopes,
             default_scopes=default_scopes,
             request=request,
         )
     elif credential_type == _IMPERSONATED_SERVICE_ACCOUNT_TYPE:
         credentials, project_id = _get_impersonated_service_account_credentials(
-            filename, info, scopes
+            credential_source, info, scopes
         )
     else:
         raise exceptions.DefaultCredentialsError(
-            "The file {file} does not have a valid type. "
+            "The credential source {source} does not have a valid type. "
             "Type is {type}, expected one of {valid_types}.".format(
-                file=filename, type=credential_type, valid_types=_VALID_TYPES
+                source=credential_source, type=credential_type, valid_types=_VALID_TYPES
             )
         )
     credentials = _apply_quota_project_id(credentials, quota_project_id)
@@ -192,29 +194,27 @@ def _get_gcloud_sdk_credentials(quota_project_id=None):
     return credentials, project_id
 
 
-def _get_explicit_environ_credentials(quota_project_id=None):
-    """Gets credentials from the GOOGLE_APPLICATION_CREDENTIALS environment
-    variable."""
+def _get_from_credentials_file_path(file_path, quota_project_id=None):
+    """Gets credentials from the given credentials file path."""
     from google.auth import _cloud_sdk
 
     cloud_sdk_adc_path = _cloud_sdk.get_application_default_credentials_path()
-    explicit_file = os.environ.get(environment_vars.CREDENTIALS)
 
     _LOGGER.debug(
-        "Checking %s for explicit credentials as part of auth process...", explicit_file
+        "Checking %s for explicit credentials as part of auth process...", file_path
     )
 
-    if explicit_file is not None and explicit_file == cloud_sdk_adc_path:
+    if file_path is not None and file_path == cloud_sdk_adc_path:
         # Cloud sdk flow calls gcloud to fetch project id, so if the explicit
         # file path is cloud sdk credentials path, then we should fall back
         # to cloud sdk flow, otherwise project id cannot be obtained.
         _LOGGER.debug(
             "Explicit credentials path %s is the same as Cloud SDK credentials path, fall back to Cloud SDK credentials flow...",
-            explicit_file,
+            file_path,
         )
         return _get_gcloud_sdk_credentials(quota_project_id=quota_project_id)
 
-    if explicit_file is not None:
+    if file_path is not None:
         credentials, project_id = load_credentials_from_file(
             os.environ[environment_vars.CREDENTIALS], quota_project_id=quota_project_id
         )
@@ -223,6 +223,44 @@ def _get_explicit_environ_credentials(quota_project_id=None):
 
     else:
         return None, None
+
+
+def get_api_key_credentials(api_key):
+    """Return credentials with the given API key."""
+    from google.auth import api_key
+
+    return api_key.Credentials(api_key)
+
+
+def _get_explicit_environ_credentials(quota_project_id=None):
+    """Gets credentials from the GOOGLE_APPLICATION_CREDENTIALS environment
+    variable."""
+    adc_value = os.environ.get(environment_vars.CREDENTIALS)
+    adc_format = os.environ.get(environment_vars.ADC_FORMAT, "file_path")
+    if adc_format not in ["file_path", "token", "base64_json", "api_key"]:
+        raise exceptions.DefaultCredentialsError("{} is not a supported GOOGLE_ADC_FORMAT value".format(adc_format))
+
+    if adc_format == "api_key":
+        from google.auth import api_key
+
+        return api_key.Credentials(adc_value), quota_project_id
+    elif adc_format == "token":
+        from google.oauth2 import fixed_token_credentials
+
+        return fixed_token_credentials.credentials(adc_value), quota_project_id
+    elif adc_format == "base64_json":
+        try:
+            json_str = base64.b64decode(adc_value, validate=True).decode("utf8")
+            json_content = json.loads(json_str)
+        except (binascii.Error, json.JSONDecodeError) as caught_exc:
+            new_exc = exceptions.DefaultCredentialsError(
+                "GOOGLE_APPLICATION_CREDENTIALS is not valid 'base64_json' format.",
+                caught_exc,
+            )
+            six.raise_from(new_exc, caught_exc)
+        return _load_credentials_from_info("JSON", json_content, quota_project_id=quota_project_id)
+
+    return _get_from_credentials_file_path(adc_value)
 
 
 def _get_gae_credentials():
@@ -287,7 +325,7 @@ def _get_gce_credentials(request=None):
 
 
 def _get_external_account_credentials(
-    info, filename, scopes=None, default_scopes=None, request=None
+    info, credential_source, scopes=None, default_scopes=None, request=None
 ):
     """Loads external account Credentials from the parsed external account info.
 
@@ -296,7 +334,7 @@ def _get_external_account_credentials(
 
     Args:
         info (Mapping[str, str]): The external account info in Google format.
-        filename (str): The full path to the credentials file.
+        credential_source (str): The source of the credentials file.
         scopes (Optional[Sequence[str]]): The list of scopes for the credentials. If
             specified, the credentials will automatically be scoped if
             necessary.
@@ -337,7 +375,7 @@ def _get_external_account_credentials(
             # If the configuration is invalid or does not correspond to any
             # supported external_account credentials, raise an error.
             raise exceptions.DefaultCredentialsError(
-                "Failed to load external account credentials from {}".format(filename)
+                "Failed to load external account credentials from {}".format(credential_source)
             )
     if request is None:
         request = google.auth.transport.requests.Request()
@@ -345,7 +383,7 @@ def _get_external_account_credentials(
     return credentials, credentials.get_project_id(request=request)
 
 
-def _get_authorized_user_credentials(filename, info, scopes=None):
+def _get_authorized_user_credentials(credential_source, info, scopes=None):
     from google.oauth2 import credentials
 
     try:
@@ -353,13 +391,13 @@ def _get_authorized_user_credentials(filename, info, scopes=None):
             info, scopes=scopes
         )
     except ValueError as caught_exc:
-        msg = "Failed to load authorized user credentials from {}".format(filename)
+        msg = "Failed to load authorized user credentials from {}".format(credential_source)
         new_exc = exceptions.DefaultCredentialsError(msg, caught_exc)
         six.raise_from(new_exc, caught_exc)
     return credentials, None
 
 
-def _get_service_account_credentials(filename, info, scopes=None, default_scopes=None):
+def _get_service_account_credentials(credential_source, info, scopes=None, default_scopes=None):
     from google.oauth2 import service_account
 
     try:
@@ -367,13 +405,13 @@ def _get_service_account_credentials(filename, info, scopes=None, default_scopes
             info, scopes=scopes, default_scopes=default_scopes
         )
     except ValueError as caught_exc:
-        msg = "Failed to load service account credentials from {}".format(filename)
+        msg = "Failed to load service account credentials from {}".format(credential_source)
         new_exc = exceptions.DefaultCredentialsError(msg, caught_exc)
         six.raise_from(new_exc, caught_exc)
     return credentials, info.get("project_id")
 
 
-def _get_impersonated_service_account_credentials(filename, info, scopes):
+def _get_impersonated_service_account_credentials(credential_source, info, scopes):
     from google.auth import impersonated_credentials
 
     try:
@@ -381,11 +419,11 @@ def _get_impersonated_service_account_credentials(filename, info, scopes):
         source_credentials_type = source_credentials_info.get("type")
         if source_credentials_type == _AUTHORIZED_USER_TYPE:
             source_credentials, _ = _get_authorized_user_credentials(
-                filename, source_credentials_info
+                credential_source, source_credentials_info
             )
         elif source_credentials_type == _SERVICE_ACCOUNT_TYPE:
             source_credentials, _ = _get_service_account_credentials(
-                filename, source_credentials_info
+                credential_source, source_credentials_info
             )
         else:
             raise ValueError(
@@ -412,7 +450,7 @@ def _get_impersonated_service_account_credentials(filename, info, scopes):
         )
     except ValueError as caught_exc:
         msg = "Failed to load impersonated service account credentials from {}".format(
-            filename
+            credential_source
         )
         new_exc = exceptions.DefaultCredentialsError(msg, caught_exc)
         six.raise_from(new_exc, caught_exc)
@@ -440,20 +478,33 @@ def default(scopes=None, request=None, quota_project_id=None, default_scopes=Non
     This function acquires credentials from the environment in the following
     order:
 
-    1. If the environment variable ``GOOGLE_APPLICATION_CREDENTIALS`` is set
-       to the path of a valid service account JSON private key file, then it is
+    1. If the environment variable ``GOOGLE_APPLICATION_CREDENTIALS`` is set,
+       its value will be used to create credentials. The format of the value
+       depends on the ``GOOGLE_ADC_FORMAT`` environment variable.
+       
+       - If the format is not set or "file_path", then the value is a file path.
+       If the path is a valid service account JSON private key file, then it is
        loaded and returned. The project ID returned is the project ID defined
        in the service account file if available (some older files do not
        contain project ID information).
-
-       If the environment variable is set to the path of a valid external
-       account JSON configuration file (workload identity federation), then the
+       If the path is a valid external account JSON configuration file
+       (workload identity federation), then the
        configuration file is used to determine and retrieve the external
        credentials from the current environment (AWS, Azure, etc).
        These will then be exchanged for Google access tokens via the Google STS
-       endpoint.
-       The project ID returned in this case is the one corresponding to the
+       endpoint. The project ID returned in this case is the one corresponding to the
        underlying workload identity pool resource if determinable.
+
+       - If the format is "api_key", then the value is an API key string. An
+       API key credential and the quota project id will be returned.
+
+       - If the format is "token", then the value is an OAuth2 token string. A
+       fixed token credential and the quota project id will be returned.
+
+       - If the format is "base64_json", then the value is a base64 encoded JSON
+       string. "base64_json" is an alternative way to provide the JSON content
+       besides "file_path". The behavior and supported scenarios are the same as
+       the "file_path" format. 
     2. If the `Google Cloud SDK`_ is installed and has application default
        credentials set they are loaded and returned.
 
