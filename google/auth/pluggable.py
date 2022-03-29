@@ -150,7 +150,7 @@ class Credentials(external_account.Credentials):
         )
 
         if not self._credential_source_executable_command:
-            raise ValueError("Missing command. Executable command must be provided.")
+            raise ValueError("Missing command field. Executable command must be provided.")
         if not self._credential_source_executable_timeout_millis:
             self._credential_source_executable_timeout_millis = 30 * 1000
         elif (
@@ -184,18 +184,20 @@ class Credentials(external_account.Credentials):
                 return subject_token
 
         # Inject env vars.
+        env = os.environ.copy()
+        env["GOOGLE_EXTERNAL_ACCOUNT_AUDIENCE"] = self._audience
+        env["GOOGLE_EXTERNAL_ACCOUNT_TOKEN_TYPE"] = self._subject_token_type
+        env[
+            "GOOGLE_EXTERNAL_ACCOUNT_INTERACTIVE"
+        ] = "0"  # Always set to 0 until interactive mode is implemented.
         if self._service_account_impersonation_url is not None:
-            os.environ[
+            env[
                 "GOOGLE_EXTERNAL_ACCOUNT_IMPERSONATED_EMAIL"
             ] = self.service_account_email()
-        original_credential_source_executable_output_file = os.getenv(
-            "GOOGLE_EXTERNAL_ACCOUNT_OUTPUT_FILE"
-        )
         if self._credential_source_executable_output_file is not None:
-            os.environ[
+            env[
                 "GOOGLE_EXTERNAL_ACCOUNT_OUTPUT_FILE"
             ] = self._credential_source_executable_output_file
-        env = os.environ.copy()
         result = subprocess.run(
             self._credential_source_executable_command.split(),
             timeout=self._credential_source_executable_timeout_millis / 1000,
@@ -263,7 +265,7 @@ class Credentials(external_account.Credentials):
             return cls.from_info(data, **kwargs)
 
     def _parse_subject_token(self, response):
-        if response["version"] > EXECUTABLE_SUPPORTED_MAX_VERSION:
+        if "version" in response and response["version"] > EXECUTABLE_SUPPORTED_MAX_VERSION:
             raise exceptions.RefreshError(
                 "Executable returned unsupported version {}.".format(
                     response["version"]
