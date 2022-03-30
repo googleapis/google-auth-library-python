@@ -33,7 +33,9 @@ BLACK_PATHS = [
 
 @nox.session(python="3.7")
 def lint(session):
-    session.install("flake8", "flake8-import-order", "docutils", BLACK_VERSION, "click<8.1.0")
+    session.install(
+        "flake8", "flake8-import-order", "docutils", BLACK_VERSION, "click<8.1.0"
+    )
     session.install("-e", ".")
     session.run("black", "--check", *BLACK_PATHS)
     session.run(
