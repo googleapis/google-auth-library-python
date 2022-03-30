@@ -33,7 +33,7 @@ BLACK_PATHS = [
 
 @nox.session(python="3.7")
 def lint(session):
-    session.install("flake8", "flake8-import-order", "docutils", BLACK_VERSION)
+    session.install("flake8", "flake8-import-order", "docutils", BLACK_VERSION, "click<8.1.0")
     session.install("-e", ".")
     session.run("black", "--check", *BLACK_PATHS)
     session.run(
@@ -58,7 +58,7 @@ def blacken(session):
 
     https://github.com/googleapis/synthtool/blob/master/docker/owlbot/python/Dockerfile
     """
-    session.install(BLACK_VERSION)
+    session.install(BLACK_VERSION, "click<8.1.0")
     session.run("black", *BLACK_PATHS)
 
 
