@@ -225,11 +225,11 @@ def _get_from_credentials_file_path(file_path, quota_project_id=None):
         return None, None
 
 
-def get_api_key_credentials(api_key):
+def get_api_key_credentials(key):
     """Return credentials with the given API key."""
     from google.auth import api_key
 
-    return api_key.Credentials(api_key)
+    return api_key.Credentials(key)
 
 
 def _get_explicit_environ_credentials(quota_project_id=None):
@@ -241,13 +241,11 @@ def _get_explicit_environ_credentials(quota_project_id=None):
         raise exceptions.DefaultCredentialsError("{} is not a supported GOOGLE_ADC_FORMAT value".format(adc_format))
 
     if adc_format == "api_key":
-        from google.auth import api_key
-
-        return api_key.Credentials(adc_value), quota_project_id
+        return get_api_key_credentials(adc_value), quota_project_id
     elif adc_format == "token":
         from google.oauth2 import fixed_token_credentials
 
-        return fixed_token_credentials.credentials(adc_value), quota_project_id
+        return fixed_token_credentials.Credentials(adc_value), quota_project_id
     elif adc_format == "base64_json":
         try:
             json_str = base64.b64decode(adc_value, validate=True).decode("utf8")
@@ -260,7 +258,7 @@ def _get_explicit_environ_credentials(quota_project_id=None):
             six.raise_from(new_exc, caught_exc)
         return _load_credentials_from_info("JSON", json_content, quota_project_id=quota_project_id)
 
-    return _get_from_credentials_file_path(adc_value)
+    return _get_from_credentials_file_path(adc_value, quota_project_id=quota_project_id)
 
 
 def _get_gae_credentials():

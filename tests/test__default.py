@@ -19,6 +19,7 @@ import mock
 import pytest  # type: ignore
 
 from google.auth import _default
+from google.auth import api_key
 from google.auth import app_engine
 from google.auth import aws
 from google.auth import compute_engine
@@ -28,6 +29,7 @@ from google.auth import exceptions
 from google.auth import external_account
 from google.auth import identity_pool
 from google.auth import impersonated_credentials
+from google.oauth2 import fixed_token_credentials
 from google.oauth2 import service_account
 import google.oauth2.credentials
 
@@ -1140,3 +1142,32 @@ def test_default_impersonated_service_account_set_both_scopes_and_default_scopes
 
     credentials, _ = _default.default(scopes=scopes, default_scopes=default_scopes)
     assert credentials._target_scopes == scopes
+
+
+def test_default_adc_format_unsupported():
+    with pytest.raises(exceptions.DefaultCredentialsError) as excinfo:
+        with mock.patch.dict(os.environ, {environment_vars.ADC_FORMAT: "unsupported"}):
+            _default.default()
+
+    assert excinfo.match("not a supported GOOGLE_ADC_FORMAT value")
+
+
+def test_default_adc_format_api_key():
+    with mock.patch.dict(os.environ, {environment_vars.ADC_FORMAT: "api_key"}):
+        with mock.patch.dict(os.environ, {environment_vars.CREDENTIALS: "key-foo"}):
+            cred, project_id = _default.default(quota_project_id="project-foo")
+
+    assert isinstance(cred, api_key.Credentials)
+    assert cred.token == "key-foo"
+    assert project_id == "project-foo"
+
+
+def test_default_adc_format_token():
+    with mock.patch.dict(os.environ, {environment_vars.ADC_FORMAT: "token"}):
+        with mock.patch.dict(os.environ, {environment_vars.CREDENTIALS: "token-foo"}):
+            cred, project_id = _default.default(quota_project_id="project-foo")
+
+    assert isinstance(cred, fixed_token_credentials.Credentials)
+    assert cred.token == "token-foo"
+    assert cred.valid
+    assert project_id == "project-foo"

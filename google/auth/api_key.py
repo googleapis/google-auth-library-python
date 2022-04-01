@@ -34,9 +34,9 @@ class Credentials(credentials.Credentials):
         Raises:
             ValueError: If the provided API key is not a non-empty string.
         """
+        super(Credentials, self).__init__()
         if not token:
             raise ValueError("Token must be a non-empty API key string")
-        super(Credentials, self).__init__()
         self.token = token
 
     @property

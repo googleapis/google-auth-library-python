@@ -23,7 +23,7 @@ from google.auth import _helpers
 from google.auth import credentials
 
 
-class FixedTokenCredentials(credentials.Credentials):
+class Credentials(credentials.Credentials):
     """Credentials with a fixed OAuth2 token.
     
     The token is considered never expired so users are responsible for the
@@ -39,7 +39,7 @@ class FixedTokenCredentials(credentials.Credentials):
         """
         if not token:
             raise ValueError("Token is not provided")
-        super(FixedTokenCredentials, self).__init__()
+        super(Credentials, self).__init__()
         self.token = token
 
     @property
