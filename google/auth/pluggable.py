@@ -176,12 +176,16 @@ class Credentials(external_account.Credentials):
                     self._credential_source_executable_output_file
                 ) as output_file:
                     response = json.load(output_file)
-                    # If the cached response is expired, _parse_subject_token will raise an error which will be ignored and we will call the executable again.
-                    subject_token = self._parse_subject_token(response)
             except:
                 pass
             else:
-                return subject_token
+                try:
+                    # If the cached response is expired, _parse_subject_token will raise an error which will be ignored and we will call the executable again.
+                    subject_token = self._parse_subject_token(response)
+                except:
+                    raise
+                else:
+                    return subject_token
 
         # Inject env vars.
         env = os.environ.copy()
