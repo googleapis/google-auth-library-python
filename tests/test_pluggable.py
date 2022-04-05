@@ -483,7 +483,7 @@ class TestCredentials(object):
         with pytest.raises(exceptions.RefreshError) as excinfo:
             subject_token = credentials.retrieve_subject_token(None)
 
-        assert excinfo.match(r"Executable returned unsuccessful response")
+        assert excinfo.match(r"Executable returned unsuccessful response: code: 401, message: Permission denied. Caller not authorized.")
 
     @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "0"})
     def test_retrieve_subject_token_not_allowd(self, fp):
@@ -519,7 +519,7 @@ class TestCredentials(object):
         with pytest.raises(exceptions.RefreshError) as excinfo:
             subject_token = credentials.retrieve_subject_token(None)
 
-        assert excinfo.match(r"Executable returned unsupported version")
+        assert excinfo.match(r"Executable returned unsupported version.")
 
     @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
     def test_retrieve_subject_token_expired_token(self, fp):
@@ -541,7 +541,7 @@ class TestCredentials(object):
         with pytest.raises(exceptions.RefreshError) as excinfo:
             subject_token = credentials.retrieve_subject_token(None)
 
-        assert excinfo.match(r"The token returned by the executable is expired")
+        assert excinfo.match(r"The token returned by the executable is expired.")
 
     @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
     def test_retrieve_subject_token_file_cache(self, fp):
@@ -556,3 +556,25 @@ class TestCredentials(object):
 
         if os.path.exists(self.CREDENTIAL_SOURCE_EXECUTABLE_OUTPUT_FILE):
             os.remove(self.CREDENTIAL_SOURCE_EXECUTABLE_OUTPUT_FILE)
+
+    @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
+    def test_retrieve_subject_token_unsupported_token_type(self, fp):
+        EXECUTABLE_SUCCESSFUL_OIDC_RESPONSE = {
+            "version": 1,
+            "success": True,
+            "token_type": "unsupported_token_type",
+            "id_token": self.EXECUTABLE_OIDC_TOKEN,
+            "expiration_time": 9999999999,
+        }
+
+        fp.register(
+            self.CREDENTIAL_SOURCE_EXECUTABLE_COMMAND.split(),
+            stdout=json.dumps(EXECUTABLE_SUCCESSFUL_OIDC_RESPONSE),
+        )
+
+        credentials = self.make_pluggable(credential_source=self.CREDENTIAL_SOURCE)
+
+        with pytest.raises(exceptions.RefreshError) as excinfo:
+            subject_token = credentials.retrieve_subject_token(None)
+
+        assert excinfo.match(r"Executable returned unsupported token type.")
