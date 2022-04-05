@@ -20,7 +20,7 @@ or credentials, external account clients use the environment and hints/guideline
 provided by the external_account JSON file to retrieve credentials and exchange
 them for Google access tokens. 
 
-Example credential_source for pluggable credential::
+Example credential_source for pluggable credential:
 
     {
         "executable": {
