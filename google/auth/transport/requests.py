@@ -239,6 +239,86 @@ class _MutualTlsAdapter(requests.adapters.HTTPAdapter):
         return super(_MutualTlsAdapter, self).proxy_manager_for(*args, **kwargs)
 
 
+class _MutualTlsOffloadAdapter(requests.adapters.HTTPAdapter):
+    """
+    A TransportAdapter that enables mutual TLS and offloads the client side
+    signing operation to the signing library. Users need to config the following
+    two environment variables:
+    - GOOGLE_AUTH_SIGNER_LIBRARY_PATH: the path to the signer library for
+        Windows cert store and MacOS keychain. PKCS#11 use case on Linux does
+        not need this environment variable.
+    - GOOGLE_AUTH_OFFLOAD_LIBRARY_PATH: the path to the TLS offload library.
+
+    Args:
+        cert (bytes): client certificate in PEM format. If not provided, the
+            library will try to get it based on the information given in key.
+        key (dict): the key information JSON with the following formats.
+            Windows certificate store:
+
+                {
+                    "type": "windows_cert_store",
+                    "key_info": {
+                        "provider": "", // "current_user" or "local_machine"
+                        "store_name": "", // for example, "MY"
+                        "issuer": "" // the issuer, for example, "localhost"
+                    }
+                }
+
+            MacOS keystore:
+
+                {
+                    "type": "macos_keychain",
+                    "key_info": {
+                        "issuer": "" // the issuer
+                    }
+                }
+
+            Linux PKCS#11 TPM/Keystore:
+
+                {
+                    "type": "pkcs11",
+                    "key_info": {
+                        // PKCS#11 module path, e.g. "/usr/local/lib/softhsm/libsofthsm2.so"
+                        "module_path": "",
+                        "token_label": "",
+                        "key_label": "",
+                    }
+                } 
+    Raises:
+        ImportError: if certifi or pyOpenSSL is not installed
+        OpenSSL.crypto.Error: if client cert or key is invalid
+    """
+
+    def __init__(self, cert, key):
+        import certifi
+        import urllib3.contrib.pyopenssl
+        from google.auth.transport import _custom_tls_signer
+
+        urllib3.contrib.pyopenssl.inject_into_urllib3()
+
+        self.signer = _custom_tls_signer.CustomTlsSigner(cert, key)
+
+        poolmanager = create_urllib3_context()
+        poolmanager.load_verify_locations(cafile=certifi.where())
+        self.signer.set_up_ssl_context(poolmanager)
+        self._ctx_poolmanager = poolmanager
+
+        proxymanager = create_urllib3_context()
+        proxymanager.load_verify_locations(cafile=certifi.where())
+        self.signer.set_up_ssl_context(proxymanager)
+        self._ctx_proxymanager = proxymanager
+
+        super(_MutualTlsOffloadAdapter, self).__init__()
+
+    def init_poolmanager(self, *args, **kwargs):
+        kwargs["ssl_context"] = self._ctx_poolmanager
+        super(_MutualTlsOffloadAdapter, self).init_poolmanager(*args, **kwargs)
+
+    def proxy_manager_for(self, *args, **kwargs):
+        kwargs["ssl_context"] = self._ctx_proxymanager
+        return super(_MutualTlsOffloadAdapter, self).proxy_manager_for(*args, **kwargs)
+
+
 class AuthorizedSession(requests.Session):
     """A Requests Session class with credentials.
 

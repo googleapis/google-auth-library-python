@@ -78,3 +78,13 @@ AWS_SECRET_ACCESS_KEY = "AWS_SECRET_ACCESS_KEY"
 AWS_SESSION_TOKEN = "AWS_SESSION_TOKEN"
 AWS_REGION = "AWS_REGION"
 AWS_DEFAULT_REGION = "AWS_DEFAULT_REGION"
+
+# Environment variables for offloading TLS signing operation to
+# external signing libraries.
+GOOGLE_AUTH_SIGNER_LIBRARY_PATH = "GOOGLE_AUTH_SIGNER_LIBRARY_PATH"
+"""Signer library for TLS handshake."""
+
+GOOGLE_AUTH_OFFLOAD_LIBRARY_PATH = "GOOGLE_AUTH_OFFLOAD_LIBRARY_PATH"
+"""Offload library for delegating the client side signing operation
+in TLS handshake to a signer library.
+"""
