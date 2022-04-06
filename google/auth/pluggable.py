@@ -269,24 +269,32 @@ class Credentials(external_account.Credentials):
             return cls.from_info(data, **kwargs)
 
     def _parse_subject_token(self, response):
-        if "version" in response and response["version"] > EXECUTABLE_SUPPORTED_MAX_VERSION:
+        if not "version" in response:
+            raise ValueError("The executable response is missing the version field.")
+        if response["version"] > EXECUTABLE_SUPPORTED_MAX_VERSION:
             raise exceptions.RefreshError(
                 "Executable returned unsupported version {}.".format(
                     response["version"]
                 )
             )
+        if not "success" in response:
+            raise ValueError("The executable response is missing the success field.")
         if not response["success"]:
-            if not response["code"] or not response["message"]:
-                raise ValueError("Code and message are required in the response.")
+            if "code" not in response or "message" not in response:
+                raise ValueError("Error code and message fields are required in the response.")
             raise exceptions.RefreshError(
                 "Executable returned unsuccessful response: code: {}, message: {}.".format(
                     response["code"], response["message"]
                 )
             )
+        if not "expiration_time" in response:
+            raise ValueError("The executable response is missing the expiration_time field.")
         if response["expiration_time"] < time.time():
             raise exceptions.RefreshError(
                 "The token returned by the executable is expired."
             )
+        if not "token_type" in response:
+            raise ValueError("The executable response is missing the token_type field.")
         if (
             response["token_type"] == "urn:ietf:params:oauth:token-type:jwt"
             or response["token_type"] == "urn:ietf:params:oauth:token-type:id_token"

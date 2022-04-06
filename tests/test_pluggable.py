@@ -437,6 +437,7 @@ class TestCredentials(object):
         fp.register(
             self.CREDENTIAL_SOURCE_EXECUTABLE_COMMAND.split(),
             stdout=json.dumps(self.EXECUTABLE_SUCCESSFUL_OIDC_RESPONSE_ID_TOKEN),
+        
         )
 
         credentials = self.make_pluggable(credential_source=self.CREDENTIAL_SOURCE)
@@ -520,7 +521,7 @@ class TestCredentials(object):
             subject_token = credentials.retrieve_subject_token(None)
 
         assert excinfo.match(r"Executable returned unsupported version.")
-
+        
     @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
     def test_retrieve_subject_token_expired_token(self, fp):
         EXECUTABLE_SUCCESSFUL_OIDC_RESPONSE_EXPIRED = {
@@ -578,3 +579,107 @@ class TestCredentials(object):
             subject_token = credentials.retrieve_subject_token(None)
 
         assert excinfo.match(r"Executable returned unsupported token type.")
+        
+    
+    @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
+    def test_retrieve_subject_token_missing_version(self, fp):
+        EXECUTABLE_SUCCESSFUL_OIDC_RESPONSE = {
+            "success": True,
+            "token_type": "urn:ietf:params:oauth:token-type:id_token",
+            "id_token": self.EXECUTABLE_OIDC_TOKEN,
+            "expiration_time": 9999999999,
+        }
+
+        fp.register(
+            self.CREDENTIAL_SOURCE_EXECUTABLE_COMMAND.split(),
+            stdout=json.dumps(EXECUTABLE_SUCCESSFUL_OIDC_RESPONSE),
+        )
+
+        credentials = self.make_pluggable(credential_source=self.CREDENTIAL_SOURCE)
+
+        with pytest.raises(ValueError) as excinfo:
+            subject_token = credentials.retrieve_subject_token(None)
+
+        assert excinfo.match(r"The executable response is missing the version field.")
+        
+    @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
+    def test_retrieve_subject_token_missing_success(self, fp):
+        EXECUTABLE_SUCCESSFUL_OIDC_RESPONSE = {
+            "version": 1,
+            "token_type": "urn:ietf:params:oauth:token-type:id_token",
+            "id_token": self.EXECUTABLE_OIDC_TOKEN,
+            "expiration_time": 9999999999,
+        }
+
+        fp.register(
+            self.CREDENTIAL_SOURCE_EXECUTABLE_COMMAND.split(),
+            stdout=json.dumps(EXECUTABLE_SUCCESSFUL_OIDC_RESPONSE),
+        )
+
+        credentials = self.make_pluggable(credential_source=self.CREDENTIAL_SOURCE)
+
+        with pytest.raises(ValueError) as excinfo:
+            subject_token = credentials.retrieve_subject_token(None)
+
+        assert excinfo.match(r"The executable response is missing the success field.")
+    
+    @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
+    def test_retrieve_subject_token_missing_error_code_message(self, fp):
+        EXECUTABLE_SUCCESSFUL_OIDC_RESPONSE = {
+            "version": 1,
+            "success": False,
+        }
+
+        fp.register(
+            self.CREDENTIAL_SOURCE_EXECUTABLE_COMMAND.split(),
+            stdout=json.dumps(EXECUTABLE_SUCCESSFUL_OIDC_RESPONSE),
+        )
+
+        credentials = self.make_pluggable(credential_source=self.CREDENTIAL_SOURCE)
+
+        with pytest.raises(ValueError) as excinfo:
+            subject_token = credentials.retrieve_subject_token(None)
+
+        assert excinfo.match(r"Error code and message fields are required in the response.")
+        
+    @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
+    def test_retrieve_subject_token_missing_expiration_time(self, fp):
+        EXECUTABLE_SUCCESSFUL_OIDC_RESPONSE = {
+            "version": 1,
+            "success": True,
+            "token_type": "urn:ietf:params:oauth:token-type:id_token",
+            "id_token": self.EXECUTABLE_OIDC_TOKEN,
+        }
+
+        fp.register(
+            self.CREDENTIAL_SOURCE_EXECUTABLE_COMMAND.split(),
+            stdout=json.dumps(EXECUTABLE_SUCCESSFUL_OIDC_RESPONSE),
+        )
+
+        credentials = self.make_pluggable(credential_source=self.CREDENTIAL_SOURCE)
+
+        with pytest.raises(ValueError) as excinfo:
+            subject_token = credentials.retrieve_subject_token(None)
+
+        assert excinfo.match(r"The executable response is missing the expiration_time field.")
+        
+    @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
+    def test_retrieve_subject_token_missing_token_type(self, fp):
+        EXECUTABLE_SUCCESSFUL_OIDC_RESPONSE = {
+            "version": 1,
+            "success": True,
+            "id_token": self.EXECUTABLE_OIDC_TOKEN,
+            "expiration_time": 9999999999,
+        }
+
+        fp.register(
+            self.CREDENTIAL_SOURCE_EXECUTABLE_COMMAND.split(),
+            stdout=json.dumps(EXECUTABLE_SUCCESSFUL_OIDC_RESPONSE),
+        )
+
+        credentials = self.make_pluggable(credential_source=self.CREDENTIAL_SOURCE)
+
+        with pytest.raises(ValueError) as excinfo:
+            subject_token = credentials.retrieve_subject_token(None)
+
+        assert excinfo.match(r"The executable response is missing the token_type field.")    
