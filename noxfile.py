@@ -20,6 +20,9 @@ import nox
 
 CURRENT_DIRECTORY = pathlib.Path(__file__).parent.absolute()
 
+# https://github.com/psf/black/issues/2964, pin click version to 8.0.4 to
+# avoid incompatiblity with black.
+CLICK_VERSION = "click==8.0.4"
 BLACK_VERSION = "black==19.3b0"
 BLACK_PATHS = [
     "google",
@@ -34,7 +37,7 @@ BLACK_PATHS = [
 @nox.session(python="3.7")
 def lint(session):
     session.install(
-        "flake8", "flake8-import-order", "docutils", BLACK_VERSION, "click<8.1.0"
+        "flake8", "flake8-import-order", "docutils", CLICK_VERSION, BLACK_VERSION
     )
     session.install("-e", ".")
     session.run("black", "--check", *BLACK_PATHS)
@@ -60,7 +63,8 @@ def blacken(session):
 
     https://github.com/googleapis/synthtool/blob/master/docker/owlbot/python/Dockerfile
     """
-    session.install(BLACK_VERSION, "click<8.1.0")
+
+    session.install(CLICK_VERSION, BLACK_VERSION)
     session.run("black", *BLACK_PATHS)
 
 
