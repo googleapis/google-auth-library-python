@@ -28,6 +28,7 @@ from six.moves import http_client
 from google.auth import environment_vars
 from google.auth import exceptions
 import google.auth.credentials
+import google.auth.transport._custom_tls_signer
 import google.auth.transport._mtls_helper
 import google.auth.transport.requests
 from google.oauth2 import service_account
@@ -529,3 +530,26 @@ class TestAuthorizedSession(object):
         )
 
         authed_session.close()  # no raise
+
+
+class TestMutualTlsOffloadAdapter(object):
+    @mock.patch.object(requests.adapters.HTTPAdapter, "init_poolmanager")
+    @mock.patch.object(requests.adapters.HTTPAdapter, "proxy_manager_for")
+    def test_success(self, mock_proxy_manager_for, mock_init_poolmanager):
+        mock_custom_signer = mock.MagicMock()
+        with mock.patch(
+            "google.auth.transport._custom_tls_signer.CustomTlsSigner", autospec=True
+        ) as mock_ctor:
+            mock_ctor.return_value = mock_custom_signer
+            adapter = google.auth.transport.requests._MutualTlsOffloadAdapter(
+                None, mock.Mock()
+            )
+
+        assert adapter.signer == mock_custom_signer
+        assert mock_custom_signer.set_up_ssl_context.call_count == 2
+
+        adapter.init_poolmanager()
+        mock_init_poolmanager.assert_called_with(ssl_context=adapter._ctx_poolmanager)
+
+        adapter.proxy_manager_for()
+        mock_proxy_manager_for.assert_called_with(ssl_context=adapter._ctx_proxymanager)

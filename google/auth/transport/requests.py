@@ -286,7 +286,8 @@ class _MutualTlsOffloadAdapter(requests.adapters.HTTPAdapter):
                 } 
     Raises:
         ImportError: if certifi or pyOpenSSL is not installed
-        OpenSSL.crypto.Error: if client cert or key is invalid
+        google.auth.exceptions.MutualTLSChannelError: If mutual TLS channel
+            creation failed for any reason.
     """
 
     def __init__(self, cert, key):
