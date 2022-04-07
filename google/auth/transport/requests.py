@@ -283,7 +283,7 @@ class _MutualTlsOffloadAdapter(requests.adapters.HTTPAdapter):
                         "token_label": "",
                         "key_label": "",
                     }
-                } 
+                }
     Raises:
         ImportError: if certifi or pyOpenSSL is not installed
         google.auth.exceptions.MutualTLSChannelError: If mutual TLS channel

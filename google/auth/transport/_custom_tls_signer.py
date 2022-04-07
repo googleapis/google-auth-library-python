@@ -1,9 +1,28 @@
+# Copyright 2022 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""Experimental code for offloading client side TLS signing operation to signing
+libraries.
+"""
+
 import atexit
-import cffi
 import ctypes
 import logging
 import os
 import sys
+
+import cffi
 
 from google.auth import environment_vars
 from google.auth import exceptions
@@ -29,7 +48,6 @@ def validate_key_format(key):
         raise exceptions.MutualTLSChannelError(
             "key type {} is not supported".format(key["type"])
         )
-    # todo
 
 
 def load_offload_lib():
@@ -159,7 +177,7 @@ def _get_pkcs11_sign_callback(key):
 
             return 1
 
-    return SIGN_CALLBACK_CTYPE(sign_callback)
+    return sign_callback
 
 
 def _get_win_cert_store_sign_callback(key, signer_lib):
@@ -192,7 +210,7 @@ def _get_win_cert_store_sign_callback(key, signer_lib):
 
         return 1
 
-    return SIGN_CALLBACK_CTYPE(sign_callback)
+    return sign_callback
 
 
 def _get_macos_keychain_sign_callback(key, signer_lib):
@@ -225,15 +243,17 @@ def _get_macos_keychain_sign_callback(key, signer_lib):
 
         return 1
 
-    return SIGN_CALLBACK_CTYPE(sign_callback)
+    return sign_callback
 
 
 def get_sign_callback(key, signer_lib):
     if key["type"] == "pkcs11":
-        return _get_pkcs11_sign_callback(key)
+        sign_callback = _get_pkcs11_sign_callback(key)
     elif key["type"] == "windows_cert_store":
-        return _get_win_cert_store_sign_callback(key, signer_lib)
-    return _get_macos_keychain_sign_callback(key, signer_lib)
+        sign_callback = _get_win_cert_store_sign_callback(key, signer_lib)
+    else:
+        sign_callback = _get_macos_keychain_sign_callback(key, signer_lib)
+    return SIGN_CALLBACK_CTYPE(sign_callback)
 
 
 def _get_cert_from_pkcs11(key):
