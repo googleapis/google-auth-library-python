@@ -297,18 +297,20 @@ def _get_cert_from_windows_cert_store(key, signer_lib):
         None,
         0,
     )
-    if certLen > 0:
-        # Then we create an array to hold the cert, and call again to fill the cert
-        certHolder = ctypes.create_string_buffer(certLen)
-        signer_lib.GetCertPemForPython(
-            ctypes.c_char_p(issuer),
-            ctypes.c_char_p(storeName),
-            ctypes.c_char_p(provider),
-            certHolder,
-            certLen,
-        )
-        return bytes(certHolder)
-    return None
+
+    if certLen == 0:
+        raise exceptions.MutualTLSChannelError("failed to get certificate")
+
+    # Then we create an array to hold the cert, and call again to fill the cert
+    certHolder = ctypes.create_string_buffer(certLen)
+    signer_lib.GetCertPemForPython(
+        ctypes.c_char_p(issuer),
+        ctypes.c_char_p(storeName),
+        ctypes.c_char_p(provider),
+        certHolder,
+        certLen,
+    )
+    return bytes(certHolder)
 
 
 def _get_cert_from_macos_keychain(key, signer_lib):
@@ -316,12 +318,14 @@ def _get_cert_from_macos_keychain(key, signer_lib):
 
     # First call to calculate the cert length
     certLen = signer_lib.GetCertPemForPython(ctypes.c_char_p(issuer), None, 0)
-    if certLen > 0:
-        # Then we create an array to hold the cert, and call again to fill the cert
-        certHolder = ctypes.create_string_buffer(certLen)
-        signer_lib.GetCertPemForPython(ctypes.c_char_p(issuer), certHolder, certLen)
-        return bytes(certHolder)
-    return None
+
+    if certLen == 0:
+        raise exceptions.MutualTLSChannelError("failed to get certificate")
+
+    # Then we create an array to hold the cert, and call again to fill the cert
+    certHolder = ctypes.create_string_buffer(certLen)
+    signer_lib.GetCertPemForPython(ctypes.c_char_p(issuer), certHolder, certLen)
+    return bytes(certHolder)
 
 
 def get_cert(key, signer_lib):
@@ -340,6 +344,7 @@ class CustomTlsSigner(object):
         self.key = key
         self.offload_lib = load_offload_lib()
         self.signer_lib = load_signer_lib(key)
+        self.custom_key = None
 
         atexit.register(self.cleanup)
 

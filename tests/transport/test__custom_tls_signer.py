@@ -18,9 +18,13 @@ import os
 
 import mock
 import pytest
+from requests.packages.urllib3.util.ssl_ import create_urllib3_context
+import urllib3.contrib.pyopenssl
 
 from google.auth import environment_vars, exceptions
 from google.auth.transport import _custom_tls_signer
+
+urllib3.contrib.pyopenssl.inject_into_urllib3()
 
 PKCS11_KEY = {
     "type": "pkcs11",
@@ -232,6 +236,25 @@ def test__get_cert_from_win_and_mac(mock_key, get_cert_method):
     assert len(mock_cert) == mock_cert_len
 
 
+@pytest.mark.parametrize(
+    "mock_key, get_cert_method",
+    [
+        (WINDOWS_CERT_STORE_KEY, _custom_tls_signer._get_cert_from_windows_cert_store),
+        (MACOS_KEYCHAIN_KEY, _custom_tls_signer._get_cert_from_macos_keychain),
+    ],
+)
+def test__get_cert_from_win_and_mac_failed(mock_key, get_cert_method):
+    # mock signer lib's GetCertPemForPython function to return 0, which
+    # means it fails to get cert.
+    mock_signer_lib = mock.MagicMock()
+    mock_signer_lib.GetCertPemForPython.return_value = 0
+
+    with pytest.raises(exceptions.MutualTLSChannelError) as excinfo:
+        # call the get cert method
+        get_cert_method(mock_key, mock_signer_lib)
+    assert excinfo.match("failed to get certificate")
+
+
 def test_get_cert_pkcs11():
     with mock.patch(
         "google.auth.transport._custom_tls_signer._get_cert_from_pkcs11"
@@ -260,3 +283,66 @@ def test_get_cert_macos_keychain():
         _get_cert_from_macos_keychain.assert_called_once_with(
             MACOS_KEYCHAIN_KEY, signer_lib
         )
+
+
+def test_custom_tls_signer():
+    offload_lib = mock.MagicMock()
+    signer_lib = mock.MagicMock()
+
+    with mock.patch(
+        "google.auth.transport._custom_tls_signer.load_signer_lib"
+    ) as load_signer_lib:
+        with mock.patch(
+            "google.auth.transport._custom_tls_signer.load_offload_lib"
+        ) as load_offload_lib:
+            load_offload_lib.return_value = offload_lib
+            load_signer_lib.return_value = signer_lib
+            signer_object = _custom_tls_signer.CustomTlsSigner(
+                None, WINDOWS_CERT_STORE_KEY
+            )
+    assert signer_object.cert is None
+    assert signer_object.key == WINDOWS_CERT_STORE_KEY
+    assert signer_object.offload_lib == offload_lib
+    assert signer_object.signer_lib == signer_lib
+
+    with mock.patch("google.auth.transport._custom_tls_signer.get_cert") as get_cert:
+        with mock.patch(
+            "google.auth.transport._custom_tls_signer.get_sign_callback"
+        ) as get_sign_callback:
+            get_cert.return_value = b"mock_cert"
+            signer_object.set_up_ssl_context(create_urllib3_context())
+    get_cert.assert_called_once()
+    get_sign_callback.assert_called_once()
+    offload_lib.CreateCustomKey.assert_called_once()
+    offload_lib.OffloadSigning.assert_called_once()
+
+
+def test_custom_tls_signer_fail_to_offload():
+    offload_lib = mock.MagicMock()
+    signer_lib = mock.MagicMock()
+
+    with mock.patch(
+        "google.auth.transport._custom_tls_signer.load_signer_lib"
+    ) as load_signer_lib:
+        with mock.patch(
+            "google.auth.transport._custom_tls_signer.load_offload_lib"
+        ) as load_offload_lib:
+            load_offload_lib.return_value = offload_lib
+            load_signer_lib.return_value = signer_lib
+            signer_object = _custom_tls_signer.CustomTlsSigner(
+                None, WINDOWS_CERT_STORE_KEY
+            )
+
+    # set the return value to be 0 which indicts offload fails
+    offload_lib.OffloadSigning.return_value = 0
+
+    with pytest.raises(exceptions.MutualTLSChannelError) as excinfo:
+        with mock.patch(
+            "google.auth.transport._custom_tls_signer.get_cert"
+        ) as get_cert:
+            with mock.patch(
+                "google.auth.transport._custom_tls_signer.get_sign_callback"
+            ):
+                get_cert.return_value = b"mock_cert"
+                signer_object.set_up_ssl_context(create_urllib3_context())
+    assert excinfo.match("failed to offload signing")
