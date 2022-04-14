@@ -156,7 +156,7 @@ def _token_endpoint_request_no_throw(
                 ):
                     retry += 1
                     continue
-            except json.decoder.JSONDecodeError:
+            except ValueError:
                 response_data = response_body
             return response.status == expected_status_code, response_data
 
