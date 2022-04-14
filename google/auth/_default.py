@@ -36,6 +36,7 @@ _AUTHORIZED_USER_TYPE = "authorized_user"
 _SERVICE_ACCOUNT_TYPE = "service_account"
 _EXTERNAL_ACCOUNT_TYPE = "external_account"
 _IMPERSONATED_SERVICE_ACCOUNT_TYPE = "impersonated_service_account"
+_GDCH_TYPE = "gdch"
 _VALID_TYPES = (
     _AUTHORIZED_USER_TYPE,
     _SERVICE_ACCOUNT_TYPE,
@@ -158,6 +159,8 @@ def _load_credentials_from_info(
         credentials, project_id = _get_impersonated_service_account_credentials(
             filename, info, scopes
         )
+    elif credential_type == _GDCH_TYPE:
+        credentials, project_id = _get_gdch_credentials(info)
     else:
         raise exceptions.DefaultCredentialsError(
             "The file {file} does not have a valid type. "
@@ -419,6 +422,30 @@ def _get_impersonated_service_account_credentials(filename, info, scopes):
     return credentials, None
 
 
+def _get_gdch_credentials(info):
+    from google.oauth2 import gdch_credentials
+
+    k8s_ca_cert_path = info.get("k8s_ca_cert_path")
+    k8s_cert_path = info.get("k8s_cert_path")
+    k8s_key_path = info.get("k8s_key_path")
+    k8s_token_endpoint = info.get("k8s_token_endpoint")
+    ais_ca_cert_path = info.get("ais_ca_cert_path")
+    ais_token_endpoint = info.get("ais_token_endpoint")
+
+    return (
+        gdch_credentials.Credentials(
+            k8s_ca_cert_path,
+            k8s_cert_path,
+            k8s_key_path,
+            k8s_token_endpoint,
+            ais_ca_cert_path,
+            ais_token_endpoint,
+            None,
+        ),
+        None,
+    )
+
+
 def _apply_quota_project_id(credentials, quota_project_id):
     if quota_project_id:
         credentials = credentials.with_quota_project(quota_project_id)
@@ -454,6 +481,11 @@ def default(scopes=None, request=None, quota_project_id=None, default_scopes=Non
        endpoint.
        The project ID returned in this case is the one corresponding to the
        underlying workload identity pool resource if determinable.
+
+       If the environment variable is set to the path of a valid GDCH JSON
+       file (`Google Distributed Cloud Hosted`_), then a GDCH credential will
+       be returned. The project ID returned is None unless it is set via
+       `GOOGLE_CLOUD_PROJECT` environment variable.
     2. If the `Google Cloud SDK`_ is installed and has application default
        credentials set they are loaded and returned.
 
@@ -488,6 +520,8 @@ def default(scopes=None, request=None, quota_project_id=None, default_scopes=Non
     .. _Metadata Service: https://cloud.google.com/compute/docs\
             /storing-retrieving-metadata
     .. _Cloud Run: https://cloud.google.com/run
+    .. _Google Distributed Cloud Hosted: https://cloud.google.com/blog/topics\
+            /hybrid-cloud/announcing-google-distributed-cloud-edge-and-hosted
 
     Example::
 

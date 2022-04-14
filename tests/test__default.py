@@ -28,6 +28,7 @@ from google.auth import exceptions
 from google.auth import external_account
 from google.auth import identity_pool
 from google.auth import impersonated_credentials
+from google.oauth2 import gdch_credentials
 from google.oauth2 import service_account
 import google.oauth2.credentials
 
@@ -49,6 +50,8 @@ AUTHORIZED_USER_CLOUD_SDK_WITH_QUOTA_PROJECT_ID_FILE = os.path.join(
 SERVICE_ACCOUNT_FILE = os.path.join(DATA_DIR, "service_account.json")
 
 CLIENT_SECRETS_FILE = os.path.join(DATA_DIR, "client_secrets.json")
+
+GDCH_FILE = os.path.join(DATA_DIR, "gdch.json")
 
 with open(SERVICE_ACCOUNT_FILE) as fh:
     SERVICE_ACCOUNT_FILE_DATA = json.load(fh)
@@ -1140,3 +1143,23 @@ def test_default_impersonated_service_account_set_both_scopes_and_default_scopes
 
     credentials, _ = _default.default(scopes=scopes, default_scopes=default_scopes)
     assert credentials._target_scopes == scopes
+
+
+@mock.patch(
+    "google.auth._cloud_sdk.get_application_default_credentials_path", autospec=True
+)
+def test_default_gdch_credentials(get_adc_path):
+    get_adc_path.return_value = GDCH_FILE
+
+    credentials, _ = _default.default(quota_project_id="project-foo")
+    assert isinstance(credentials, gdch_credentials.Credentials)
+    assert credentials._quota_project_id == "project-foo"
+    assert credentials._k8s_ca_cert_path == "./k8s_ca_cert.pem"
+    assert credentials._k8s_cert_path == "./k8s_cert.pem"
+    assert credentials._k8s_key_path == "./k8s_key.pem"
+    assert (
+        credentials._k8s_token_endpoint
+        == "https://k8s_endpoint/api/v1/namespaces/sa-token-test/serviceaccounts/sa-token-user/token"
+    )
+    assert credentials._ais_ca_cert_path == "./ais_ca_cert.pem"
+    assert credentials._ais_token_endpoint == "https://ais_endpoint/sts/v1beta/token"
