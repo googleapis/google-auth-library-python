@@ -4,6 +4,29 @@
 
 [1]: https://pypi.org/project/google-auth/#history
 
+### [2.6.5](https://github.com/googleapis/google-auth-library-python/compare/v2.6.4...v2.6.5) (2022-04-14)
+
+
+### Bug Fixes
+
+* add additional missing import in _default.py ([#1018](https://github.com/googleapis/google-auth-library-python/issues/1018)) ([638331b](https://github.com/googleapis/google-auth-library-python/commit/638331b5b89c807b40c23c1e6333845d9b7e169a))
+
+### [2.6.4](https://github.com/googleapis/google-auth-library-python/compare/v2.6.3...v2.6.4) (2022-04-12)
+
+
+### Bug Fixes
+
+* fix missing import in _default.py ([#1015](https://github.com/googleapis/google-auth-library-python/issues/1015)) ([63f4e38](https://github.com/googleapis/google-auth-library-python/commit/63f4e38153ded9fe9b51b83a1de74f3b71f73abc))
+
+### [2.6.3](https://github.com/googleapis/google-auth-library-python/compare/v2.6.2...v2.6.3) (2022-04-06)
+
+
+### Bug Fixes
+
+* change requests lib import place ([#1010](https://github.com/googleapis/google-auth-library-python/issues/1010)) ([c753c08](https://github.com/googleapis/google-auth-library-python/commit/c753c08d2c78295173bb1160e8a74e819a352c33))
+* clean up HTTP session and pool during tear down phase ([#1007](https://github.com/googleapis/google-auth-library-python/issues/1007)) ([d057376](https://github.com/googleapis/google-auth-library-python/commit/d057376245283402fe0b772ca138091c05864e5d))
+* pin click version and update sys test creds ([#1008](https://github.com/googleapis/google-auth-library-python/issues/1008)) ([ae2804b](https://github.com/googleapis/google-auth-library-python/commit/ae2804bf292b5c8e6f935d2d0751db8fbe95a7b3))
+
 ### [2.6.2](https://github.com/googleapis/google-auth-library-python/compare/v2.6.1...v2.6.2) (2022-03-16)
 
 

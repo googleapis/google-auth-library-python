@@ -150,7 +150,9 @@ class Credentials(external_account.Credentials):
         )
 
         if not self._credential_source_executable_command:
-            raise ValueError("Missing command field. Executable command must be provided.")
+            raise ValueError(
+                "Missing command field. Executable command must be provided."
+            )
         if not self._credential_source_executable_timeout_millis:
             self._credential_source_executable_timeout_millis = 30 * 1000
         elif (
@@ -281,14 +283,18 @@ class Credentials(external_account.Credentials):
             raise ValueError("The executable response is missing the success field.")
         if not response["success"]:
             if "code" not in response or "message" not in response:
-                raise ValueError("Error code and message fields are required in the response.")
+                raise ValueError(
+                    "Error code and message fields are required in the response."
+                )
             raise exceptions.RefreshError(
                 "Executable returned unsuccessful response: code: {}, message: {}.".format(
                     response["code"], response["message"]
                 )
             )
         if not "expiration_time" in response:
-            raise ValueError("The executable response is missing the expiration_time field.")
+            raise ValueError(
+                "The executable response is missing the expiration_time field."
+            )
         if response["expiration_time"] < time.time():
             raise exceptions.RefreshError(
                 "The token returned by the executable is expired."
