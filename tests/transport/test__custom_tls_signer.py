@@ -17,6 +17,7 @@ import ctypes
 import os
 
 import mock
+import pkcs11
 import pytest
 from requests.packages.urllib3.util.ssl_ import create_urllib3_context
 import urllib3.contrib.pyopenssl
@@ -145,9 +146,67 @@ def test__compute_sha256_digest():
     )
 
 
-def test__get_pkcs11_sign_callback():
-    # todo
-    pass
+@mock.patch("pkcs11.lib")
+def test__get_pkcs11_sign_callback_rsa(pkcs11_lib):
+    # mock pkcs11 lib and all the function calls in `sign_callback`
+    lib = mock.MagicMock()
+    token = mock.MagicMock()
+    session = mock.MagicMock()
+    key = mock.MagicMock()
+
+    pkcs11_lib.return_value = lib
+    lib.get_token.return_value = token
+    token.open.return_value.__enter__.return_value = session
+    session.get_key.return_value = key
+
+    key.key_type = pkcs11.KeyType.RSA
+    signature = b"signature"
+    key.sign.return_value = signature
+
+    # mock the parameters used to call the sign callback
+    to_be_signed = ctypes.create_string_buffer(b"foo")
+    to_be_signed_len = 3
+    mock_sig_array = bytearray(len(signature))
+    mock_sig_len_array = [0]
+
+    # call the callback, make sure the signature len is returned via mock_sig_len_array[0]
+    callback = _custom_tls_signer._get_pkcs11_sign_callback(PKCS11_KEY)
+    assert callback(mock_sig_array, mock_sig_len_array, to_be_signed, to_be_signed_len)
+    assert mock_sig_len_array[0] == len(signature)
+    pkcs11_lib.assert_called_once_with("/usr/local/lib/libfoo.so")
+    lib.get_token.assert_called_once_with(token_label="token1")
+    token.open.assert_called_once_with(user_pin=None)
+
+
+@mock.patch("pkcs11.lib")
+def test__get_pkcs11_sign_callback_ecdsa(pkcs11_lib):
+    # mock pkcs11 lib and all the function calls in `sign_callback`
+    lib = mock.MagicMock()
+    token = mock.MagicMock()
+    session = mock.MagicMock()
+    key = mock.MagicMock()
+
+    pkcs11_lib.return_value = lib
+    lib.get_token.return_value = token
+    token.open.return_value.__enter__.return_value = session
+    session.get_key.return_value = key
+
+    # For EC key we need to ASN1 encode the raw signature
+    key.key_type = pkcs11.KeyType.EC
+    signature = b"signature"
+    encoded_signature = pkcs11.util.ec.encode_ecdsa_signature(signature)
+    key.sign.return_value = signature
+
+    # mock the parameters used to call the sign callback
+    to_be_signed = ctypes.create_string_buffer(b"foo")
+    to_be_signed_len = 3
+    mock_sig_array = bytearray(len(encoded_signature))
+    mock_sig_len_array = [0]
+
+    # call the callback, make sure the signature len is returned via mock_sig_len_array[0]
+    callback = _custom_tls_signer._get_pkcs11_sign_callback(PKCS11_KEY)
+    assert callback(mock_sig_array, mock_sig_len_array, to_be_signed, to_be_signed_len)
+    assert mock_sig_len_array[0] == len(encoded_signature)
 
 
 @pytest.mark.parametrize(
@@ -209,9 +268,45 @@ def test_get_sign_callback_macos_keychain():
         )
 
 
-def test__get_cert_from_pkcs11():
-    # todo
-    pass
+@mock.patch("pkcs11.lib")
+@mock.patch("OpenSSL.crypto")
+def test__get_cert_from_pkcs11(mock_crypto, pkcs11_lib):
+    # mock pkcs11 lib and all the pkcs11 function calls
+    lib = mock.MagicMock()
+    token = mock.MagicMock()
+    session = mock.MagicMock()
+    cert = mock.MagicMock()
+
+    pkcs11_lib.return_value = lib
+    lib.get_token.return_value = token
+    token.open.return_value.__enter__.return_value = session
+    session.get_objects.return_value = [cert]
+
+    # mock OpenSSL.crypto calls which handle the cert
+    mock_crypto.load_certificate.return_value = cert
+    mock_crypto.dump_certificate.return_value = cert
+
+    assert _custom_tls_signer._get_cert_from_pkcs11(PKCS11_KEY) == cert
+    mock_crypto.load_certificate.assert_called_once()
+    mock_crypto.dump_certificate.assert_called_once()
+    pkcs11_lib.assert_called_once_with("/usr/local/lib/libfoo.so")
+    lib.get_token.assert_called_once_with(token_label="token1")
+    token.open.assert_called_once_with(user_pin=None)
+
+
+@mock.patch("pkcs11.lib")
+def test__get_cert_from_pkcs11_no_cert(pkcs11_lib):
+    # mock pkcs11 lib and all the pkcs11 function calls
+    lib = mock.MagicMock()
+    token = mock.MagicMock()
+    session = mock.MagicMock()
+
+    pkcs11_lib.return_value = lib
+    lib.get_token.return_value = token
+    token.open.return_value.__enter__.return_value = session
+    session.get_objects.return_value = []
+
+    assert _custom_tls_signer._get_cert_from_pkcs11(PKCS11_KEY) is None
 
 
 @pytest.mark.parametrize(
@@ -346,3 +441,27 @@ def test_custom_tls_signer_fail_to_offload():
                 get_cert.return_value = b"mock_cert"
                 signer_object.set_up_ssl_context(create_urllib3_context())
     assert excinfo.match("failed to offload signing")
+
+
+def test_custom_tls_signer_cleanup():
+    offload_lib = mock.MagicMock()
+    signer_lib = mock.MagicMock()
+
+    with mock.patch(
+        "google.auth.transport._custom_tls_signer.load_signer_lib"
+    ) as load_signer_lib:
+        with mock.patch(
+            "google.auth.transport._custom_tls_signer.load_offload_lib"
+        ) as load_offload_lib:
+            load_offload_lib.return_value = offload_lib
+            load_signer_lib.return_value = signer_lib
+            signer_object = _custom_tls_signer.CustomTlsSigner(
+                None, WINDOWS_CERT_STORE_KEY
+            )
+
+    signer_object.cleanup()
+    offload_lib.DestroyCustomKey.assert_not_called()
+
+    signer_object.custom_key = mock.Mock()
+    signer_object.cleanup()
+    offload_lib.DestroyCustomKey.assert_called_with(signer_object.custom_key)

@@ -170,10 +170,10 @@ def _get_pkcs11_sign_callback(key):
             else:
                 signature = key.sign(digest, mechanism=Mechanism.ECDSA)
                 signature = pkcs11.util.ec.encode_ecdsa_signature(signature)
+
             sig_len[0] = len(signature)
-            if sig:
-                for i in range(len(signature)):
-                    sig[i] = signature[i]
+            for i in range(len(signature)):
+                sig[i] = signature[i]
 
             return 1
 
@@ -191,7 +191,10 @@ def _get_win_cert_store_sign_callback(key, signer_lib):
         issuer = key_info["issuer"].encode()
         storeName = key_info["store_name"].encode()
         provider = key_info["provider"].encode()
+
+        # reserve 2000 bytes for the signature, shoud be more then enough
         sigHolder = ctypes.create_string_buffer(2000)
+
         sigLen = signer_lib.SignForPython(
             ctypes.c_char_p(issuer),
             ctypes.c_char_p(storeName),
@@ -203,10 +206,9 @@ def _get_win_cert_store_sign_callback(key, signer_lib):
         )
 
         sig_len[0] = sigLen
-        if sig:
-            bs = bytearray(sigHolder)
-            for i in range(sigLen):
-                sig[i] = bs[i]
+        bs = bytearray(sigHolder)
+        for i in range(sigLen):
+            sig[i] = bs[i]
 
         return 1
 
@@ -226,7 +228,10 @@ def _get_macos_keychain_sign_callback(key, signer_lib):
         digestArray = ctypes.c_char * len(digest)
 
         issuer = key["key_info"]["issuer"].encode()
+
+        # reserve 2000 bytes for the signature, shoud be more then enough
         sigHolder = ctypes.create_string_buffer(2000)
+
         sigLen = signer_lib.SignForPython(
             ctypes.c_char_p(issuer),
             digestArray.from_buffer(bytearray(digest)),
@@ -236,10 +241,9 @@ def _get_macos_keychain_sign_callback(key, signer_lib):
         )
 
         sig_len[0] = sigLen
-        if sig:
-            bs = bytearray(sigHolder)
-            for i in range(sigLen):
-                sig[i] = bs[i]
+        bs = bytearray(sigHolder)
+        for i in range(sigLen):
+            sig[i] = bs[i]
 
         return 1
 
@@ -350,8 +354,7 @@ class CustomTlsSigner(object):
 
     def set_up_ssl_context(self, ctx):
         # Get cert using signer lib if cert is not provided.
-        if not self.cert:
-            self.cert = get_cert(self.key, self.signer_lib)
+        self.cert = self.cert if self.cert else get_cert(self.key, self.signer_lib)
 
         # We need to keep a reference of sign_callback so it won't get garbage
         # collected, otherwise it will crash when it gets call in signer lib.

@@ -7,6 +7,7 @@ pyopenssl
 pytest
 pytest-cov
 pytest-localserver
+python-pkcs11
 pyu2f
 requests
 urllib3
