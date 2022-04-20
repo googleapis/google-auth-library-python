@@ -349,6 +349,8 @@ def _get_external_account_credentials(
                 "Failed to load external account credentials from {}".format(filename)
             )
     if request is None:
+        import google.auth.transport.requests
+
         request = google.auth.transport.requests.Request()
 
     return credentials, credentials.get_project_id(request=request)
@@ -563,6 +565,8 @@ def default(scopes=None, request=None, quota_project_id=None, default_scopes=Non
                 getattr(credentials, "get_project_id", None)
             ):
                 if request is None:
+                    import google.auth.transport.requests
+
                     request = google.auth.transport.requests.Request()
                 project_id = credentials.get_project_id(request=request)
 
