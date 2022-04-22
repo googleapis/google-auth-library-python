@@ -292,6 +292,27 @@ class TestCredentials(object):
         assert not external_account.Credentials.is_valid_url(external_account._TOKEN_URL_PATTERNS, "https:///v1/token")
         assert not external_account.Credentials.is_valid_url(external_account._TOKEN_URL_PATTERNS, "https://some-invalid-url/v1/token")
 
+    def test_service_account_impersonation_url_matching(self):
+        # matching *.iamcredentials.googleapis.com
+        assert external_account.Credentials.is_valid_url(external_account._SERVICE_ACCOUNT_IMPERSONATION_URL_PATTERNS,
+            "https://fooauth.iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/foo@google.com:generateAccessToken"
+        )
+        # matching iamcredentials.googleapis.com
+        assert external_account.Credentials.is_valid_url(external_account._SERVICE_ACCOUNT_IMPERSONATION_URL_PATTERNS,
+            "https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/foo@google.com:generateAccessToken"
+        )
+        # matching iamcredentials.*.googleapis.com
+        assert external_account.Credentials.is_valid_url(external_account._SERVICE_ACCOUNT_IMPERSONATION_URL_PATTERNS,
+            "https://iamcredentials.fooauth.googleapis.com/v1/projects/-/serviceAccounts/foo@google.com:generateAccessToken"
+        )
+        # matching *-iamcredentials.googleapis.com
+        assert external_account.Credentials.is_valid_url(external_account._SERVICE_ACCOUNT_IMPERSONATION_URL_PATTERNS,
+            "https://us-east1-iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/foo@google.com:generateAccessToken"
+        )
+        # invalid url cannot match
+        assert not external_account.Credentials.is_valid_url(external_account._SERVICE_ACCOUNT_IMPERSONATION_URL_PATTERNS, "https:///v1/accesstoken")
+        assert not external_account.Credentials.is_valid_url(external_account._SERVICE_ACCOUNT_IMPERSONATION_URL_PATTERNS, "https://some-invalid-url/v1")
+
     def test_default_state(self):
         credentials = self.make_credentials(service_account_impersonation_url=self.SERVICE_ACCOUNT_IMPERSONATION_URL)
 
