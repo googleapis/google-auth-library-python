@@ -316,7 +316,7 @@ class TestCredentials(object):
     def test_default_state(self):
         credentials = self.make_credentials(service_account_impersonation_url=self.SERVICE_ACCOUNT_IMPERSONATION_URL)
 
-        # Token url and service account impersonation url should 
+        # Token url and service account impersonation url should be set
         assert credentials._token_url
         assert credentials._service_account_impersonation_url
         # Not token acquired yet

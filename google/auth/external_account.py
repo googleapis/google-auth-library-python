@@ -34,7 +34,7 @@ import json
 import re
 
 import six
-from urllib.parse import urlparse
+from urllib3.util import parse_url
 
 from google.auth import _helpers
 from google.auth import credentials
@@ -450,7 +450,7 @@ class Credentials(credentials.Scoped, credentials.CredentialsWithQuotaProject):
         Returns True if the provided URL's scheme is HTTPS and the host comforms to at least one of the provided patterns.
         """
         try:
-            uri = urlparse(url)
+            uri = parse_url(url)
         except:
             return False
 
