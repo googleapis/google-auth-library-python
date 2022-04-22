@@ -275,9 +275,29 @@ class TestCredentials(object):
         assert request_kwargs["headers"] == headers
         assert "body" not in request_kwargs
 
-    def test_default_state(self):
-        credentials = self.make_credentials()
+    def test_valid_token_url_shall_pass_validation(self):
+        # valid url doesn't throw exception, a None value should be return
+        assert not external_account.Credentials.validate_token_url(self.TOKEN_URL)
+    
+    def test_token_url_pattern_matching(self):
+        # matching *.sts.googleapis.com
+        assert external_account.Credentials.is_valid_url(external_account._TOKEN_URL_PATTERNS, "https://auth.sts.googleapis.com/v1/token")
+        # matching sts.googleapis.com
+        assert external_account.Credentials.is_valid_url(external_account._TOKEN_URL_PATTERNS, "https://sts.googleapis.com/v1/token")
+        # matching sts.*.googleapis.com
+        assert external_account.Credentials.is_valid_url(external_account._TOKEN_URL_PATTERNS, "https://sts.auth.googleapis.com/v1/token")
+        # matching *-sts.googleapis.com
+        assert external_account.Credentials.is_valid_url(external_account._TOKEN_URL_PATTERNS, "https://auth-sts.googleapis.com/v1/token")
+        # invalid url cannot match
+        assert not external_account.Credentials.is_valid_url(external_account._TOKEN_URL_PATTERNS, "https:///v1/token")
+        assert not external_account.Credentials.is_valid_url(external_account._TOKEN_URL_PATTERNS, "https://some-invalid-url/v1/token")
 
+    def test_default_state(self):
+        credentials = self.make_credentials(service_account_impersonation_url=self.SERVICE_ACCOUNT_IMPERSONATION_URL)
+
+        # Token url and service account impersonation url should 
+        assert credentials._token_url
+        assert credentials._service_account_impersonation_url
         # Not token acquired yet
         assert not credentials.token
         assert not credentials.valid
@@ -288,6 +308,33 @@ class TestCredentials(object):
         assert not credentials.scopes
         assert credentials.requires_scopes
         assert not credentials.quota_project_id
+
+    def test_invalid_token_url(self):
+        with pytest.raises(ValueError) as excinfo:
+            CredentialsImpl(
+                audience=self.AUDIENCE,
+                subject_token_type=self.SUBJECT_TOKEN_TYPE,
+                token_url="https:///v1/token",
+                credential_source=self.CREDENTIAL_SOURCE
+            )
+
+        assert excinfo.match(
+            "The provided token URL is invalid."
+        )
+
+    def test_invalid_service_account_impersonate_url(self):
+        with pytest.raises(ValueError) as excinfo:
+            CredentialsImpl(
+                audience=self.AUDIENCE,
+                subject_token_type=self.SUBJECT_TOKEN_TYPE,
+                token_url=self.TOKEN_URL,
+                credential_source=self.CREDENTIAL_SOURCE,
+                service_account_impersonation_url=12345    # create an exception by sending to parse url
+            )
+        
+        assert excinfo.match(
+            "The provided service account impersonation URL is invalid."
+        )
 
     def test_nonworkforce_with_workforce_pool_user_project(self):
         with pytest.raises(ValueError) as excinfo:
