@@ -352,7 +352,7 @@ class CustomTlsSigner(object):
 
         atexit.register(self.cleanup)
 
-    def set_up_ssl_context(self, ctx):
+    def set_up_custom_key(self):
         # Get cert using signer lib if cert is not provided.
         self.cert = self.cert if self.cert else get_cert(self.key, self.signer_lib)
 
@@ -364,6 +364,7 @@ class CustomTlsSigner(object):
         # destroy method from offload lib on exit.
         self.custom_key = self.offload_lib.CreateCustomKey(self.sign_callback)
 
+    def attach_to_ssl_context(self, ctx):
         # Add custom_key and cert to SSL context. In the TLS handshake, the
         # signing operation will be done by the sign_callback in custom_key.
         if not self.offload_lib.OffloadSigning(

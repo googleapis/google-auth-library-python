@@ -298,15 +298,16 @@ class _MutualTlsOffloadAdapter(requests.adapters.HTTPAdapter):
         urllib3.contrib.pyopenssl.inject_into_urllib3()
 
         self.signer = _custom_tls_signer.CustomTlsSigner(cert, key)
+        self.signer.set_up_custom_key()
 
         poolmanager = create_urllib3_context()
         poolmanager.load_verify_locations(cafile=certifi.where())
-        self.signer.set_up_ssl_context(poolmanager)
+        self.signer.attach_to_ssl_context(poolmanager)
         self._ctx_poolmanager = poolmanager
 
         proxymanager = create_urllib3_context()
         proxymanager.load_verify_locations(cafile=certifi.where())
-        self.signer.set_up_ssl_context(proxymanager)
+        self.signer.attach_to_ssl_context(proxymanager)
         self._ctx_proxymanager = proxymanager
 
         super(_MutualTlsOffloadAdapter, self).__init__()
