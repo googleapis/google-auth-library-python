@@ -57,7 +57,7 @@ _TOKEN_URL_PATTERNS = [
     "^[^\\.\\s\\/\\\\]+\\.sts\\.googleapis\\.com$",
     "^sts\\.googleapis\\.com$",
     "^sts\\.[^\\.\\s\\/\\\\]+\\.googleapis\\.com$",
-    "^[^\\.\\s\\/\\\\]+\\-sts\\.googleapis\\.com$"
+    "^[^\\.\\s\\/\\\\]+\\-sts\\.googleapis\\.com$",
 ]
 
 # Service account impersonation url patterns
@@ -65,8 +65,9 @@ _SERVICE_ACCOUNT_IMPERSONATION_URL_PATTERNS = [
     "^[^\\.\\s\\/\\\\]+\\.iamcredentials\\.googleapis\\.com$",
     "^iamcredentials\\.googleapis\\.com$",
     "^iamcredentials\\.[^\\.\\s\\/\\\\]+\\.googleapis\\.com$",
-    "^[^\\.\\s\\/\\\\]+\\-iamcredentials\\.googleapis\\.com$"
+    "^[^\\.\\s\\/\\\\]+\\-iamcredentials\\.googleapis\\.com$",
 ]
+
 
 @six.add_metaclass(abc.ABCMeta)
 class Credentials(credentials.Scoped, credentials.CredentialsWithQuotaProject):
@@ -132,7 +133,9 @@ class Credentials(credentials.Scoped, credentials.CredentialsWithQuotaProject):
 
         Credentials.validate_token_url(token_url)
         if service_account_impersonation_url:
-            Credentials.validate_service_account_impersonation_url(service_account_impersonation_url)
+            Credentials.validate_service_account_impersonation_url(
+                service_account_impersonation_url
+            )
 
         if self._client_id:
             self._client_auth = utils.ClientAuthentication(
@@ -433,7 +436,7 @@ class Credentials(credentials.Scoped, credentials.CredentialsWithQuotaProject):
             quota_project_id=self._quota_project_id,
             iam_endpoint_override=self._service_account_impersonation_url,
         )
-    
+
     @staticmethod
     def validate_token_url(token_url):
         if not Credentials.is_valid_url(_TOKEN_URL_PATTERNS, token_url):
@@ -441,8 +444,12 @@ class Credentials(credentials.Scoped, credentials.CredentialsWithQuotaProject):
 
     @staticmethod
     def validate_service_account_impersonation_url(url):
-        if not Credentials.is_valid_url(_SERVICE_ACCOUNT_IMPERSONATION_URL_PATTERNS, url):
-            raise ValueError("The provided service account impersonation URL is invalid.")
+        if not Credentials.is_valid_url(
+            _SERVICE_ACCOUNT_IMPERSONATION_URL_PATTERNS, url
+        ):
+            raise ValueError(
+                "The provided service account impersonation URL is invalid."
+            )
 
     @staticmethod
     def is_valid_url(patterns, url):
@@ -451,7 +458,7 @@ class Credentials(credentials.Scoped, credentials.CredentialsWithQuotaProject):
         """
         try:
             uri = parse_url(url)
-        except:
+        except Exception:
             return False
 
         if not uri.scheme or uri.scheme != "https":

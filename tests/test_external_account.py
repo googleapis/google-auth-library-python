@@ -278,43 +278,70 @@ class TestCredentials(object):
     def test_valid_token_url_shall_pass_validation(self):
         # valid url doesn't throw exception, a None value should be return
         assert not external_account.Credentials.validate_token_url(self.TOKEN_URL)
-    
+
     def test_token_url_pattern_matching(self):
         # matching *.sts.googleapis.com
-        assert external_account.Credentials.is_valid_url(external_account._TOKEN_URL_PATTERNS, "https://auth.sts.googleapis.com/v1/token")
+        assert external_account.Credentials.is_valid_url(
+            external_account._TOKEN_URL_PATTERNS,
+            "https://auth.sts.googleapis.com/v1/token",
+        )
         # matching sts.googleapis.com
-        assert external_account.Credentials.is_valid_url(external_account._TOKEN_URL_PATTERNS, "https://sts.googleapis.com/v1/token")
+        assert external_account.Credentials.is_valid_url(
+            external_account._TOKEN_URL_PATTERNS, "https://sts.googleapis.com/v1/token"
+        )
         # matching sts.*.googleapis.com
-        assert external_account.Credentials.is_valid_url(external_account._TOKEN_URL_PATTERNS, "https://sts.auth.googleapis.com/v1/token")
+        assert external_account.Credentials.is_valid_url(
+            external_account._TOKEN_URL_PATTERNS,
+            "https://sts.auth.googleapis.com/v1/token",
+        )
         # matching *-sts.googleapis.com
-        assert external_account.Credentials.is_valid_url(external_account._TOKEN_URL_PATTERNS, "https://auth-sts.googleapis.com/v1/token")
+        assert external_account.Credentials.is_valid_url(
+            external_account._TOKEN_URL_PATTERNS,
+            "https://auth-sts.googleapis.com/v1/token",
+        )
         # invalid url cannot match
-        assert not external_account.Credentials.is_valid_url(external_account._TOKEN_URL_PATTERNS, "https:///v1/token")
-        assert not external_account.Credentials.is_valid_url(external_account._TOKEN_URL_PATTERNS, "https://some-invalid-url/v1/token")
+        assert not external_account.Credentials.is_valid_url(
+            external_account._TOKEN_URL_PATTERNS, "https:///v1/token"
+        )
+        assert not external_account.Credentials.is_valid_url(
+            external_account._TOKEN_URL_PATTERNS, "https://some-invalid-url/v1/token"
+        )
 
     def test_service_account_impersonation_url_matching(self):
         # matching *.iamcredentials.googleapis.com
-        assert external_account.Credentials.is_valid_url(external_account._SERVICE_ACCOUNT_IMPERSONATION_URL_PATTERNS,
-            "https://fooauth.iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/foo@google.com:generateAccessToken"
+        assert external_account.Credentials.is_valid_url(
+            external_account._SERVICE_ACCOUNT_IMPERSONATION_URL_PATTERNS,
+            "https://fooauth.iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/foo@google.com:generateAccessToken",
         )
         # matching iamcredentials.googleapis.com
-        assert external_account.Credentials.is_valid_url(external_account._SERVICE_ACCOUNT_IMPERSONATION_URL_PATTERNS,
-            "https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/foo@google.com:generateAccessToken"
+        assert external_account.Credentials.is_valid_url(
+            external_account._SERVICE_ACCOUNT_IMPERSONATION_URL_PATTERNS,
+            "https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/foo@google.com:generateAccessToken",
         )
         # matching iamcredentials.*.googleapis.com
-        assert external_account.Credentials.is_valid_url(external_account._SERVICE_ACCOUNT_IMPERSONATION_URL_PATTERNS,
-            "https://iamcredentials.fooauth.googleapis.com/v1/projects/-/serviceAccounts/foo@google.com:generateAccessToken"
+        assert external_account.Credentials.is_valid_url(
+            external_account._SERVICE_ACCOUNT_IMPERSONATION_URL_PATTERNS,
+            "https://iamcredentials.fooauth.googleapis.com/v1/projects/-/serviceAccounts/foo@google.com:generateAccessToken",
         )
         # matching *-iamcredentials.googleapis.com
-        assert external_account.Credentials.is_valid_url(external_account._SERVICE_ACCOUNT_IMPERSONATION_URL_PATTERNS,
-            "https://us-east1-iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/foo@google.com:generateAccessToken"
+        assert external_account.Credentials.is_valid_url(
+            external_account._SERVICE_ACCOUNT_IMPERSONATION_URL_PATTERNS,
+            "https://us-east1-iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/foo@google.com:generateAccessToken",
         )
         # invalid url cannot match
-        assert not external_account.Credentials.is_valid_url(external_account._SERVICE_ACCOUNT_IMPERSONATION_URL_PATTERNS, "https:///v1/accesstoken")
-        assert not external_account.Credentials.is_valid_url(external_account._SERVICE_ACCOUNT_IMPERSONATION_URL_PATTERNS, "https://some-invalid-url/v1")
+        assert not external_account.Credentials.is_valid_url(
+            external_account._SERVICE_ACCOUNT_IMPERSONATION_URL_PATTERNS,
+            "https:///v1/accesstoken",
+        )
+        assert not external_account.Credentials.is_valid_url(
+            external_account._SERVICE_ACCOUNT_IMPERSONATION_URL_PATTERNS,
+            "https://some-invalid-url/v1",
+        )
 
     def test_default_state(self):
-        credentials = self.make_credentials(service_account_impersonation_url=self.SERVICE_ACCOUNT_IMPERSONATION_URL)
+        credentials = self.make_credentials(
+            service_account_impersonation_url=self.SERVICE_ACCOUNT_IMPERSONATION_URL
+        )
 
         # Token url and service account impersonation url should be set
         assert credentials._token_url
@@ -336,12 +363,10 @@ class TestCredentials(object):
                 audience=self.AUDIENCE,
                 subject_token_type=self.SUBJECT_TOKEN_TYPE,
                 token_url="https:///v1/token",
-                credential_source=self.CREDENTIAL_SOURCE
+                credential_source=self.CREDENTIAL_SOURCE,
             )
 
-        assert excinfo.match(
-            "The provided token URL is invalid."
-        )
+        assert excinfo.match("The provided token URL is invalid.")
 
     def test_invalid_service_account_impersonate_url(self):
         with pytest.raises(ValueError) as excinfo:
@@ -350,9 +375,9 @@ class TestCredentials(object):
                 subject_token_type=self.SUBJECT_TOKEN_TYPE,
                 token_url=self.TOKEN_URL,
                 credential_source=self.CREDENTIAL_SOURCE,
-                service_account_impersonation_url=12345    # create an exception by sending to parse url
+                service_account_impersonation_url=12345,  # create an exception by sending to parse url
             )
-        
+
         assert excinfo.match(
             "The provided service account impersonation URL is invalid."
         )
