@@ -52,22 +52,6 @@ _STS_REQUESTED_TOKEN_TYPE = "urn:ietf:params:oauth:token-type:access_token"
 # Cloud resource manager URL used to retrieve project information.
 _CLOUD_RESOURCE_MANAGER = "https://cloudresourcemanager.googleapis.com/v1/projects/"
 
-# Token url patterns
-_TOKEN_URL_PATTERNS = [
-    "^[^\\.\\s\\/\\\\]+\\.sts\\.googleapis\\.com$",
-    "^sts\\.googleapis\\.com$",
-    "^sts\\.[^\\.\\s\\/\\\\]+\\.googleapis\\.com$",
-    "^[^\\.\\s\\/\\\\]+\\-sts\\.googleapis\\.com$",
-]
-
-# Service account impersonation url patterns
-_SERVICE_ACCOUNT_IMPERSONATION_URL_PATTERNS = [
-    "^[^\\.\\s\\/\\\\]+\\.iamcredentials\\.googleapis\\.com$",
-    "^iamcredentials\\.googleapis\\.com$",
-    "^iamcredentials\\.[^\\.\\s\\/\\\\]+\\.googleapis\\.com$",
-    "^[^\\.\\s\\/\\\\]+\\-iamcredentials\\.googleapis\\.com$",
-]
-
 
 @six.add_metaclass(abc.ABCMeta)
 class Credentials(credentials.Scoped, credentials.CredentialsWithQuotaProject):
@@ -439,11 +423,25 @@ class Credentials(credentials.Scoped, credentials.CredentialsWithQuotaProject):
 
     @staticmethod
     def validate_token_url(token_url):
+        _TOKEN_URL_PATTERNS = [
+            "^[^\\.\\s\\/\\\\]+\\.sts\\.googleapis\\.com$",
+            "^sts\\.googleapis\\.com$",
+            "^sts\\.[^\\.\\s\\/\\\\]+\\.googleapis\\.com$",
+            "^[^\\.\\s\\/\\\\]+\\-sts\\.googleapis\\.com$",
+        ]
+
         if not Credentials.is_valid_url(_TOKEN_URL_PATTERNS, token_url):
             raise ValueError("The provided token URL is invalid.")
 
     @staticmethod
     def validate_service_account_impersonation_url(url):
+        _SERVICE_ACCOUNT_IMPERSONATION_URL_PATTERNS = [
+            "^[^\\.\\s\\/\\\\]+\\.iamcredentials\\.googleapis\\.com$",
+            "^iamcredentials\\.googleapis\\.com$",
+            "^iamcredentials\\.[^\\.\\s\\/\\\\]+\\.googleapis\\.com$",
+            "^[^\\.\\s\\/\\\\]+\\-iamcredentials\\.googleapis\\.com$",
+        ]
+
         if not Credentials.is_valid_url(
             _SERVICE_ACCOUNT_IMPERSONATION_URL_PATTERNS, url
         ):
@@ -461,10 +459,7 @@ class Credentials(credentials.Scoped, credentials.CredentialsWithQuotaProject):
         except Exception:
             return False
 
-        if not uri.scheme or uri.scheme != "https":
-            return False
-
-        if not uri.hostname:
+        if not uri.scheme or uri.scheme != "https" or not uri.hostname:
             return False
 
         return any(re.compile(p).match(uri.hostname.lower()) for p in patterns)
