@@ -289,7 +289,7 @@ class TestCredentials(object):
 
         for url in valid_urls:
             # A valid url shouldn't throw exception and a None value should be returned
-            assert not external_account.Credentials.validate_token_url(url)
+            external_account.Credentials.validate_token_url(url)
 
     def test_invalid_token_url_shall_throw_exceptions(self):
         invalid_urls = [
@@ -335,9 +335,7 @@ class TestCredentials(object):
 
         for url in valid_urls:
             # A valid url shouldn't throw exception and a None value should be returned
-            assert not external_account.Credentials.validate_service_account_impersonation_url(
-                url
-            )
+            external_account.Credentials.validate_service_account_impersonation_url(url)
 
     def test_invalid_service_account_impersonate_url_shall_throw_exceptions(self):
         invalid_urls = [
