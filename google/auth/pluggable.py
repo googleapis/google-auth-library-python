@@ -184,8 +184,10 @@ class Credentials(external_account.Credentials):
                 try:
                     # If the cached response is expired, _parse_subject_token will raise an error which will be ignored and we will call the executable again.
                     subject_token = self._parse_subject_token(response)
-                except:
+                except ValueError:
                     raise
+                except exceptions.RefreshError:
+                    pass
                 else:
                     return subject_token
 
@@ -219,9 +221,14 @@ class Credentials(external_account.Credentials):
                 )
             )
         else:
-            data = result.stdout.decode("utf-8")
-            response = json.loads(data)
-            return self._parse_subject_token(response)
+            try:
+                data = result.stdout.decode("utf-8")
+                response = json.loads(data)
+                subject_token = self._parse_subject_token(response)
+            except:
+                raise 
+            else:
+                return subject_token
 
     @classmethod
     def from_info(cls, info, **kwargs):
