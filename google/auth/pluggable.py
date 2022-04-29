@@ -226,7 +226,7 @@ class Credentials(external_account.Credentials):
                 response = json.loads(data)
                 subject_token = self._parse_subject_token(response)
             except:
-                raise 
+                raise
             else:
                 return subject_token
 
