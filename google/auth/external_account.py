@@ -454,6 +454,11 @@ class Credentials(credentials.Scoped, credentials.CredentialsWithQuotaProject):
         """
         Returns True if the provided URL's scheme is HTTPS and the host comforms to at least one of the provided patterns.
         """
+        # Check specifically for whitespcaces:
+        #   Some python3.6 will parse the space character into %20 and pass the regex check which shouldn't be passed
+        if not url or len(str(url).split()) > 1:
+            return False
+
         try:
             uri = parse_url(url)
         except Exception:
@@ -462,4 +467,10 @@ class Credentials(credentials.Scoped, credentials.CredentialsWithQuotaProject):
         if not uri.scheme or uri.scheme != "https" or not uri.hostname:
             return False
 
-        return any(re.compile(p).match(uri.hostname.lower()) for p in patterns)
+        # return any(re.compile(p).match(uri.hostname.lower()) for p in patterns)
+        for p in patterns:
+            if re.compile(p).match(uri.hostname.lower()):
+                print(f"{p} matches {uri.hostname.lower()}")
+                return True
+
+        return False
