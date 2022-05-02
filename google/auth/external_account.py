@@ -467,10 +467,5 @@ class Credentials(credentials.Scoped, credentials.CredentialsWithQuotaProject):
         if not uri.scheme or uri.scheme != "https" or not uri.hostname:
             return False
 
-        # return any(re.compile(p).match(uri.hostname.lower()) for p in patterns)
-        for p in patterns:
-            if re.compile(p).match(uri.hostname.lower()):
-                print(f"{p} matches {uri.hostname.lower()}")
-                return True
-
-        return False
+        return any(re.compile(p).match(uri.hostname.lower()) for p in patterns)
+        
