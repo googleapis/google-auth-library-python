@@ -468,4 +468,3 @@ class Credentials(credentials.Scoped, credentials.CredentialsWithQuotaProject):
             return False
 
         return any(re.compile(p).match(uri.hostname.lower()) for p in patterns)
-        
