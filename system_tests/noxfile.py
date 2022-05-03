@@ -87,8 +87,6 @@ def install_cloud_sdk(session):
     session.env[CLOUD_SDK_CONFIG_ENV] = str(CLOUD_SDK_ROOT)
     # This tells gcloud which Python interpreter to use (always use 2.7)
     session.env[CLOUD_SDK_PYTHON_ENV] = CLOUD_SDK_PYTHON
-    # This allows google auth to run executable code
-    session.env[ALLOW_PLUGGABLE_ENV] = "1"
     # This sets the $PATH for the subprocesses so they can find the gcloud
     # executable.
     session.env["PATH"] = (
@@ -384,6 +382,7 @@ def mtls_http(session):
 
 @nox.session(python=PYTHON_VERSIONS_SYNC)
 def external_accounts(session):
+    session.env[ALLOW_PLUGGABLE_ENV] = "1"
     session.install(
         *TEST_DEPENDENCIES_SYNC,
         LIBRARY_DIR,
