@@ -37,6 +37,7 @@ AUTHORIZED_USER_FILE = os.path.join(DATA_DIR, "authorized_user.json")
 EXPLICIT_CREDENTIALS_ENV = "GOOGLE_APPLICATION_CREDENTIALS"
 EXPLICIT_PROJECT_ENV = "GOOGLE_CLOUD_PROJECT"
 EXPECT_PROJECT_ENV = "EXPECT_PROJECT_ID"
+ALLOW_PLUGGABLE_ENV = "GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES"
 
 SKIP_GAE_TEST_ENV = "SKIP_APP_ENGINE_SYSTEM_TEST"
 GAE_APP_URL_TMPL = "https://{}-dot-{}.appspot.com"
@@ -86,7 +87,9 @@ def install_cloud_sdk(session):
     session.env[CLOUD_SDK_CONFIG_ENV] = str(CLOUD_SDK_ROOT)
     # This tells gcloud which Python interpreter to use (always use 2.7)
     session.env[CLOUD_SDK_PYTHON_ENV] = CLOUD_SDK_PYTHON
-    # This set the $PATH for the subprocesses so they can find the gcloud
+    # This allows google auth to run executable code
+    session.env[ALLOW_PLUGGABLE_ENV] = "1"
+    # This sets the $PATH for the subprocesses so they can find the gcloud
     # executable.
     session.env["PATH"] = (
         str(CLOUD_SDK_INSTALL_DIR.join("bin")) + os.pathsep + os.environ["PATH"]

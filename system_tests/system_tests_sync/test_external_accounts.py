@@ -38,6 +38,7 @@ import os
 import socket
 from tempfile import NamedTemporaryFile
 import threading
+import time
 
 import sys
 import google.auth
@@ -308,7 +309,8 @@ def test_aws_based_external_account(
 def test_pluggable_external_account(
     oidc_credentials, service_account_info, dns_access
 ):
-    unix_seconds = datetime.datetime.now().timestamp()
+    now = datetime.datetime.now()
+    unix_seconds = time.mktime(now.timetuple())
     expiration_time = (unix_seconds + 1 * 60 * 60) * 1000
     credential = {
         "success": True,
