@@ -214,7 +214,7 @@ class Credentials(external_account.Credentials):
             os.environ[
                 "GOOGLE_EXTERNAL_ACCOUNT_OUTPUT_FILE"
             ] = self._credential_source_executable_output_file
-        
+
         try:
             result = subprocess.check_output(
                 self._credential_source_executable_command.split(),
