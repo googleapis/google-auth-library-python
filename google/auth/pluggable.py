@@ -206,23 +206,20 @@ class Credentials(external_account.Credentials):
             env[
                 "GOOGLE_EXTERNAL_ACCOUNT_OUTPUT_FILE"
             ] = self._credential_source_executable_output_file
-        result = subprocess.run(
-            self._credential_source_executable_command.split(),
-            timeout=self._credential_source_executable_timeout_millis / 1000,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            env=env,
-        )
-
-        if result.returncode != 0:
+        try:
+            result = subprocess.check_output(
+                self._credential_source_executable_command.split(),
+                stderr=subprocess.STDOUT,
+            )
+        except subprocess.CalledProcessError as e:
             raise exceptions.RefreshError(
                 "Executable exited with non-zero return code {}. Error: {}".format(
-                    result.returncode, result.stdout
+                    e.returncode, e.output
                 )
             )
         else:
             try:
-                data = result.stdout.decode("utf-8")
+                data = result.decode("utf-8")
                 response = json.loads(data)
                 subject_token = self._parse_subject_token(response)
             except:
