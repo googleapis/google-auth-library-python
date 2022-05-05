@@ -18,13 +18,11 @@ import os
 
 import mock
 import pytest  # type: ignore
-import subprocess
 from six.moves import http_client
 from six.moves import urllib
 
 from google.auth import _helpers
 from google.auth import exceptions
-from google.auth import identity_pool
 from google.auth import pluggable
 from google.auth import transport
 
@@ -482,7 +480,7 @@ class TestCredentials(object):
             credentials = self.make_pluggable(credential_source=self.CREDENTIAL_SOURCE)
 
             with pytest.raises(exceptions.RefreshError) as excinfo:
-                subject_token = credentials.retrieve_subject_token(None)
+                _ = credentials.retrieve_subject_token(None)
 
             assert excinfo.match(
                 r"Executable returned unsuccessful response: code: 401, message: Permission denied. Caller not authorized."
@@ -499,7 +497,7 @@ class TestCredentials(object):
             credentials = self.make_pluggable(credential_source=self.CREDENTIAL_SOURCE)
 
             with pytest.raises(ValueError) as excinfo:
-                subject_token = credentials.retrieve_subject_token(None)
+                _ = credentials.retrieve_subject_token(None)
 
             assert excinfo.match(r"Executables need to be explicitly allowed")
 
@@ -522,7 +520,7 @@ class TestCredentials(object):
             credentials = self.make_pluggable(credential_source=self.CREDENTIAL_SOURCE)
 
             with pytest.raises(exceptions.RefreshError) as excinfo:
-                subject_token = credentials.retrieve_subject_token(None)
+                _ = credentials.retrieve_subject_token(None)
 
             assert excinfo.match(r"Executable returned unsupported version.")
 
@@ -545,7 +543,7 @@ class TestCredentials(object):
             credentials = self.make_pluggable(credential_source=self.CREDENTIAL_SOURCE)
 
             with pytest.raises(exceptions.RefreshError) as excinfo:
-                subject_token = credentials.retrieve_subject_token(None)
+                _ = credentials.retrieve_subject_token(None)
 
             assert excinfo.match(r"The token returned by the executable is expired.")
 
@@ -582,7 +580,7 @@ class TestCredentials(object):
             credentials = self.make_pluggable(credential_source=self.CREDENTIAL_SOURCE)
 
             with pytest.raises(exceptions.RefreshError) as excinfo:
-                subject_token = credentials.retrieve_subject_token(None)
+                _ = credentials.retrieve_subject_token(None)
 
             assert excinfo.match(r"Executable returned unsupported token type.")
 
@@ -604,7 +602,7 @@ class TestCredentials(object):
             credentials = self.make_pluggable(credential_source=self.CREDENTIAL_SOURCE)
 
             with pytest.raises(ValueError) as excinfo:
-                subject_token = credentials.retrieve_subject_token(None)
+                _ = credentials.retrieve_subject_token(None)
 
             assert excinfo.match(
                 r"The executable response is missing the version field."
@@ -628,7 +626,7 @@ class TestCredentials(object):
             credentials = self.make_pluggable(credential_source=self.CREDENTIAL_SOURCE)
 
             with pytest.raises(ValueError) as excinfo:
-                subject_token = credentials.retrieve_subject_token(None)
+                _ = credentials.retrieve_subject_token(None)
 
             assert excinfo.match(
                 r"The executable response is missing the success field."
@@ -647,7 +645,7 @@ class TestCredentials(object):
             credentials = self.make_pluggable(credential_source=self.CREDENTIAL_SOURCE)
 
             with pytest.raises(ValueError) as excinfo:
-                subject_token = credentials.retrieve_subject_token(None)
+                _ = credentials.retrieve_subject_token(None)
 
             assert excinfo.match(
                 r"Error code and message fields are required in the response."
@@ -671,7 +669,7 @@ class TestCredentials(object):
             credentials = self.make_pluggable(credential_source=self.CREDENTIAL_SOURCE)
 
             with pytest.raises(ValueError) as excinfo:
-                subject_token = credentials.retrieve_subject_token(None)
+                _ = credentials.retrieve_subject_token(None)
 
             assert excinfo.match(
                 r"The executable response is missing the expiration_time field."
@@ -695,7 +693,7 @@ class TestCredentials(object):
             credentials = self.make_pluggable(credential_source=self.CREDENTIAL_SOURCE)
 
             with pytest.raises(ValueError) as excinfo:
-                subject_token = credentials.retrieve_subject_token(None)
+                _ = credentials.retrieve_subject_token(None)
 
             assert excinfo.match(
                 r"The executable response is missing the token_type field."

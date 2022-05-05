@@ -18,7 +18,7 @@ are typically loaded from third-party executables. Unlike other
 credentials that can be initialized with a list of explicit arguments, secrets
 or credentials, external account clients use the environment and hints/guidelines
 provided by the external_account JSON file to retrieve credentials and exchange
-them for Google access tokens. 
+them for Google access tokens.
 
 Example credential_source for pluggable credential:
 
@@ -178,7 +178,7 @@ class Credentials(external_account.Credentials):
                     self._credential_source_executable_output_file
                 ) as output_file:
                     response = json.load(output_file)
-            except:
+            except Exception as e:
                 pass
             else:
                 try:
@@ -231,7 +231,7 @@ class Credentials(external_account.Credentials):
                 data = result.decode("utf-8")
                 response = json.loads(data)
                 subject_token = self._parse_subject_token(response)
-            except:
+            except Exception as e:
                 raise
             else:
                 return subject_token
@@ -312,7 +312,7 @@ class Credentials(external_account.Credentials):
             return cls.from_info(data, **kwargs)
 
     def _parse_subject_token(self, response):
-        if not "version" in response:
+        if "version" not in response:
             raise ValueError("The executable response is missing the version field.")
         if response["version"] > EXECUTABLE_SUPPORTED_MAX_VERSION:
             raise exceptions.RefreshError(
@@ -320,7 +320,7 @@ class Credentials(external_account.Credentials):
                     response["version"]
                 )
             )
-        if not "success" in response:
+        if "success" not in response:
             raise ValueError("The executable response is missing the success field.")
         if not response["success"]:
             if "code" not in response or "message" not in response:
@@ -332,7 +332,7 @@ class Credentials(external_account.Credentials):
                     response["code"], response["message"]
                 )
             )
-        if not "expiration_time" in response:
+        if "expiration_time" not in response:
             raise ValueError(
                 "The executable response is missing the expiration_time field."
             )
@@ -340,7 +340,7 @@ class Credentials(external_account.Credentials):
             raise exceptions.RefreshError(
                 "The token returned by the executable is expired."
             )
-        if not "token_type" in response:
+        if "token_type" not in response:
             raise ValueError("The executable response is missing the token_type field.")
         if (
             response["token_type"] == "urn:ietf:params:oauth:token-type:jwt"
