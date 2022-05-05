@@ -125,10 +125,6 @@ class Credentials(external_account.Credentials):
             default_scopes=default_scopes,
             workforce_pool_user_project=workforce_pool_user_project,
         )
-        if workforce_pool_user_project is not None:
-            raise ValueError(
-                "Workforce Pools are not yet supported with Pluggable Auth."
-            )
         if not isinstance(credential_source, Mapping):
             self._credential_source_executable = None
             raise ValueError(
@@ -206,7 +202,7 @@ class Credentials(external_account.Credentials):
         if self._service_account_impersonation_url is not None:
             os.environ[
                 "GOOGLE_EXTERNAL_ACCOUNT_IMPERSONATED_EMAIL"
-            ] = self.service_account_email()
+            ] = self.service_account_email
         original_credential_source_executable_output_file = os.getenv(
             "GOOGLE_EXTERNAL_ACCOUNT_OUTPUT_FILE"
         )
@@ -233,36 +229,36 @@ class Credentials(external_account.Credentials):
                 subject_token = self._parse_subject_token(response)
             except Exception:
                 raise
-            else:
-                return subject_token
-        finally:
-            # Reset env vars.
-            if original_audience is not None:
-                os.environ["GOOGLE_EXTERNAL_ACCOUNT_AUDIENCE"] = original_audience
-            else:
-                del os.environ["GOOGLE_EXTERNAL_ACCOUNT_AUDIENCE"]
-            if original_subject_token_type is not None:
-                os.environ[
-                    "GOOGLE_EXTERNAL_ACCOUNT_TOKEN_TYPE"
-                ] = self.original_subject_token_type
-            else:
-                del os.environ["GOOGLE_EXTERNAL_ACCOUNT_TOKEN_TYPE"]
-            if original_interactive is not None:
-                os.environ["GOOGLE_EXTERNAL_ACCOUNT_INTERACTIVE"] = original_interactive
-            else:
-                del os.environ["GOOGLE_EXTERNAL_ACCOUNT_INTERACTIVE"]
-            if original_service_account_impersonation_url is not None:
-                os.environ[
-                    "GOOGLE_EXTERNAL_ACCOUNT_IMPERSONATED_EMAIL"
-                ] = original_service_account_impersonation_url
-            elif os.getenv("GOOGLE_EXTERNAL_ACCOUNT_IMPERSONATED_EMAIL") is not None:
-                del os.environ["GOOGLE_EXTERNAL_ACCOUNT_IMPERSONATED_EMAIL"]
-            if original_credential_source_executable_output_file is not None:
-                os.environ[
-                    "GOOGLE_EXTERNAL_ACCOUNT_OUTPUT_FILE"
-                ] = original_credential_source_executable_output_file
-            elif os.getenv("GOOGLE_EXTERNAL_ACCOUNT_OUTPUT_FILE") is not None:
-                del os.environ["GOOGLE_EXTERNAL_ACCOUNT_OUTPUT_FILE"]
+
+        # Reset env vars.
+        if original_audience is not None:
+            os.environ["GOOGLE_EXTERNAL_ACCOUNT_AUDIENCE"] = original_audience
+        else:
+            del os.environ["GOOGLE_EXTERNAL_ACCOUNT_AUDIENCE"]
+        if original_subject_token_type is not None:
+            os.environ[
+                "GOOGLE_EXTERNAL_ACCOUNT_TOKEN_TYPE"
+            ] = original_subject_token_type
+        else:
+            del os.environ["GOOGLE_EXTERNAL_ACCOUNT_TOKEN_TYPE"]
+        if original_interactive is not None:
+            os.environ["GOOGLE_EXTERNAL_ACCOUNT_INTERACTIVE"] = original_interactive
+        else:
+            del os.environ["GOOGLE_EXTERNAL_ACCOUNT_INTERACTIVE"]
+        if original_service_account_impersonation_url is not None:
+            os.environ[
+                "GOOGLE_EXTERNAL_ACCOUNT_IMPERSONATED_EMAIL"
+            ] = original_service_account_impersonation_url
+        elif os.getenv("GOOGLE_EXTERNAL_ACCOUNT_IMPERSONATED_EMAIL") is not None:
+            del os.environ["GOOGLE_EXTERNAL_ACCOUNT_IMPERSONATED_EMAIL"]
+        if original_credential_source_executable_output_file is not None:
+            os.environ[
+                "GOOGLE_EXTERNAL_ACCOUNT_OUTPUT_FILE"
+            ] = original_credential_source_executable_output_file
+        elif os.getenv("GOOGLE_EXTERNAL_ACCOUNT_OUTPUT_FILE") is not None:
+            del os.environ["GOOGLE_EXTERNAL_ACCOUNT_OUTPUT_FILE"]
+        
+        return subject_token
 
     @classmethod
     def from_info(cls, info, **kwargs):
