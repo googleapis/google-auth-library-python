@@ -178,7 +178,7 @@ class Credentials(external_account.Credentials):
                     self._credential_source_executable_output_file
                 ) as output_file:
                     response = json.load(output_file)
-            except Exception as e:
+            except Exception:
                 pass
             else:
                 try:
@@ -231,7 +231,7 @@ class Credentials(external_account.Credentials):
                 data = result.decode("utf-8")
                 response = json.loads(data)
                 subject_token = self._parse_subject_token(response)
-            except Exception as e:
+            except Exception:
                 raise
             else:
                 return subject_token
