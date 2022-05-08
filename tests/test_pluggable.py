@@ -640,7 +640,7 @@ class TestCredentials(object):
                     "output_file": self.CREDENTIAL_SOURCE_EXECUTABLE_OUTPUT_FILE,
                 }
             }
-            credentials = self.make_pluggable(credential_source=CREDENTIAL_SOURCE)
+            _ = self.make_pluggable(credential_source=CREDENTIAL_SOURCE)
 
         assert excinfo.match(
             r"Missing command field. Executable command must be provided."
@@ -656,7 +656,7 @@ class TestCredentials(object):
                     "output_file": self.CREDENTIAL_SOURCE_EXECUTABLE_OUTPUT_FILE,
                 }
             }
-            credentials = self.make_pluggable(credential_source=CREDENTIAL_SOURCE)
+            _ = self.make_pluggable(credential_source=CREDENTIAL_SOURCE)
 
         assert excinfo.match(r"Timeout must be between 5 and 120 seconds.")
 
@@ -670,7 +670,7 @@ class TestCredentials(object):
                     "output_file": self.CREDENTIAL_SOURCE_EXECUTABLE_OUTPUT_FILE,
                 }
             }
-            credentials = self.make_pluggable(credential_source=CREDENTIAL_SOURCE)
+            _ = self.make_pluggable(credential_source=CREDENTIAL_SOURCE)
 
         assert excinfo.match(r"Timeout must be between 5 and 120 seconds.")
 
