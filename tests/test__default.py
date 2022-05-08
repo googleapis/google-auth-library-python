@@ -78,11 +78,7 @@ PLUGGABLE_DATA = {
     "audience": AUDIENCE,
     "subject_token_type": "urn:ietf:params:oauth:token-type:jwt",
     "token_url": TOKEN_URL,
-    "credential_source": {
-        "executable": {
-            "command": "command"
-        }
-    },
+    "credential_source": {"executable": {"command": "command"}},
 }
 AWS_DATA = {
     "type": "external_account",
@@ -1153,10 +1149,9 @@ def test_default_impersonated_service_account_set_both_scopes_and_default_scopes
     credentials, _ = _default.default(scopes=scopes, default_scopes=default_scopes)
     assert credentials._target_scopes == scopes
 
+
 @EXTERNAL_ACCOUNT_GET_PROJECT_ID_PATCH
-def test_load_credentials_from_external_account_pluggable(
-    get_project_id, tmpdir
-):
+def test_load_credentials_from_external_account_pluggable(get_project_id, tmpdir):
     config_file = tmpdir.join("config.json")
     config_file.write(json.dumps(PLUGGABLE_DATA))
     credentials, project_id = _default.load_credentials_from_file(str(config_file))

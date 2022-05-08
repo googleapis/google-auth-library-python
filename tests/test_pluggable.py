@@ -254,7 +254,17 @@ class TestCredentials(object):
             "credential_source": self.CREDENTIAL_SOURCE,
         }
 
-    @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1", "GOOGLE_EXTERNAL_ACCOUNT_AUDIENCE": "original_audience", "GOOGLE_EXTERNAL_ACCOUNT_TOKEN_TYPE": "original_token_type", "GOOGLE_EXTERNAL_ACCOUNT_INTERACTIVE": "0", "GOOGLE_EXTERNAL_ACCOUNT_IMPERSONATED_EMAIL": "original_impersonated_email", "GOOGLE_EXTERNAL_ACCOUNT_OUTPUT_FILE": "original_output_file"})
+    @mock.patch.dict(
+        os.environ,
+        {
+            "GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1",
+            "GOOGLE_EXTERNAL_ACCOUNT_AUDIENCE": "original_audience",
+            "GOOGLE_EXTERNAL_ACCOUNT_TOKEN_TYPE": "original_token_type",
+            "GOOGLE_EXTERNAL_ACCOUNT_INTERACTIVE": "0",
+            "GOOGLE_EXTERNAL_ACCOUNT_IMPERSONATED_EMAIL": "original_impersonated_email",
+            "GOOGLE_EXTERNAL_ACCOUNT_OUTPUT_FILE": "original_output_file",
+        },
+    )
     def test_retrieve_subject_token_oidc_id_token(self):
         with mock.patch(
             "subprocess.check_output",
@@ -262,7 +272,11 @@ class TestCredentials(object):
                 self.EXECUTABLE_SUCCESSFUL_OIDC_RESPONSE_ID_TOKEN
             ).encode("UTF-8"),
         ):
-            credentials = self.make_pluggable(audience=AUDIENCE,service_account_impersonation_url=SERVICE_ACCOUNT_IMPERSONATION_URL, credential_source=self.CREDENTIAL_SOURCE)
+            credentials = self.make_pluggable(
+                audience=AUDIENCE,
+                service_account_impersonation_url=SERVICE_ACCOUNT_IMPERSONATION_URL,
+                credential_source=self.CREDENTIAL_SOURCE,
+            )
 
             subject_token = credentials.retrieve_subject_token(None)
 
@@ -276,7 +290,11 @@ class TestCredentials(object):
                 self.EXECUTABLE_SUCCESSFUL_OIDC_RESPONSE_JWT
             ).encode("UTF-8"),
         ):
-            credentials = self.make_pluggable(audience=AUDIENCE,service_account_impersonation_url=SERVICE_ACCOUNT_IMPERSONATION_URL, credential_source=self.CREDENTIAL_SOURCE)
+            credentials = self.make_pluggable(
+                audience=AUDIENCE,
+                service_account_impersonation_url=SERVICE_ACCOUNT_IMPERSONATION_URL,
+                credential_source=self.CREDENTIAL_SOURCE,
+            )
 
             subject_token = credentials.retrieve_subject_token(None)
 
@@ -401,16 +419,18 @@ class TestCredentials(object):
 
         with mock.patch(
             "subprocess.check_output",
-            return_value=json.dumps(self.EXECUTABLE_SUCCESSFUL_OIDC_RESPONSE_ID_TOKEN).encode(
-                "UTF-8"
-            ),
+            return_value=json.dumps(
+                self.EXECUTABLE_SUCCESSFUL_OIDC_RESPONSE_ID_TOKEN
+            ).encode("UTF-8"),
         ):
-            credentials = self.make_pluggable(credential_source=ACTUAL_CREDENTIAL_SOURCE)
+            credentials = self.make_pluggable(
+                credential_source=ACTUAL_CREDENTIAL_SOURCE
+            )
 
             subject_token = credentials.retrieve_subject_token(None)
-            
+
             assert subject_token == self.EXECUTABLE_OIDC_TOKEN
-        
+
     @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
     def test_retrieve_subject_token_file_cache_value_error_report(self):
         ACTUAL_CREDENTIAL_SOURCE_EXECUTABLE_OUTPUT_FILE = "actual_output_file"
@@ -420,7 +440,7 @@ class TestCredentials(object):
             "output_file": ACTUAL_CREDENTIAL_SOURCE_EXECUTABLE_OUTPUT_FILE,
         }
         ACTUAL_CREDENTIAL_SOURCE = {"executable": ACTUAL_CREDENTIAL_SOURCE_EXECUTABLE}
-        ACTUAL_EXECUTABLE_RESPONSE= {
+        ACTUAL_EXECUTABLE_RESPONSE = {
             "success": True,
             "token_type": "urn:ietf:params:oauth:token-type:id_token",
             "id_token": self.EXECUTABLE_OIDC_TOKEN,
@@ -428,18 +448,16 @@ class TestCredentials(object):
         }
         with open(ACTUAL_CREDENTIAL_SOURCE_EXECUTABLE_OUTPUT_FILE, "w") as output_file:
             json.dump(ACTUAL_EXECUTABLE_RESPONSE, output_file)
-            
+
         credentials = self.make_pluggable(credential_source=ACTUAL_CREDENTIAL_SOURCE)
 
         with pytest.raises(ValueError) as excinfo:
             _ = credentials.retrieve_subject_token(None)
 
-        assert excinfo.match(
-            r"The executable response is missing the version field."
-        )
-        
+        assert excinfo.match(r"The executable response is missing the version field.")
+
         os.remove(ACTUAL_CREDENTIAL_SOURCE_EXECUTABLE_OUTPUT_FILE)
-        
+
     @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
     def test_retrieve_subject_token_file_cache_refresh_error_retry(self):
         ACTUAL_CREDENTIAL_SOURCE_EXECUTABLE_OUTPUT_FILE = "actual_output_file"
@@ -449,7 +467,7 @@ class TestCredentials(object):
             "output_file": ACTUAL_CREDENTIAL_SOURCE_EXECUTABLE_OUTPUT_FILE,
         }
         ACTUAL_CREDENTIAL_SOURCE = {"executable": ACTUAL_CREDENTIAL_SOURCE_EXECUTABLE}
-        ACTUAL_EXECUTABLE_RESPONSE= {
+        ACTUAL_EXECUTABLE_RESPONSE = {
             "version": 2,
             "success": True,
             "token_type": "urn:ietf:params:oauth:token-type:id_token",
@@ -461,18 +479,20 @@ class TestCredentials(object):
 
         with mock.patch(
             "subprocess.check_output",
-            return_value=json.dumps(self.EXECUTABLE_SUCCESSFUL_OIDC_RESPONSE_ID_TOKEN).encode(
-                "UTF-8"
-            ),
+            return_value=json.dumps(
+                self.EXECUTABLE_SUCCESSFUL_OIDC_RESPONSE_ID_TOKEN
+            ).encode("UTF-8"),
         ):
-            credentials = self.make_pluggable(credential_source=ACTUAL_CREDENTIAL_SOURCE)
+            credentials = self.make_pluggable(
+                credential_source=ACTUAL_CREDENTIAL_SOURCE
+            )
 
             subject_token = credentials.retrieve_subject_token(None)
 
             assert subject_token == self.EXECUTABLE_OIDC_TOKEN
-        
+
         os.remove(ACTUAL_CREDENTIAL_SOURCE_EXECUTABLE_OUTPUT_FILE)
-    
+
     @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
     def test_retrieve_subject_token_unsupported_token_type(self):
         EXECUTABLE_SUCCESSFUL_OIDC_RESPONSE = {
@@ -614,59 +634,66 @@ class TestCredentials(object):
     @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
     def test_workforce_pool_user_project_not_supported(self):
         with pytest.raises(ValueError) as excinfo:
-            credentials = self.make_pluggable(workforce_pool_user_project="fake_workforce_pool_user_project")
+            credentials = self.make_pluggable(
+                workforce_pool_user_project="fake_workforce_pool_user_project"
+            )
 
             assert excinfo.match(
                 r"workforce_pool_user_project should not be set for non-workforce pool credentials"
             )
-            
+
     @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
     def test_credential_source_missing_command(self):
         with pytest.raises(ValueError) as excinfo:
-            CREDENTIAL_SOURCE = {"executable":
-                {"timeout_millis": 30000,
-                "output_file": self.CREDENTIAL_SOURCE_EXECUTABLE_OUTPUT_FILE,}}
+            CREDENTIAL_SOURCE = {
+                "executable": {
+                    "timeout_millis": 30000,
+                    "output_file": self.CREDENTIAL_SOURCE_EXECUTABLE_OUTPUT_FILE,
+                }
+            }
             credentials = self.make_pluggable(credential_source=CREDENTIAL_SOURCE)
             _ = credentials.retrieve_subject_token(None)
 
         assert excinfo.match(
             r"Missing command field. Executable command must be provided."
         )
-        
+
     @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
     def test_credential_source_timeout_small(self):
         with pytest.raises(ValueError) as excinfo:
-            CREDENTIAL_SOURCE = {"executable":
-                {"command": self.CREDENTIAL_SOURCE_EXECUTABLE_COMMAND,
-                "timeout_millis": 5000-1,
-                "output_file": self.CREDENTIAL_SOURCE_EXECUTABLE_OUTPUT_FILE,}}
+            CREDENTIAL_SOURCE = {
+                "executable": {
+                    "command": self.CREDENTIAL_SOURCE_EXECUTABLE_COMMAND,
+                    "timeout_millis": 5000 - 1,
+                    "output_file": self.CREDENTIAL_SOURCE_EXECUTABLE_OUTPUT_FILE,
+                }
+            }
             credentials = self.make_pluggable(credential_source=CREDENTIAL_SOURCE)
             _ = credentials.retrieve_subject_token(None)
 
-        assert excinfo.match(
-            r"Timeout must be between 5 and 120 seconds."
-        )
-        
+        assert excinfo.match(r"Timeout must be between 5 and 120 seconds.")
+
     @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
     def test_credential_source_timeout_large(self):
         with pytest.raises(ValueError) as excinfo:
-            CREDENTIAL_SOURCE = {"executable":
-                {"command": self.CREDENTIAL_SOURCE_EXECUTABLE_COMMAND,
-                "timeout_millis": 120000+1,
-                "output_file": self.CREDENTIAL_SOURCE_EXECUTABLE_OUTPUT_FILE,}}
+            CREDENTIAL_SOURCE = {
+                "executable": {
+                    "command": self.CREDENTIAL_SOURCE_EXECUTABLE_COMMAND,
+                    "timeout_millis": 120000 + 1,
+                    "output_file": self.CREDENTIAL_SOURCE_EXECUTABLE_OUTPUT_FILE,
+                }
+            }
             credentials = self.make_pluggable(credential_source=CREDENTIAL_SOURCE)
             _ = credentials.retrieve_subject_token(None)
 
-        assert excinfo.match(
-            r"Timeout must be between 5 and 120 seconds."
-        )
-        
+        assert excinfo.match(r"Timeout must be between 5 and 120 seconds.")
+
     @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
     def test_retrieve_subject_token_executable_fail(self):
-        with mock.patch(
-            "subprocess.check_output",
-        ) as subprocess_mock:
-            subprocess_mock.side_effect = subprocess.CalledProcessError(returncode=1,cmd='')
+        with mock.patch("subprocess.check_output") as subprocess_mock:
+            subprocess_mock.side_effect = subprocess.CalledProcessError(
+                returncode=1, cmd=""
+            )
             credentials = self.make_pluggable(credential_source=self.CREDENTIAL_SOURCE)
 
             with pytest.raises(exceptions.RefreshError) as excinfo:

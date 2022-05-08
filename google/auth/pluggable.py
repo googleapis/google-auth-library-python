@@ -257,7 +257,7 @@ class Credentials(external_account.Credentials):
             ] = original_credential_source_executable_output_file
         elif os.getenv("GOOGLE_EXTERNAL_ACCOUNT_OUTPUT_FILE") is not None:
             del os.environ["GOOGLE_EXTERNAL_ACCOUNT_OUTPUT_FILE"]
-        
+
         return subject_token
 
     @classmethod
