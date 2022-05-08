@@ -632,17 +632,6 @@ class TestCredentials(object):
             )
 
     @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
-    def test_workforce_pool_user_project_not_supported(self):
-        with pytest.raises(ValueError) as excinfo:
-            _ = self.make_pluggable(
-                workforce_pool_user_project="fake_workforce_pool_user_project"
-            )
-
-            assert excinfo.match(
-                r"workforce_pool_user_project should not be set for non-workforce pool credentials"
-            )
-
-    @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
     def test_credential_source_missing_command(self):
         with pytest.raises(ValueError) as excinfo:
             CREDENTIAL_SOURCE = {
@@ -652,7 +641,6 @@ class TestCredentials(object):
                 }
             }
             credentials = self.make_pluggable(credential_source=CREDENTIAL_SOURCE)
-            _ = credentials.retrieve_subject_token(None)
 
         assert excinfo.match(
             r"Missing command field. Executable command must be provided."
@@ -669,7 +657,6 @@ class TestCredentials(object):
                 }
             }
             credentials = self.make_pluggable(credential_source=CREDENTIAL_SOURCE)
-            _ = credentials.retrieve_subject_token(None)
 
         assert excinfo.match(r"Timeout must be between 5 and 120 seconds.")
 
@@ -684,7 +671,6 @@ class TestCredentials(object):
                 }
             }
             credentials = self.make_pluggable(credential_source=CREDENTIAL_SOURCE)
-            _ = credentials.retrieve_subject_token(None)
 
         assert excinfo.match(r"Timeout must be between 5 and 120 seconds.")
 
