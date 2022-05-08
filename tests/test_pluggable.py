@@ -12,20 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import datetime
+# import datetime
 import json
 import os
 import subprocess
 
 import mock
 import pytest  # type: ignore
-from six.moves import http_client
-from six.moves import urllib
+# from six.moves import http_client
+# from six.moves import urllib
 
-from google.auth import _helpers
+# from google.auth import _helpers
 from google.auth import exceptions
 from google.auth import pluggable
-from google.auth import transport
+# from google.auth import transport
 
 
 CLIENT_ID = "username"
@@ -634,7 +634,7 @@ class TestCredentials(object):
     @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
     def test_workforce_pool_user_project_not_supported(self):
         with pytest.raises(ValueError) as excinfo:
-            credentials = self.make_pluggable(
+            _ = self.make_pluggable(
                 workforce_pool_user_project="fake_workforce_pool_user_project"
             )
 
