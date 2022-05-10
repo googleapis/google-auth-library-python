@@ -1164,12 +1164,17 @@ def test_default_impersonated_service_account_set_both_scopes_and_default_scopes
 @mock.patch(
     "google.auth._cloud_sdk.get_application_default_credentials_path", autospec=True
 )
-def test_default_gdch_service_account_credentials(get_adc_path):
+@mock.patch("google.auth._default._apply_quota_project_id", autospec=True)
+def test_default_gdch_service_account_credentials(apply_quota_project_id, get_adc_path):
     get_adc_path.return_value = GDCH_SERVICE_ACCOUNT_FILE
 
     credentials, _ = _default.default(quota_project_id="project-foo")
+
+    # make sure _apply_quota_project_id is not called since GDCH service account
+    # credential doesn't inheirt from CredentialsWithQuotaProject.
+    apply_quota_project_id.assert_not_called()
+
     assert isinstance(credentials, gdch_credentials.ServiceAccountCredentials)
-    assert credentials._quota_project_id == "project-foo"
     assert credentials._k8s_ca_cert_path == "./k8s_ca_cert.pem"
     assert credentials._k8s_cert_path == "./k8s_cert.pem"
     assert credentials._k8s_key_path == "./k8s_key.pem"

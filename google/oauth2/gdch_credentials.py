@@ -30,7 +30,7 @@ JWT_TOKEN_TYPE = "urn:ietf:params:oauth:token-type:jwt"
 SERVICE_ACCOUNT_TOKEN_TYPE = "urn:k8s:params:oauth:token-type:serviceaccount"
 
 
-class ServiceAccountCredentials(credentials.CredentialsWithQuotaProject):
+class ServiceAccountCredentials(credentials.Credentials):
     """Credentials for GDCH (`Google Distributed Cloud Hosted`_) for service
     account users.
 
@@ -89,7 +89,6 @@ class ServiceAccountCredentials(credentials.CredentialsWithQuotaProject):
         ais_ca_cert_path,
         ais_token_endpoint,
         audience,
-        quota_project_id=None,
     ):
         """
         Args:
@@ -107,9 +106,6 @@ class ServiceAccountCredentials(credentials.CredentialsWithQuotaProject):
             ais_token_endpoint (str): AIS token endpoint url
             audience (str): The audience for the requested AIS token. For
                 example, it could be a k8s cluster or API service.
-            quota_project_id (Optional[str]): The project ID used for quota
-                and billing. This project may be different from the project
-                used to create the credentials.
         """
         super(ServiceAccountCredentials, self).__init__()
         self._k8s_ca_cert_path = k8s_ca_cert_path
@@ -119,7 +115,6 @@ class ServiceAccountCredentials(credentials.CredentialsWithQuotaProject):
         self._ais_ca_cert_path = ais_ca_cert_path
         self._ais_token_endpoint = ais_token_endpoint
         self._audience = audience
-        self._quota_project_id = quota_project_id
 
     def _make_k8s_token_request(self, request):
         k8s_request_body = {
@@ -196,18 +191,4 @@ class ServiceAccountCredentials(credentials.CredentialsWithQuotaProject):
             self._ais_ca_cert_path,
             self._ais_token_endpoint,
             audience,
-            self._quota_project_id,
-        )
-
-    @_helpers.copy_docstring(credentials.CredentialsWithQuotaProject)
-    def with_quota_project(self, quota_project_id):
-        return self.__class__(
-            self._k8s_ca_cert_path,
-            self._k8s_cert_path,
-            self._k8s_key_path,
-            self._k8s_token_endpoint,
-            self._ais_ca_cert_path,
-            self._ais_token_endpoint,
-            self._audience,
-            quota_project_id,
         )

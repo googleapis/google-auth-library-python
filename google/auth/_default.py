@@ -136,6 +136,8 @@ def load_credentials_from_file(
 def _load_credentials_from_info(
     filename, info, scopes, default_scopes, quota_project_id, request
 ):
+    from google.auth.credentials import CredentialsWithQuotaProject
+
     credential_type = info.get("type")
 
     if credential_type == _AUTHORIZED_USER_TYPE:
@@ -169,7 +171,8 @@ def _load_credentials_from_info(
                 file=filename, type=credential_type, valid_types=_VALID_TYPES
             )
         )
-    credentials = _apply_quota_project_id(credentials, quota_project_id)
+    if isinstance(credentials, CredentialsWithQuotaProject):
+        credentials = _apply_quota_project_id(credentials, quota_project_id)
     return credentials, project_id
 
 

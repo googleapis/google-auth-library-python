@@ -32,7 +32,6 @@ class TestCredentials(object):
     AIS_CA_CERT_PATH = "./ais_ca_cert.pem"
     AIS_TOKEN_ENDPOINT = "https://k8s_endpoint/v1/token"
     AUDIENCE = "audience_foo"
-    QUOTA_PROJECT = "project_foo"
 
     @classmethod
     def make_credentials(cls):
@@ -44,7 +43,6 @@ class TestCredentials(object):
             cls.AIS_CA_CERT_PATH,
             cls.AIS_TOKEN_ENDPOINT,
             cls.AUDIENCE,
-            cls.QUOTA_PROJECT,
         )
 
     def test_with_audience(self):
@@ -53,13 +51,6 @@ class TestCredentials(object):
 
         new_creds = creds.with_audience("bar")
         assert new_creds._audience == "bar"
-
-    def test_with_quota_project(self):
-        creds = self.make_credentials()
-        assert creds.quota_project_id == self.QUOTA_PROJECT
-
-        new_creds = creds.with_quota_project("project_bar")
-        assert new_creds._quota_project_id == "project_bar"
 
     @mock.patch("google.oauth2._client._token_endpoint_request", autospec=True)
     def test__make_k8s_token_request(self, token_endpoint_request):
@@ -187,4 +178,3 @@ class TestCredentials(object):
         k8s_token_request.assert_called()
         ais_token_request.assert_called()
         assert headers["authorization"] == "Bearer ais_token"
-        assert headers["x-goog-user-project"] == "project_foo"
