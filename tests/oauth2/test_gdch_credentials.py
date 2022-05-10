@@ -121,9 +121,7 @@ class TestCredentials(object):
         k8s_token = self.K8S_TOKEN
         ais_token, ais_expiry = creds._make_ais_token_request(k8s_token, req)
         assert ais_token == "ais_token"
-        assert ais_expiry == issue_time + datetime.timedelta(
-            seconds=expires_in_seconds
-        )
+        assert ais_expiry == issue_time + datetime.timedelta(seconds=expires_in_seconds)
         token_endpoint_request.assert_called_with(
             req,
             creds._ais_token_endpoint,
