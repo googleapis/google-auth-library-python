@@ -104,7 +104,13 @@ def _token_endpoint_request_no_throw(
         expected_status_code (Optional(int)): The expected the status code of
             the token response. The default value is 200. We may expect other
             status code like 201 for GDCH credentials.
-        kwargs: Additional arguments passed on to the request method.
+        kwargs: Additional arguments passed on to the request method. The
+            kwargs will be passed to `requests.request` method, see:
+            https://docs.python-requests.org/en/latest/api/#requests.request.
+            For example, you can use `cert=("cert_pem_path", "key_pem_path")`
+            to set up client side SSL certificate, and use
+            `verify="ca_bundle_path"` to set up the CA certificates for sever
+            side SSL certificate verification.
 
     Returns:
         Tuple(bool, Mapping[str, str]): A boolean indicating if the request is
@@ -151,7 +157,7 @@ def _token_endpoint_request_no_throw(
                     continue
             except ValueError:
                 response_data = response_body
-            return response.status == expected_status_code, response_data
+            return False, response_data
 
     return response.status == expected_status_code, response_data
 
@@ -179,7 +185,13 @@ def _token_endpoint_request(
         expected_status_code (Optional(int)): The expected the status code of
             the token response. The default value is 200. We may expect other
             status code like 201 for GDCH credentials.
-        kwargs: Additional arguments passed on to the request method.
+        kwargs: Additional arguments passed on to the request method. The
+            kwargs will be passed to `requests.request` method, see:
+            https://docs.python-requests.org/en/latest/api/#requests.request.
+            For example, you can use `cert=("cert_pem_path", "key_pem_path")`
+            to set up client side SSL certificate, and use
+            `verify="ca_bundle_path"` to set up the CA certificates for sever
+            side SSL certificate verification.
 
     Returns:
         Mapping[str, str]: The JSON-decoded response data.

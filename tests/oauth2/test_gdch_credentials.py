@@ -27,6 +27,7 @@ class TestCredentials(object):
     K8S_CA_CERT_PATH = "./k8s_ca_cert.pem"
     K8S_CERT_PATH = "./k8s_cert.pem"
     K8S_KEY_PATH = "./k8s_key.pem"
+    K8S_TOKEN = "k8s_token"
     K8S_TOKEN_ENDPOINT = "https://k8s_endpoint/v1/token"
     AIS_CA_CERT_PATH = "./ais_ca_cert.pem"
     AIS_TOKEN_ENDPOINT = "https://k8s_endpoint/v1/token"
@@ -67,11 +68,11 @@ class TestCredentials(object):
 
         token_endpoint_request.return_value = {
             "status": {
-                "token": "k8s_token",
+                "token": self.K8S_TOKEN,
                 "expirationTimestamp": "2022-02-22T06:51:46Z",
             }
         }
-        assert creds._make_k8s_token_request(req) == "k8s_token"
+        assert creds._make_k8s_token_request(req) == self.K8S_TOKEN
         token_endpoint_request.assert_called_with(
             req,
             creds._k8s_token_endpoint,
@@ -106,18 +107,23 @@ class TestCredentials(object):
         creds = self.make_credentials()
         req = requests.Request()
 
+        issue_time = datetime.datetime(2022, 1, 1, 0, 0, 0)
+        utcnow.return_value = issue_time
+        expires_in_seconds = 3599
+
         token_endpoint_request.return_value = {
             "access_token": "ais_token",
-            "expires_in": 3599,
+            "expires_in": expires_in_seconds,
             "issued_token_type": "urn:ietf:params:oauth:token-type:access_token",
             "token_type": "Bearer",
         }
-        utcnow.return_value = datetime.datetime(2022, 1, 1, 0, 0, 0)
 
-        k8s_token = "k8s_token"
+        k8s_token = self.K8S_TOKEN
         ais_token, ais_expiry = creds._make_ais_token_request(k8s_token, req)
         assert ais_token == "ais_token"
-        assert ais_expiry == datetime.datetime(2022, 1, 1, 0, 59, 59)
+        assert ais_expiry == issue_time + datetime.timedelta(
+            seconds=expires_in_seconds
+        )
         token_endpoint_request.assert_called_with(
             req,
             creds._ais_token_endpoint,
@@ -142,7 +148,7 @@ class TestCredentials(object):
         autospec=True,
     )
     def test_refresh(self, ais_token_request, k8s_token_request):
-        k8s_token_request.return_value = "k8s_token"
+        k8s_token_request.return_value = self.K8S_TOKEN
         mock_expiry = mock.Mock()
         ais_token_request.return_value = ("ais_token", mock_expiry)
 
@@ -151,7 +157,7 @@ class TestCredentials(object):
         creds.refresh(req)
 
         k8s_token_request.assert_called_with(creds, req)
-        ais_token_request.assert_called_with(creds, "k8s_token", req)
+        ais_token_request.assert_called_with(creds, self.K8S_TOKEN, req)
         assert creds.token == "ais_token"
         assert creds.expiry == mock_expiry
 

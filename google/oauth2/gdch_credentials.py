@@ -132,9 +132,9 @@ class ServiceAccountCredentials(credentials.CredentialsWithQuotaProject):
             request,
             self._k8s_token_endpoint,
             k8s_request_body,
-            None,
-            True,
-            http_client.CREATED,
+            access_token=None,
+            use_json=True,
+            expected_status_code=http_client.CREATED,
             cert=(self._k8s_cert_path, self._k8s_key_path),
             verify=self._k8s_ca_cert_path,
         )
@@ -161,8 +161,8 @@ class ServiceAccountCredentials(credentials.CredentialsWithQuotaProject):
             request,
             self._ais_token_endpoint,
             ais_request_body,
-            None,
-            True,
+            access_token=None,
+            use_json=True,
             verify=self._ais_ca_cert_path,
         )
         ais_token, _, ais_expiry, _ = _client._handle_refresh_grant_response(

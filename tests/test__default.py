@@ -643,13 +643,17 @@ def test__get_gcloud_sdk_credentials_no_project_id(load, unused_isfile, get_proj
 def test__get_gdch_service_account_credentials_no_format_version():
     with pytest.raises(exceptions.DefaultCredentialsError) as excinfo:
         _default._get_gdch_service_account_credentials({})
-    assert excinfo.match("format_version is not provided or unsupported")
+    assert excinfo.match(
+        "format_version is not provided or unsupported. Supported version is: v1"
+    )
 
 
 def test__get_gdch_service_account_credentials_invalid_format_version():
     with pytest.raises(exceptions.DefaultCredentialsError) as excinfo:
         _default._get_gdch_service_account_credentials({"format_version": "v2"})
-    assert excinfo.match("format_version is not provided or unsupported")
+    assert excinfo.match(
+        "format_version is not provided or unsupported. Supported version is: v1"
+    )
 
 
 class _AppIdentityModule(object):

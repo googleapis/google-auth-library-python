@@ -154,6 +154,8 @@ def test__token_endpoint_request_internal_failure_error():
         _client._token_endpoint_request(
             request, "http://example.com", {"error_description": "internal_failure"}
         )
+    # request should be called twice due to the retry
+    assert request.call_count == 2
 
     request = make_request(
         {"error": "internal_failure"}, status=http_client.BAD_REQUEST
@@ -163,6 +165,8 @@ def test__token_endpoint_request_internal_failure_error():
         _client._token_endpoint_request(
             request, "http://example.com", {"error": "internal_failure"}
         )
+    # request should be called twice due to the retry
+    assert request.call_count == 2
 
 
 def test__token_endpoint_request_string_error():
