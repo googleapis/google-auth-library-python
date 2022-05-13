@@ -16,7 +16,6 @@
 libraries.
 """
 
-import atexit
 import ctypes
 import json
 import logging
@@ -37,7 +36,6 @@ SIGN_CALLBACK_CTYPE = ctypes.CFUNCTYPE(
     ctypes.POINTER(ctypes.c_ubyte),
     ctypes.c_size_t,
 )
-CUSTOM_KEY_CTYPE = ctypes.POINTER(ctypes.c_char)
 
 
 def _cast_ssl_ctx_to_void_p(ssl_ctx):
@@ -54,9 +52,12 @@ def load_offload_lib(offload_lib_path):
         else ctypes.CDLL(offload_lib_path)
     )
 
-    lib.CreateCustomKey.argtypes = [SIGN_CALLBACK_CTYPE]
-    lib.CreateCustomKey.restype = CUSTOM_KEY_CTYPE
-    lib.DestroyCustomKey.argtypes = [CUSTOM_KEY_CTYPE]
+    lib.ConfigureSslContext.argtypes = [
+        SIGN_CALLBACK_CTYPE,
+        ctypes.c_char_p,
+        ctypes.c_void_p,
+    ]
+    lib.ConfigureSslContext.restype = ctypes.c_int
     return lib
 
 
@@ -154,11 +155,8 @@ class CustomTlsSigner(object):
                     }
         """
         self._enterprise_cert_file_path = enterprise_cert_file_path
-        self._custom_key = None
         self._cert = None
         self._sign_callback = None
-
-        atexit.register(self.cleanup)
 
     def load_libraries(self):
         try:
@@ -176,27 +174,18 @@ class CustomTlsSigner(object):
         self._signer_lib = load_signer_lib(signer_library)
 
     def set_up_custom_key(self):
+        # We need to keep a reference of the cert and sign callback so it won't
+        # be garbage collected, otherwise it will crash when used by signer lib.
         # Get cert using signer lib.
         self._cert = get_cert(self._signer_lib)
-
-        # We need to keep a reference of sign_callback so it won't get garbage
-        # collected, otherwise it will crash when it gets call in signer lib.
         self._sign_callback = get_sign_callback(self._signer_lib)
 
-        # Custom key is created on heap by offload lib, so we must call the
-        # destroy method from offload lib on exit.
-        self._custom_key = self._offload_lib.CreateCustomKey(self._sign_callback)
-
     def attach_to_ssl_context(self, ctx):
-        # Add custom_key and cert to SSL context. In the TLS handshake, the
-        # signing operation will be done by the sign_callback in custom_key.
-        if not self._offload_lib.OffloadSigning(
-            self._custom_key,
+        # In the TLS handshake, the signing operation will be done by the
+        # sign_callback.
+        if not self._offload_lib.ConfigureSslContext(
+            self._sign_callback,
             ctypes.c_char_p(self._cert),
             _cast_ssl_ctx_to_void_p(ctx._ctx._context),
         ):
-            raise exceptions.MutualTLSChannelError("failed to offload signing")
-
-    def cleanup(self):
-        if self._custom_key:
-            self._offload_lib.DestroyCustomKey(self._custom_key)
+            raise exceptions.MutualTLSChannelError("failed to configure SSL context")

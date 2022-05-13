@@ -38,9 +38,12 @@ def test_load_offload_lib():
     with mock.patch("ctypes.CDLL", return_value=mock.MagicMock()):
         lib = _custom_tls_signer.load_offload_lib("/path/to/offload/lib")
 
-    assert lib.CreateCustomKey.argtypes == [_custom_tls_signer.SIGN_CALLBACK_CTYPE]
-    assert lib.CreateCustomKey.restype == _custom_tls_signer.CUSTOM_KEY_CTYPE
-    assert lib.DestroyCustomKey.argtypes == [_custom_tls_signer.CUSTOM_KEY_CTYPE]
+    assert lib.ConfigureSslContext.argtypes == [
+        _custom_tls_signer.SIGN_CALLBACK_CTYPE,
+        ctypes.c_char_p,
+        ctypes.c_void_p,
+    ]
+    assert lib.ConfigureSslContext.restype == ctypes.c_int
 
 
 def test_load_signer_lib():
@@ -150,8 +153,7 @@ def test_custom_tls_signer():
             signer_object.attach_to_ssl_context(create_urllib3_context())
     get_cert.assert_called_once()
     get_sign_callback.assert_called_once()
-    offload_lib.CreateCustomKey.assert_called_once()
-    offload_lib.OffloadSigning.assert_called_once()
+    offload_lib.ConfigureSslContext.assert_called_once()
 
 
 def test_custom_tls_signer_failed_to_load_libraries():
@@ -178,7 +180,7 @@ def test_custom_tls_signer_fail_to_offload():
             signer_object.load_libraries()
 
     # set the return value to be 0 which indicts offload fails
-    offload_lib.OffloadSigning.return_value = 0
+    offload_lib.ConfigureSslContext.return_value = 0
 
     with pytest.raises(exceptions.MutualTLSChannelError) as excinfo:
         with mock.patch(
@@ -190,27 +192,4 @@ def test_custom_tls_signer_fail_to_offload():
                 get_cert.return_value = b"mock_cert"
                 signer_object.set_up_custom_key()
                 signer_object.attach_to_ssl_context(create_urllib3_context())
-    assert excinfo.match("failed to offload signing")
-
-
-def test_custom_tls_signer_cleanup():
-    offload_lib = mock.MagicMock()
-    signer_lib = mock.MagicMock()
-
-    with mock.patch(
-        "google.auth.transport._custom_tls_signer.load_signer_lib"
-    ) as load_signer_lib:
-        with mock.patch(
-            "google.auth.transport._custom_tls_signer.load_offload_lib"
-        ) as load_offload_lib:
-            load_offload_lib.return_value = offload_lib
-            load_signer_lib.return_value = signer_lib
-            signer_object = _custom_tls_signer.CustomTlsSigner(ENTERPRISE_CERT_FILE)
-            signer_object.load_libraries()
-
-    signer_object.cleanup()
-    offload_lib.DestroyCustomKey.assert_not_called()
-
-    signer_object._custom_key = mock.Mock()
-    signer_object.cleanup()
-    offload_lib.DestroyCustomKey.assert_called_with(signer_object._custom_key)
+    assert excinfo.match("failed to configure SSL context")
