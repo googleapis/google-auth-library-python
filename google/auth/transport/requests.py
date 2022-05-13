@@ -251,8 +251,8 @@ class _MutualTlsOffloadAdapter(requests.adapters.HTTPAdapter):
     signing operation to the signing library.
 
     Args:
-        enterprise_cert (dict): a JSON object containing the following
-            field:
+        enterprise_cert_file_path (str): the path to a enterprise cert JSON
+            file. The file should contain the following field:
 
                 {
                     "libs": {
@@ -267,14 +267,14 @@ class _MutualTlsOffloadAdapter(requests.adapters.HTTPAdapter):
             creation failed for any reason.
     """
 
-    def __init__(self, enterprise_cert):
+    def __init__(self, enterprise_cert_file_path):
         import certifi
         import urllib3.contrib.pyopenssl
         from google.auth.transport import _custom_tls_signer
 
         urllib3.contrib.pyopenssl.inject_into_urllib3()
 
-        self.signer = _custom_tls_signer.CustomTlsSigner(enterprise_cert)
+        self.signer = _custom_tls_signer.CustomTlsSigner(enterprise_cert_file_path)
         self.signer.set_up_custom_key()
 
         poolmanager = create_urllib3_context()

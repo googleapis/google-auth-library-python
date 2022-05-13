@@ -14,6 +14,7 @@
 
 import base64
 import ctypes
+import os
 
 import mock
 import pytest
@@ -25,42 +26,26 @@ from google.auth.transport import _custom_tls_signer
 
 urllib3.contrib.pyopenssl.inject_into_urllib3()
 
-ENTERPRISE_CERT = {
-    "libs": {
-        "signer_library": "/path/to/signer/lib",
-        "offload_library": "/path/to/offload/lib",
-    }
-}
-
-
-@pytest.mark.parametrize("enterprise_cert", [None, {}, {"libs": {}}])
-def test_load_offload_lib_no_lib(enterprise_cert):
-    with pytest.raises(exceptions.MutualTLSChannelError) as excinfo:
-        _custom_tls_signer.load_offload_lib(enterprise_cert)
-
-    assert excinfo.match("offload library is not set")
+ENTERPRISE_CERT_FILE = os.path.join(
+    os.path.dirname(__file__), "../data/enterprise_cert.json"
+)
+INVALID_ENTERPRISE_CERT_FILE = os.path.join(
+    os.path.dirname(__file__), "../data/enterprise_cert_invalid.json"
+)
 
 
 def test_load_offload_lib():
     with mock.patch("ctypes.CDLL", return_value=mock.MagicMock()):
-        lib = _custom_tls_signer.load_offload_lib(ENTERPRISE_CERT)
+        lib = _custom_tls_signer.load_offload_lib("/path/to/offload/lib")
 
     assert lib.CreateCustomKey.argtypes == [_custom_tls_signer.SIGN_CALLBACK_CTYPE]
     assert lib.CreateCustomKey.restype == _custom_tls_signer.CUSTOM_KEY_CTYPE
     assert lib.DestroyCustomKey.argtypes == [_custom_tls_signer.CUSTOM_KEY_CTYPE]
 
 
-@pytest.mark.parametrize("enterprise_cert", [None, {}, {"libs": {}}])
-def test_load_signer_lib_no_lib(enterprise_cert):
-    with pytest.raises(exceptions.MutualTLSChannelError) as excinfo:
-        _custom_tls_signer.load_signer_lib(enterprise_cert)
-
-    assert excinfo.match("signer library is not set")
-
-
 def test_load_signer_lib():
     with mock.patch("ctypes.CDLL", return_value=mock.MagicMock()):
-        lib = _custom_tls_signer.load_signer_lib(ENTERPRISE_CERT)
+        lib = _custom_tls_signer.load_signer_lib("/path/to/signer/lib")
 
     assert lib.SignForPython.restype == ctypes.c_int
     assert lib.SignForPython.argtypes == [
@@ -146,12 +131,14 @@ def test_custom_tls_signer():
         ) as load_offload_lib:
             load_offload_lib.return_value = offload_lib
             load_signer_lib.return_value = signer_lib
-            signer_object = _custom_tls_signer.CustomTlsSigner(ENTERPRISE_CERT)
+            signer_object = _custom_tls_signer.CustomTlsSigner(ENTERPRISE_CERT_FILE)
             signer_object.load_libraries()
     assert signer_object._cert is None
-    assert signer_object._enterprise_cert == ENTERPRISE_CERT
+    assert signer_object._enterprise_cert_file_path == ENTERPRISE_CERT_FILE
     assert signer_object._offload_lib == offload_lib
     assert signer_object._signer_lib == signer_lib
+    load_signer_lib.assert_called_with("/path/to/signer/lib")
+    load_offload_lib.assert_called_with("/path/to/offload/lib")
 
     # Test set_up_custom_key and set_up_ssl_context methods
     with mock.patch("google.auth.transport._custom_tls_signer.get_cert") as get_cert:
@@ -167,6 +154,14 @@ def test_custom_tls_signer():
     offload_lib.OffloadSigning.assert_called_once()
 
 
+def test_custom_tls_signer_failed_to_load_libraries():
+    # Test load_libraries method
+    with pytest.raises(exceptions.MutualTLSChannelError) as excinfo:
+        signer_object = _custom_tls_signer.CustomTlsSigner(INVALID_ENTERPRISE_CERT_FILE)
+        signer_object.load_libraries()
+    assert excinfo.match("enterprise cert file is invalid")
+
+
 def test_custom_tls_signer_fail_to_offload():
     offload_lib = mock.MagicMock()
     signer_lib = mock.MagicMock()
@@ -179,7 +174,7 @@ def test_custom_tls_signer_fail_to_offload():
         ) as load_offload_lib:
             load_offload_lib.return_value = offload_lib
             load_signer_lib.return_value = signer_lib
-            signer_object = _custom_tls_signer.CustomTlsSigner(ENTERPRISE_CERT)
+            signer_object = _custom_tls_signer.CustomTlsSigner(ENTERPRISE_CERT_FILE)
             signer_object.load_libraries()
 
     # set the return value to be 0 which indicts offload fails
@@ -210,7 +205,7 @@ def test_custom_tls_signer_cleanup():
         ) as load_offload_lib:
             load_offload_lib.return_value = offload_lib
             load_signer_lib.return_value = signer_lib
-            signer_object = _custom_tls_signer.CustomTlsSigner(ENTERPRISE_CERT)
+            signer_object = _custom_tls_signer.CustomTlsSigner(ENTERPRISE_CERT_FILE)
             signer_object.load_libraries()
 
     signer_object.cleanup()

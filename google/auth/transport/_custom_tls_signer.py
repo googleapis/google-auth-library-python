@@ -18,11 +18,13 @@ libraries.
 
 import atexit
 import ctypes
+import json
 import logging
 import os
 import sys
 
 import cffi
+import six
 
 from google.auth import exceptions
 
@@ -42,14 +44,7 @@ def _cast_ssl_ctx_to_void_p(ssl_ctx):
     return ctypes.cast(int(cffi.FFI().cast("intptr_t", ssl_ctx)), ctypes.c_void_p)
 
 
-def load_offload_lib(enterprise_cert):
-    if (
-        not enterprise_cert
-        or not enterprise_cert.get("libs")
-        or not enterprise_cert.get("libs").get("offload_library")
-    ):
-        raise exceptions.MutualTLSChannelError("offload library is not set")
-    offload_lib_path = enterprise_cert.get("libs").get("offload_library")
+def load_offload_lib(offload_lib_path):
     _LOGGER.debug("loading offload library from %s", offload_lib_path)
 
     # winmode parameter is only available for python 3.8+.
@@ -65,14 +60,7 @@ def load_offload_lib(enterprise_cert):
     return lib
 
 
-def load_signer_lib(enterprise_cert):
-    if (
-        not enterprise_cert
-        or not enterprise_cert.get("libs")
-        or not enterprise_cert.get("libs").get("signer_library")
-    ):
-        raise exceptions.MutualTLSChannelError("signer library is not set")
-    signer_lib_path = enterprise_cert.get("libs").get("signer_library")
+def load_signer_lib(signer_lib_path):
     _LOGGER.debug("loading signer library from %s", signer_lib_path)
 
     # winmode parameter is only available for python 3.8+.
@@ -146,7 +134,7 @@ def get_cert(signer_lib):
 
 
 class CustomTlsSigner(object):
-    def __init__(self, enterprise_cert):
+    def __init__(self, enterprise_cert_file_path):
         """
         This class loads the offload and signer library, and calls APIs from
         these libraries to obtain the cert and the custom key. The cert and
@@ -155,8 +143,8 @@ class CustomTlsSigner(object):
         signature.
 
         Args:
-            enterprise_cert (dict):a JSON object containing the following
-                field:
+            enterprise_cert_file_path (str): the path to a enterprise cert JSON
+                file. The file should contain the following field:
 
                     {
                         "libs": {
@@ -165,7 +153,7 @@ class CustomTlsSigner(object):
                         }
                     }
         """
-        self._enterprise_cert = enterprise_cert
+        self._enterprise_cert_file_path = enterprise_cert_file_path
         self._custom_key = None
         self._cert = None
         self._sign_callback = None
@@ -173,8 +161,19 @@ class CustomTlsSigner(object):
         atexit.register(self.cleanup)
 
     def load_libraries(self):
-        self._offload_lib = load_offload_lib(self._enterprise_cert)
-        self._signer_lib = load_signer_lib(self._enterprise_cert)
+        try:
+            with open(self._enterprise_cert_file_path, "r") as f:
+                enterprise_cert_json = json.load(f)
+                libs = enterprise_cert_json["libs"]
+                signer_library = libs["signer_library"]
+                offload_library = libs["offload_library"]
+        except (KeyError, ValueError) as caught_exc:
+            new_exc = exceptions.MutualTLSChannelError(
+                "enterprise cert file is invalid", caught_exc
+            )
+            six.raise_from(new_exc, caught_exc)
+        self._offload_lib = load_offload_lib(offload_library)
+        self._signer_lib = load_signer_lib(signer_library)
 
     def set_up_custom_key(self):
         # Get cert using signer lib.
