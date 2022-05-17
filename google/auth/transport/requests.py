@@ -275,6 +275,7 @@ class _MutualTlsOffloadAdapter(requests.adapters.HTTPAdapter):
         urllib3.contrib.pyopenssl.inject_into_urllib3()
 
         self.signer = _custom_tls_signer.CustomTlsSigner(enterprise_cert_file_path)
+        self.signer.load_libraries()
         self.signer.set_up_custom_key()
 
         poolmanager = create_urllib3_context()

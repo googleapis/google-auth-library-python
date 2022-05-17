@@ -557,6 +557,8 @@ class TestMutualTlsOffloadAdapter(object):
             )
 
         assert adapter.signer == mock_custom_signer
+        mock_custom_signer.load_libraries.assert_called_once()
+        mock_custom_signer.set_up_custom_key.assert_called_once()
         assert mock_custom_signer.attach_to_ssl_context.call_count == 2
 
         adapter.init_poolmanager()
