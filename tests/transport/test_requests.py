@@ -543,22 +543,11 @@ class TestMutualTlsOffloadAdapter(object):
     @mock.patch.object(requests.adapters.HTTPAdapter, "proxy_manager_for")
     def test_success(self, mock_proxy_manager_for, mock_init_poolmanager):
         mock_custom_signer = mock.MagicMock()
-        with mock.patch(
-            "google.auth.transport._custom_tls_signer.CustomTlsSigner", autospec=True
-        ) as mock_ctor:
-            mock_ctor.return_value = mock_custom_signer
-            adapter = google.auth.transport.requests._MutualTlsOffloadAdapter(
-                {
-                    "libs": {
-                        "signer_library": "/path/to/signer/lib",
-                        "offload_library": "/path/to/offload/lib",
-                    }
-                }
-            )
+        adapter = google.auth.transport.requests._MutualTlsOffloadAdapter(
+            mock_custom_signer
+        )
 
         assert adapter.signer == mock_custom_signer
-        mock_custom_signer.load_libraries.assert_called_once()
-        mock_custom_signer.set_up_custom_key.assert_called_once()
         assert mock_custom_signer.attach_to_ssl_context.call_count == 2
 
         adapter.init_poolmanager()

@@ -248,18 +248,19 @@ class _MutualTlsAdapter(requests.adapters.HTTPAdapter):
 class _MutualTlsOffloadAdapter(requests.adapters.HTTPAdapter):
     """
     A TransportAdapter that enables mutual TLS and offloads the client side
-    signing operation to the signing library.
+    signing operation to the signing library. Example usage:
+
+        from google.auth.transport import _custom_tls_signer, requests
+
+        custom_tls_signer = _custom_tls_signer.CustomTlsSigner(enterprise_cert_file_path)
+        custom_tls_signer.load_libraries()
+        custom_tls_signer.set_up_custom_key()
+
+        adapter = requests._MutualTlsOffloadAdapter(custom_tls_signer)
 
     Args:
-        enterprise_cert_file_path (str): the path to a enterprise cert JSON
-            file. The file should contain the following field:
-
-                {
-                    "libs": {
-                        "signer_library": "...",
-                        "offload_library": "..."
-                    }
-                }
+        custom_tls_signer (google.auth.transport._custom_tls_signer.CustomTlsSigner): the
+            CustomTlsSigner object that will be attached to SSL context.
 
     Raises:
         ImportError: if certifi or pyOpenSSL is not installed
@@ -267,16 +268,13 @@ class _MutualTlsOffloadAdapter(requests.adapters.HTTPAdapter):
             creation failed for any reason.
     """
 
-    def __init__(self, enterprise_cert_file_path):
+    def __init__(self, custom_tls_signer):
         import certifi
         import urllib3.contrib.pyopenssl
-        from google.auth.transport import _custom_tls_signer
 
         urllib3.contrib.pyopenssl.inject_into_urllib3()
 
-        self.signer = _custom_tls_signer.CustomTlsSigner(enterprise_cert_file_path)
-        self.signer.load_libraries()
-        self.signer.set_up_custom_key()
+        self.signer = custom_tls_signer
 
         poolmanager = create_urllib3_context()
         poolmanager.load_verify_locations(cafile=certifi.where())
