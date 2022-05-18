@@ -211,29 +211,20 @@ class Credentials(external_account.Credentials):
                 "GOOGLE_EXTERNAL_ACCOUNT_OUTPUT_FILE"
             ] = self._credential_source_executable_output_file
 
-        cmd = self._credential_source_executable_command.split()
-        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         try:
-            timeout = self._credential_source_executable_timeout_millis / 1000
-            while proc.poll() is None and timeout > 0:
-                time.sleep(1)
-                timeout -= 1
-            if timeout <= 0:
-                proc.kill()
-                raise Exception("The executable failed to finish within the timeout specified.")
-            else:
-                stdout, stderr = proc.communicate()
-                if proc.returncode != 0:
-                    raise exceptions.RefreshError(
-                        "Executable exited with non-zero return code {}. Error: {}".format(
-                            proc.returncode, stderr
-                        )
-                    )                    
-        except Exception:
-            raise
+            result = subprocess.check_output(
+                self._credential_source_executable_command.split(),
+                stderr=subprocess.STDOUT,
+            )
+        except subprocess.CalledProcessError as e:
+            raise exceptions.RefreshError(
+                "Executable exited with non-zero return code {}. Error: {}".format(
+                    e.returncode, e.output
+                )
+            )
         else:
             try:
-                data = stdout.decode("utf-8")
+                data = result.decode("utf-8")
                 response = json.loads(data)
                 subject_token = self._parse_subject_token(response)
             except Exception:
