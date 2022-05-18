@@ -41,6 +41,7 @@ import json
 import os
 import subprocess
 import time
+from threading import Timer
 
 from google.auth import _helpers
 from google.auth import exceptions
@@ -212,19 +213,26 @@ class Credentials(external_account.Credentials):
             ] = self._credential_source_executable_output_file
 
         try:
-            result = subprocess.check_output(
-                self._credential_source_executable_command.split(),
-                stderr=subprocess.STDOUT,
-            )
-        except subprocess.CalledProcessError as e:
-            raise exceptions.RefreshError(
-                "Executable exited with non-zero return code {}. Error: {}".format(
-                    e.returncode, e.output
-                )
-            )
+            cmd = self._credential_source_executable_command.split()
+            proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            timer = Timer(5, proc.kill)
+            timer.start()
+            proc.wait()
+            if (timer.isAlive()):
+                timer.cancel()
+                if proc.returncode != 0:
+                    raise exceptions.RefreshError(
+                        "Executable exited with non-zero return code {}. Error: {}".format(
+                            proc.returncode, proc.stderr.read()
+                        )
+                    )
+            else:
+                raise Exception("The executable failed to finish within the timeout specified.")
+        except Exception:
+            raise
         else:
             try:
-                data = result.decode("utf-8")
+                data = proc.stdout.read().decode("utf-8")
                 response = json.loads(data)
                 subject_token = self._parse_subject_token(response)
             except Exception:
