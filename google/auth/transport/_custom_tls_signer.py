@@ -71,13 +71,14 @@ def load_signer_lib(signer_lib_path):
         else ctypes.CDLL(signer_lib_path)
     )
 
-    # Arguments are: certHolder, certHolderLen
-    lib.GetCertPemForPython.argtypes = [ctypes.c_char_p, ctypes.c_int]
+    # Arguments are: configFilePath, certHolder, certHolderLen
+    lib.GetCertPemForPython.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_int]
     # Returns: certLen
     lib.GetCertPemForPython.restype = ctypes.c_int
 
-    # Arguments are: digest, digestLen, sigHolder, sigHolderLen
+    # Arguments are: configFilePath, digest, digestLen, sigHolder, sigHolderLen
     lib.SignForPython.argtypes = [
+        ctypes.c_char_p,
         ctypes.c_char_p,
         ctypes.c_int,
         ctypes.c_char_p,
@@ -98,7 +99,7 @@ def _compute_sha256_digest(to_be_signed, to_be_signed_len):
     return hash.finalize()
 
 
-def get_sign_callback(signer_lib):
+def get_sign_callback(signer_lib, config_file_path):
     def sign_callback(sig, sig_len, tbs, tbs_len):
         _LOGGER.debug("calling sign callback...")
 
@@ -109,7 +110,7 @@ def get_sign_callback(signer_lib):
         sigHolder = ctypes.create_string_buffer(2000)
 
         sigLen = signer_lib.SignForPython(
-            digestArray.from_buffer(bytearray(digest)), len(digest), sigHolder, 2000
+            config_file_path.encode(), digestArray.from_buffer(bytearray(digest)), len(digest), sigHolder, 2000
         )
 
         sig_len[0] = sigLen
@@ -119,18 +120,18 @@ def get_sign_callback(signer_lib):
 
         return 1
 
-    return sign_callback
+    return SIGN_CALLBACK_CTYPE(sign_callback)
 
 
-def get_cert(signer_lib):
+def get_cert(signer_lib, config_file_path):
     # First call to calculate the cert length
-    certLen = signer_lib.GetCertPemForPython(None, 0)
+    certLen = signer_lib.GetCertPemForPython(config_file_path.encode(), None, 0)
     if certLen == 0:
         raise exceptions.MutualTLSChannelError("failed to get certificate")
 
     # Then we create an array to hold the cert, and call again to fill the cert
     certHolder = ctypes.create_string_buffer(certLen)
-    signer_lib.GetCertPemForPython(certHolder, certLen)
+    signer_lib.GetCertPemForPython(config_file_path.encode(), certHolder, certLen)
     return bytes(certHolder)
 
 
@@ -177,8 +178,8 @@ class CustomTlsSigner(object):
         # We need to keep a reference of the cert and sign callback so it won't
         # be garbage collected, otherwise it will crash when used by signer lib.
         # Get cert using signer lib.
-        self._cert = get_cert(self._signer_lib)
-        self._sign_callback = get_sign_callback(self._signer_lib)
+        self._cert = get_cert(self._signer_lib, self._enterprise_cert_file_path)
+        self._sign_callback = get_sign_callback(self._signer_lib, self._enterprise_cert_file_path)
 
     def attach_to_ssl_context(self, ctx):
         # In the TLS handshake, the signing operation will be done by the
