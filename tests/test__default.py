@@ -30,6 +30,7 @@ from google.auth import identity_pool
 from google.auth import impersonated_credentials
 from google.auth import pluggable
 from google.oauth2 import gdch_credentials
+
 from google.oauth2 import service_account
 import google.oauth2.credentials
 
@@ -51,8 +52,6 @@ AUTHORIZED_USER_CLOUD_SDK_WITH_QUOTA_PROJECT_ID_FILE = os.path.join(
 SERVICE_ACCOUNT_FILE = os.path.join(DATA_DIR, "service_account.json")
 
 CLIENT_SECRETS_FILE = os.path.join(DATA_DIR, "client_secrets.json")
-
-GDCH_SERVICE_ACCOUNT_FILE = os.path.join(DATA_DIR, "gdch_service_account.json")
 
 with open(SERVICE_ACCOUNT_FILE) as fh:
     SERVICE_ACCOUNT_FILE_DATA = json.load(fh)
@@ -648,22 +647,6 @@ def test__get_gcloud_sdk_credentials_no_project_id(load, unused_isfile, get_proj
     assert get_project_id.called
 
 
-def test__get_gdch_service_account_credentials_no_format_version():
-    with pytest.raises(exceptions.DefaultCredentialsError) as excinfo:
-        _default._get_gdch_service_account_credentials({})
-    assert excinfo.match(
-        "format_version is not provided or unsupported. Supported version is: v1"
-    )
-
-
-def test__get_gdch_service_account_credentials_invalid_format_version():
-    with pytest.raises(exceptions.DefaultCredentialsError) as excinfo:
-        _default._get_gdch_service_account_credentials({"format_version": "v2"})
-    assert excinfo.match(
-        "format_version is not provided or unsupported. Supported version is: v1"
-    )
-
-
 class _AppIdentityModule(object):
     """The interface of the App Idenity app engine module.
     See https://cloud.google.com/appengine/docs/standard/python/refdocs\
@@ -1167,7 +1150,6 @@ def test_default_impersonated_service_account_set_both_scopes_and_default_scopes
 
     credentials, _ = _default.default(scopes=scopes, default_scopes=default_scopes)
     assert credentials._target_scopes == scopes
-
 
 @mock.patch(
     "google.auth._cloud_sdk.get_application_default_credentials_path", autospec=True
