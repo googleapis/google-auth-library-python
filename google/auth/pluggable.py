@@ -213,7 +213,9 @@ class Credentials(external_account.Credentials):
             ] = self._credential_source_executable_output_file
 
         if sys.version_info < (3, 0):
-            raise exceptions.RefreshError("Pluggable auth is only supported for python 3.6+")
+            raise exceptions.RefreshError(
+                "Pluggable auth is only supported for python 3.6+"
+            )
 
         try:
             result = subprocess.run(
