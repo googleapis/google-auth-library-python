@@ -150,7 +150,7 @@ class ServiceAccountCredentials(credentials.Credentials):
         """Create a copy of GDCH credentials with the specified audience.
 
         Args:
-            gdch_audience (str): The intended audience for GDCH credentials.
+            audience (str): The intended audience for GDCH credentials.
         """
         return self.__class__(
             self._signer,
