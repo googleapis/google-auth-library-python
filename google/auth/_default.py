@@ -338,6 +338,9 @@ def _get_external_account_credentials(
     ):
         from google.auth import pluggable
 
+        if sys.version_info < (3, 0):
+            raise RefreshError("Pluggable auth is only supported for python 3.6+")
+        
         credentials = pluggable.Credentials.from_info(
             info, scopes=scopes, default_scopes=default_scopes
         )
