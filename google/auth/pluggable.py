@@ -39,8 +39,10 @@ except ImportError:  # pragma: NO COVER
 import io
 import json
 import os
+import sys
 import subprocess
 import time
+import threading
 
 from google.auth import _helpers
 from google.auth import exceptions
@@ -212,19 +214,22 @@ class Credentials(external_account.Credentials):
             ] = self._credential_source_executable_output_file
 
         try:
-            result = subprocess.check_output(
-                self._credential_source_executable_command.split(),
-                stderr=subprocess.STDOUT,
-            )
-        except subprocess.CalledProcessError as e:
-            raise exceptions.RefreshError(
-                "Executable exited with non-zero return code {}. Error: {}".format(
-                    e.returncode, e.output
-                )
-            )
+            def exe():
+                result = subprocess.check_output(
+                    self._credential_source_executable_command.split(),
+                    stderr=subprocess.STDOUT,
+                )                
+            x = threading.Thread(target=exe)
+            x.start()
+            x.join(timeout = self._credential_source_executable_timeout_millis / 1000)
+            if (x.is_alive()):
+                raise Exception("The executable failed to finish within the timeout specified.")
+        except Exception():
+            raise
         else:
             try:
-                data = result.decode("utf-8")
+                output = sys.stdout???
+                data = output.decode("utf-8")
                 response = json.loads(data)
                 subject_token = self._parse_subject_token(response)
             except Exception:
