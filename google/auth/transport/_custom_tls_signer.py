@@ -110,7 +110,11 @@ def get_sign_callback(signer_lib, config_file_path):
         sigHolder = ctypes.create_string_buffer(2000)
 
         sigLen = signer_lib.SignForPython(
-            config_file_path.encode(), digestArray.from_buffer(bytearray(digest)), len(digest), sigHolder, 2000
+            config_file_path.encode(),
+            digestArray.from_buffer(bytearray(digest)),
+            len(digest),
+            sigHolder,
+            2000,
         )
 
         sig_len[0] = sigLen
@@ -179,7 +183,9 @@ class CustomTlsSigner(object):
         # be garbage collected, otherwise it will crash when used by signer lib.
         # Get cert using signer lib.
         self._cert = get_cert(self._signer_lib, self._enterprise_cert_file_path)
-        self._sign_callback = get_sign_callback(self._signer_lib, self._enterprise_cert_file_path)
+        self._sign_callback = get_sign_callback(
+            self._signer_lib, self._enterprise_cert_file_path
+        )
 
     def attach_to_ssl_context(self, ctx):
         # In the TLS handshake, the signing operation will be done by the

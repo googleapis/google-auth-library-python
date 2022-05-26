@@ -53,13 +53,18 @@ def test_load_signer_lib():
     assert lib.SignForPython.restype == ctypes.c_int
     assert lib.SignForPython.argtypes == [
         ctypes.c_char_p,
+        ctypes.c_char_p,
         ctypes.c_int,
         ctypes.c_char_p,
         ctypes.c_int,
     ]
 
     assert lib.GetCertPemForPython.restype == ctypes.c_int
-    assert lib.GetCertPemForPython.argtypes == [ctypes.c_char_p, ctypes.c_int]
+    assert lib.GetCertPemForPython.argtypes == [
+        ctypes.c_char_p,
+        ctypes.c_char_p,
+        ctypes.c_int,
+    ]
 
 
 def test__compute_sha256_digest():
@@ -78,19 +83,23 @@ def test_get_sign_callback():
     mock_signer_lib.SignForPython.return_value = mock_sig_len
 
     # create a sign callback. The callback calls signer lib's SignForPython method
-    sign_callback = _custom_tls_signer.get_sign_callback(mock_signer_lib)
+    sign_callback = _custom_tls_signer.get_sign_callback(
+        mock_signer_lib, "config_file_path"
+    )
 
     # mock the parameters used to call the sign callback
-    to_be_signed = ctypes.create_string_buffer(b"foo")
+    to_be_signed = ctypes.POINTER(ctypes.c_ubyte)()
     to_be_signed_len = 4
-    mock_sig_array = bytearray(mock_sig_len)
-    mock_sig_len_array = [0]
+    returned_sig_array = ctypes.c_ubyte()
+    mock_sig_array = ctypes.byref(returned_sig_array)
+    returned_sign_len = ctypes.c_ulong()
+    mock_sig_len_array = ctypes.byref(returned_sign_len)
 
     # call the callback, make sure the signature len is returned via mock_sig_len_array[0]
     assert sign_callback(
         mock_sig_array, mock_sig_len_array, to_be_signed, to_be_signed_len
     )
-    assert mock_sig_len_array[0] == mock_sig_len
+    assert returned_sign_len.value == mock_sig_len
 
 
 def test_get_cert_no_cert():
@@ -101,7 +110,7 @@ def test_get_cert_no_cert():
 
     # call the get cert method
     with pytest.raises(exceptions.MutualTLSChannelError) as excinfo:
-        _custom_tls_signer.get_cert(mock_signer_lib)
+        _custom_tls_signer.get_cert(mock_signer_lib, "config_file_path")
 
     assert excinfo.match("failed to get certificate")
 
@@ -113,7 +122,7 @@ def test_get_cert():
     mock_signer_lib.GetCertPemForPython.return_value = mock_cert_len
 
     # call the get cert method
-    mock_cert = _custom_tls_signer.get_cert(mock_signer_lib)
+    mock_cert = _custom_tls_signer.get_cert(mock_signer_lib, "config_file_path")
 
     # make sure the signer lib's GetCertPemForPython is called twice, and the
     # mock_cert has length mock_cert_len
