@@ -41,6 +41,7 @@ import json
 import os
 import subprocess
 import time
+import sys
 
 from google.auth import _helpers
 from google.auth import exceptions
