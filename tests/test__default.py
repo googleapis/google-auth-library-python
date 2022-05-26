@@ -1151,6 +1151,7 @@ def test_default_impersonated_service_account_set_both_scopes_and_default_scopes
     credentials, _ = _default.default(scopes=scopes, default_scopes=default_scopes)
     assert credentials._target_scopes == scopes
 
+
 @EXTERNAL_ACCOUNT_GET_PROJECT_ID_PATCH
 def test_load_credentials_from_external_account_pluggable(get_project_id, tmpdir):
     config_file = tmpdir.join("config.json")
