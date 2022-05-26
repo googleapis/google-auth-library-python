@@ -14,6 +14,7 @@
 
 import json
 import os
+import sys
 
 import mock
 import pytest  # type: ignore
