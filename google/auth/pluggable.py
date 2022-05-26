@@ -211,6 +211,9 @@ class Credentials(external_account.Credentials):
                 "GOOGLE_EXTERNAL_ACCOUNT_OUTPUT_FILE"
             ] = self._credential_source_executable_output_file
 
+        if sys.version_info < (3, 0):
+            raise RefreshError("Pluggable auth is only supported for python 3.6+")
+
         try:
             result = subprocess.run(
                 self._credential_source_executable_command.split(),
