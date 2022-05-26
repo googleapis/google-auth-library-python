@@ -1151,6 +1151,7 @@ def test_default_impersonated_service_account_set_both_scopes_and_default_scopes
     credentials, _ = _default.default(scopes=scopes, default_scopes=default_scopes)
     assert credentials._target_scopes == scopes
 
+
 @mock.patch(
     "google.auth._cloud_sdk.get_application_default_credentials_path", autospec=True
 )
