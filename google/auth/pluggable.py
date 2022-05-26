@@ -212,19 +212,23 @@ class Credentials(external_account.Credentials):
             ] = self._credential_source_executable_output_file
 
         try:
-            result = subprocess.check_output(
+            result = subprocess.run(
                 self._credential_source_executable_command.split(),
+                timeout=self._credential_source_executable_timeout_millis / 1000,
+                stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
             )
-        except subprocess.CalledProcessError as e:
-            raise exceptions.RefreshError(
-                "Executable exited with non-zero return code {}. Error: {}".format(
-                    e.returncode, e.output
+            if result.returncode != 0:
+                raise exceptions.RefreshError(
+                    "Executable exited with non-zero return code {}. Error: {}".format(
+                        result.returncode, result.stdout
+                    )
                 )
-            )
+        except:
+            raise
         else:
             try:
-                data = result.decode("utf-8")
+                data = result.stdout.decode("utf-8")
                 response = json.loads(data)
                 subject_token = self._parse_subject_token(response)
             except Exception:
