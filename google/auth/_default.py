@@ -22,6 +22,7 @@ import json
 import logging
 import os
 import warnings
+import sys
 
 import six
 
@@ -330,9 +331,6 @@ def _get_external_account_credentials(
         and info.get("credential_source").get("executable") is not None
     ):
         from google.auth import pluggable
-
-        if sys.version_info < (3, 0):
-            raise RefreshError("Pluggable auth is only supported for python 3.6+")
 
         credentials = pluggable.Credentials.from_info(
             info, scopes=scopes, default_scopes=default_scopes
