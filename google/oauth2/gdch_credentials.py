@@ -47,7 +47,7 @@ class ServiceAccountCredentials(credentials.Credentials):
             "format_version": "1",
             "project": "<project name>",
             "private_key_id": "<key id>",
-            "private_key": "-----BEGIN RSA PRIVATE KEY-----\n<key bytes>\n-----END RSA PRIVATE KEY-----\n",
+            "private_key": "-----BEGIN EC PRIVATE KEY-----\n<key bytes>\n-----END EC PRIVATE KEY-----\n",
             "name": "<service identity name>",
             "ca_cert_path": "<CA cert path>",
             "token_uri": "https://service-identity.<Domain>/authenticate"
@@ -64,31 +64,31 @@ class ServiceAccountCredentials(credentials.Credentials):
         import google.auth
 
         credential, _ = google.auth.default()
-        credential = credential.with_target_audience("<the target audience>")
+        credential = credential.with_gdch_audience("<the audience>")
 
     We can also create the credential directly::
 
         from google.oauth import gdch_credentials
 
         credential = gdch_credentials.ServiceAccountCredentials.from_service_account_file("<the json file path>")
-        credential = credential.with_target_audience("<the target audience>")
+        credential = credential.with_gdch_audience("<the audience>")
 
     The token is obtained in the following way. This class first creates a
     self signed JWT. It uses the `name` value as the `iss` and `sub` claim, and
     the `token_uri` as the `aud` claim, and signes the JWT with the `private_key`.
     It then sends the JWT to the `token_uri` to exchange a final token for
-    `target_audience`.
+    `audience`.
     """
 
     def __init__(
-        self, signer, service_identity_name, target_audience, token_uri, ca_cert_path
+        self, signer, service_identity_name, audience, token_uri, ca_cert_path
     ):
         """
         Args:
             signer (google.auth.crypt.Signer): The signer used to sign JWTs.
             service_identity_name (str): The service identity name. It will be
                 used as the `iss` and `sub` claim in the self signed JWT.
-            target_audience (str): The target audience for the final token.
+            audience (str): The audience for the final token.
             token_uri (str): The token server uri.
             ca_cert_path (str): The CA cert path for token server side TLS
                 certificate verification. If the token server uses well known
@@ -97,7 +97,7 @@ class ServiceAccountCredentials(credentials.Credentials):
         super(ServiceAccountCredentials, self).__init__()
         self._signer = signer
         self._service_identity_name = service_identity_name
-        self._target_audience = target_audience
+        self._audience = audience
         self._token_uri = token_uri
         self._ca_cert_path = ca_cert_path
 
@@ -128,7 +128,7 @@ class ServiceAccountCredentials(credentials.Credentials):
         jwt_token = self._create_jwt()
         request_body = {
             "grant_type": TOKEN_EXCHANGE_TYPE,
-            "audience": self._target_audience,
+            "audience": self._audience,
             "requested_token_type": ACCESS_TOKEN_TOKEN_TYPE,
             "subject_token": jwt_token,
             "subject_token_type": SERVICE_ACCOUNT_TOKEN_TYPE,
@@ -146,16 +146,16 @@ class ServiceAccountCredentials(credentials.Credentials):
             response_data, None
         )
 
-    def with_target_audience(self, target_audience):
-        """Create a copy of GDCH credentials with the specified target audience.
+    def with_gdch_audience(self, audience):
+        """Create a copy of GDCH credentials with the specified audience.
 
         Args:
-            target_audience (str): The intended audience for GDCH credentials.
+            gdch_audience (str): The intended audience for GDCH credentials.
         """
         return self.__class__(
             self._signer,
             self._service_identity_name,
-            target_audience,
+            audience,
             self._token_uri,
             self._ca_cert_path,
         )
@@ -182,7 +182,7 @@ class ServiceAccountCredentials(credentials.Credentials):
         return cls(
             signer,
             info["name"],  # service_identity_name
-            None,  # target_audience
+            None,  # audience
             info["token_uri"],
             info.get("ca_cert_path", None),
         )
@@ -212,6 +212,7 @@ class ServiceAccountCredentials(credentials.Credentials):
                 "name",
                 "token_uri",
             ],
+            use_rsa_signer=False,
         )
         return cls._from_signer_and_info(signer, info)
 
@@ -236,5 +237,6 @@ class ServiceAccountCredentials(credentials.Credentials):
                 "name",
                 "token_uri",
             ],
+            use_rsa_signer=False,
         )
         return cls._from_signer_and_info(signer, info)

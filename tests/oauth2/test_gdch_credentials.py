@@ -42,19 +42,19 @@ class TestServiceAccountCredentials(object):
     with open(JSON_PATH, "rb") as fh:
         INFO = json.load(fh)
 
-    def test_with_target_audience(self):
+    def test_with_gdch_audience(self):
         mock_signer = mock.Mock()
         creds = ServiceAccountCredentials._from_signer_and_info(mock_signer, self.INFO)
         assert creds._signer == mock_signer
         assert creds._service_identity_name == self.NAME
-        assert creds._target_audience is None
+        assert creds._audience is None
         assert creds._token_uri == self.TOKEN_URI
         assert creds._ca_cert_path == self.CA_CERT_PATH
 
-        new_creds = creds.with_target_audience(self.AUDIENCE)
+        new_creds = creds.with_gdch_audience(self.AUDIENCE)
         assert new_creds._signer == mock_signer
         assert new_creds._service_identity_name == self.NAME
-        assert new_creds._target_audience == self.AUDIENCE
+        assert new_creds._audience == self.AUDIENCE
         assert new_creds._token_uri == self.TOKEN_URI
         assert new_creds._ca_cert_path == self.CA_CERT_PATH
 
@@ -65,7 +65,7 @@ class TestServiceAccountCredentials(object):
             jwt_token = creds._create_jwt()
             header, payload, _, _ = jwt._unverified_decode(jwt_token)
 
-        assert header["alg"] == "RS256"
+        assert header["alg"] == "ES256"
         assert header["kid"] == self.PRIVATE_KEY_ID
         assert payload["iss"] == self.NAME
         assert payload["sub"] == self.NAME
@@ -79,7 +79,7 @@ class TestServiceAccountCredentials(object):
     @mock.patch("google.oauth2._client._token_endpoint_request", autospec=True)
     def test_refresh(self, token_endpoint_request, create_jwt):
         creds = ServiceAccountCredentials.from_service_account_info(self.INFO)
-        creds = creds.with_target_audience(self.AUDIENCE)
+        creds = creds.with_gdch_audience(self.AUDIENCE)
         req = google.auth.transport.requests.Request()
 
         mock_jwt_token = "jwt token"
@@ -112,7 +112,7 @@ class TestServiceAccountCredentials(object):
 
     def test_refresh_wrong_requests_object(self):
         creds = ServiceAccountCredentials.from_service_account_info(self.INFO)
-        creds = creds.with_target_audience(self.AUDIENCE)
+        creds = creds.with_gdch_audience(self.AUDIENCE)
         req = requests.Request()
 
         with pytest.raises(exceptions.RefreshError) as excinfo:
@@ -158,9 +158,10 @@ class TestServiceAccountCredentials(object):
                 "name",
                 "token_uri",
             ],
+            use_rsa_signer=False,
         )
         assert creds._signer == mock_signer
         assert creds._service_identity_name == self.NAME
-        assert creds._target_audience is None
+        assert creds._audience is None
         assert creds._token_uri == self.TOKEN_URI
         assert creds._ca_cert_path == self.CA_CERT_PATH

@@ -1163,7 +1163,7 @@ def test_default_gdch_service_account_credentials(get_adc_path):
 
     assert isinstance(creds, gdch_credentials.ServiceAccountCredentials)
     assert creds._service_identity_name == "service_identity_name"
-    assert creds._target_audience is None
+    assert creds._audience is None
     assert creds._token_uri == "https://service-identity.<Domain>/authenticate"
     assert creds._ca_cert_path == "/path/to/ca/cert"
     assert project == "project_foo"
