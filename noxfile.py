@@ -99,7 +99,7 @@ def unit(session):
         "--cov=google.oauth2",
         "--cov=tests",
         "--cov-report=term-missing",
-        "--ignore=tests/test_pluggable.py", # Pluggable auth only support 3.6+ for now.
+        "--ignore=tests/test_pluggable.py",  # Pluggable auth only support 3.6+ for now.
         "tests",
         "tests_async",
     )
