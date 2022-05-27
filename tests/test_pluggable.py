@@ -750,6 +750,4 @@ class TestCredentials(object):
             with pytest.raises(exceptions.RefreshError) as excinfo:
                 _ = credentials.retrieve_subject_token(None)
 
-            assert excinfo.match(
-                r"Pluggable auth is only supported for python 3.6+"
-            )
+            assert excinfo.match(r"Pluggable auth is only supported for python 3.6+")
