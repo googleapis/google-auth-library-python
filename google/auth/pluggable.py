@@ -40,8 +40,8 @@ import io
 import json
 import os
 import subprocess
-import time
 import sys
+import time
 
 from google.auth import _helpers
 from google.auth import exceptions
@@ -230,7 +230,7 @@ class Credentials(external_account.Credentials):
                         result.returncode, result.stdout
                     )
                 )
-        except:
+        except Exception:
             raise
         else:
             try:
