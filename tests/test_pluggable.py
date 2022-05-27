@@ -269,10 +269,14 @@ class TestCredentials(object):
     )
     def test_retrieve_subject_token_oidc_id_token(self):
         with mock.patch(
-            "subprocess.check_output",
-            return_value=json.dumps(
-                self.EXECUTABLE_SUCCESSFUL_OIDC_RESPONSE_ID_TOKEN
-            ).encode("UTF-8"),
+            "subprocess.run",
+            return_value=subprocess.CompletedProcess(
+                args=[],
+                stdout=json.dumps(
+                    self.EXECUTABLE_SUCCESSFUL_OIDC_RESPONSE_ID_TOKEN
+                ).encode("UTF-8"),
+                returncode=0,
+            ),
         ):
             credentials = self.make_pluggable(
                 audience=AUDIENCE,
@@ -287,10 +291,14 @@ class TestCredentials(object):
     @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
     def test_retrieve_subject_token_oidc_jwt(self):
         with mock.patch(
-            "subprocess.check_output",
-            return_value=json.dumps(
-                self.EXECUTABLE_SUCCESSFUL_OIDC_RESPONSE_JWT
-            ).encode("UTF-8"),
+            "subprocess.run",
+            return_value=subprocess.CompletedProcess(
+                args=[],
+                stdout=json.dumps(self.EXECUTABLE_SUCCESSFUL_OIDC_RESPONSE_JWT).encode(
+                    "UTF-8"
+                ),
+                returncode=0,
+            ),
         ):
             credentials = self.make_pluggable(
                 audience=AUDIENCE,
@@ -305,9 +313,13 @@ class TestCredentials(object):
     @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
     def test_retrieve_subject_token_saml(self):
         with mock.patch(
-            "subprocess.check_output",
-            return_value=json.dumps(self.EXECUTABLE_SUCCESSFUL_SAML_RESPONSE).encode(
-                "UTF-8"
+            "subprocess.run",
+            return_value=subprocess.CompletedProcess(
+                args=[],
+                stdout=json.dumps(self.EXECUTABLE_SUCCESSFUL_SAML_RESPONSE).encode(
+                    "UTF-8"
+                ),
+                returncode=0,
             ),
         ):
             credentials = self.make_pluggable(credential_source=self.CREDENTIAL_SOURCE)
@@ -319,8 +331,12 @@ class TestCredentials(object):
     @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
     def test_retrieve_subject_token_failed(self):
         with mock.patch(
-            "subprocess.check_output",
-            return_value=json.dumps(self.EXECUTABLE_FAILED_RESPONSE).encode("UTF-8"),
+            "subprocess.run",
+            return_value=subprocess.CompletedProcess(
+                args=[],
+                stdout=json.dumps(self.EXECUTABLE_FAILED_RESPONSE).encode("UTF-8"),
+                returncode=0,
+            ),
         ):
             credentials = self.make_pluggable(credential_source=self.CREDENTIAL_SOURCE)
 
@@ -334,10 +350,14 @@ class TestCredentials(object):
     @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "0"})
     def test_retrieve_subject_token_not_allowd(self):
         with mock.patch(
-            "subprocess.check_output",
-            return_value=json.dumps(
-                self.EXECUTABLE_SUCCESSFUL_OIDC_RESPONSE_ID_TOKEN
-            ).encode("UTF-8"),
+            "subprocess.run",
+            return_value=subprocess.CompletedProcess(
+                args=[],
+                stdout=json.dumps(
+                    self.EXECUTABLE_SUCCESSFUL_OIDC_RESPONSE_ID_TOKEN
+                ).encode("UTF-8"),
+                returncode=0,
+            ),
         ):
             credentials = self.make_pluggable(credential_source=self.CREDENTIAL_SOURCE)
 
@@ -357,10 +377,14 @@ class TestCredentials(object):
         }
 
         with mock.patch(
-            "subprocess.check_output",
-            return_value=json.dumps(
-                EXECUTABLE_SUCCESSFUL_OIDC_RESPONSE_VERSION_2
-            ).encode("UTF-8"),
+            "subprocess.run",
+            return_value=subprocess.CompletedProcess(
+                args=[],
+                stdout=json.dumps(EXECUTABLE_SUCCESSFUL_OIDC_RESPONSE_VERSION_2).encode(
+                    "UTF-8"
+                ),
+                returncode=0,
+            ),
         ):
             credentials = self.make_pluggable(credential_source=self.CREDENTIAL_SOURCE)
 
@@ -380,9 +404,13 @@ class TestCredentials(object):
         }
 
         with mock.patch(
-            "subprocess.check_output",
-            return_value=json.dumps(EXECUTABLE_SUCCESSFUL_OIDC_RESPONSE_EXPIRED).encode(
-                "UTF-8"
+            "subprocess.run",
+            return_value=subprocess.CompletedProcess(
+                args=[],
+                stdout=json.dumps(EXECUTABLE_SUCCESSFUL_OIDC_RESPONSE_EXPIRED).encode(
+                    "UTF-8"
+                ),
+                returncode=0,
             ),
         ):
             credentials = self.make_pluggable(credential_source=self.CREDENTIAL_SOURCE)
@@ -420,10 +448,14 @@ class TestCredentials(object):
         ACTUAL_CREDENTIAL_SOURCE = {"executable": ACTUAL_CREDENTIAL_SOURCE_EXECUTABLE}
 
         with mock.patch(
-            "subprocess.check_output",
-            return_value=json.dumps(
-                self.EXECUTABLE_SUCCESSFUL_OIDC_RESPONSE_ID_TOKEN
-            ).encode("UTF-8"),
+            "subprocess.run",
+            return_value=subprocess.CompletedProcess(
+                args=[],
+                stdout=json.dumps(
+                    self.EXECUTABLE_SUCCESSFUL_OIDC_RESPONSE_ID_TOKEN
+                ).encode("UTF-8"),
+                returncode=0,
+            ),
         ):
             credentials = self.make_pluggable(
                 credential_source=ACTUAL_CREDENTIAL_SOURCE
@@ -480,10 +512,14 @@ class TestCredentials(object):
             json.dump(ACTUAL_EXECUTABLE_RESPONSE, output_file)
 
         with mock.patch(
-            "subprocess.check_output",
-            return_value=json.dumps(
-                self.EXECUTABLE_SUCCESSFUL_OIDC_RESPONSE_ID_TOKEN
-            ).encode("UTF-8"),
+            "subprocess.run",
+            return_value=subprocess.CompletedProcess(
+                args=[],
+                stdout=json.dumps(
+                    self.EXECUTABLE_SUCCESSFUL_OIDC_RESPONSE_ID_TOKEN
+                ).encode("UTF-8"),
+                returncode=0,
+            ),
         ):
             credentials = self.make_pluggable(
                 credential_source=ACTUAL_CREDENTIAL_SOURCE
@@ -506,9 +542,11 @@ class TestCredentials(object):
         }
 
         with mock.patch(
-            "subprocess.check_output",
-            return_value=json.dumps(EXECUTABLE_SUCCESSFUL_OIDC_RESPONSE).encode(
-                "UTF-8"
+            "subprocess.run",
+            return_value=subprocess.CompletedProcess(
+                args=[],
+                stdout=json.dumps(EXECUTABLE_SUCCESSFUL_OIDC_RESPONSE).encode("UTF-8"),
+                returncode=0,
             ),
         ):
             credentials = self.make_pluggable(credential_source=self.CREDENTIAL_SOURCE)
@@ -528,9 +566,11 @@ class TestCredentials(object):
         }
 
         with mock.patch(
-            "subprocess.check_output",
-            return_value=json.dumps(EXECUTABLE_SUCCESSFUL_OIDC_RESPONSE).encode(
-                "UTF-8"
+            "subprocess.run",
+            return_value=subprocess.CompletedProcess(
+                args=[],
+                stdout=json.dumps(EXECUTABLE_SUCCESSFUL_OIDC_RESPONSE).encode("UTF-8"),
+                returncode=0,
             ),
         ):
             credentials = self.make_pluggable(credential_source=self.CREDENTIAL_SOURCE)
@@ -552,9 +592,11 @@ class TestCredentials(object):
         }
 
         with mock.patch(
-            "subprocess.check_output",
-            return_value=json.dumps(EXECUTABLE_SUCCESSFUL_OIDC_RESPONSE).encode(
-                "UTF-8"
+            "subprocess.run",
+            return_value=subprocess.CompletedProcess(
+                args=[],
+                stdout=json.dumps(EXECUTABLE_SUCCESSFUL_OIDC_RESPONSE).encode("UTF-8"),
+                returncode=0,
             ),
         ):
             credentials = self.make_pluggable(credential_source=self.CREDENTIAL_SOURCE)
@@ -571,9 +613,11 @@ class TestCredentials(object):
         EXECUTABLE_SUCCESSFUL_OIDC_RESPONSE = {"version": 1, "success": False}
 
         with mock.patch(
-            "subprocess.check_output",
-            return_value=json.dumps(EXECUTABLE_SUCCESSFUL_OIDC_RESPONSE).encode(
-                "UTF-8"
+            "subprocess.run",
+            return_value=subprocess.CompletedProcess(
+                args=[],
+                stdout=json.dumps(EXECUTABLE_SUCCESSFUL_OIDC_RESPONSE).encode("UTF-8"),
+                returncode=0,
             ),
         ):
             credentials = self.make_pluggable(credential_source=self.CREDENTIAL_SOURCE)
@@ -595,9 +639,11 @@ class TestCredentials(object):
         }
 
         with mock.patch(
-            "subprocess.check_output",
-            return_value=json.dumps(EXECUTABLE_SUCCESSFUL_OIDC_RESPONSE).encode(
-                "UTF-8"
+            "subprocess.run",
+            return_value=subprocess.CompletedProcess(
+                args=[],
+                stdout=json.dumps(EXECUTABLE_SUCCESSFUL_OIDC_RESPONSE).encode("UTF-8"),
+                returncode=0,
             ),
         ):
             credentials = self.make_pluggable(credential_source=self.CREDENTIAL_SOURCE)
@@ -619,9 +665,11 @@ class TestCredentials(object):
         }
 
         with mock.patch(
-            "subprocess.check_output",
-            return_value=json.dumps(EXECUTABLE_SUCCESSFUL_OIDC_RESPONSE).encode(
-                "UTF-8"
+            "subprocess.run",
+            return_value=subprocess.CompletedProcess(
+                args=[],
+                stdout=json.dumps(EXECUTABLE_SUCCESSFUL_OIDC_RESPONSE).encode("UTF-8"),
+                returncode=0,
             ),
         ):
             credentials = self.make_pluggable(credential_source=self.CREDENTIAL_SOURCE)
@@ -678,10 +726,12 @@ class TestCredentials(object):
 
     @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
     def test_retrieve_subject_token_executable_fail(self):
-        with mock.patch("subprocess.check_output") as subprocess_mock:
-            subprocess_mock.side_effect = subprocess.CalledProcessError(
-                returncode=1, cmd=""
-            )
+        with mock.patch(
+            "subprocess.run",
+            return_value=subprocess.CompletedProcess(
+                args=[], stdout=None, returncode=1
+            ),
+        ):
             credentials = self.make_pluggable(credential_source=self.CREDENTIAL_SOURCE)
 
             with pytest.raises(exceptions.RefreshError) as excinfo:
@@ -690,3 +740,13 @@ class TestCredentials(object):
             assert excinfo.match(
                 r"Executable exited with non-zero return code 1. Error: None"
             )
+
+    @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
+    def test_retrieve_subject_token_python_2(self):
+        with mock.patch("sys.version_info", (2, 7)):
+            credentials = self.make_pluggable(credential_source=self.CREDENTIAL_SOURCE)
+
+            with pytest.raises(exceptions.RefreshError) as excinfo:
+                _ = credentials.retrieve_subject_token(None)
+
+            assert excinfo.match(r"Pluggable auth is only supported for python 3.6+")
