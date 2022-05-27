@@ -16,6 +16,7 @@
 import json
 import os
 import subprocess
+import sys
 
 import mock
 import pytest  # type: ignore
@@ -739,4 +740,16 @@ class TestCredentials(object):
 
             assert excinfo.match(
                 r"Executable exited with non-zero return code 1. Error: None"
+            )
+
+    @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
+    def test_retrieve_subject_token_python_2(self):
+        with mock.patch("sys.version_info", (2, 7)):
+            credentials = self.make_pluggable(credential_source=self.CREDENTIAL_SOURCE)
+
+            with pytest.raises(exceptions.RefreshError) as excinfo:
+                _ = credentials.retrieve_subject_token(None)
+
+            assert excinfo.match(
+                r"Pluggable auth is only supported for python 3.6+"
             )
