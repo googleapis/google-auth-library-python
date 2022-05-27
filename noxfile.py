@@ -117,6 +117,7 @@ def unit_prev_versions(session):
         "--cov=google.auth",
         "--cov=google.oauth2",
         "--cov=tests",
+        "--ignore=tests/test_pluggable.py",  # Pluggable auth only support 3.6+ for now.
         "tests",
     )
 
