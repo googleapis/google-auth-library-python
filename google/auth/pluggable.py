@@ -46,7 +46,7 @@ Where the following variables need to be substituted:
 - `$POOL_ID`: The workload identity pool ID.
 - `$PROVIDER_ID`: The OIDC or SAML provider ID.
 - `$SERVICE_ACCOUNT_EMAIL`: The email of the service account to impersonate.
-- `SUBJECT_TOKEN_TYPE`: The subject token type.
+- `$SUBJECT_TOKEN_TYPE`: The subject token type.
 - `$EXECUTABLE_COMMAND`: The full command to run, including arguments. Must be an absolute path to the program. 
 
 To retrieve the 3rd party token, the library will call the executable 
