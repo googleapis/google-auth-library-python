@@ -16,7 +16,7 @@
 Using Executable-sourced credentials with OIDC and SAML
 
 **Executable-sourced credentials**
-For executable-sourced credentials, a local executable is used to retrieve the 3rd party token. 
+For executable-sourced credentials, a local executable is used to retrieve the 3rd party token.
 The executable must handle providing a valid, unexpired OIDC ID token or SAML assertion in JSON format
 to stdout.
 
@@ -47,10 +47,10 @@ Where the following variables need to be substituted:
 - `$PROVIDER_ID`: The OIDC or SAML provider ID.
 - `$SERVICE_ACCOUNT_EMAIL`: The email of the service account to impersonate.
 - `$SUBJECT_TOKEN_TYPE`: The subject token type.
-- `$EXECUTABLE_COMMAND`: The full command to run, including arguments. Must be an absolute path to the program. 
+- `$EXECUTABLE_COMMAND`: The full command to run, including arguments. Must be an absolute path to the program.
 
-To retrieve the 3rd party token, the library will call the executable 
-using the command specified. The executable's output must adhere to the response format 
+To retrieve the 3rd party token, the library will call the executable
+using the command specified. The executable's output must adhere to the response format
 specified below. It must output the response to stdout.
 
 A sample successful executable OIDC response:
@@ -88,10 +88,10 @@ fields will be used by library as part of the thrown exception.
 
 Response format fields summary:
   * `version`: The version of the JSON output. Currently only version 1 is supported.
-  * `success`: The status of the response. When true, the response must contain the 3rd party token, 
+  * `success`: The status of the response. When true, the response must contain the 3rd party token,
     token type, and expiration. The executable must also exit with exit code 0.
     When false, the response must contain the error code and message fields and exit with a non-zero value.
-  * `token_type`: The 3rd party subject token type. Must be *urn:ietf:params:oauth:token-type:jwt*, 
+  * `token_type`: The 3rd party subject token type. Must be *urn:ietf:params:oauth:token-type:jwt*,
      *urn:ietf:params:oauth:token-type:id_token*, or *urn:ietf:params:oauth:token-type:saml2*.
   * `id_token`: The 3rd party OIDC token.
   * `saml_response`: The 3rd party SAML response.
@@ -107,12 +107,12 @@ All response types must include both the `version` and `success` fields.
 The library will populate the following environment variables when the executable is run:
   * `GOOGLE_EXTERNAL_ACCOUNT_AUDIENCE`: The audience field from the credential configuration. Always present.
   * `GOOGLE_EXTERNAL_ACCOUNT_IMPERSONATED_EMAIL`: The service account email. Only present when service account impersonation is used.
-  * `GOOGLE_EXTERNAL_ACCOUNT_OUTPUT_FILE`: The output file location from the credential configuration. Only present when specified in the credential configuration. 
+  * `GOOGLE_EXTERNAL_ACCOUNT_OUTPUT_FILE`: The output file location from the credential configuration. Only present when specified in the credential configuration.
 
 These environment variables can be used by the executable to avoid hard-coding these values.
 
 Security considerations
-The following security practices are highly recommended:  
+The following security practices are highly recommended:
   * Access to the script should be restricted as it will be displaying credentials to stdout. This ensures that rogue processes do not gain  access to the script.
   * The configuration file should not be modifiable. Write access should be restricted to avoid processes modifying the executable command portion.
 
@@ -133,7 +133,6 @@ import io
 import json
 import os
 import subprocess
-import sys
 import time
 
 from google.auth import _helpers
