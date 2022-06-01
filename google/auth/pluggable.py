@@ -308,7 +308,7 @@ class Credentials(external_account.Credentials):
                 timeout=self._credential_source_executable_timeout_millis / 1000,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
-                env = env
+                env=env,
             )
             if result.returncode != 0:
                 raise exceptions.RefreshError(
