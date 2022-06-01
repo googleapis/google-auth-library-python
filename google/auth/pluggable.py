@@ -13,22 +13,115 @@
 # limitations under the License.
 
 """Pluggable Credentials.
-Pluggable Credentials are initialized using external_account arguments which
-are typically loaded from third-party executables. Unlike other
-credentials that can be initialized with a list of explicit arguments, secrets
-or credentials, external account clients use the environment and hints/guidelines
-provided by the external_account JSON file to retrieve credentials and exchange
-them for Google access tokens.
+Using Executable-sourced credentials with OIDC and SAML
 
-Example credential_source for pluggable credential:
+**Executable-sourced credentials**
+For executable-sourced credentials, a local executable is used to retrieve the 3rd party token. 
+The executable must handle providing a valid, unexpired OIDC ID token or SAML assertion in JSON format
+to stdout.
 
-    {
-        "executable": {
-            "command": "/path/to/get/credentials.sh --arg1=value1 --arg2=value2",
-            "timeout_millis": 5000,
-            "output_file": "/path/to/generated/cached/credentials"
-        }
-    }
+To use executable-sourced credentials, the `GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES`
+environment variable must be set to `1`.
+
+To generate an executable-sourced workload identity configuration, run the following command:
+
+```bash
+# Generate a configuration file for executable-sourced credentials.
+gcloud iam workload-identity-pools create-cred-config \
+    projects/$PROJECT_NUMBER/locations/global/workloadIdentityPools/$POOL_ID/providers/$PROVIDER_ID \
+    --service-account=$SERVICE_ACCOUNT_EMAIL \
+    --subject-token-type=$SUBJECT_TOKEN_TYPE \
+    # The absolute path for the program, including arguments.
+    # e.g. --executable-command="/path/to/command --foo=bar"
+    --executable-command=$EXECUTABLE_COMMAND \
+    # Optional argument for the executable timeout. Defaults to 30s.
+    # --executable-timeout-millis=$EXECUTABLE_TIMEOUT \
+    # Optional argument for the absolute path to the executable output file.
+    # See below on how this argument impacts the library behaviour.
+    # --executable-output-file=$EXECUTABLE_OUTPUT_FILE \
+    --output-file /path/to/generated/config.json
+```
+Where the following variables need to be substituted:
+- `$PROJECT_NUMBER`: The Google Cloud project number.
+- `$POOL_ID`: The workload identity pool ID.
+- `$PROVIDER_ID`: The OIDC or SAML provider ID.
+- `$SERVICE_ACCOUNT_EMAIL`: The email of the service account to impersonate.
+- `$SUBJECT_TOKEN_TYPE`: The subject token type.
+- `$EXECUTABLE_COMMAND`: The full command to run, including arguments. Must be an absolute path to the program. 
+
+To retrieve the 3rd party token, the library will call the executable 
+using the command specified. The executable's output must adhere to the response format 
+specified below. It must output the response to stdout.
+
+A sample successful executable OIDC response:
+```json
+{
+  "version": 1,
+  "success": true,
+  "token_type": "urn:ietf:params:oauth:token-type:id_token",
+  "id_token": "HEADER.PAYLOAD.SIGNATURE",
+  "expiration_time": 1620499962
+}
+```
+
+A sample successful executable SAML response:
+```json
+{
+  "version": 1,
+  "success": true,
+  "token_type": "urn:ietf:params:oauth:token-type:saml2",
+  "saml_response": "...",
+  "expiration_time": 1620499962
+}
+```
+A sample executable error response:
+```json
+{
+  "version": 1,
+  "success": false,
+  "code": "401",
+  "message": "Caller not authorized."
+}
+```
+These are all required fields for an error response. The code and message
+fields will be used by library as part of the thrown exception.
+
+Response format fields summary:
+  * `version`: The version of the JSON output. Currently only version 1 is supported.
+  * `success`: The status of the response. When true, the response must contain the 3rd party token, 
+    token type, and expiration. The executable must also exit with exit code 0.
+    When false, the response must contain the error code and message fields and exit with a non-zero value.
+  * `token_type`: The 3rd party subject token type. Must be *urn:ietf:params:oauth:token-type:jwt*, 
+     *urn:ietf:params:oauth:token-type:id_token*, or *urn:ietf:params:oauth:token-type:saml2*.
+  * `id_token`: The 3rd party OIDC token.
+  * `saml_response`: The 3rd party SAML response.
+  * `expiration_time`: The 3rd party subject token expiration time in seconds (unix epoch time).
+  * `code`: The error code string.
+  * `message`: The error message.
+
+All response types must include both the `version` and `success` fields.
+ * Successful responses must include the `token_type`, `expiration_time`, and one of
+   `id_token` or `saml_response`.
+ * Error responses must include both the `code` and `message` fields.
+
+The library will populate the following environment variables when the executable is run:
+  * `GOOGLE_EXTERNAL_ACCOUNT_AUDIENCE`: The audience field from the credential configuration. Always present.
+  * `GOOGLE_EXTERNAL_ACCOUNT_IMPERSONATED_EMAIL`: The service account email. Only present when service account impersonation is used.
+  * `GOOGLE_EXTERNAL_ACCOUNT_OUTPUT_FILE`: The output file location from the credential configuration. Only present when specified in the credential configuration. 
+
+These environment variables can be used by the executable to avoid hard-coding these values.
+
+Security considerations
+The following security practices are highly recommended:  
+  * Access to the script should be restricted as it will be displaying credentials to stdout. This ensures that rogue processes do not gain  access to the script.
+  * The configuration file should not be modifiable. Write access should be restricted to avoid processes modifying the executable command portion.
+
+Given the complexity of using executable-sourced credentials, it is recommended to use
+the existing supported mechanisms (file-sourced/URL-sourced) for providing 3rd party
+credentials unless they do not meet your specific requirements.
+
+You can now [use the Auth library](#using-external-identities) to call Google Cloud
+resources from an OIDC or SAML provider.
 """
 
 try:
@@ -188,34 +281,26 @@ class Credentials(external_account.Credentials):
                 else:
                     return subject_token
 
-        # Inject env vars.
-        original_audience = os.getenv("GOOGLE_EXTERNAL_ACCOUNT_AUDIENCE")
-        os.environ["GOOGLE_EXTERNAL_ACCOUNT_AUDIENCE"] = self._audience
-        original_subject_token_type = os.getenv("GOOGLE_EXTERNAL_ACCOUNT_TOKEN_TYPE")
-        os.environ["GOOGLE_EXTERNAL_ACCOUNT_TOKEN_TYPE"] = self._subject_token_type
-        original_interactive = os.getenv("GOOGLE_EXTERNAL_ACCOUNT_INTERACTIVE")
-        os.environ[
-            "GOOGLE_EXTERNAL_ACCOUNT_INTERACTIVE"
-        ] = "0"  # Always set to 0 until interactive mode is implemented.
-        original_service_account_impersonation_url = os.getenv(
-            "GOOGLE_EXTERNAL_ACCOUNT_IMPERSONATED_EMAIL"
-        )
-        if self._service_account_impersonation_url is not None:
-            os.environ[
-                "GOOGLE_EXTERNAL_ACCOUNT_IMPERSONATED_EMAIL"
-            ] = self.service_account_email
-        original_credential_source_executable_output_file = os.getenv(
-            "GOOGLE_EXTERNAL_ACCOUNT_OUTPUT_FILE"
-        )
-        if self._credential_source_executable_output_file is not None:
-            os.environ[
-                "GOOGLE_EXTERNAL_ACCOUNT_OUTPUT_FILE"
-            ] = self._credential_source_executable_output_file
-
-        if sys.version_info < (3, 0):
+        if not _helpers.is_python_3():
             raise exceptions.RefreshError(
                 "Pluggable auth is only supported for python 3.6+"
             )
+
+        # Inject env vars.
+        env = os.environ.copy()
+        env["GOOGLE_EXTERNAL_ACCOUNT_AUDIENCE"] = self._audience
+        env["GOOGLE_EXTERNAL_ACCOUNT_TOKEN_TYPE"] = self._subject_token_type
+        env[
+            "GOOGLE_EXTERNAL_ACCOUNT_INTERACTIVE"
+        ] = "0"  # Always set to 0 until interactive mode is implemented.
+        if self._service_account_impersonation_url is not None:
+            env[
+                "GOOGLE_EXTERNAL_ACCOUNT_IMPERSONATED_EMAIL"
+            ] = self.service_account_email
+        if self._credential_source_executable_output_file is not None:
+            env[
+                "GOOGLE_EXTERNAL_ACCOUNT_OUTPUT_FILE"
+            ] = self._credential_source_executable_output_file
 
         try:
             result = subprocess.run(
@@ -223,6 +308,7 @@ class Credentials(external_account.Credentials):
                 timeout=self._credential_source_executable_timeout_millis / 1000,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
+                env=env,
             )
             if result.returncode != 0:
                 raise exceptions.RefreshError(
@@ -239,34 +325,6 @@ class Credentials(external_account.Credentials):
                 subject_token = self._parse_subject_token(response)
             except Exception:
                 raise
-
-        # Reset env vars.
-        if original_audience is not None:
-            os.environ["GOOGLE_EXTERNAL_ACCOUNT_AUDIENCE"] = original_audience
-        else:
-            del os.environ["GOOGLE_EXTERNAL_ACCOUNT_AUDIENCE"]
-        if original_subject_token_type is not None:
-            os.environ[
-                "GOOGLE_EXTERNAL_ACCOUNT_TOKEN_TYPE"
-            ] = original_subject_token_type
-        else:
-            del os.environ["GOOGLE_EXTERNAL_ACCOUNT_TOKEN_TYPE"]
-        if original_interactive is not None:
-            os.environ["GOOGLE_EXTERNAL_ACCOUNT_INTERACTIVE"] = original_interactive
-        else:
-            del os.environ["GOOGLE_EXTERNAL_ACCOUNT_INTERACTIVE"]
-        if original_service_account_impersonation_url is not None:
-            os.environ[
-                "GOOGLE_EXTERNAL_ACCOUNT_IMPERSONATED_EMAIL"
-            ] = original_service_account_impersonation_url
-        elif os.getenv("GOOGLE_EXTERNAL_ACCOUNT_IMPERSONATED_EMAIL") is not None:
-            del os.environ["GOOGLE_EXTERNAL_ACCOUNT_IMPERSONATED_EMAIL"]
-        if original_credential_source_executable_output_file is not None:
-            os.environ[
-                "GOOGLE_EXTERNAL_ACCOUNT_OUTPUT_FILE"
-            ] = original_credential_source_executable_output_file
-        elif os.getenv("GOOGLE_EXTERNAL_ACCOUNT_OUTPUT_FILE") is not None:
-            del os.environ["GOOGLE_EXTERNAL_ACCOUNT_OUTPUT_FILE"]
 
         return subject_token
 
