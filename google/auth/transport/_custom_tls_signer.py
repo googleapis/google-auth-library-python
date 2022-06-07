@@ -13,8 +13,8 @@
 # limitations under the License.
 
 """
-Experimental code for configuring client side TLS to offload the signing
-operation to signing libraries.
+Code for configuring client side TLS to offload the signing operation to
+signing libraries.
 """
 
 import ctypes
@@ -129,23 +129,24 @@ def get_sign_callback(signer_lib, config_file_path):
 
         # reserve 2000 bytes for the signature, shoud be more then enough.
         # RSA signature is 256 bytes, EC signature is 70~72.
-        sigHolder = ctypes.create_string_buffer(2000)
+        sig_holder_len = 2000
+        sig_holder = ctypes.create_string_buffer(sig_holder_len)
 
-        sigLen = signer_lib.SignForPython(
+        signature_len = signer_lib.SignForPython(
             config_file_path.encode(),  # configFilePath
             digestArray.from_buffer(bytearray(digest)),  # digest
             len(digest),  # digestLen
-            sigHolder,  # sigHolder
-            2000,  # sigHolderLen
+            sig_holder,  # sigHolder
+            sig_holder_len,  # sigHolderLen
         )
 
-        if sigLen == 0:
+        if signature_len == 0:
             # signing failed, return 0
             return 0
 
-        sig_len[0] = sigLen
-        bs = bytearray(sigHolder)
-        for i in range(sigLen):
+        sig_len[0] = signature_len
+        bs = bytearray(sig_holder)
+        for i in range(signature_len):
             sig[i] = bs[i]
 
         return 1
@@ -159,22 +160,22 @@ def get_sign_callback(signer_lib, config_file_path):
 # fill the buffer.
 def get_cert(signer_lib, config_file_path):
     # First call to calculate the cert length
-    certLen = signer_lib.GetCertPemForPython(
+    cert_len = signer_lib.GetCertPemForPython(
         config_file_path.encode(),  # configFilePath
         None,  # certHolder
         0,  # certHolderLen
     )
-    if certLen == 0:
+    if cert_len == 0:
         raise exceptions.MutualTLSChannelError("failed to get certificate")
 
     # Then we create an array to hold the cert, and call again to fill the cert
-    certHolder = ctypes.create_string_buffer(certLen)
+    cert_holder = ctypes.create_string_buffer(cert_len)
     signer_lib.GetCertPemForPython(
         config_file_path.encode(),  # configFilePath
-        certHolder,  # certHolder
-        certLen,  # certHolderLen
+        cert_holder,  # certHolder
+        cert_len,  # certHolderLen
     )
-    return bytes(certHolder)
+    return bytes(cert_holder)
 
 
 class CustomTlsSigner(object):

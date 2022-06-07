@@ -26,8 +26,9 @@ from google.auth.transport import _custom_tls_signer
 
 urllib3.contrib.pyopenssl.inject_into_urllib3()
 
+FAKE_ENTERPRISE_CERT_FILE_PATH = "/path/to/enterprise/cert/file"
 ENTERPRISE_CERT_FILE = os.path.join(
-    os.path.dirname(__file__), "../data/enterprise_cert.json"
+    os.path.dirname(__file__), "../data/enterprise_cert_valid.json"
 )
 INVALID_ENTERPRISE_CERT_FILE = os.path.join(
     os.path.dirname(__file__), "../data/enterprise_cert_invalid.json"
@@ -84,7 +85,7 @@ def test_get_sign_callback():
 
     # create a sign callback. The callback calls signer lib's SignForPython method
     sign_callback = _custom_tls_signer.get_sign_callback(
-        mock_signer_lib, "config_file_path"
+        mock_signer_lib, FAKE_ENTERPRISE_CERT_FILE_PATH
     )
 
     # mock the parameters used to call the sign callback
@@ -111,7 +112,7 @@ def test_get_sign_callback_failed_to_sign():
 
     # create a sign callback. The callback calls signer lib's SignForPython method
     sign_callback = _custom_tls_signer.get_sign_callback(
-        mock_signer_lib, "config_file_path"
+        mock_signer_lib, FAKE_ENTERPRISE_CERT_FILE_PATH
     )
 
     # mock the parameters used to call the sign callback
@@ -137,7 +138,7 @@ def test_get_cert_no_cert():
 
     # call the get cert method
     with pytest.raises(exceptions.MutualTLSChannelError) as excinfo:
-        _custom_tls_signer.get_cert(mock_signer_lib, "config_file_path")
+        _custom_tls_signer.get_cert(mock_signer_lib, FAKE_ENTERPRISE_CERT_FILE_PATH)
 
     assert excinfo.match("failed to get certificate")
 
@@ -149,7 +150,9 @@ def test_get_cert():
     mock_signer_lib.GetCertPemForPython.return_value = mock_cert_len
 
     # call the get cert method
-    mock_cert = _custom_tls_signer.get_cert(mock_signer_lib, "config_file_path")
+    mock_cert = _custom_tls_signer.get_cert(
+        mock_signer_lib, FAKE_ENTERPRISE_CERT_FILE_PATH
+    )
 
     # make sure the signer lib's GetCertPemForPython is called twice, and the
     # mock_cert has length mock_cert_len
