@@ -23,7 +23,7 @@ import logging
 import os
 import sys
 
-import cffi
+import cffi  # type: ignore
 import six
 
 from google.auth import exceptions
