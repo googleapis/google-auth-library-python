@@ -75,7 +75,7 @@ class ServiceAccountCredentials(credentials.Credentials):
 
     The token is obtained in the following way. This class first creates a
     self signed JWT. It uses the `name` value as the `iss` and `sub` claim, and
-    the `token_uri` as the `aud` claim, and signes the JWT with the `private_key`.
+    the `token_uri` as the `aud` claim, and signs the JWT with the `private_key`.
     It then sends the JWT to the `token_uri` to exchange a final token for
     `audience`.
     """
