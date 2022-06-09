@@ -462,10 +462,9 @@ These environment variables can be used by the executable to avoid
 hard-coding these values.
 
 Security considerations
-=======================
 
-| The following security practices are highly recommended:
-| \* Access to the script should be restricted as it will be displaying
+  The following security practices are highly recommended:
+  \* Access to the script should be restricted as it will be displaying
   credentials to stdout. This ensures that rogue processes do not gain
   access to the script. \* The configuration file should not be
   modifiable. Write access should be restricted to avoid processes
