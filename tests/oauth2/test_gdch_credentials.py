@@ -20,6 +20,7 @@ import os
 import mock
 import pytest  # type: ignore
 import requests
+import six
 
 from google.auth import exceptions
 from google.auth import jwt
@@ -65,6 +66,7 @@ class TestServiceAccountCredentials(object):
             jwt_token = creds._create_jwt()
             header, payload, _, _ = jwt._unverified_decode(jwt_token)
 
+        assert isinstance(jwt_token, six.text_type)
         assert header["alg"] == "ES256"
         assert header["kid"] == self.PRIVATE_KEY_ID
         assert payload["iss"] == self.NAME

@@ -113,7 +113,7 @@ class ServiceAccountCredentials(credentials.Credentials):
             "exp": _helpers.datetime_to_secs(expiry),
         }
 
-        return jwt.encode(self._signer, payload)
+        return _helpers.from_bytes(jwt.encode(self._signer, payload))
 
     @_helpers.copy_docstring(credentials.Credentials)
     def refresh(self, request):
