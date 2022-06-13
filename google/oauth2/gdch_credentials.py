@@ -81,13 +81,14 @@ class ServiceAccountCredentials(credentials.Credentials):
     """
 
     def __init__(
-        self, signer, service_identity_name, audience, token_uri, ca_cert_path
+        self, signer, service_identity_name, project, audience, token_uri, ca_cert_path
     ):
         """
         Args:
             signer (google.auth.crypt.Signer): The signer used to sign JWTs.
             service_identity_name (str): The service identity name. It will be
                 used as the `iss` and `sub` claim in the self signed JWT.
+            project (str): The project.
             audience (str): The audience for the final token.
             token_uri (str): The token server uri.
             ca_cert_path (str): The CA cert path for token server side TLS
@@ -97,6 +98,7 @@ class ServiceAccountCredentials(credentials.Credentials):
         super(ServiceAccountCredentials, self).__init__()
         self._signer = signer
         self._service_identity_name = service_identity_name
+        self._project = project
         self._audience = audience
         self._token_uri = token_uri
         self._ca_cert_path = ca_cert_path
@@ -104,10 +106,13 @@ class ServiceAccountCredentials(credentials.Credentials):
     def _create_jwt(self):
         now = _helpers.utcnow()
         expiry = now + JWT_LIFETIME
+        iss_sub_value = "system:serviceaccount:{}:{}".format(
+            self._project, self._service_identity_name
+        )
 
         payload = {
-            "iss": self._service_identity_name,
-            "sub": self._service_identity_name,
+            "iss": iss_sub_value,
+            "sub": iss_sub_value,
             "aud": self._token_uri,
             "iat": _helpers.datetime_to_secs(now),
             "exp": _helpers.datetime_to_secs(expiry),
@@ -155,6 +160,7 @@ class ServiceAccountCredentials(credentials.Credentials):
         return self.__class__(
             self._signer,
             self._service_identity_name,
+            self._project,
             audience,
             self._token_uri,
             self._ca_cert_path,
@@ -182,6 +188,7 @@ class ServiceAccountCredentials(credentials.Credentials):
         return cls(
             signer,
             info["name"],  # service_identity_name
+            info["project"],
             None,  # audience
             info["token_uri"],
             info.get("ca_cert_path", None),
@@ -210,6 +217,7 @@ class ServiceAccountCredentials(credentials.Credentials):
                 "private_key_id",
                 "private_key",
                 "name",
+                "project",
                 "token_uri",
             ],
             use_rsa_signer=False,
@@ -235,6 +243,7 @@ class ServiceAccountCredentials(credentials.Credentials):
                 "private_key_id",
                 "private_key",
                 "name",
+                "project",
                 "token_uri",
             ],
             use_rsa_signer=False,
