@@ -429,31 +429,31 @@ These are all required fields for an error response. The code and
 message fields will be used by the library as part of the thrown
 exception.
 
-Response format fields summary: \* ``version``: The version of the JSON
-output. Currently only version 1 is supported. \* ``success``: The
+Response format fields summary: ``version``: The version of the JSON
+output. Currently only version 1 is supported. ``success``: The
 status of the response. When true, the response must contain the 3rd
 party token, token type, and expiration. The executable must also exit
 with exit code 0. When false, the response must contain the error code
-and message fields and exit with a non-zero value. \* ``token_type``:
+and message fields and exit with a non-zero value. ``token_type``:
 The 3rd party subject token type. Must be
 *urn:ietf:params:oauth:token-type:jwt*,
 *urn:ietf:params:oauth:token-type:id_token*, or
-*urn:ietf:params:oauth:token-type:saml2*. \* ``id_token``: The 3rd party
-OIDC token. \* ``saml_response``: The 3rd party SAML response. \*
+*urn:ietf:params:oauth:token-type:saml2*. ``id_token``: The 3rd party
+OIDC token. ``saml_response``: The 3rd party SAML response. 
 ``expiration_time``: The 3rd party subject token expiration time in
-seconds (unix epoch time). \* ``code``: The error code string. \*
+seconds (unix epoch time). ``code``: The error code string. 
 ``message``: The error message.
 
 All response types must include both the ``version`` and ``success``
-fields. \* Successful responses must include the ``token_type``,
-``expiration_time``, and one of ``id_token`` or ``saml_response``. \*
+fields. Successful responses must include the ``token_type``,
+``expiration_time``, and one of ``id_token`` or ``saml_response``. 
 Error responses must include both the ``code`` and ``message`` fields.
 
 The library will populate the following environment variables when the
-executable is run: \* ``GOOGLE_EXTERNAL_ACCOUNT_AUDIENCE``: The audience
-field from the credential configuration. Always present. \*
+executable is run: ``GOOGLE_EXTERNAL_ACCOUNT_AUDIENCE``: The audience
+field from the credential configuration. Always present. 
 ``GOOGLE_EXTERNAL_ACCOUNT_IMPERSONATED_EMAIL``: The service account
-email. Only present when service account impersonation is used. \*
+email. Only present when service account impersonation is used. 
 ``GOOGLE_EXTERNAL_ACCOUNT_OUTPUT_FILE``: The output file location from
 the credential configuration. Only present when specified in the
 credential configuration.
@@ -464,9 +464,9 @@ hard-coding these values.
 Security considerations
 
   The following security practices are highly recommended:
-  \* Access to the script should be restricted as it will be displaying
+  Access to the script should be restricted as it will be displaying
   credentials to stdout. This ensures that rogue processes do not gain
-  access to the script. \* The configuration file should not be
+  access to the script.  The configuration file should not be
   modifiable. Write access should be restricted to avoid processes
   modifying the executable command portion.
 
@@ -544,7 +544,7 @@ Impersonated credentials
 ++++++++++++++++++++++++
 
 Impersonated Credentials allows one set of credentials issued to a user or service account
-to impersonate another.  The source credentials must be granted 
+to impersonate another. The source credentials must be granted 
 the "Service Account Token Creator" IAM role. ::
 
     from google.auth import impersonated_credentials
@@ -566,7 +566,7 @@ the "Service Account Token Creator" IAM role. ::
 
 
 In the example above `source_credentials` does not have direct access to list buckets
-in the target project.  Using `ImpersonatedCredentials` will allow the source_credentials
+in the target project. Using `ImpersonatedCredentials` will allow the source_credentials
 to assume the identity of a target_principal that does have access.
 
 
