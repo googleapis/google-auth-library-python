@@ -20,6 +20,9 @@ import nox
 
 CURRENT_DIRECTORY = pathlib.Path(__file__).parent.absolute()
 
+# https://github.com/psf/black/issues/2964, pin click version to 8.0.4 to
+# avoid incompatiblity with black.
+CLICK_VERSION = "click==8.0.4"
 BLACK_VERSION = "black==19.3b0"
 BLACK_PATHS = [
     "google",
@@ -31,9 +34,11 @@ BLACK_PATHS = [
 ]
 
 
-@nox.session(python="3.7")
+@nox.session(python="3.8")
 def lint(session):
-    session.install("flake8", "flake8-import-order", "docutils", BLACK_VERSION)
+    session.install(
+        "flake8", "flake8-import-order", "docutils", CLICK_VERSION, BLACK_VERSION
+    )
     session.install("-e", ".")
     session.run("black", "--check", *BLACK_PATHS)
     session.run(
@@ -58,11 +63,11 @@ def blacken(session):
 
     https://github.com/googleapis/synthtool/blob/master/docker/owlbot/python/Dockerfile
     """
-    session.install(BLACK_VERSION)
+    session.install(CLICK_VERSION, BLACK_VERSION)
     session.run("black", *BLACK_PATHS)
 
 
-@nox.session(python="3.6")
+@nox.session(python="3.8")
 def mypy(session):
     """Verify type hints are mypy compatible."""
     session.install("-e", ".")
@@ -113,10 +118,11 @@ def unit_prev_versions(session):
         "--cov=google.oauth2",
         "--cov=tests",
         "tests",
+        "--ignore=tests/transport/test__custom_tls_signer.py",  # enterprise cert is for python 3.6+
     )
 
 
-@nox.session(python="3.7")
+@nox.session(python="3.8")
 def cover(session):
     session.install("-r", "testing/requirements.txt")
     session.install("-e", ".")
