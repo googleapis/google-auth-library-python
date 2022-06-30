@@ -37,6 +37,7 @@ AUTHORIZED_USER_FILE = os.path.join(DATA_DIR, "authorized_user.json")
 EXPLICIT_CREDENTIALS_ENV = "GOOGLE_APPLICATION_CREDENTIALS"
 EXPLICIT_PROJECT_ENV = "GOOGLE_CLOUD_PROJECT"
 EXPECT_PROJECT_ENV = "EXPECT_PROJECT_ID"
+ALLOW_PLUGGABLE_ENV = "GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES"
 
 SKIP_GAE_TEST_ENV = "SKIP_APP_ENGINE_SYSTEM_TEST"
 GAE_APP_URL_TMPL = "https://{}-dot-{}.appspot.com"
@@ -379,8 +380,9 @@ def mtls_http(session):
     )
 
 
-@nox.session(python=PYTHON_VERSIONS_SYNC)
+@nox.session(python=PYTHON_VERSIONS_ASYNC)
 def external_accounts(session):
+    session.env[ALLOW_PLUGGABLE_ENV] = "1"
     session.install(
         *TEST_DEPENDENCIES_SYNC,
         LIBRARY_DIR,

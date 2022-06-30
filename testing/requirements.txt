@@ -13,6 +13,7 @@ urllib3
 cryptography
 responses
 grpcio
+pytest-subprocess; python_version > '3.5'
 # Async Dependencies
 pytest-asyncio; python_version > '3.0'
 aioresponses; python_version > '3.0'
