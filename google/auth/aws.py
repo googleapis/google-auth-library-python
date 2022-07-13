@@ -353,6 +353,7 @@ class Credentials(external_account.Credentials):
         token_url,
         credential_source=None,
         service_account_impersonation_url=None,
+        service_account_impersonation_info={},
         client_id=None,
         client_secret=None,
         quota_project_id=None,
@@ -393,6 +394,7 @@ class Credentials(external_account.Credentials):
             token_url=token_url,
             credential_source=credential_source,
             service_account_impersonation_url=service_account_impersonation_url,
+            service_account_impersonation_info=service_account_impersonation_info,
             client_id=client_id,
             client_secret=client_secret,
             quota_project_id=quota_project_id,
@@ -754,6 +756,9 @@ class Credentials(external_account.Credentials):
             token_url=info.get("token_url"),
             service_account_impersonation_url=info.get(
                 "service_account_impersonation_url"
+            ),
+            service_account_impersonation_info=info.get(
+                "service_account_impersonation"
             ),
             client_id=info.get("client_id"),
             client_secret=info.get("client_secret"),
