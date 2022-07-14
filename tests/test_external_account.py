@@ -20,8 +20,6 @@ import pytest  # type: ignore
 from six.moves import http_client
 from six.moves import urllib
 
-import sys
-assert '/Users/ryankohler/google-auth-library-python' in sys.path
 from google.auth import _helpers
 from google.auth import exceptions
 from google.auth import external_account
@@ -76,7 +74,7 @@ class CredentialsImpl(external_account.Credentials):
         token_url,
         credential_source,
         service_account_impersonation_url=None,
-        service_account_impersonation_info={},
+        service_account_impersonation_options={},
         client_id=None,
         client_secret=None,
         quota_project_id=None,
@@ -90,7 +88,7 @@ class CredentialsImpl(external_account.Credentials):
             token_url=token_url,
             credential_source=credential_source,
             service_account_impersonation_url=service_account_impersonation_url,
-            service_account_impersonation_info=service_account_impersonation_info,
+            service_account_impersonation_options=service_account_impersonation_options,
             client_id=client_id,
             client_secret=client_secret,
             quota_project_id=quota_project_id,
@@ -170,14 +168,14 @@ class TestCredentials(object):
         scopes=None,
         default_scopes=None,
         service_account_impersonation_url=None,
-        service_account_impersonation_info={},
+        service_account_impersonation_options={},
     ):
         return CredentialsImpl(
             audience=cls.AUDIENCE,
             subject_token_type=cls.SUBJECT_TOKEN_TYPE,
             token_url=cls.TOKEN_URL,
             service_account_impersonation_url=service_account_impersonation_url,
-            service_account_impersonation_info=service_account_impersonation_info,
+            service_account_impersonation_options=service_account_impersonation_options,
             credential_source=cls.CREDENTIAL_SOURCE,
             client_id=client_id,
             client_secret=client_secret,
@@ -514,7 +512,7 @@ class TestCredentials(object):
             token_url=self.TOKEN_URL,
             credential_source=self.CREDENTIAL_SOURCE,
             service_account_impersonation_url=self.SERVICE_ACCOUNT_IMPERSONATION_URL,
-            service_account_impersonation_info={},
+            service_account_impersonation_options={},
             client_id=CLIENT_ID,
             client_secret=CLIENT_SECRET,
             quota_project_id=self.QUOTA_PROJECT_ID,
@@ -572,7 +570,7 @@ class TestCredentials(object):
             token_url=self.TOKEN_URL,
             credential_source=self.CREDENTIAL_SOURCE,
             service_account_impersonation_url=self.SERVICE_ACCOUNT_IMPERSONATION_URL,
-            service_account_impersonation_info={},
+            service_account_impersonation_options={},
             client_id=CLIENT_ID,
             client_secret=CLIENT_SECRET,
             quota_project_id="project-foo",
@@ -1741,7 +1739,7 @@ class TestCredentials(object):
         # No additional requests.
         assert len(request.call_args_list) == 2
 
-    def test_refresh_impersonation_without_client_auth_success(self):
+    def test_refresh_impersonation_with_lifetime(self):
         # Simulate service account access token expires in 2800 seconds.
         expire_time = (
             _helpers.utcnow().replace(microsecond=0) + datetime.timedelta(seconds=2800)
@@ -1770,7 +1768,7 @@ class TestCredentials(object):
         impersonation_request_data = {
             "delegates": None,
             "scope": self.SCOPES,
-            "lifetime": "10000s",
+            "lifetime": "2800s",
         }
         # Initialize mock request to handle token exchange and service account
         # impersonation request.
@@ -1783,8 +1781,8 @@ class TestCredentials(object):
         # Initialize credentials with service account impersonation.
         credentials = self.make_credentials(
             service_account_impersonation_url=self.SERVICE_ACCOUNT_IMPERSONATION_URL,
-            service_account_impersonation_info={
-                "token_lifetime_seconds": 10000,
+            service_account_impersonation_options={
+                "token_lifetime_seconds": 2800,
             },
             scopes=self.SCOPES,
         )
