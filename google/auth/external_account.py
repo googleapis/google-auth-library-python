@@ -160,7 +160,7 @@ class Credentials(credentials.Scoped, credentials.CredentialsWithQuotaProject):
             "subject_token_type": self._subject_token_type,
             "token_url": self._token_url,
             "service_account_impersonation_url": self._service_account_impersonation_url,
-            "service_account_impersonation_options": copy.deepcopy(self._service_account_impersonation_options) or None,
+            "service_account_impersonation": copy.deepcopy(self._service_account_impersonation_options) or None,
             "credential_source": copy.deepcopy(self._credential_source),
             "quota_project_id": self._quota_project_id,
             "client_id": self._client_id,

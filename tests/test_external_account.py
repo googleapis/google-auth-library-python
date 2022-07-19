@@ -497,6 +497,9 @@ class TestCredentials(object):
             scopes=self.SCOPES,
             default_scopes=["default1"],
             service_account_impersonation_url=self.SERVICE_ACCOUNT_IMPERSONATION_URL,
+            service_account_impersonation_options={
+                "token_lifetime_seconds": 2800,
+            },
         )
 
         with mock.patch.object(
@@ -512,7 +515,9 @@ class TestCredentials(object):
             token_url=self.TOKEN_URL,
             credential_source=self.CREDENTIAL_SOURCE,
             service_account_impersonation_url=self.SERVICE_ACCOUNT_IMPERSONATION_URL,
-            service_account_impersonation_options={},
+            service_account_impersonation_options={
+                "token_lifetime_seconds": 2800,
+            },
             client_id=CLIENT_ID,
             client_secret=CLIENT_SECRET,
             quota_project_id=self.QUOTA_PROJECT_ID,
@@ -555,6 +560,9 @@ class TestCredentials(object):
             scopes=self.SCOPES,
             default_scopes=["default1"],
             service_account_impersonation_url=self.SERVICE_ACCOUNT_IMPERSONATION_URL,
+            service_account_impersonation_options={
+                "token_lifetime_seconds": 2800,
+            },
         )
 
         with mock.patch.object(
@@ -570,7 +578,9 @@ class TestCredentials(object):
             token_url=self.TOKEN_URL,
             credential_source=self.CREDENTIAL_SOURCE,
             service_account_impersonation_url=self.SERVICE_ACCOUNT_IMPERSONATION_URL,
-            service_account_impersonation_options={},
+            service_account_impersonation_options={
+                "token_lifetime_seconds": 2800,
+            },
             client_id=CLIENT_ID,
             client_secret=CLIENT_SECRET,
             quota_project_id="project-foo",
@@ -620,6 +630,9 @@ class TestCredentials(object):
             client_secret=CLIENT_SECRET,
             quota_project_id=self.QUOTA_PROJECT_ID,
             service_account_impersonation_url=self.SERVICE_ACCOUNT_IMPERSONATION_URL,
+            service_account_impersonation_options={
+                "token_lifetime_seconds": 2800,
+            },
         )
 
         assert credentials.info == {
@@ -628,6 +641,9 @@ class TestCredentials(object):
             "subject_token_type": self.SUBJECT_TOKEN_TYPE,
             "token_url": self.TOKEN_URL,
             "service_account_impersonation_url": self.SERVICE_ACCOUNT_IMPERSONATION_URL,
+            "service_account_impersonation": {
+                "token_lifetime_seconds": 2800,
+            },
             "credential_source": self.CREDENTIAL_SOURCE.copy(),
             "quota_project_id": self.QUOTA_PROJECT_ID,
             "client_id": CLIENT_ID,
