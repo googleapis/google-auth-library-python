@@ -636,7 +636,7 @@ class TestCredentials(object):
             )
 
     @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
-    def test_retrieve_subject_token_missing_expiration_time(self):
+    def test_retrieve_subject_token_missing_expiration_time_should_pass(self):
         EXECUTABLE_SUCCESSFUL_OIDC_RESPONSE = {
             "version": 1,
             "success": True,
@@ -652,14 +652,7 @@ class TestCredentials(object):
                 returncode=0,
             ),
         ):
-            credentials = self.make_pluggable(credential_source=self.CREDENTIAL_SOURCE)
-
-            with pytest.raises(ValueError) as excinfo:
-                _ = credentials.retrieve_subject_token(None)
-
-            assert excinfo.match(
-                r"The executable response is missing the expiration_time field."
-            )
+            self.make_pluggable(credential_source=self.CREDENTIAL_SOURCE)
 
     @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
     def test_retrieve_subject_token_missing_token_type(self):
