@@ -636,7 +636,9 @@ class TestCredentials(object):
             )
 
     @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
-    def test_retrieve_subject_token_missing_expiration_time_should_pass(self):
+    def test_retrieve_subject_token_without_expiration_time_should_fail_when_using_output_file(
+        self
+    ):
         EXECUTABLE_SUCCESSFUL_OIDC_RESPONSE = {
             "version": 1,
             "success": True,
@@ -652,7 +654,40 @@ class TestCredentials(object):
                 returncode=0,
             ),
         ):
-            self.make_pluggable(credential_source=self.CREDENTIAL_SOURCE)
+            credentials = self.make_pluggable(credential_source=self.CREDENTIAL_SOURCE)
+
+            with pytest.raises(ValueError) as excinfo:
+                _ = credentials.retrieve_subject_token(None)
+
+            assert excinfo.match(
+                r"Expiration_time must be specified while using output file"
+            )
+
+    @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
+    def test_retrieve_subject_token_without_expiration_time_should_pass_when_not_using_output_file(
+        self
+    ):
+        EXECUTABLE_SUCCESSFUL_OIDC_RESPONSE = {
+            "version": 1,
+            "success": True,
+            "token_type": "urn:ietf:params:oauth:token-type:id_token",
+            "id_token": self.EXECUTABLE_OIDC_TOKEN,
+        }
+
+        CREDENTIAL_SOURCE = {
+            "executable": {"command": "command", "timeout_millis": 30000}
+        }
+
+        with mock.patch(
+            "subprocess.run",
+            return_value=subprocess.CompletedProcess(
+                args=[],
+                stdout=json.dumps(EXECUTABLE_SUCCESSFUL_OIDC_RESPONSE).encode("UTF-8"),
+                returncode=0,
+            ),
+        ):
+            credentials = self.make_pluggable(credential_source=CREDENTIAL_SOURCE)
+            credentials.retrieve_subject_token(None)
 
     @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
     def test_retrieve_subject_token_missing_token_type(self):

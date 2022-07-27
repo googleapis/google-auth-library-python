@@ -262,6 +262,13 @@ class Credentials(external_account.Credentials):
                     response["code"], response["message"]
                 )
             )
+        if (
+            "expiration_time" not in response
+            and self._credential_source_executable_output_file
+        ):
+            raise ValueError(
+                "Expiration_time must be specified while using output file"
+            )
         if "expiration_time" in response and response["expiration_time"] < time.time():
             raise exceptions.RefreshError(
                 "The token returned by the executable is expired."
