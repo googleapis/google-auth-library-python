@@ -660,7 +660,7 @@ class TestCredentials(object):
                 _ = credentials.retrieve_subject_token(None)
 
             assert excinfo.match(
-                r"Expiration_time must be specified while using output file"
+                r"The output file response must contain the expiration_time field when success=true."
             )
 
     @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
