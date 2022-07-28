@@ -759,7 +759,8 @@ class Credentials(external_account.Credentials):
             ),
             service_account_impersonation_options=info.get(
                 "service_account_impersonation"
-            ) or {},
+            )
+            or {},
             client_id=info.get("client_id"),
             client_secret=info.get("client_secret"),
             credential_source=info.get("credential_source"),

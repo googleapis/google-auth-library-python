@@ -797,9 +797,7 @@ class TestCredentials(object):
                 "subject_token_type": SUBJECT_TOKEN_TYPE,
                 "token_url": TOKEN_URL,
                 "service_account_impersonation_url": SERVICE_ACCOUNT_IMPERSONATION_URL,
-                "service_account_impersonation": {
-                    "token_lifetime_seconds": 2800,
-                },
+                "service_account_impersonation": {"token_lifetime_seconds": 2800},
                 "client_id": CLIENT_ID,
                 "client_secret": CLIENT_SECRET,
                 "quota_project_id": QUOTA_PROJECT_ID,
@@ -814,9 +812,7 @@ class TestCredentials(object):
             subject_token_type=SUBJECT_TOKEN_TYPE,
             token_url=TOKEN_URL,
             service_account_impersonation_url=SERVICE_ACCOUNT_IMPERSONATION_URL,
-            service_account_impersonation_options={
-                "token_lifetime_seconds": 2800,
-            },
+            service_account_impersonation_options={"token_lifetime_seconds": 2800},
             client_id=CLIENT_ID,
             client_secret=CLIENT_SECRET,
             credential_source=self.CREDENTIAL_SOURCE,
@@ -855,9 +851,7 @@ class TestCredentials(object):
             "subject_token_type": SUBJECT_TOKEN_TYPE,
             "token_url": TOKEN_URL,
             "service_account_impersonation_url": SERVICE_ACCOUNT_IMPERSONATION_URL,
-            "service_account_impersonation": {
-                "token_lifetime_seconds": 2800,
-            },
+            "service_account_impersonation": {"token_lifetime_seconds": 2800},
             "client_id": CLIENT_ID,
             "client_secret": CLIENT_SECRET,
             "quota_project_id": QUOTA_PROJECT_ID,
@@ -874,9 +868,7 @@ class TestCredentials(object):
             subject_token_type=SUBJECT_TOKEN_TYPE,
             token_url=TOKEN_URL,
             service_account_impersonation_url=SERVICE_ACCOUNT_IMPERSONATION_URL,
-            service_account_impersonation_options={
-                "token_lifetime_seconds": 2800,
-            },
+            service_account_impersonation_options={"token_lifetime_seconds": 2800},
             client_id=CLIENT_ID,
             client_secret=CLIENT_SECRET,
             credential_source=self.CREDENTIAL_SOURCE,
