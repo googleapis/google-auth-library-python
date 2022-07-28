@@ -306,6 +306,9 @@ def test_aws_based_external_account(
             },
         )
 
+
+# This test makes sure that setting up an executable to provide credentials
+# works to allow access to Google resources.
 def test_pluggable_external_account(
     oidc_credentials, service_account_info, dns_access
 ):

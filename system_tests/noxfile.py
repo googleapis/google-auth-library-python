@@ -380,7 +380,7 @@ def mtls_http(session):
     )
 
 
-@nox.session(python=PYTHON_VERSIONS_ASYNC)
+@nox.session(python=PYTHON_VERSIONS_SYNC)
 def external_accounts(session):
     session.env[ALLOW_PLUGGABLE_ENV] = "1"
     session.install(
