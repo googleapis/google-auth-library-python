@@ -380,11 +380,11 @@ def mtls_http(session):
     )
 
 
-@nox.session(python=PYTHON_VERSIONS_SYNC)
+@nox.session(python=PYTHON_VERSIONS_ASYNC)
 def external_accounts(session):
     session.env[ALLOW_PLUGGABLE_ENV] = "1"
     session.install(
-        *TEST_DEPENDENCIES_SYNC,
+        *TEST_DEPENDENCIES_ASYNC,
         LIBRARY_DIR,
         "google-api-python-client",
     )
