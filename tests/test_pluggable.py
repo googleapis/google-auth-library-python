@@ -636,7 +636,7 @@ class TestCredentials(object):
             )
 
     @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
-    def test_retrieve_subject_token_without_expiration_time_should_fail_when_using_output_file(
+    def test_retrieve_subject_token_without_expiration_time_should_fail_when_output_file_specified(
         self
     ):
         EXECUTABLE_SUCCESSFUL_OIDC_RESPONSE = {
@@ -664,7 +664,34 @@ class TestCredentials(object):
             )
 
     @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
-    def test_retrieve_subject_token_without_expiration_time_should_pass_when_not_using_output_file(
+    def test_retrieve_subject_token_without_expiration_time_should_fail_when_retrieving_from_output_file(
+        self
+    ):
+        ACTUAL_CREDENTIAL_SOURCE_EXECUTABLE_OUTPUT_FILE = "actual_output_file"
+        ACTUAL_CREDENTIAL_SOURCE_EXECUTABLE = {
+            "command": "command",
+            "timeout_millis": 30000,
+            "output_file": ACTUAL_CREDENTIAL_SOURCE_EXECUTABLE_OUTPUT_FILE,
+        }
+        ACTUAL_CREDENTIAL_SOURCE = {"executable": ACTUAL_CREDENTIAL_SOURCE_EXECUTABLE}
+        data = self.EXECUTABLE_SUCCESSFUL_OIDC_RESPONSE_ID_TOKEN.copy()
+        data.pop("expiration_time")
+
+        with open(ACTUAL_CREDENTIAL_SOURCE_EXECUTABLE_OUTPUT_FILE, "w") as output_file:
+            json.dump(data, output_file)
+
+        credentials = self.make_pluggable(credential_source=ACTUAL_CREDENTIAL_SOURCE)
+
+        with pytest.raises(ValueError) as excinfo:
+            _ = credentials.retrieve_subject_token(None)
+
+        assert excinfo.match(
+            r"The output file response must contain the expiration_time field when success=true."
+        )
+        os.remove(ACTUAL_CREDENTIAL_SOURCE_EXECUTABLE_OUTPUT_FILE)
+
+    @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
+    def test_retrieve_subject_token_without_expiration_time_should_pass_when_output_file_not_specified(
         self
     ):
         EXECUTABLE_SUCCESSFUL_OIDC_RESPONSE = {
@@ -687,7 +714,9 @@ class TestCredentials(object):
             ),
         ):
             credentials = self.make_pluggable(credential_source=CREDENTIAL_SOURCE)
-            credentials.retrieve_subject_token(None)
+            subject_token = credentials.retrieve_subject_token(None)
+
+            assert subject_token == self.EXECUTABLE_OIDC_TOKEN
 
     @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
     def test_retrieve_subject_token_missing_token_type(self):
