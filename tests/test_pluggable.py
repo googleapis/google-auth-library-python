@@ -660,7 +660,7 @@ class TestCredentials(object):
                 _ = credentials.retrieve_subject_token(None)
 
             assert excinfo.match(
-                r"The output file response must contain the expiration_time field when success=true."
+                r"The executable response must contain an expiration_time for successful responses when an output_file has been specified in the configuration."
             )
 
     @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
@@ -686,7 +686,7 @@ class TestCredentials(object):
             _ = credentials.retrieve_subject_token(None)
 
         assert excinfo.match(
-            r"The output file response must contain the expiration_time field when success=true."
+            r"The executable response must contain an expiration_time for successful responses when an output_file has been specified in the configuration."
         )
         os.remove(ACTUAL_CREDENTIAL_SOURCE_EXECUTABLE_OUTPUT_FILE)
 
