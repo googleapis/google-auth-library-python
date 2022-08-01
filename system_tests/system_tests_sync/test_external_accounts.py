@@ -173,7 +173,7 @@ def test_file_based_external_account(
 
 # This test makes sure that setting a token lifetime works
 # for service account impersonation.
-def test-file_based_external_account_with_configure_token_lifetime
+def test_file_based_external_account_with_configure_token_lifetime
     oidc_credentials, service_account_info, dns_access
 ):
     with NamedTemporaryFile() as tmpfile:
