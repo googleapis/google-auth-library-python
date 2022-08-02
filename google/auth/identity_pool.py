@@ -52,12 +52,19 @@ class Credentials(external_account.Credentials):
 
     def __init__(
         self,
+        audience,
+        subject_token_type,
+        token_url,
         credential_source,
-        **kwargs,
+        *args,
+        **kwargs
     ):
         """Instantiates an external account credentials object from a file/URL.
 
         Args:
+            audience (str): The STS audience field.
+            subject_token_type (str): The subject token type.
+            token_url (str): The STS endpoint URL.
             credential_source (Mapping): The credential source dictionary used to
                 provide instructions on how to retrieve external credential to be
                 exchanged for Google access tokens.
@@ -78,6 +85,8 @@ class Credentials(external_account.Credentials):
                     {
                         "file": "/path/to/token/file.txt"
                     }
+            args (List): Optional positional arguments passed into the underlying __init__ method
+            kwargs (Mapping): Optional keyword arguments passed into the underlying __init__ method
 
         Raises:
             google.auth.exceptions.RefreshError: If an error is encountered during
@@ -90,8 +99,12 @@ class Credentials(external_account.Credentials):
         """
 
         super(Credentials, self).__init__(
+            audience=audience,
+            subject_token_type=subject_token_type,
+            token_url=tokenurl,
             credential_source=credential_source,
-            **kwargs,
+            *args,
+            **kwargs
         )
         if not isinstance(credential_source, Mapping):
             self._credential_source_file = None
