@@ -473,6 +473,7 @@ class TestImpersonatedCredentials(object):
 
         assert id_creds.token == ID_TOKEN_DATA
         assert id_creds._include_email is True
+        assert id_creds._target_credentials == credentials
 
     def test_id_token_with_target_audience(
         self, mock_donor_credentials, mock_authorizedsession_idtoken
