@@ -486,10 +486,10 @@ class Credentials(credentials.Scoped, credentials.CredentialsWithQuotaProject):
 
     @classmethod
     def from_info(cls, info, **kwargs):
-        """Creates an Identity Pool Credentials instance from parsed external account info.
+        """Creates a Credentials instance from parsed external account info.
 
         Args:
-            info (Mapping[str, str]): The Identity Pool external account info in Google
+            info (Mapping[str, str]): The external account info in Google
                 format.
             kwargs: Additional arguments to pass to the constructor.
 
@@ -521,10 +521,10 @@ class Credentials(credentials.Scoped, credentials.CredentialsWithQuotaProject):
 
     @classmethod
     def from_file(cls, filename, **kwargs):
-        """Creates an IdentityPool Credentials instance from an external account json file.
+        """Creates a Credentials instance from an external account json file.
 
         Args:
-            filename (str): The path to the IdentityPool external account json file.
+            filename (str): The path to the external account json file.
             kwargs: Additional arguments to pass to the constructor.
 
         Returns:
