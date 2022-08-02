@@ -85,8 +85,8 @@ class Credentials(external_account.Credentials):
                     {
                         "file": "/path/to/token/file.txt"
                     }
-            args (List): Optional positional arguments passed into the underlying __init__ method
-            kwargs (Mapping): Optional keyword arguments passed into the underlying __init__ method
+            args (List): Optional positional arguments passed into the underlying :meth:`~external_account.Credentials.__init__` method
+            kwargs (Mapping): Optional keyword arguments passed into the underlying :meth:`~external_account.Credentials.__init__` method
 
         Raises:
             google.auth.exceptions.RefreshError: If an error is encountered during

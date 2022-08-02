@@ -363,8 +363,8 @@ class Credentials(external_account.Credentials):
             credential_source (Mapping): The credential source dictionary used
                 to provide instructions on how to retrieve external credential
                 to be exchanged for Google access tokens.
-            args (List): Optional positional arguments passed into the underlying __init__ method
-            kwargs (Mapping): Optional keyword arguments passed into the underlying __init__ method
+            args (List): Optional positional arguments passed into the underlying :meth:`~external_account.Credentials.__init__` method. method
+            kwargs (Mapping): Optional keyword arguments passed into the underlying :meth:`~external_account.Credentials.__init__` method
 
         Raises:
             google.auth.exceptions.RefreshError: If an error is encountered during

@@ -79,8 +79,8 @@ class Credentials(external_account.Credentials):
                             "output_file": "/path/to/generated/cached/credentials"
                         }
                     }
-            args (List): Optional positional arguments passed into the underlying __init__ method
-            kwargs (Mapping): Optional keyword arguments passed into the underlying __init__ method
+            args (List): Optional positional arguments passed into the underlying :meth:`~external_account.Credentials.__init__` method
+            kwargs (Mapping): Optional keyword arguments passed into the underlying :meth:`~external_account.Credentials.__init__` method
 
         Raises:
             google.auth.exceptions.RefreshError: If an error is encountered during
