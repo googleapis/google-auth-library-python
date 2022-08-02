@@ -32,11 +32,13 @@
 # original service account key.
 
 
+import datetime
 import json
 import os
 import socket
 from tempfile import NamedTemporaryFile
 import threading
+import time
 
 import sys
 import google.auth
@@ -165,6 +167,34 @@ def test_file_based_external_account(
                 "service_account_impersonation_url": "https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/{}:generateAccessToken".format(
                     oidc_credentials.service_account_email
                 ),
+                "credential_source": {
+                    "file": tmpfile.name,
+                },
+            },
+        )
+
+# This test makes sure that setting a token lifetime works
+# for service account impersonation.
+def test_file_based_external_account_with_configure_token_lifetime(
+    oidc_credentials, service_account_info, dns_access
+):
+    with NamedTemporaryFile() as tmpfile:
+        tmpfile.write(oidc_credentials.token.encode("utf-8"))
+        tmpfile.flush()
+
+        assert get_project_dns(
+            dns_access,
+            {
+                "type": "external_account",
+                "audience": _AUDIENCE_OIDC,
+                "subject_token_type": "urn:ietf:params:oauth:token-type:jwt",
+                "token_url": "https://sts.googleapis.com/v1/token",
+                "service_account_impersonation_url": "https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/{}:generateAccessToken".format(
+                    oidc_credentials.service_account_email
+                ),
+                "service_account_impersonation": {
+                    "token_lifetime_seconds": 2800,
+                },
                 "credential_source": {
                     "file": tmpfile.name,
                 },
@@ -303,3 +333,45 @@ def test_aws_based_external_account(
                 },
             },
         )
+
+
+# This test makes sure that setting up an executable to provide credentials
+# works to allow access to Google resources.
+def test_pluggable_external_account(
+    oidc_credentials, service_account_info, dns_access
+):
+    now = datetime.datetime.now()
+    unix_seconds = time.mktime(now.timetuple())
+    expiration_time = (unix_seconds + 1 * 60 * 60) * 1000
+    credential = {
+        "success": True,
+        "version": 1,
+        "expiration_time": expiration_time,
+        "token_type": "urn:ietf:params:oauth:token-type:jwt",
+        "id_token": oidc_credentials.token,
+    }
+
+    tmpfile = NamedTemporaryFile(delete=True)
+    with open(tmpfile.name, "w") as f:
+        f.write("#!/bin/bash\n")
+        f.write("echo \"{}\"\n".format(json.dumps(credential).replace('"', '\\"')))
+    tmpfile.file.close()
+
+    os.chmod(tmpfile.name, 0o777)
+    assert get_project_dns(
+        dns_access,
+        {
+            "type": "external_account",
+            "audience": _AUDIENCE_OIDC,
+            "subject_token_type": "urn:ietf:params:oauth:token-type:jwt",
+            "token_url": "https://sts.googleapis.com/v1/token",
+            "service_account_impersonation_url": "https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/{}:generateAccessToken".format(
+                oidc_credentials.service_account_email
+            ),
+            "credential_source": {
+                "executable": {
+                    "command": tmpfile.name,
+                }
+            },
+        },
+    )
