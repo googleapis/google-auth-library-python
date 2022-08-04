@@ -434,10 +434,8 @@ Response format fields summary:
 - ``version``: The version of the JSON output. Currently only version 1 is
   supported.
 - ``success``: The status of the response.
-    - When true, the response must contain the 3rd party token, token type,
-    and expiration. The executable must also exit with exit code 0.
-    - When false, the response must contain the error code and message
-    fields and exit with a non-zero value.
+    - When true, the response must contain the 3rd party token, token type, and expiration. The executable must also exit with exit code 0.
+    - When false, the response must contain the error code and message fields and exit with a non-zero value.
 - ``token_type``: The 3rd party subject token type. Must be
     - *urn:ietf:params:oauth:token-type:jwt*
     - *urn:ietf:params:oauth:token-type:id_token*
