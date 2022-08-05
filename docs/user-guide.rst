@@ -450,8 +450,7 @@ Response format fields summary:
 All response types must include both the ``version`` and ``success`` fields.
 Successful responses must include the ``token_type``, and one of ``id_token``
 or ``saml_response``.
-``expiration_time`` is only optional when ``output_file`` is not specified.
-Otherwise we will treat the response as malformed.
+If output file is specified, ``expiration_time`` is mandatory.
 Error responses must include both the ``code`` and ``message`` fields.
 
 The library will populate the following environment variables when the
