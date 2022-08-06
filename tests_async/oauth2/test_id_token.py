@@ -36,6 +36,9 @@ def make_request(status, data=None):
         response.data.read = mock.AsyncMock(
             spec=["__call__"], return_value=json.dumps(data).encode("utf-8")
         )
+        response.content = mock.AsyncMock(
+            spec=["__call__"], return_value=json.dumps(data).encode("utf-8")
+        )
 
     request = mock.AsyncMock(spec=["transport.Request"])
     request.return_value = response
