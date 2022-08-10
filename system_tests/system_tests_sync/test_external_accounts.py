@@ -203,7 +203,7 @@ def test_file_based_external_account_with_configure_token_lifetime(
 
 def test_configurable_token_lifespan(oidc_credentials, http_request):
     TOKEN_LIFETIME_SECONDS = 2800
-    BUFFER_SECONDS = 30
+    BUFFER_SECONDS = 5
 
     def check_impersonation_expiration():
         # First, get the default credentials.
