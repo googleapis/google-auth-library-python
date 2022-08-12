@@ -581,11 +581,13 @@ The Auth library can retrieve external subject tokens from a local file
 location (file-sourced credentials), from a local server (URL-sourced
 credentials) or by calling an executable (executable-sourced credentials).
 
-File-sourced credentials For file-sourced credentials, a background process
-needs to be continuously refreshing the file location with a new subject token
-prior to expiration. For tokens with one hour lifetimes, the token needs to be
-updated in the file every hour. The token can be stored directly as plain text
-or in JSON format.
+File-sourced credentials
+++++++++++++++++++++++++
+
+For file-sourced credentials, a background process needs to be continuously
+refreshing the file location with a new subject token prior to expiration. For
+tokens with one hour lifetimes, the token needs to be updated in the file every
+hour. The token can be stored directly as plain text or in JSON format.
 
 To generate a file-sourced OIDC configuration, run the following command:
 
@@ -635,9 +637,12 @@ Where the following variables need to be substituted:
 
 These commands generate the configuration file in the specified output file.
 
-URL-sourced credentials For URL-sourced credentials, a local server needs to
-host a GET endpoint to return the OIDC token. The response can be in plain text
-or JSON. Additional required request headers can also be specified.
+URL-sourced credentials
++++++++++++++++++++++++
+
+For URL-sourced credentials, a local server needs to host a GET endpoint to
+return the OIDC token. The response can be in plain text or JSON. Additional
+required request headers can also be specified.
 
 To generate a URL-sourced OIDC workforce identity configuration, run the
 following command:
