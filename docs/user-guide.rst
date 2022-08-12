@@ -680,6 +680,7 @@ To generate a URL-sourced SAML configuration, run the following command:
 These commands generate the configuration file in the specified output file.
 
 Where the following variables need to be substituted:
+
 * ``$WORKFORCE_POOL_ID``: The workforce pool ID.
 * ``$PROVIDER_ID``: The provider ID.
 * ``$URL_TO_GET_SAML_ASSERTION``: The URL of the local server endpoint.
