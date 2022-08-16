@@ -33,9 +33,6 @@ def make_request(status, data=None):
 
     if data is not None:
         response.data = mock.AsyncMock(spec=["__call__", "read"])
-        response.data.read = mock.AsyncMock(
-            spec=["__call__"], return_value=json.dumps(data).encode("utf-8")
-        )
         response.content = mock.AsyncMock(
             spec=["__call__"], return_value=json.dumps(data).encode("utf-8")
         )
