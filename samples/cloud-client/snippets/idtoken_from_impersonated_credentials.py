@@ -33,7 +33,7 @@ def idtoken_from_impersonated_credentials(
 
         scope: Provide the scopes that you might need to request to access Google APIs,
             depending on the level of access you need.
-            The best practice is to use the cloud-wide scope and use IAM to narrow the permissions.
+            For this example, we use the cloud-wide scope and use IAM to narrow the permissions.
             https://cloud.google.com/docs/authentication#authorization_for_services
             For more information, see: https://developers.google.com/identity/protocols/oauth2/scopes
 
