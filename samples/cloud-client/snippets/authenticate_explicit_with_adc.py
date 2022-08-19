@@ -20,7 +20,7 @@ import google.oauth2.credentials
 import google.auth
 
 
-def authenticate_explicit(project_id="your-google-cloud-project-id"):
+def authenticate_explicit_with_adc(project_id="your-google-cloud-project-id"):
     """
     List storage buckets by authenticating with ADC.
 

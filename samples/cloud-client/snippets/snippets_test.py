@@ -15,7 +15,7 @@ import re
 
 from _pytest.capture import CaptureFixture
 
-import authenticate_explicit
+import authenticate_explicit_with_adc
 import authenticate_implicit_with_adc
 import idtoken_from_metadata_server
 import idtoken_from_service_account
@@ -29,7 +29,7 @@ CREDENTIALS, PROJECT = google.auth.default()
 
 
 def test_authenticate_explicit(capsys: CaptureFixture):
-    authenticate_explicit.authenticate_explicit(PROJECT)
+    authenticate_explicit_with_adc.authenticate_explicit_with_adc(PROJECT)
     out, err = capsys.readouterr()
     assert re.search("Listed all storage buckets.", out)
 
