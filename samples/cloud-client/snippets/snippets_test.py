@@ -56,9 +56,9 @@ def test_verify_google_idtoken():
     idtoken = get_idtoken_from_service_account(CREDENTIALS, "iap.googleapis.com")
 
     verify_google_idtoken.verify_google_idtoken(
-    idtoken,
-    "iap.googleapis.com",
-    "https://www.googleapis.com/oauth2/v3/certs"
+        idtoken,
+        "iap.googleapis.com",
+        "https://www.googleapis.com/oauth2/v3/certs"
     )
 
 
