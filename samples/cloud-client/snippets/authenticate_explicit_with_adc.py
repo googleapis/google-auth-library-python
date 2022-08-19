@@ -25,8 +25,10 @@ def authenticate_explicit_with_adc(project_id="your-google-cloud-project-id"):
     List storage buckets by authenticating with ADC.
 
     // TODO(Developer):
-    //  1. Replace the project variable.
-    //  2. Make sure you have the necessary permission to list storage buckets: "storage.buckets.list"
+    //  1. Before running this sample,
+    //  set up ADC as described in https://cloud.google.com/docs/authentication/external/set-up-adc
+    //  2. Replace the project variable.
+    //  3. Make sure you have the necessary permission to list storage buckets: "storage.buckets.list"
     Args:
         project_id: The project id of your Google Cloud project.
     """
