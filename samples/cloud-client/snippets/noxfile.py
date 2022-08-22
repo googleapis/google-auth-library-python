@@ -85,7 +85,7 @@ BLACK_PATHS = [
 #     session.run("mypy", "google/", "tests/", "tests_async/")
 
 
-@nox.session(python=["3.6", "3.7", "3.8", "3.9", "3.10"])
+@nox.session(python=["3.7", "3.8", "3.9", "3.10"])
 def unit(session):
     # constraints_path = str(
     #     CURRENT_DIRECTORY / "testing" / f"constraints-{session.python}.txt"
@@ -95,12 +95,8 @@ def unit(session):
     session.run(
         "pytest",
         f"--junitxml=unit_{session.python}_sponge_log.xml",
-        "--cov=google.auth",
-        "--cov=google.oauth2",
-        "--cov=tests",
-        "--cov-report=term-missing",
-        "tests",
-        "tests_async",
+        "snippets_test.py",
+        # "tests_async",
     )
 
 
