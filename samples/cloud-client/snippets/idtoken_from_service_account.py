@@ -45,7 +45,6 @@ def get_idToken_from_serviceaccount(json_credential_path: str, target_audience: 
 
     request = google.auth.transport.requests.Request()
     credentials.refresh(request)
-    # print(credentials.token)
     print("Generated ID token.")
 
 # [END auth_cloud_idtoken_service_account]

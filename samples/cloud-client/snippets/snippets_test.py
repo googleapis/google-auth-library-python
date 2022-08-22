@@ -47,7 +47,9 @@ def test_idtoken_from_metadata_server(capsys: CaptureFixture):
 
 
 def test_idtoken_from_service_account(capsys: CaptureFixture):
-    idtoken_from_service_account.get_idToken_from_serviceaccount(CREDENTIALS, "iap.googleapis.com")
+    idtoken_from_service_account.get_idToken_from_serviceaccount(
+        "${KOKORO_GFILE_DIR}/service-account.json",
+        "iap.googleapis.com")
     out, err = capsys.readouterr()
     assert re.search("Generated ID token.", out)
 
