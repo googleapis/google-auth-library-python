@@ -90,7 +90,7 @@ def unit(session):
     # constraints_path = str(
     #     CURRENT_DIRECTORY / "testing" / f"constraints-{session.python}.txt"
     # )
-    session.install("-r", "testing/requirements.txt")
+    session.install("-r", "requirements.txt")
     # session.install("-e", ".")
     session.run(
         "pytest",
