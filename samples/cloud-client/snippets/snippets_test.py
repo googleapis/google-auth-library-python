@@ -19,7 +19,7 @@ import authenticate_explicit_with_adc
 import authenticate_implicit_with_adc
 import idtoken_from_metadata_server
 import idtoken_from_service_account
-from system_tests.noxfile import SERVICE_ACCOUNT_FILE
+# from system_tests.noxfile import SERVICE_ACCOUNT_FILE
 import verify_google_idtoken
 
 import google
