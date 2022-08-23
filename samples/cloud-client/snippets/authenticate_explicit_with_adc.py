@@ -14,7 +14,6 @@
 
 # [START auth_cloud_explicit_adc]
 
-from google.cloud import compute_v1
 from google.cloud import storage
 
 import google.oauth2.credentials
@@ -30,8 +29,6 @@ def authenticate_explicit_with_adc():
     //  set up ADC as described in https://cloud.google.com/docs/authentication/external/set-up-adc
     //  2. Replace the project variable.
     //  3. Make sure you have the necessary permission to list storage buckets: "storage.buckets.list"
-    Args:
-        project_id: The project id of your Google Cloud project.
     """
 
     # Construct the Google credentials object which obtains the default configuration from your
