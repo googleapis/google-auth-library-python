@@ -32,7 +32,7 @@ SERVICE_ACCOUNT_FILE = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
 
 
 def test_authenticate_explicit_with_adc(capsys: CaptureFixture):
-    authenticate_explicit_with_adc.authenticate_explicit_with_adc(PROJECT)
+    authenticate_explicit_with_adc.authenticate_explicit_with_adc()
     out, err = capsys.readouterr()
     assert re.search("Listed all storage buckets.", out)
 
