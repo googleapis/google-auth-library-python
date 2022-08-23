@@ -24,6 +24,7 @@ import verify_google_idtoken
 import google
 from google.oauth2 import service_account
 import google.auth.transport.requests
+import os
 
 CREDENTIALS, PROJECT = google.auth.default()
 
@@ -48,7 +49,7 @@ def test_idtoken_from_metadata_server(capsys: CaptureFixture):
 
 def test_idtoken_from_service_account(capsys: CaptureFixture):
     idtoken_from_service_account.get_idToken_from_serviceaccount(
-        "${KOKORO_GFILE_DIR}/service-account.json",
+        os.getenv("GOOGLE_APPLICATION_CREDENTIALS"),
         "iap.googleapis.com")
     out, err = capsys.readouterr()
     assert re.search("Generated ID token.", out)
