@@ -21,7 +21,7 @@ import google.oauth2.credentials
 import google.auth
 
 
-def authenticate_explicit_with_adc(project_id="your-google-cloud-project-id"):
+def authenticate_explicit_with_adc():
     """
     List storage buckets by authenticating with ADC.
 
@@ -38,7 +38,7 @@ def authenticate_explicit_with_adc(project_id="your-google-cloud-project-id"):
     # working environment.
     # google.auth.default() will give you ComputeEngineCredentials
     # if you are on a GCE (or other metadata server supported environments).
-    credentials = google.auth.default()
+    credentials, project_id = google.auth.default()
     # If you are authenticating to a Cloud API, you can let the library include the default scope,
     # https://www.googleapis.com/auth/cloud-platform, because IAM is used to provide fine-grained
     # permissions for Cloud.
