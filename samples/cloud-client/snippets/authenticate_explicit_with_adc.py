@@ -63,7 +63,7 @@ def authenticate_explicit_with_adc(project_id="your-google-cloud-project-id"):
 
     zone = "us-central1-a"
 
-    instances_client = compute_v1.InstancesClient(credentials=credentials, project=project_id)
+    instances_client = compute_v1.InstancesClient(credentials=credentials)
 
     print(f"Listing instances from {project_id} in {zone}")
     # Set the project and zone to retrieve instances present in the zone.
