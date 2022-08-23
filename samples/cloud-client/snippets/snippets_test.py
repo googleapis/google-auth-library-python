@@ -19,6 +19,7 @@ import authenticate_explicit_with_adc
 import authenticate_implicit_with_adc
 import idtoken_from_metadata_server
 import idtoken_from_service_account
+from system_tests.noxfile import SERVICE_ACCOUNT_FILE
 import verify_google_idtoken
 
 import google
@@ -27,9 +28,10 @@ import google.auth.transport.requests
 import os
 
 CREDENTIALS, PROJECT = google.auth.default()
+SERVICE_ACCOUNT_FILE = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
 
 
-def test_authenticate_explicit(capsys: CaptureFixture):
+def test_authenticate_explicit_with_adc(capsys: CaptureFixture):
     authenticate_explicit_with_adc.authenticate_explicit_with_adc(PROJECT)
     out, err = capsys.readouterr()
     assert re.search("Listed all storage buckets.", out)
@@ -49,14 +51,14 @@ def test_idtoken_from_metadata_server(capsys: CaptureFixture):
 
 def test_idtoken_from_service_account(capsys: CaptureFixture):
     idtoken_from_service_account.get_idToken_from_serviceaccount(
-        os.getenv("GOOGLE_APPLICATION_CREDENTIALS"),
+        SERVICE_ACCOUNT_FILE,
         "iap.googleapis.com")
     out, err = capsys.readouterr()
     assert re.search("Generated ID token.", out)
 
 
 def test_verify_google_idtoken():
-    idtoken = get_idtoken_from_service_account(CREDENTIALS, "iap.googleapis.com")
+    idtoken = get_idtoken_from_service_account(SERVICE_ACCOUNT_FILE, "iap.googleapis.com")
 
     verify_google_idtoken.verify_google_idtoken(
         idtoken,

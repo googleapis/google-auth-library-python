@@ -14,6 +14,7 @@
 
 # [START auth_cloud_explicit_adc]
 
+from google.cloud import compute_v1
 from google.cloud import storage
 
 import google.oauth2.credentials
@@ -47,13 +48,27 @@ def authenticate_explicit_with_adc(project_id="your-google-cloud-project-id"):
     # see: https://developers.google.com/identity/protocols/oauth2/scopes
 
     # Construct the Storage client.
-    storage_client = storage.Client(credentials=credentials, project=project_id)
+    # storage_client = storage.Client(credentials=credentials, project=project_id)
 
-    buckets = storage_client.list_buckets()
+    # buckets = storage_client.list_buckets()
 
-    print("Buckets:")
-    for bucket in buckets:
-        print(bucket.name)
-    print("Listed all storage buckets.")
+    # print("Buckets:")
+    # for bucket in buckets:
+    #     print(bucket.name)
+    # print("Listed all storage buckets.")
+    # This snippet demonstrates how to list instances.
+    # *NOTE*: Replace the client created below with the client required for your application.
+    # Note that the credentials are not specified when constructing the client.
+    # Hence, the client library will look for credentials using ADC.
+
+    zone = "us-central1-a"
+
+    instances_client = compute_v1.InstancesClient(credentials=credentials, project=project_id)
+
+    print(f"Listing instances from {project_id} in {zone}")
+    # Set the project and zone to retrieve instances present in the zone.
+    for response in instances_client.list(project=project_id, zone=zone):
+        print(response)
+    print("####### Listing instances complete #######")
 
 # [END auth_cloud_explicit_adc]
