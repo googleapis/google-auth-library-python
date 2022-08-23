@@ -61,14 +61,21 @@ def authenticate_explicit_with_adc():
     # Note that the credentials are not specified when constructing the client.
     # Hence, the client library will look for credentials using ADC.
 
-    zone = "us-central1-a"
+    # zone = "us-central1-a"
 
-    instances_client = compute_v1.InstancesClient(credentials=credentials)
+    # instances_client = compute_v1.InstancesClient(credentials=credentials)
 
-    print(f"Listing instances from {project_id} in {zone}")
-    # Set the project and zone to retrieve instances present in the zone.
-    for response in instances_client.list(project=project_id, zone=zone):
-        print(response)
-    print("####### Listing instances complete #######")
+    # print(f"Listing instances from {project_id} in {zone}")
+    # # Set the project and zone to retrieve instances present in the zone.
+    # for response in instances_client.list(project=project_id, zone=zone):
+    #     print(response)
+    # print("####### Listing instances complete #######")
+
+    storage_client = storage.Client(credentials=credentials, project=project_id)
+    buckets = storage_client.list_buckets()
+    print("Buckets:")
+    for bucket in buckets:
+        print(bucket.name)
+    print("Listed all storage buckets.")
 
 # [END auth_cloud_explicit_adc]
