@@ -100,7 +100,6 @@ async def _token_endpoint_request_no_throw(
     )
 
     if not retryable_error or not should_retry:
-        # For a failed response, response_body could be a string
         return False, response_data, retryable_error
 
     retries = _exponential_backoff.ExponentialBackoff()
@@ -115,7 +114,6 @@ async def _token_endpoint_request_no_throw(
         )
 
         if not retryable_error:
-            # For a failed response, response_body could be a string
             return False, response_data, retryable_error
 
     return False, response_data, retryable_error

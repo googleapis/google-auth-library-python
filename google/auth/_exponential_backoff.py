@@ -17,7 +17,7 @@ import time
 
 import six
 
-# The default amount of retry total_attempts
+# The default amount of retry attempts
 _DEFAULT_RETRY_TOTAL_ATTEMPTS = 3
 
 # The default initial backoff period (1.0 second).
@@ -73,7 +73,6 @@ class ExponentialBackoff(six.Iterator):
         self._total_attempts = total_attempts
         self._initial_wait_seconds = initial_wait_seconds
 
-        # convert secondseconds to seconds for the time.sleep API
         self._current_wait_in_seconds = self._initial_wait_seconds
 
         self._randomization_factor = randomization_factor

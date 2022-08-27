@@ -83,6 +83,7 @@ def _can_retry(status_code, response_data):
       bool: True if the response is retryable. False otherwise.
     """
     try:
+        # For a failed response, response_body could be a string
         error_desc = response_data.get("error_description") or ""
         error_code = response_data.get("error") or ""
 
@@ -177,6 +178,7 @@ def _token_endpoint_request_no_throw(
         )
         response_data = ""
         try:
+            # response_body should be a JSON
             response_data = json.loads(response_body)
         except ValueError:
             response_data = response_body
@@ -185,7 +187,6 @@ def _token_endpoint_request_no_throw(
     response, response_data = _perform_request()
 
     if response.status == http_client.OK:
-        # response_body should be a JSON
         return True, response_data, None
 
     retryable_error = _can_retry(
@@ -193,7 +194,6 @@ def _token_endpoint_request_no_throw(
     )
 
     if not retryable_error or not should_retry:
-        # For a failed response, response_body could be a string
         return False, response_data, retryable_error
 
     retries = _exponential_backoff.ExponentialBackoff()
@@ -208,7 +208,6 @@ def _token_endpoint_request_no_throw(
         )
 
         if not retryable_error:
-            # For a failed response, response_body could be a string
             return False, response_data, retryable_error
 
     return False, response_data, retryable_error
