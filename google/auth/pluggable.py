@@ -38,6 +38,7 @@ except ImportError:  # pragma: NO COVER
 import json
 import os
 import subprocess
+import sys
 import time
 
 from google.auth import _helpers
@@ -105,6 +106,7 @@ class Credentials(external_account.Credentials):
             raise ValueError(
                 "Missing credential_source. The credential_source is not a dict."
             )
+        self._interactive = os.environ.get("GOOGLE_EXTERNAL_ACCOUNT_INTERACTIVE") == "1"
         self._credential_source_executable = credential_source.get("executable")
         if not self._credential_source_executable:
             raise ValueError(
@@ -115,6 +117,9 @@ class Credentials(external_account.Credentials):
         )
         self._credential_source_executable_timeout_millis = self._credential_source_executable.get(
             "timeout_millis"
+        )
+        self._credential_source_executable_interactive_timeout_millis = self._credential_source_executable.get(
+            "interactive_timeout_millis"
         )
         self._credential_source_executable_output_file = self._credential_source_executable.get(
             "output_file"
@@ -131,6 +136,20 @@ class Credentials(external_account.Credentials):
             or self._credential_source_executable_timeout_millis > 120 * 1000
         ):
             raise ValueError("Timeout must be between 5 and 120 seconds.")
+
+        if not self._credential_source_executable_interactive_timeout_millis:
+            self._credential_source_executable_interactive_timeout_millis = (
+                5 * 60 * 1000
+            )
+        elif (
+            self._credential_source_executable_interactive_timeout_millis
+            < 5 * 60 * 1000
+            or self._credential_source_executable_interactive_timeout_millis
+            > 30 * 60 * 1000
+        ):
+            raise ValueError("Interactive timeout must be between 5 and 30 minutes.")
+        if self._interactive and not self._credential_source_executable_output_file:
+            raise ValueError("Output file must be specified in interactive mode")
 
     @_helpers.copy_docstring(external_account.Credentials)
     def retrieve_subject_token(self, request):
@@ -155,6 +174,10 @@ class Credentials(external_account.Credentials):
                 try:
                     # If the cached response is expired, _parse_subject_token will raise an error which will be ignored and we will call the executable again.
                     subject_token = self._parse_subject_token(response)
+                    if (
+                        self._interactive and "expiration_time" not in response
+                    ):  # Always treat missing expiration_time as expired
+                        raise exceptions.RefreshError
                 except ValueError:
                     raise
                 except exceptions.RefreshError:
@@ -171,9 +194,10 @@ class Credentials(external_account.Credentials):
         env = os.environ.copy()
         env["GOOGLE_EXTERNAL_ACCOUNT_AUDIENCE"] = self._audience
         env["GOOGLE_EXTERNAL_ACCOUNT_TOKEN_TYPE"] = self._subject_token_type
-        env[
-            "GOOGLE_EXTERNAL_ACCOUNT_INTERACTIVE"
-        ] = "0"  # Always set to 0 until interactive mode is implemented.
+        env["GOOGLE_EXTERNAL_ACCOUNT_INTERACTIVE"] = (
+            "1" if self._interactive else "0"
+        )  # if variable not set, backfill to "0"
+
         if self._service_account_impersonation_url is not None:
             env[
                 "GOOGLE_EXTERNAL_ACCOUNT_IMPERSONATED_EMAIL"
@@ -183,31 +207,61 @@ class Credentials(external_account.Credentials):
                 "GOOGLE_EXTERNAL_ACCOUNT_OUTPUT_FILE"
             ] = self._credential_source_executable_output_file
 
-        try:
-            result = subprocess.run(
-                self._credential_source_executable_command.split(),
-                timeout=self._credential_source_executable_timeout_millis / 1000,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                env=env,
-            )
-            if result.returncode != 0:
-                raise exceptions.RefreshError(
-                    "Executable exited with non-zero return code {}. Error: {}".format(
-                        result.returncode, result.stdout
-                    )
-                )
-        except Exception:
-            raise
-        else:
+        if self._interactive:
             try:
-                data = result.stdout.decode("utf-8")
-                response = json.loads(data)
-                subject_token = self._parse_subject_token(response)
+                result = subprocess.run(
+                    self._credential_source_executable_command.split(),
+                    timeout=self._credential_source_executable_interactive_timeout_millis
+                    / 1000,
+                    stdin=sys.stdin,
+                    stdout=sys.stdout,
+                    stderr=sys.stdout,
+                    env=env,
+                )
+                if result.returncode != 0:
+                    raise exceptions.RefreshError(
+                        "Executable exited with non-zero return code {}.".format(
+                            result.returncode
+                        )
+                    )
             except Exception:
                 raise
+            else:
+                try:
+                    with open(
+                        self._credential_source_executable_output_file, encoding="utf-8"
+                    ) as data:
+                        response = json.load(data)
+                    subject_token = self._parse_subject_token(response)
+                except Exception:
+                    raise
+            return subject_token
 
-        return subject_token
+        else:
+            try:
+                result = subprocess.run(
+                    self._credential_source_executable_command.split(),
+                    timeout=self._credential_source_executable_timeout_millis / 1000,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    env=env,
+                )
+                if result.returncode != 0:
+                    raise exceptions.RefreshError(
+                        "Executable exited with non-zero return code {}. Error: {}".format(
+                            result.returncode, result.stdout
+                        )
+                    )
+            except Exception:
+                raise
+            else:
+                try:
+                    data = result.stdout.decode("utf-8")
+                    response = json.loads(data)
+                    subject_token = self._parse_subject_token(response)
+                except Exception:
+                    raise
+            return subject_token
 
     @classmethod
     def from_info(cls, info, **kwargs):
@@ -264,10 +318,11 @@ class Credentials(external_account.Credentials):
             )
         if (
             "expiration_time" not in response
+            and not self._interactive
             and self._credential_source_executable_output_file
         ):
             raise ValueError(
-                "The executable response must contain an expiration_time for successful responses when an output_file has been specified in the configuration."
+                "The executable response must contain an expiration_time for successful responses when an output_file has been specified in the configuration in non-interactive mode."
             )
         if "expiration_time" in response and response["expiration_time"] < time.time():
             raise exceptions.RefreshError(
