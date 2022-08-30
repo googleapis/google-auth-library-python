@@ -70,11 +70,6 @@ CLOUD_SDK_INSTALL_DIR = CLOUD_SDK_ROOT.join("google-cloud-sdk")
 # The full path to the gcloud cli executable.
 GCLOUD = str(CLOUD_SDK_INSTALL_DIR.join("bin", "gcloud"))
 
-# gcloud requires Python 2 and doesn't work on 3, so we need to tell it
-# where to find 2 when we're running in a 3 environment.
-CLOUD_SDK_PYTHON_ENV = "CLOUDSDK_PYTHON"
-CLOUD_SDK_PYTHON = which("python2", None)
-
 # Cloud SDK helpers
 
 
@@ -85,8 +80,6 @@ def install_cloud_sdk(session):
     # our tests from clobbering a developer's configuration when running
     # these tests locally.
     session.env[CLOUD_SDK_CONFIG_ENV] = str(CLOUD_SDK_ROOT)
-    # This tells gcloud which Python interpreter to use (always use 2.7)
-    session.env[CLOUD_SDK_PYTHON_ENV] = CLOUD_SDK_PYTHON
     # This set the $PATH for the subprocesses so they can find the gcloud
     # executable.
     session.env["PATH"] = (
