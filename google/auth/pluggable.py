@@ -176,9 +176,13 @@ class Credentials(external_account.Credentials):
                     subject_token = self._parse_subject_token(response)
                     if (
                         self._interactive and "expiration_time" not in response
-                    ):  # Always treat missing expiration_time as expired
+                    ):  # Always treat missing expiration_time as expired and proceed to executable run
                         raise exceptions.RefreshError
                 except ValueError:
+                    if (
+                        self._interactive
+                    ):  # For any interactive mode errors in the latest run, we automatically ignore it and proceed to executable run
+                        pass
                     raise
                 except exceptions.RefreshError:
                     pass
