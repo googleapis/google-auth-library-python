@@ -438,19 +438,19 @@ def test_refresh_grant_no_access_token():
 def test_jwt_grant_retry_default(mock_token_endpoint_request, mock_expiry):
     _client.jwt_grant(mock.Mock(), mock.Mock(), mock.Mock())
     mock_token_endpoint_request.assert_called_with(
-        mock.ANY, mock.ANY, mock.ANY, should_retry=True
+        mock.ANY, mock.ANY, mock.ANY, can_retry=True
     )
 
 
-@pytest.mark.parametrize("should_retry", [True, False])
+@pytest.mark.parametrize("can_retry", [True, False])
 @mock.patch("google.oauth2._client._parse_expiry", return_value=None)
 @mock.patch.object(_client, "_token_endpoint_request", autospec=True)
 def test_jwt_grant_retry_with_retry(
-    mock_token_endpoint_request, mock_expiry, should_retry
+    mock_token_endpoint_request, mock_expiry, can_retry
 ):
-    _client.jwt_grant(mock.Mock(), mock.Mock(), mock.Mock(), should_retry=should_retry)
+    _client.jwt_grant(mock.Mock(), mock.Mock(), mock.Mock(), can_retry=can_retry)
     mock_token_endpoint_request.assert_called_with(
-        mock.ANY, mock.ANY, mock.ANY, should_retry=should_retry
+        mock.ANY, mock.ANY, mock.ANY, can_retry=can_retry
     )
 
 
@@ -459,21 +459,21 @@ def test_jwt_grant_retry_with_retry(
 def test_id_token_jwt_grant_retry_default(mock_token_endpoint_request, mock_jwt_decode):
     _client.id_token_jwt_grant(mock.Mock(), mock.Mock(), mock.Mock())
     mock_token_endpoint_request.assert_called_with(
-        mock.ANY, mock.ANY, mock.ANY, should_retry=True
+        mock.ANY, mock.ANY, mock.ANY, can_retry=True
     )
 
 
-@pytest.mark.parametrize("should_retry", [True, False])
+@pytest.mark.parametrize("can_retry", [True, False])
 @mock.patch("google.auth.jwt.decode", return_value={"exp": 0})
 @mock.patch.object(_client, "_token_endpoint_request", autospec=True)
 def test_id_token_jwt_grant_retry_with_retry(
-    mock_token_endpoint_request, mock_jwt_decode, should_retry
+    mock_token_endpoint_request, mock_jwt_decode, can_retry
 ):
     _client.id_token_jwt_grant(
-        mock.Mock(), mock.Mock(), mock.Mock(), should_retry=should_retry
+        mock.Mock(), mock.Mock(), mock.Mock(), can_retry=can_retry
     )
     mock_token_endpoint_request.assert_called_with(
-        mock.ANY, mock.ANY, mock.ANY, should_retry=should_retry
+        mock.ANY, mock.ANY, mock.ANY, can_retry=can_retry
     )
 
 
@@ -484,15 +484,15 @@ def test_refresh_grant_retry_default(mock_token_endpoint_request, mock_parse_exp
         mock.Mock(), mock.Mock(), mock.Mock(), mock.Mock(), mock.Mock()
     )
     mock_token_endpoint_request.assert_called_with(
-        mock.ANY, mock.ANY, mock.ANY, should_retry=True
+        mock.ANY, mock.ANY, mock.ANY, can_retry=True
     )
 
 
-@pytest.mark.parametrize("should_retry", [True, False])
+@pytest.mark.parametrize("can_retry", [True, False])
 @mock.patch("google.oauth2._client._parse_expiry", return_value=None)
 @mock.patch.object(_client, "_token_endpoint_request", autospec=True)
 def test_refresh_grant_retry_with_retry(
-    mock_token_endpoint_request, mock_parse_expiry, should_retry
+    mock_token_endpoint_request, mock_parse_expiry, can_retry
 ):
     _client.refresh_grant(
         mock.Mock(),
@@ -500,15 +500,15 @@ def test_refresh_grant_retry_with_retry(
         mock.Mock(),
         mock.Mock(),
         mock.Mock(),
-        should_retry=should_retry,
+        can_retry=can_retry,
     )
     mock_token_endpoint_request.assert_called_with(
-        mock.ANY, mock.ANY, mock.ANY, should_retry=should_retry
+        mock.ANY, mock.ANY, mock.ANY, can_retry=can_retry
     )
 
 
-@pytest.mark.parametrize("should_retry", [True, False])
-def test__token_endpoint_request_no_throw_with_retry(should_retry):
+@pytest.mark.parametrize("can_retry", [True, False])
+def test__token_endpoint_request_no_throw_with_retry(can_retry):
     response_data = {"error": "help", "error_description": "I'm alive"}
     body = "dummy body"
 
@@ -520,15 +520,10 @@ def test__token_endpoint_request_no_throw_with_retry(should_retry):
     mock_request.return_value = mock_response
 
     _client._token_endpoint_request_no_throw(
-        mock_request,
-        mock.Mock(),
-        body,
-        mock.Mock(),
-        mock.Mock(),
-        should_retry=should_retry,
+        mock_request, mock.Mock(), body, mock.Mock(), mock.Mock(), can_retry=can_retry
     )
 
-    if should_retry:
+    if can_retry:
         assert mock_request.call_count == 4
     else:
         assert mock_request.call_count == 1
