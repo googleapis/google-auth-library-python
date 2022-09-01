@@ -25,6 +25,7 @@ try:
     import oauth2client.contrib.gce  # type: ignore
     import oauth2client.service_account  # type: ignore
 except ImportError:  # pragma: no cover
+    # pragma: no cover
     pytest.skip(
         "Skipping oauth2client tests since oauth2client is not installed.",
         allow_module_level=True,
