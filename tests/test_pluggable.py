@@ -505,7 +505,9 @@ class TestCredentials(object):
             "output_file": ACTUAL_CREDENTIAL_SOURCE_EXECUTABLE_OUTPUT_FILE,
         }
         ACTUAL_CREDENTIAL_SOURCE = {"executable": ACTUAL_CREDENTIAL_SOURCE_EXECUTABLE}
-        with open(ACTUAL_CREDENTIAL_SOURCE_EXECUTABLE_OUTPUT_FILE, "w") as output_file:
+        with open(
+            ACTUAL_CREDENTIAL_SOURCE_EXECUTABLE_OUTPUT_FILE, "w", encoding="utf-8"
+        ) as output_file:
             json.dump(self.EXECUTABLE_FAILED_RESPONSE, output_file)
 
         with mock.patch(
@@ -938,22 +940,6 @@ class TestCredentials(object):
             r"Missing command field. Executable command must be provided."
         )
 
-    @mock.patch.dict(
-        os.environ,
-        {
-            "GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1",
-            "GOOGLE_EXTERNAL_ACCOUNT_INTERACTIVE": "1",
-        },
-    )
-    def test_credential_source_missing_output_interactive_mode(self):
-        with pytest.raises(ValueError) as excinfo:
-            CREDENTIAL_SOURCE = {
-                "executable": {"command": self.CREDENTIAL_SOURCE_EXECUTABLE_COMMAND}
-            }
-            _ = self.make_pluggable(credential_source=CREDENTIAL_SOURCE)
-
-        assert excinfo.match(r"Output file must be specified in interactive mode")
-
     @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
     def test_credential_source_timeout_small(self):
         with pytest.raises(ValueError) as excinfo:
@@ -1046,7 +1032,9 @@ class TestCredentials(object):
             with pytest.raises(exceptions.RefreshError) as excinfo:
                 _ = credentials.retrieve_subject_token(None)
 
-            assert excinfo.match(r"Executable exited with non-zero return code 1.")
+            assert excinfo.match(
+                r"Executable exited with non-zero return code 1. Error: None"
+            )
 
     @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
     def test_retrieve_subject_token_python_2(self):
