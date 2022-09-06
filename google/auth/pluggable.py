@@ -93,6 +93,7 @@ class Credentials(external_account.Credentials):
             :meth:`from_info` are used instead of calling the constructor directly.
         """
 
+        self.interactive = kwargs.pop("interactive", False)
         super(Credentials, self).__init__(
             audience=audience,
             subject_token_type=subject_token_type,
@@ -157,7 +158,13 @@ class Credentials(external_account.Credentials):
             raise ValueError(
                 "Executables need to be explicitly allowed (set GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES to '1') to run."
             )
-        interactive_mode = os.environ.get("GOOGLE_EXTERNAL_ACCOUNT_INTERACTIVE") == "1"
+        if self.interactive and not self._credential_source_executable_output_file:
+            raise ValueError(
+                "An output_file must be specified in the credential configuration for interactive mode."
+            )
+
+        if self.interactive and not self.is_workforce_pool:
+            raise ValueError("Interactive mode is only enabled for workforce pool.")
 
         # Check output file.
         if self._credential_source_executable_output_file is not None:
@@ -173,7 +180,7 @@ class Credentials(external_account.Credentials):
                     # If the cached response is expired, _parse_subject_token will raise an error which will be ignored and we will call the executable again.
                     subject_token = self._parse_subject_token(response)
                     if (
-                        interactive_mode and "expiration_time" not in response
+                        self.interactive and "expiration_time" not in response
                     ):  # Always treat missing expiration_time as expired and proceed to executable run.
                         raise exceptions.RefreshError
                 except ValueError:
@@ -192,6 +199,7 @@ class Credentials(external_account.Credentials):
         env = os.environ.copy()
         env["GOOGLE_EXTERNAL_ACCOUNT_AUDIENCE"] = self._audience
         env["GOOGLE_EXTERNAL_ACCOUNT_TOKEN_TYPE"] = self._subject_token_type
+        env["GOOGLE_EXTERNAL_ACCOUNT_INTERACTIVE"] = "1" if self.interactive else "0"
 
         if self._service_account_impersonation_url is not None:
             env[
@@ -204,16 +212,16 @@ class Credentials(external_account.Credentials):
 
         exe_timeout = (
             self._credential_source_executable_interactive_timeout_millis / 1000
-            if interactive_mode
+            if self.interactive
             else self._credential_source_executable_timeout_millis / 1000
         )
-        exe_stdin = sys.stdin if interactive_mode else None
-        exe_stdout = sys.stdout if interactive_mode else subprocess.PIPE
-        exe_stderr = sys.stdout if interactive_mode else subprocess.STDOUT
+        exe_stdin = sys.stdin if self.interactive else None
+        exe_stdout = sys.stdout if self.interactive else subprocess.PIPE
+        exe_stderr = sys.stdout if self.interactive else subprocess.STDOUT
 
         result = subprocess.run(
             self._credential_source_executable_command.split(),
-            timeout=exe_timeout / 1000,
+            timeout=exe_timeout,
             stdin=exe_stdin,
             stdout=exe_stdout,
             stderr=exe_stderr,
@@ -230,7 +238,7 @@ class Credentials(external_account.Credentials):
             json.load(
                 open(self._credential_source_executable_output_file, encoding="utf-8")
             )
-            if interactive_mode
+            if self.interactive
             else json.loads(result.stdout.decode("utf-8"))
         )
         subject_token = self._parse_subject_token(response)
@@ -291,7 +299,7 @@ class Credentials(external_account.Credentials):
             )
         if (
             "expiration_time" not in response
-            and not os.environ.get("GOOGLE_EXTERNAL_ACCOUNT_INTERACTIVE") == "1"
+            and not self.interactive
             and self._credential_source_executable_output_file
         ):
             raise ValueError(

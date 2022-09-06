@@ -24,8 +24,9 @@ import pytest  # type: ignore
 # from six.moves import urllib
 
 # from google.auth import _helpers
-from google.auth import exceptions
+from google.auth import credentials, exceptions
 from google.auth import pluggable
+from tests.test__default import WORKFORCE_AUDIENCE
 
 # from google.auth import transport
 
@@ -123,6 +124,7 @@ class TestCredentials(object):
         service_account_impersonation_url=None,
         credential_source=None,
         workforce_pool_user_project=None,
+        interactive=None,
     ):
         return pluggable.Credentials(
             audience=audience,
@@ -136,6 +138,7 @@ class TestCredentials(object):
             scopes=scopes,
             default_scopes=default_scopes,
             workforce_pool_user_project=workforce_pool_user_project,
+            interactive=interactive,
         )
 
     @mock.patch.object(pluggable.Credentials, "__init__", return_value=None)
@@ -346,9 +349,10 @@ class TestCredentials(object):
             return_value=subprocess.CompletedProcess(args=[], returncode=0),
         ):
             credentials = self.make_pluggable(
-                audience=AUDIENCE,
+                audience=WORKFORCE_AUDIENCE,
                 service_account_impersonation_url=SERVICE_ACCOUNT_IMPERSONATION_URL,
                 credential_source=ACTUAL_CREDENTIAL_SOURCE,
+                interactive=True,
             )
 
             subject_token = credentials.retrieve_subject_token(None)
@@ -377,13 +381,7 @@ class TestCredentials(object):
 
             assert subject_token == self.EXECUTABLE_OIDC_TOKEN
 
-    @mock.patch.dict(
-        os.environ,
-        {
-            "GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1",
-            "GOOGLE_EXTERNAL_ACCOUNT_INTERACTIVE": "1",
-        },
-    )
+    @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
     def test_retrieve_subject_token_oidc_jwt_interactive_mode(self, tmpdir):
         ACTUAL_CREDENTIAL_SOURCE_EXECUTABLE_OUTPUT_FILE = tmpdir.join(
             "actual_output_file"
@@ -405,9 +403,10 @@ class TestCredentials(object):
             return_value=subprocess.CompletedProcess(args=[], returncode=0),
         ):
             credentials = self.make_pluggable(
-                audience=AUDIENCE,
+                audience=WORKFORCE_AUDIENCE,
                 service_account_impersonation_url=SERVICE_ACCOUNT_IMPERSONATION_URL,
                 credential_source=ACTUAL_CREDENTIAL_SOURCE,
+                interactive=True,
             )
 
             subject_token = credentials.retrieve_subject_token(None)
@@ -433,13 +432,7 @@ class TestCredentials(object):
 
             assert subject_token == self.EXECUTABLE_SAML_TOKEN
 
-    @mock.patch.dict(
-        os.environ,
-        {
-            "GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1",
-            "GOOGLE_EXTERNAL_ACCOUNT_INTERACTIVE": "1",
-        },
-    )
+    @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
     def test_retrieve_subject_token_saml_interactive_mode(self, tmpdir):
 
         ACTUAL_CREDENTIAL_SOURCE_EXECUTABLE_OUTPUT_FILE = tmpdir.join(
@@ -461,7 +454,9 @@ class TestCredentials(object):
             return_value=subprocess.CompletedProcess(args=[], returncode=0),
         ):
             credentials = self.make_pluggable(
-                credential_source=ACTUAL_CREDENTIAL_SOURCE
+                audience=WORKFORCE_AUDIENCE,
+                credential_source=ACTUAL_CREDENTIAL_SOURCE,
+                interactive=True,
             )
 
             subject_token = credentials.retrieve_subject_token(None)
@@ -515,7 +510,9 @@ class TestCredentials(object):
             return_value=subprocess.CompletedProcess(args=[], returncode=0),
         ):
             credentials = self.make_pluggable(
-                credential_source=ACTUAL_CREDENTIAL_SOURCE
+                audience=WORKFORCE_AUDIENCE,
+                credential_source=ACTUAL_CREDENTIAL_SOURCE,
+                interactive=True,
             )
 
             with pytest.raises(exceptions.RefreshError) as excinfo:
@@ -941,6 +938,21 @@ class TestCredentials(object):
         )
 
     @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
+    def test_credential_source_missing_output_interactive_mode(self):
+        CREDENTIAL_SOURCE = {
+            "executable": {"command": self.CREDENTIAL_SOURCE_EXECUTABLE_COMMAND}
+        }
+        credentials = self.make_pluggable(
+            credential_source=CREDENTIAL_SOURCE, interactive=True
+        )
+        with pytest.raises(ValueError) as excinfo:
+            _ = credentials.retrieve_subject_token(None)
+
+        assert excinfo.match(
+            r"An output_file must be specified in the credential configuration for interactive mode."
+        )
+
+    @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
     def test_credential_source_timeout_small(self):
         with pytest.raises(ValueError) as excinfo:
             CREDENTIAL_SOURCE = {
@@ -1013,13 +1025,19 @@ class TestCredentials(object):
                 r"Executable exited with non-zero return code 1. Error: None"
             )
 
-    @mock.patch.dict(
-        os.environ,
-        {
-            "GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1",
-            "GOOGLE_EXTERNAL_ACCOUNT_INTERACTIVE": "1",
-        },
-    )
+    @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
+    def test_retrieve_subject_token_non_workforce_fail_interactive_mode(self):
+        credentials = self.make_pluggable(
+            credential_source=self.CREDENTIAL_SOURCE, interactive=True
+        )
+        with pytest.raises(ValueError) as excinfo:
+            _ = credentials.retrieve_subject_token(None)
+
+        assert excinfo.match(
+            r"Interactive mode is only enabled for workforce pool."
+        )
+
+    @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
     def test_retrieve_subject_token_executable_fail_interactive_mode(self):
         with mock.patch(
             "subprocess.run",
@@ -1027,7 +1045,11 @@ class TestCredentials(object):
                 args=[], stdout=None, returncode=1
             ),
         ):
-            credentials = self.make_pluggable(credential_source=self.CREDENTIAL_SOURCE)
+            credentials = self.make_pluggable(
+                audience=WORKFORCE_AUDIENCE,
+                credential_source=self.CREDENTIAL_SOURCE,
+                interactive=True,
+            )
 
             with pytest.raises(exceptions.RefreshError) as excinfo:
                 _ = credentials.retrieve_subject_token(None)
