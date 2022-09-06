@@ -48,6 +48,14 @@ from google.auth import external_account
 # The max supported executable spec version.
 EXECUTABLE_SUPPORTED_MAX_VERSION = 1
 
+EXECUTABLE_TIMEOUT_MILLIS_DEFAULT = 30 * 1000  # 30 seconds
+EXECUTABLE_TIMEOUT_MILLIS_LOWER_BOUND = 5 * 1000  # 5 seconds
+EXECUTABLE_TIMEOUT_MILLIS_UPPER_BOUND = 120 * 1000  # 2 minutes
+
+EXECUTABLE_INTERACTIVE_TIMEOUT_MILLIS_DEFAULT = 5 * 60 * 1000  # 5 minutes
+EXECUTABLE_INTERACTIVE_TIMEOUT_MILLIS_LOWER_BOUND = 5 * 60 * 1000  # 5 minutes
+EXECUTABLE_INTERACTIVE_TIMEOUT_MILLIS_UPPER_BOUND = 30 * 60 * 1000  # 30 minutes
+
 
 class Credentials(external_account.Credentials):
     """External account credentials sourced from executables."""
@@ -130,22 +138,26 @@ class Credentials(external_account.Credentials):
                 "Missing command field. Executable command must be provided."
             )
         if not self._credential_source_executable_timeout_millis:
-            self._credential_source_executable_timeout_millis = 30 * 1000
+            self._credential_source_executable_timeout_millis = (
+                EXECUTABLE_TIMEOUT_MILLIS_DEFAULT
+            )
         elif (
-            self._credential_source_executable_timeout_millis < 5 * 1000
-            or self._credential_source_executable_timeout_millis > 120 * 1000
+            self._credential_source_executable_timeout_millis
+            < EXECUTABLE_TIMEOUT_MILLIS_LOWER_BOUND
+            or self._credential_source_executable_timeout_millis
+            > EXECUTABLE_TIMEOUT_MILLIS_UPPER_BOUND
         ):
             raise ValueError("Timeout must be between 5 and 120 seconds.")
 
         if not self._credential_source_executable_interactive_timeout_millis:
             self._credential_source_executable_interactive_timeout_millis = (
-                5 * 60 * 1000
+                EXECUTABLE_INTERACTIVE_TIMEOUT_MILLIS_DEFAULT
             )
         elif (
             self._credential_source_executable_interactive_timeout_millis
-            < 5 * 60 * 1000
+            < EXECUTABLE_INTERACTIVE_TIMEOUT_MILLIS_LOWER_BOUND
             or self._credential_source_executable_interactive_timeout_millis
-            > 30 * 60 * 1000
+            > EXECUTABLE_INTERACTIVE_TIMEOUT_MILLIS_UPPER_BOUND
         ):
             raise ValueError("Interactive timeout must be between 5 and 30 minutes.")
 
@@ -243,6 +255,47 @@ class Credentials(external_account.Credentials):
         )
         subject_token = self._parse_subject_token(response)
         return subject_token
+
+    def revoke(self, request):
+        """Revokes the subject token using the credential_source object.
+
+        Args:
+            request (google.auth.transport.Request): A callable used to make
+                HTTP requests.
+        Raises:
+            google.auth.exceptions.RefreshError: If the executable revocation
+                not properly executed.
+            
+        """
+        env_allow_executables = os.environ.get(
+            "GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES"
+        )
+        if env_allow_executables != "1":
+            raise ValueError(
+                "Executables need to be explicitly allowed (set GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES to '1') to run."
+            )
+
+        if not self.interactive:
+            raise ValueError("Revoke is only enabled under interactive mode.")
+
+        # Inject variables
+        env = os.environ.copy()
+        env["GOOGLE_EXTERNAL_ACCOUNT_AUDIENCE"] = self._audience
+        env["GOOGLE_EXTERNAL_ACCOUNT_TOKEN_TYPE"] = self._subject_token_type
+        env["GOOGLE_EXTERNAL_ACCOUNT_REVOKE"] = "1"
+        env["GOOGLE_EXTERNAL_ACCOUNT_INTERACTIVE"] = "1"
+
+        result = subprocess.run(
+            self._credential_source_executable_command.split(),
+            timeout=self._credential_source_executable_interactive_timeout_millis
+            / 1000,
+            env=env,
+        )
+
+        if result.returncode != 0:
+            raise exceptions.RefreshError("Auth revoke failed on executable.")
+
+        # TODO: clear cache when the in memory cache feature implemented.
 
     @classmethod
     def from_info(cls, info, **kwargs):

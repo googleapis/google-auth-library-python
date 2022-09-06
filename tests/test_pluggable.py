@@ -1033,9 +1033,7 @@ class TestCredentials(object):
         with pytest.raises(ValueError) as excinfo:
             _ = credentials.retrieve_subject_token(None)
 
-        assert excinfo.match(
-            r"Interactive mode is only enabled for workforce pool."
-        )
+        assert excinfo.match(r"Interactive mode is only enabled for workforce pool.")
 
     @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
     def test_retrieve_subject_token_executable_fail_interactive_mode(self):
@@ -1057,6 +1055,51 @@ class TestCredentials(object):
             assert excinfo.match(
                 r"Executable exited with non-zero return code 1. Error: None"
             )
+
+    @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "0"})
+    def test_revoke_failed_executable_not_allowed(self):
+        credentials = self.make_pluggable(credential_source=self.CREDENTIAL_SOURCE)
+        with pytest.raises(ValueError) as excinfo:
+            _ = credentials.revoke(None)
+
+        assert excinfo.match(r"Executables need to be explicitly allowed")
+
+    @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
+    def test_revoke_failed_non_interactive_mode(self):
+        credentials = self.make_pluggable(credential_source=self.CREDENTIAL_SOURCE)
+        with pytest.raises(ValueError) as excinfo:
+            _ = credentials.revoke(None)
+
+        assert excinfo.match(r"Revoke is only enabled under interactive mode.")
+
+    @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
+    def test_revoke_failed_executable(self):
+        with mock.patch(
+            "subprocess.run",
+            return_value=subprocess.CompletedProcess(
+                args=[], stdout=None, returncode=1
+            ),
+        ):
+            credentials = self.make_pluggable(
+                credential_source=self.CREDENTIAL_SOURCE, interactive=True
+            )
+            with pytest.raises(exceptions.RefreshError) as excinfo:
+                _ = credentials.revoke(None)
+
+            assert excinfo.match(r"Auth revoke failed on executable.")
+
+    @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
+    def test_revoke_successfully(self):
+        with mock.patch(
+            "subprocess.run",
+            return_value=subprocess.CompletedProcess(
+                args=[], stdout=None, returncode=0
+            ),
+        ):
+            credentials = self.make_pluggable(
+                credential_source=self.CREDENTIAL_SOURCE, interactive=True
+            )
+            _ = credentials.revoke(None)
 
     @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
     def test_retrieve_subject_token_python_2(self):
