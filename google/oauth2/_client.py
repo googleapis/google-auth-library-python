@@ -47,7 +47,7 @@ def _handle_error_response(response_data, retryable_error):
 
     Args:
         response_data (Mapping | str): The decoded response data.
-        retryable_error Optional[bool]: A boolean indicating if an error is retry able.
+        retryable_error Optional[bool]: A boolean indicating if an error is retryable.
             Defaults to False.
 
     Raises:
@@ -89,7 +89,11 @@ def _can_retry(status_code, response_data):
 
         # Per Oauth 2.0 RFC https://www.rfc-editor.org/rfc/rfc6749.html#section-4.1.2.1
         # This is needed because a redirect will not return a 500 status code.
-        retryable_error_descriptions = {"internal_failure", "server_error", "temporarily_unavailable"}
+        retryable_error_descriptions = {
+            "internal_failure",
+            "server_error",
+            "temporarily_unavailable",
+        }
 
         if any(e in retryable_error_descriptions for e in (error_code, error_desc)):
             return True
@@ -97,10 +101,7 @@ def _can_retry(status_code, response_data):
     except AttributeError:
         pass
 
-    return (
-        status_code in transport.DEFAULT_REFRESH_STATUS_CODES
-        or status_code in transport.DEFAULT_RETRYABLE_STATUS_CODES
-    )
+    return status_code in transport.DEFAULT_RETRYABLE_STATUS_CODES
 
 
 def _parse_expiry(response_data):

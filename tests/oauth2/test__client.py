@@ -79,10 +79,7 @@ def test__handle_error_response_not_json():
 
 
 def test__can_retry_retryable():
-    retryable_codes = (
-        transport.DEFAULT_RETRYABLE_STATUS_CODES
-        + transport.DEFAULT_REFRESH_STATUS_CODES
-    )
+    retryable_codes = transport.DEFAULT_RETRYABLE_STATUS_CODES
     for status_code in range(100, 600):
         if status_code in retryable_codes:
             assert _client._can_retry(status_code, {"error": "invalid_scope"})
