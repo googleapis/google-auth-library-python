@@ -299,7 +299,11 @@ class Credentials(external_account.Credentials):
         )
 
         if result.returncode != 0:
-            raise exceptions.RefreshError("Auth revoke failed on executable.")
+            raise exceptions.RefreshError(
+                "Auth revoke failed on executable. Exit with non-zero return code {}".format(
+                    result.returncode
+                )
+            )
 
         # TODO: clear cache when the in memory cache feature implemented.
 
