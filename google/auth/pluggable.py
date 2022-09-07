@@ -278,10 +278,16 @@ class Credentials(external_account.Credentials):
         if not self.interactive:
             raise ValueError("Revoke is only enabled under interactive mode.")
 
+        if not _helpers.is_python_3():
+            raise exceptions.RefreshError(
+                "Pluggable auth is only supported for python 3.6+"
+            )
+
         # Inject variables
         env = os.environ.copy()
         env["GOOGLE_EXTERNAL_ACCOUNT_AUDIENCE"] = self._audience
         env["GOOGLE_EXTERNAL_ACCOUNT_TOKEN_TYPE"] = self._subject_token_type
+        env["GOOGLE_EXTERNAL_ACCOUNT_ID"] = self.service_account_email
         env["GOOGLE_EXTERNAL_ACCOUNT_REVOKE"] = "1"
         env["GOOGLE_EXTERNAL_ACCOUNT_INTERACTIVE"] = "1"
 
