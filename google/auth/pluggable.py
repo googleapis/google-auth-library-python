@@ -265,7 +265,7 @@ class Credentials(external_account.Credentials):
         Raises:
             google.auth.exceptions.RefreshError: If the executable revocation
                 not properly executed.
-            
+
         """
         env_allow_executables = os.environ.get(
             "GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES"

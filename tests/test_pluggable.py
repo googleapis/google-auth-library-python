@@ -24,7 +24,7 @@ import pytest  # type: ignore
 # from six.moves import urllib
 
 # from google.auth import _helpers
-from google.auth import credentials, exceptions
+from google.auth import exceptions
 from google.auth import pluggable
 from tests.test__default import WORKFORCE_AUDIENCE
 
