@@ -812,9 +812,7 @@ class TestCredentials(object):
             )
 
     @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
-    def test_retrieve_subject_token_without_expiration_time_should_pass(
-        self,
-    ):
+    def test_retrieve_subject_token_without_expiration_time_should_pass(self,):
         EXECUTABLE_SUCCESSFUL_OIDC_RESPONSE = {
             "version": 1,
             "success": True,
