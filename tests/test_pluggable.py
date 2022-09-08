@@ -894,6 +894,21 @@ class TestCredentials(object):
         )
 
     @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
+    def test_credential_source_timeout_missing_will_use_default_timeout_value(self):
+        CREDENTIAL_SOURCE = {
+            "executable": {
+                "command": self.CREDENTIAL_SOURCE_EXECUTABLE_COMMAND,
+                "output_file": self.CREDENTIAL_SOURCE_EXECUTABLE_OUTPUT_FILE,
+            }
+        }
+        credentials = self.make_pluggable(credential_source=CREDENTIAL_SOURCE)
+
+        assert (
+            credentials._credential_source_executable_timeout_millis
+            == pluggable.EXECUTABLE_TIMEOUT_MILLIS_DEFAULT
+        )
+
+    @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
     def test_credential_source_timeout_small(self):
         with pytest.raises(ValueError) as excinfo:
             CREDENTIAL_SOURCE = {
@@ -920,6 +935,23 @@ class TestCredentials(object):
             _ = self.make_pluggable(credential_source=CREDENTIAL_SOURCE)
 
         assert excinfo.match(r"Timeout must be between 5 and 120 seconds.")
+
+    @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
+    def test_credential_source_interactive_timeout_missing_will_use_default_interactive_timeout_value(
+        self
+    ):
+        CREDENTIAL_SOURCE = {
+            "executable": {
+                "command": self.CREDENTIAL_SOURCE_EXECUTABLE_COMMAND,
+                "output_file": self.CREDENTIAL_SOURCE_EXECUTABLE_OUTPUT_FILE,
+            }
+        }
+        credentials = self.make_pluggable(credential_source=CREDENTIAL_SOURCE)
+
+        assert (
+            credentials._credential_source_executable_interactive_timeout_millis
+            == pluggable.EXECUTABLE_INTERACTIVE_TIMEOUT_MILLIS_DEFAULT
+        )
 
     @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
     def test_credential_source_interactive_timeout_small(self):

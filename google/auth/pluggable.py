@@ -192,7 +192,7 @@ class Credentials(external_account.Credentials):
                     # If the cached response is expired, _parse_subject_token will raise an error which will be ignored and we will call the executable again.
                     subject_token = self._parse_subject_token(response)
                     if (
-                        self.interactive and "expiration_time" not in response
+                        "expiration_time" not in response
                     ):  # Always treat missing expiration_time as expired and proceed to executable run.
                         raise exceptions.RefreshError
                 except ValueError:
@@ -211,7 +211,9 @@ class Credentials(external_account.Credentials):
         env = os.environ.copy()
         env["GOOGLE_EXTERNAL_ACCOUNT_AUDIENCE"] = self._audience
         env["GOOGLE_EXTERNAL_ACCOUNT_TOKEN_TYPE"] = self._subject_token_type
+        env["GOOGLE_EXTERNAL_ACCOUNT_ID"] = self.service_account_email
         env["GOOGLE_EXTERNAL_ACCOUNT_INTERACTIVE"] = "1" if self.interactive else "0"
+        env["GOOGLE_EXTERNAL_ACCOUNT_REVOKE"] = 0
 
         if self._service_account_impersonation_url is not None:
             env[
