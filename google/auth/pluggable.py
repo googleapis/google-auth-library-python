@@ -290,8 +290,15 @@ class Credentials(external_account.Credentials):
         env["GOOGLE_EXTERNAL_ACCOUNT_AUDIENCE"] = self._audience
         env["GOOGLE_EXTERNAL_ACCOUNT_TOKEN_TYPE"] = self._subject_token_type
         env["GOOGLE_EXTERNAL_ACCOUNT_ID"] = self.service_account_email
-        env["GOOGLE_EXTERNAL_ACCOUNT_REVOKE"] = "1"
         env["GOOGLE_EXTERNAL_ACCOUNT_INTERACTIVE"] = "1"
+        env["GOOGLE_EXTERNAL_ACCOUNT_REVOKE"] = "1"
+        if self._service_account_impersonation_url is not None:
+            env[
+                "GOOGLE_EXTERNAL_ACCOUNT_IMPERSONATED_EMAIL"
+            ] = self.service_account_email
+        env[
+            "GOOGLE_EXTERNAL_ACCOUNT_OUTPUT_FILE"
+        ] = self._credential_source_executable_output_file
 
         result = subprocess.run(
             self._credential_source_executable_command.split(),

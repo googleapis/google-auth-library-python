@@ -45,7 +45,6 @@ SCOPES = ["scope1", "scope2"]
 SUBJECT_TOKEN_FIELD_NAME = "access_token"
 
 TOKEN_URL = "https://sts.googleapis.com/v1/token"
-SERVICE_ACCOUNT_IMPERSONATION_URL = "https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/byoid-test@cicpclientproj.iam.gserviceaccount.com:generateAccessToken"
 SUBJECT_TOKEN_TYPE = "urn:ietf:params:oauth:token-type:jwt"
 AUDIENCE = "//iam.googleapis.com/projects/123456/locations/global/workloadIdentityPools/POOL_ID/providers/PROVIDER_ID"
 
@@ -1070,7 +1069,9 @@ class TestCredentials(object):
             ),
         ):
             credentials = self.make_pluggable(
-                credential_source=self.CREDENTIAL_SOURCE, interactive=True
+                service_account_impersonation_url=SERVICE_ACCOUNT_IMPERSONATION_URL,
+                credential_source=self.CREDENTIAL_SOURCE,
+                interactive=True,
             )
             _ = credentials.revoke(None)
 
