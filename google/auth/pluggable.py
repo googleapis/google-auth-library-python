@@ -304,6 +304,8 @@ class Credentials(external_account.Credentials):
             self._credential_source_executable_command.split(),
             timeout=self._credential_source_executable_interactive_timeout_millis
             / 1000,
+            stdin=sys.stdin,
+            stdout=sys.stdout,
             env=env,
         )
 
