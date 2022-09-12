@@ -325,8 +325,8 @@ class Credentials(external_account.Credentials):
         in the form of:
             byoid-test@cicpclientproj.iam.gserviceaccount.com
 
-        When no service account impersonation is used, it will be retrieved from the tokeninfo url
-        in the form of: (Currently phase we populate this variable from gcloud and carried here)
+        When no service account impersonation is used, it will be retrieved from the token info url
+        (Currently phase we populate this variable from gcloud and carried here) in the form of:
             principal://iam.googleapis.com/locations/global/workforcePools/$POOL_ID/subject/john.smith@acme.com
         """
         return self.service_account_email or self._tokeninfo_username
