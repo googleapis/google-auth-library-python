@@ -132,6 +132,7 @@ class Credentials(external_account.Credentials):
         self._credential_source_executable_output_file = self._credential_source_executable.get(
             "output_file"
         )
+        self._tokeninfo_username = kwargs.get("tokeninfo_username", None)
 
         if not self._credential_source_executable_command:
             raise ValueError(
@@ -211,7 +212,7 @@ class Credentials(external_account.Credentials):
         env = os.environ.copy()
         env["GOOGLE_EXTERNAL_ACCOUNT_AUDIENCE"] = self._audience
         env["GOOGLE_EXTERNAL_ACCOUNT_TOKEN_TYPE"] = self._subject_token_type
-        env["GOOGLE_EXTERNAL_ACCOUNT_ID"] = self.service_account_email
+        env["GOOGLE_EXTERNAL_ACCOUNT_ID"] = self.external_account_id
         env["GOOGLE_EXTERNAL_ACCOUNT_INTERACTIVE"] = "1" if self.interactive else "0"
         env["GOOGLE_EXTERNAL_ACCOUNT_REVOKE"] = 0
 
@@ -247,7 +248,7 @@ class Credentials(external_account.Credentials):
                     result.returncode, result.stdout
                 )
             )
-        
+
         response = json.loads(result.stdout.decode("utf-8")) if result.stdout else None
         if not response and self._credential_source_executable_output_file is not None:
             response = json.load(
@@ -288,7 +289,7 @@ class Credentials(external_account.Credentials):
         env = os.environ.copy()
         env["GOOGLE_EXTERNAL_ACCOUNT_AUDIENCE"] = self._audience
         env["GOOGLE_EXTERNAL_ACCOUNT_TOKEN_TYPE"] = self._subject_token_type
-        env["GOOGLE_EXTERNAL_ACCOUNT_ID"] = self.service_account_email
+        env["GOOGLE_EXTERNAL_ACCOUNT_ID"] = self.external_account_id
         env["GOOGLE_EXTERNAL_ACCOUNT_INTERACTIVE"] = "1"
         env["GOOGLE_EXTERNAL_ACCOUNT_REVOKE"] = "1"
         if self._service_account_impersonation_url is not None:
@@ -316,6 +317,19 @@ class Credentials(external_account.Credentials):
             )
 
         # TODO: clear cache when the in memory cache feature implemented.
+
+    @property
+    def external_account_id(self):
+        """Get the GOOGLE_EXTERNAL_ACCOUNT_ID which needs to be polulated to executable
+        When service account impersonation is used, it will be parsed from the impersonation url
+        in the form of:
+            byoid-test@cicpclientproj.iam.gserviceaccount.com
+
+        When no service account impersonation is used, it will be retrieved from the tokeninfo url
+        in the form of: (Currently phase we populate this variable from gcloud and carried here)
+            principal://iam.googleapis.com/locations/global/workforcePools/$POOL_ID/subject/john.smith@acme.com
+        """
+        return self.service_account_email or self._tokeninfo_username
 
     @classmethod
     def from_info(cls, info, **kwargs):
