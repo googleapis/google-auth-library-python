@@ -247,14 +247,13 @@ class Credentials(external_account.Credentials):
                     result.returncode, result.stdout
                 )
             )
-
-        response = (
-            json.load(
+        
+        response = json.loads(result.stdout.decode("utf-8")) if result.stdout else None
+        if not response and self._credential_source_executable_output_file is not None:
+            response = json.load(
                 open(self._credential_source_executable_output_file, encoding="utf-8")
             )
-            if self.interactive
-            else json.loads(result.stdout.decode("utf-8"))
-        )
+
         subject_token = self._parse_subject_token(response)
         return subject_token
 
@@ -370,14 +369,6 @@ class Credentials(external_account.Credentials):
                 "Executable returned unsuccessful response: code: {}, message: {}.".format(
                     response["code"], response["message"]
                 )
-            )
-        if (
-            "expiration_time" not in response
-            and not self.interactive
-            and self._credential_source_executable_output_file
-        ):
-            raise ValueError(
-                "The executable response must contain an expiration_time for successful responses when an output_file has been specified in the configuration in non-interactive mode."
             )
         if "expiration_time" in response and response["expiration_time"] < time.time():
             raise exceptions.RefreshError(
