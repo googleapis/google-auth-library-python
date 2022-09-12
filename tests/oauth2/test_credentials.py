@@ -118,10 +118,11 @@ class TestCredentials(object):
         return_value=datetime.datetime.min + _helpers.REFRESH_THRESHOLD,
     )
     def test_refresh_success(self, unused_utcnow, refresh_grant):
+        scopes = ["email", "profile"]
         token = "token"
         new_rapt_token = "new_rapt_token"
         expiry = _helpers.utcnow() + datetime.timedelta(seconds=500)
-        grant_response = {"id_token": mock.sentinel.id_token}
+        grant_response = {"id_token": mock.sentinel.id_token, "scope": "email, profile"}
         refresh_grant.return_value = (
             # Access token
             token,
@@ -158,6 +159,7 @@ class TestCredentials(object):
         assert credentials.expiry == expiry
         assert credentials.id_token == mock.sentinel.id_token
         assert credentials.rapt_token == new_rapt_token
+        assert credentials.granted_scopes == scopes
 
         # Check that the credentials are valid (have a token and are not
         # expired)

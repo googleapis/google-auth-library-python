@@ -318,8 +318,8 @@ class Credentials(credentials.ReadOnlyScoped, credentials.CredentialsWithQuotaPr
 
         if scopes and "scope" in grant_response:
             requested_scopes = frozenset(scopes)
-            granted_scopes = frozenset(grant_response["scope"].split())
-            scopes_requested_but_not_granted = requested_scopes - granted_scopes
+            self.granted_scopes = frozenset(grant_response["scope"].split())
+            scopes_requested_but_not_granted = requested_scopes - self.granted_scopes
             if scopes_requested_but_not_granted:
                 raise exceptions.RefreshError(
                     "Not all requested scopes were granted by the "
