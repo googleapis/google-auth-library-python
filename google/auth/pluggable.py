@@ -215,7 +215,7 @@ class Credentials(external_account.Credentials):
         env["GOOGLE_EXTERNAL_ACCOUNT_TOKEN_TYPE"] = self._subject_token_type
         env["GOOGLE_EXTERNAL_ACCOUNT_ID"] = self.external_account_id
         env["GOOGLE_EXTERNAL_ACCOUNT_INTERACTIVE"] = "1" if self.interactive else "0"
-        env["GOOGLE_EXTERNAL_ACCOUNT_REVOKE"] = 0
+        env["GOOGLE_EXTERNAL_ACCOUNT_REVOKE"] = "0"
 
         if self._service_account_impersonation_url is not None:
             env[
