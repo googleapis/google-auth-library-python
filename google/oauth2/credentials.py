@@ -79,6 +79,7 @@ class Credentials(credentials.ReadOnlyScoped, credentials.CredentialsWithQuotaPr
         rapt_token=None,
         refresh_handler=None,
         enable_reauth_refresh=False,
+        granted_scopes=None,
     ):
         """
         Args:
@@ -125,6 +126,7 @@ class Credentials(credentials.ReadOnlyScoped, credentials.CredentialsWithQuotaPr
         self._id_token = id_token
         self._scopes = scopes
         self._default_scopes = default_scopes
+        self.granted_scopes = granted_scopes
         self._token_uri = token_uri
         self._client_id = client_id
         self._client_secret = client_secret
@@ -161,6 +163,7 @@ class Credentials(credentials.ReadOnlyScoped, credentials.CredentialsWithQuotaPr
         self._quota_project_id = d.get("_quota_project_id")
         self._rapt_token = d.get("_rapt_token")
         self._enable_reauth_refresh = d.get("_enable_reauth_refresh")
+        self.granted_scopes = d.get("granted_scopes")
         # The refresh_handler setter should be used to repopulate this.
         self._refresh_handler = None
 
@@ -252,6 +255,7 @@ class Credentials(credentials.ReadOnlyScoped, credentials.CredentialsWithQuotaPr
             quota_project_id=quota_project_id,
             rapt_token=self.rapt_token,
             enable_reauth_refresh=self._enable_reauth_refresh,
+            granted_scopes=self.granted_scopes,
         )
 
     @_helpers.copy_docstring(credentials.Credentials)
@@ -318,8 +322,10 @@ class Credentials(credentials.ReadOnlyScoped, credentials.CredentialsWithQuotaPr
 
         if scopes and "scope" in grant_response:
             requested_scopes = frozenset(scopes)
-            self.granted_scopes = frozenset(grant_response["scope"].split())
-            scopes_requested_but_not_granted = requested_scopes - self.granted_scopes
+            self.granted_scopes = grant_response["scope"].split()
+            granted_scopes = frozenset(self.granted_scopes)
+            print("Granted Scopes:{0}".format(granted_scopes))
+            scopes_requested_but_not_granted = requested_scopes - granted_scopes
             if scopes_requested_but_not_granted:
                 raise exceptions.RefreshError(
                     "Not all requested scopes were granted by the "

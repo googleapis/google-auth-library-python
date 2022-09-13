@@ -41,6 +41,7 @@ class TestCredentials(object):
     RAPT_TOKEN = "rapt_token"
     CLIENT_ID = "client_id"
     CLIENT_SECRET = "client_secret"
+    SCOPES = ["email", "profile"]
 
     @classmethod
     def make_credentials(cls):
@@ -52,6 +53,19 @@ class TestCredentials(object):
             client_secret=cls.CLIENT_SECRET,
             rapt_token=cls.RAPT_TOKEN,
             enable_reauth_refresh=True,
+        )
+
+    @classmethod
+    def make_credentials_with_scopes(cls):
+        return credentials.Credentials(
+            token=None,
+            refresh_token=cls.REFRESH_TOKEN,
+            token_uri=cls.TOKEN_URI,
+            client_id=cls.CLIENT_ID,
+            client_secret=cls.CLIENT_SECRET,
+            rapt_token=cls.RAPT_TOKEN,
+            enable_reauth_refresh=True,
+            scopes=cls.SCOPES,
         )
 
     def test_default_state(self):
@@ -118,11 +132,10 @@ class TestCredentials(object):
         return_value=datetime.datetime.min + _helpers.REFRESH_THRESHOLD,
     )
     def test_refresh_success(self, unused_utcnow, refresh_grant):
-        scopes = ["email", "profile"]
         token = "token"
         new_rapt_token = "new_rapt_token"
         expiry = _helpers.utcnow() + datetime.timedelta(seconds=500)
-        grant_response = {"id_token": mock.sentinel.id_token, "scope": "email, profile"}
+        grant_response = {"id_token": mock.sentinel.id_token, "scope": "email profile"}
         refresh_grant.return_value = (
             # Access token
             token,
@@ -137,7 +150,7 @@ class TestCredentials(object):
         )
 
         request = mock.create_autospec(transport.Request)
-        credentials = self.make_credentials()
+        credentials = self.make_credentials_with_scopes()
 
         # Refresh credentials
         credentials.refresh(request)
@@ -149,7 +162,7 @@ class TestCredentials(object):
             self.REFRESH_TOKEN,
             self.CLIENT_ID,
             self.CLIENT_SECRET,
-            None,
+            self.SCOPES,
             self.RAPT_TOKEN,
             True,
         )
@@ -159,7 +172,7 @@ class TestCredentials(object):
         assert credentials.expiry == expiry
         assert credentials.id_token == mock.sentinel.id_token
         assert credentials.rapt_token == new_rapt_token
-        assert credentials.granted_scopes == scopes
+        assert credentials.granted_scopes == self.SCOPES
 
         # Check that the credentials are valid (have a token and are not
         # expired)
