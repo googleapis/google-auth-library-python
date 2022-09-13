@@ -82,6 +82,9 @@ def _can_retry(status_code, response_data):
     Returns:
       bool: True if the response is retryable. False otherwise.
     """
+    if status_code in transport.DEFAULT_RETRYABLE_STATUS_CODES:
+        return True
+
     try:
         # For a failed response, response_body could be a string
         error_desc = response_data.get("error_description") or ""
@@ -101,7 +104,7 @@ def _can_retry(status_code, response_data):
     except AttributeError:
         pass
 
-    return status_code in transport.DEFAULT_RETRYABLE_STATUS_CODES
+    return False
 
 
 def _parse_expiry(response_data):
