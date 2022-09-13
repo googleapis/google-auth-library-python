@@ -237,6 +237,11 @@ class Credentials(credentials.ReadOnlyScoped, credentials.CredentialsWithQuotaPr
             raise TypeError("The provided refresh_handler is not a callable or None.")
         self._refresh_handler = value
 
+    @property
+    @_helpers.copy_docstring(credentials.CredentialsWithQuotaProject)
+    def quota_project_id(self):
+        return self._quota_project_id
+
     @_helpers.copy_docstring(credentials.CredentialsWithQuotaProject)
     def with_quota_project(self, quota_project_id):
 
@@ -465,6 +470,11 @@ class UserAccessTokenCredentials(credentials.CredentialsWithQuotaProject):
                 credentials with the given account.
         """
         return self.__class__(account=account, quota_project_id=self._quota_project_id)
+
+    @property
+    @_helpers.copy_docstring(credentials.CredentialsWithQuotaProject)
+    def quota_project_id(self):
+        return self._quota_project_id
 
     @_helpers.copy_docstring(credentials.CredentialsWithQuotaProject)
     def with_quota_project(self, quota_project_id):

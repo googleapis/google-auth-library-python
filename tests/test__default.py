@@ -207,6 +207,16 @@ def test_load_credentials_from_file_authorized_user():
     credentials, project_id = _default.load_credentials_from_file(AUTHORIZED_USER_FILE)
     assert isinstance(credentials, google.oauth2.credentials.Credentials)
     assert project_id is None
+    assert credentials.quota_project_id is None
+
+
+@mock.patch.dict(os.environ)
+def test_load_credentials_from_file_authorized_user_quota_env():
+    os.environ[environment_vars.GOOGLE_CLOUD_QUOTA_PROJECT_ID] = "project-foo"
+    credentials, project_id = _default.load_credentials_from_file(AUTHORIZED_USER_FILE)
+    assert isinstance(credentials, google.oauth2.credentials.Credentials)
+    assert project_id is None
+    assert credentials.quota_project_id == "project-foo"
 
 
 def test_load_credentials_from_file_no_type(tmpdir):
@@ -267,6 +277,18 @@ def test_load_credentials_from_file_authorized_user_cloud_sdk_with_quota_project
     assert credentials.quota_project_id == "project-foo"
 
 
+@mock.patch.dict(os.environ)
+def test_load_credentials_from_file_authorized_user_cloud_sdk_with_quota_project_env():
+    os.environ[environment_vars.GOOGLE_CLOUD_QUOTA_PROJECT_ID] = "project-foo"
+    credentials, project_id = _default.load_credentials_from_file(
+        AUTHORIZED_USER_CLOUD_SDK_FILE
+    )
+
+    assert isinstance(credentials, google.oauth2.credentials.Credentials)
+    assert project_id is None
+    assert credentials.quota_project_id == "project-foo"
+
+
 def test_load_credentials_from_file_service_account():
     credentials, project_id = _default.load_credentials_from_file(SERVICE_ACCOUNT_FILE)
     assert isinstance(credentials, service_account.Credentials)
@@ -286,6 +308,15 @@ def test_load_credentials_from_file_service_account_with_quota_project():
     credentials, project_id = _default.load_credentials_from_file(
         SERVICE_ACCOUNT_FILE, quota_project_id="project-foo"
     )
+    assert isinstance(credentials, service_account.Credentials)
+    assert project_id == SERVICE_ACCOUNT_FILE_DATA["project_id"]
+    assert credentials.quota_project_id == "project-foo"
+
+
+@mock.patch.dict(os.environ)
+def test_load_credentials_from_file_service_account_with_quota_project_env():
+    os.environ[environment_vars.GOOGLE_CLOUD_QUOTA_PROJECT_ID] = "project-foo"
+    credentials, project_id = _default.load_credentials_from_file(SERVICE_ACCOUNT_FILE)
     assert isinstance(credentials, service_account.Credentials)
     assert project_id == SERVICE_ACCOUNT_FILE_DATA["project_id"]
     assert credentials.quota_project_id == "project-foo"
@@ -340,6 +371,28 @@ def test_load_credentials_from_file_impersonated_passing_quota_project():
         quota_project_id="new_quota_project",
     )
     assert credentials._quota_project_id == "new_quota_project"
+
+
+@mock.patch.dict(os.environ)
+def test_load_credentials_from_file_impersonated_with_quota_project_env():
+    os.environ[environment_vars.GOOGLE_CLOUD_QUOTA_PROJECT_ID] = "project-foo"
+
+    credentials, _ = _default.load_credentials_from_file(
+        IMPERSONATED_SERVICE_ACCOUNT_WITH_QUOTA_PROJECT_FILE
+    )
+    assert isinstance(credentials, impersonated_credentials.Credentials)
+    assert credentials._quota_project_id == "quota_project"
+
+    credentials, _ = _default.load_credentials_from_file(
+        IMPERSONATED_SERVICE_ACCOUNT_SERVICE_ACCOUNT_SOURCE_FILE,
+        quota_project_id="new_quota_project",
+    )
+    assert credentials._quota_project_id == "new_quota_project"
+
+    credentials, _ = _default.load_credentials_from_file(
+        IMPERSONATED_SERVICE_ACCOUNT_SERVICE_ACCOUNT_SOURCE_FILE
+    )
+    assert credentials._quota_project_id == "project-foo"
 
 
 def test_load_credentials_from_file_impersonated_passing_scopes():
@@ -505,6 +558,22 @@ def test_load_credentials_from_file_external_account_with_quota_project(
     assert credentials.quota_project_id == "project-foo"
 
 
+@mock.patch.dict(os.environ)
+@EXTERNAL_ACCOUNT_GET_PROJECT_ID_PATCH
+def test_load_credentials_from_file_external_account_with_quota_project_env(
+    get_project_id, tmpdir
+):
+    os.environ[environment_vars.GOOGLE_CLOUD_QUOTA_PROJECT_ID] = "project-foo"
+    config_file = tmpdir.join("config.json")
+    config_file.write(json.dumps(IDENTITY_POOL_DATA))
+    credentials, project_id = _default.load_credentials_from_file(str(config_file))
+
+    assert isinstance(credentials, identity_pool.Credentials)
+    # Since no scopes are specified, the project ID cannot be determined.
+    assert project_id is None
+    assert credentials.quota_project_id == "project-foo"
+
+
 def test_load_credentials_from_file_external_account_bad_format(tmpdir):
     filename = tmpdir.join("external_account_bad.json")
     filename.write(json.dumps({"type": "external_account"}))
@@ -541,9 +610,11 @@ def test__get_explicit_environ_credentials_no_env():
 
 
 @pytest.mark.parametrize("quota_project_id", [None, "project-foo"])
+@mock.patch.dict(os.environ)
 @LOAD_FILE_PATCH
 def test__get_explicit_environ_credentials(load, quota_project_id, monkeypatch):
     monkeypatch.setenv(environment_vars.CREDENTIALS, "filename")
+    os.environ[environment_vars.GOOGLE_CLOUD_QUOTA_PROJECT_ID] = "project-bar"
 
     credentials, project_id = _default._get_explicit_environ_credentials(
         quota_project_id=quota_project_id

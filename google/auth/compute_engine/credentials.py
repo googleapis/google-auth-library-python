@@ -129,6 +129,11 @@ class Credentials(credentials.Scoped, credentials.CredentialsWithQuotaProject):
     def requires_scopes(self):
         return not self._scopes
 
+    @property
+    @_helpers.copy_docstring(credentials.CredentialsWithQuotaProject)
+    def quota_project_id(self):
+        return self._quota_project_id
+
     @_helpers.copy_docstring(credentials.CredentialsWithQuotaProject)
     def with_quota_project(self, quota_project_id):
         return self.__class__(
@@ -277,6 +282,11 @@ class IDTokenCredentials(credentials.CredentialsWithQuotaProject, credentials.Si
                 use_metadata_identity_endpoint=False,
                 quota_project_id=self._quota_project_id,
             )
+
+    @property
+    @_helpers.copy_docstring(credentials.CredentialsWithQuotaProject)
+    def quota_project_id(self):
+        return self._quota_project_id
 
     @_helpers.copy_docstring(credentials.CredentialsWithQuotaProject)
     def with_quota_project(self, quota_project_id):

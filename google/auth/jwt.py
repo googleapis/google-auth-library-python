@@ -507,6 +507,11 @@ class Credentials(
             quota_project_id=self._quota_project_id,
         )
 
+    @property
+    @_helpers.copy_docstring(google.auth.credentials.CredentialsWithQuotaProject)
+    def quota_project_id(self):
+        return self._quota_project_id
+
     @_helpers.copy_docstring(google.auth.credentials.CredentialsWithQuotaProject)
     def with_quota_project(self, quota_project_id):
         return self.__class__(
@@ -735,6 +740,11 @@ class OnDemandCredentials(
             max_cache_size=self._cache.maxsize,
             quota_project_id=self._quota_project_id,
         )
+
+    @property
+    @_helpers.copy_docstring(google.auth.credentials.CredentialsWithQuotaProject)
+    def quota_project_id(self):
+        return self._quota_project_id
 
     @_helpers.copy_docstring(google.auth.credentials.CredentialsWithQuotaProject)
     def with_quota_project(self, quota_project_id):

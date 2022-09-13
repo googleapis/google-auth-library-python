@@ -348,6 +348,11 @@ class Credentials(
             always_use_jwt_access=self._always_use_jwt_access,
         )
 
+    @property
+    @_helpers.copy_docstring(credentials.CredentialsWithQuotaProject)
+    def quota_project_id(self):
+        return self._quota_project_id
+
     @_helpers.copy_docstring(credentials.CredentialsWithQuotaProject)
     def with_quota_project(self, quota_project_id):
 
@@ -615,6 +620,11 @@ class IDTokenCredentials(credentials.Signing, credentials.CredentialsWithQuotaPr
             additional_claims=self._additional_claims.copy(),
             quota_project_id=self.quota_project_id,
         )
+
+    @property
+    @_helpers.copy_docstring(credentials.CredentialsWithQuotaProject)
+    def quota_project_id(self):
+        return self._quota_project_id
 
     @_helpers.copy_docstring(credentials.CredentialsWithQuotaProject)
     def with_quota_project(self, quota_project_id):

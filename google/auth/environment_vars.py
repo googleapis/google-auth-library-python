@@ -15,6 +15,9 @@
 """Environment variables used by :mod:`google.auth`."""
 
 
+# from tests.test_aws import QUOTA_PROJECT_ID
+
+
 PROJECT = "GOOGLE_CLOUD_PROJECT"
 """Environment variable defining default project.
 
@@ -32,6 +35,10 @@ situations (such as Google App Engine).
 CREDENTIALS = "GOOGLE_APPLICATION_CREDENTIALS"
 """Environment variable defining the location of Google application default
 credentials."""
+
+GOOGLE_CLOUD_QUOTA_PROJECT_ID = "GOOGLE_CLOUD_QUOTA_PROJECT_ID"
+"""Environment variable defining the project ot be used for
+quota and billing."""
 
 # The environment variable name which can replace ~/.config if set.
 CLOUD_SDK_CONFIG_DIR = "CLOUDSDK_CONFIG"

@@ -79,7 +79,6 @@ class Credentials(object):
 
     @property
     def quota_project_id(self):
-        """Project to use for quota and billing purposes."""
         return self._quota_project_id
 
     @abc.abstractmethod
@@ -136,6 +135,11 @@ class Credentials(object):
 
 class CredentialsWithQuotaProject(Credentials):
     """Abstract base for credentials supporting ``with_quota_project`` factory"""
+
+    @property
+    def quota_project_id(self):
+        """Optional[str]: The project ID used for quota and billing."""
+        raise NotImplementedError("This credential does not support quota project.")
 
     def with_quota_project(self, quota_project_id):
         """Returns a copy of these credentials with a modified quota project.

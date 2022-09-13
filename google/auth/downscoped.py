@@ -492,6 +492,11 @@ class Credentials(credentials.CredentialsWithQuotaProject):
         else:
             self.expiry = self._source_credentials.expiry
 
+    @property
+    @_helpers.copy_docstring(credentials.CredentialsWithQuotaProject)
+    def quota_project_id(self):
+        return self._quota_project_id
+
     @_helpers.copy_docstring(credentials.CredentialsWithQuotaProject)
     def with_quota_project(self, quota_project_id):
         return self.__class__(

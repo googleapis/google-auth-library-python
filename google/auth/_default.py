@@ -454,6 +454,10 @@ def _get_gdch_service_account_credentials(filename, info):
 def _apply_quota_project_id(credentials, quota_project_id):
     if quota_project_id:
         credentials = credentials.with_quota_project(quota_project_id)
+    elif credentials.quota_project_id is None:
+        from_env = os.environ.get(environment_vars.GOOGLE_CLOUD_QUOTA_PROJECT_ID)
+        if from_env is not None:
+            credentials = credentials.with_quota_project(from_env)
 
     from google.oauth2 import credentials as authorized_user_credentials
 

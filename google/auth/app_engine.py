@@ -147,6 +147,11 @@ class Credentials(
         """
         return not self._scopes and not self._default_scopes
 
+    @property
+    @_helpers.copy_docstring(credentials.CredentialsWithQuotaProject)
+    def quota_project_id(self):
+        return self._quota_project_id
+
     @_helpers.copy_docstring(credentials.Scoped)
     def with_scopes(self, scopes, default_scopes=None):
         return self.__class__(

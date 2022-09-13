@@ -361,6 +361,11 @@ class Credentials(credentials.Scoped, credentials.CredentialsWithQuotaProject):
             lifetime = datetime.timedelta(seconds=response_data.get("expires_in"))
             self.expiry = now + lifetime
 
+    @property
+    @_helpers.copy_docstring(credentials.CredentialsWithQuotaProject)
+    def quota_project_id(self):
+        return self._quota_project_id
+
     @_helpers.copy_docstring(credentials.CredentialsWithQuotaProject)
     def with_quota_project(self, quota_project_id):
         # Return copy of instance with the provided quota project ID.
