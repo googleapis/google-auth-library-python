@@ -132,7 +132,8 @@ class Credentials(external_account.Credentials):
         self._credential_source_executable_output_file = self._credential_source_executable.get(
             "output_file"
         )
-        self._tokeninfo_username = kwargs.get("tokeninfo_username", None)
+        # TODO: remove this when the tokeninfo endpoint query implemented in auth library
+        self._tokeninfo_username = kwargs.get("tokeninfo_username", "")  # dummy value
 
         if not self._credential_source_executable_command:
             raise ValueError(
@@ -212,15 +213,18 @@ class Credentials(external_account.Credentials):
         env = os.environ.copy()
         env["GOOGLE_EXTERNAL_ACCOUNT_AUDIENCE"] = self._audience
         env["GOOGLE_EXTERNAL_ACCOUNT_TOKEN_TYPE"] = self._subject_token_type
-        env["GOOGLE_EXTERNAL_ACCOUNT_ID"] = self.external_account_id or ""
+        env["GOOGLE_EXTERNAL_ACCOUNT_ID"] = self.external_account_id
         env["GOOGLE_EXTERNAL_ACCOUNT_INTERACTIVE"] = "1" if self.interactive else "0"
         env["GOOGLE_EXTERNAL_ACCOUNT_REVOKE"] = 0
-        env["GOOGLE_EXTERNAL_ACCOUNT_IMPERSONATED_EMAIL"] = (
-            self.service_account_email or ""
-        )
-        env["GOOGLE_EXTERNAL_ACCOUNT_OUTPUT_FILE"] = (
-            self._credential_source_executable_output_file or ""
-        )
+
+        if self._service_account_impersonation_url is not None:
+            env[
+                "GOOGLE_EXTERNAL_ACCOUNT_IMPERSONATED_EMAIL"
+            ] = self.service_account_email
+        if self._credential_source_executable_output_file is not None:
+            env[
+                "GOOGLE_EXTERNAL_ACCOUNT_OUTPUT_FILE"
+            ] = self._credential_source_executable_output_file
 
         exe_timeout = (
             self._credential_source_executable_interactive_timeout_millis / 1000
@@ -286,15 +290,16 @@ class Credentials(external_account.Credentials):
         env = os.environ.copy()
         env["GOOGLE_EXTERNAL_ACCOUNT_AUDIENCE"] = self._audience
         env["GOOGLE_EXTERNAL_ACCOUNT_TOKEN_TYPE"] = self._subject_token_type
-        env["GOOGLE_EXTERNAL_ACCOUNT_ID"] = self.external_account_id or ""
+        env["GOOGLE_EXTERNAL_ACCOUNT_ID"] = self.external_account_id
         env["GOOGLE_EXTERNAL_ACCOUNT_INTERACTIVE"] = "1"
         env["GOOGLE_EXTERNAL_ACCOUNT_REVOKE"] = "1"
-        env["GOOGLE_EXTERNAL_ACCOUNT_IMPERSONATED_EMAIL"] = (
-            self.service_account_email or ""
-        )
-        env["GOOGLE_EXTERNAL_ACCOUNT_OUTPUT_FILE"] = (
-            self._credential_source_executable_output_file or ""
-        )
+        if self._service_account_impersonation_url is not None:
+            env[
+                "GOOGLE_EXTERNAL_ACCOUNT_IMPERSONATED_EMAIL"
+            ] = self.service_account_email
+        env[
+            "GOOGLE_EXTERNAL_ACCOUNT_OUTPUT_FILE"
+        ] = self._credential_source_executable_output_file
 
         result = subprocess.run(
             self._credential_source_executable_command.split(),
