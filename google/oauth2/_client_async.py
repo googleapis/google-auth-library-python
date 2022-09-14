@@ -88,24 +88,6 @@ async def _token_endpoint_request_no_throw(
         except ValueError:
             response_data = response_body
 
-        return response, response_data
-
-    response, response_data = await _perform_request()
-
-    if response.status == http_client.OK:
-        return True, response_data, None
-
-    retryable_error = client._can_retry(
-        status_code=response.status, response_data=response_data
-    )
-
-    if not retryable_error or not can_retry:
-        return False, response_data, retryable_error
-
-    retries = _exponential_backoff.ExponentialBackoff()
-    for _ in retries:
-        response, response_data = await _perform_request()
-
         if response.status == http_client.OK:
             return True, response_data, None
 
@@ -113,8 +95,18 @@ async def _token_endpoint_request_no_throw(
             status_code=response.status, response_data=response_data
         )
 
-        if not retryable_error:
-            return False, response_data, retryable_error
+        return False, response_data, retryable_error
+
+    request_succeeded, response_data, retryable_error = await _perform_request()
+
+    if request_succeeded or not retryable_error or not can_retry:
+        return request_succeeded, response_data, retryable_error
+
+    retries = _exponential_backoff.ExponentialBackoff()
+    for _ in retries:
+        request_succeeded, response_data, retryable_error = await _perform_request()
+        if request_succeeded or not retryable_error:
+            return request_succeeded, response_data, retryable_error
 
     return False, response_data, retryable_error
 

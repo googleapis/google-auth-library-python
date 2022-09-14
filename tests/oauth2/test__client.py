@@ -294,7 +294,7 @@ def test_jwt_grant_no_access_token():
 
     with pytest.raises(exceptions.RefreshError) as excinfo:
         _client.jwt_grant(request, "http://example.com", "assertion_value")
-    assert excinfo.value.retryable
+    assert not excinfo.value.retryable
 
 
 def test_id_token_jwt_grant():
