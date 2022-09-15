@@ -1135,9 +1135,7 @@ class TestCredentials(object):
             with pytest.raises(exceptions.RefreshError) as excinfo:
                 _ = credentials.revoke(None)
 
-            assert excinfo.match(
-                r"Executable returned unsuccessful response."
-            )
+            assert excinfo.match(r"Executable returned unsuccessful response.")
 
     @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
     def test_revoke_successfully(self):
