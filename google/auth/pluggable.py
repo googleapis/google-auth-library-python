@@ -305,31 +305,32 @@ class Credentials(external_account.Credentials):
             self._credential_source_executable_command.split(),
             timeout=self._credential_source_executable_interactive_timeout_millis
             / 1000,
-            stdin=sys.stdin,
-            stdout=sys.stdout,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
             env=env,
         )
 
         if result.returncode != 0:
             raise exceptions.RefreshError(
-                "Auth revoke failed on executable. Exit with non-zero return code {}".format(
-                    result.returncode
+                "Auth revoke failed on executable. Exit with non-zero return code {}. Error: {}".format(
+                    result.returncode, result.stdout
                 )
             )
 
-        # TODO: clear cache when the in memory cache feature implemented.
+        response = json.loads(result.stdout.decode("utf-8"))
+        self._validate_revoke_response(response)
 
     @property
     def external_account_id(self):
-        """Get the GOOGLE_EXTERNAL_ACCOUNT_ID which needs to be polulated to executable
-        When service account impersonation is used, it will be parsed from the impersonation url
-        in the form of:
-            byoid-test@cicpclientproj.iam.gserviceaccount.com
+        """Returns the external account identifier.
 
-        When no service account impersonation is used, it will be retrieved from the token info url
-        (Currently phase we populate this variable from gcloud and carried here) in the form of:
-            principal://iam.googleapis.com/locations/global/workforcePools/$POOL_ID/subject/john.smith@acme.com
+        When service account impersonation is used the identifier is the service
+        account email.
+
+        Without service account impersonation, this returns None, unless it is
+        being used by the Google Cloud CLI which populates this field.
         """
+
         return self.service_account_email or self._tokeninfo_username
 
     @classmethod
@@ -400,3 +401,18 @@ class Credentials(external_account.Credentials):
             return response["saml_response"]
         else:
             raise exceptions.RefreshError("Executable returned unsupported token type.")
+
+    def _validate_revoke_response(self, response):
+        if "version" not in response:
+            raise ValueError("The executable response is missing the version field.")
+        if response["version"] > EXECUTABLE_SUPPORTED_MAX_VERSION:
+            raise exceptions.RefreshError(
+                "Executable returned unsupported version {}.".format(
+                    response["version"]
+                )
+            )
+
+        if "success" not in response:
+            raise ValueError("The executable response is missing the success field.")
+        if not response["success"]:
+            raise exceptions.RefreshError("Executable returned unsuccessful response.")
