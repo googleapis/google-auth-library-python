@@ -34,6 +34,7 @@ Authorization Code grant flow.
 from datetime import datetime
 import io
 import json
+import warnings
 
 import six
 
@@ -256,6 +257,7 @@ class Credentials(credentials.ReadOnlyScoped, credentials.CredentialsWithQuotaPr
 
     @_helpers.copy_docstring(credentials.Credentials)
     def refresh(self, request):
+        warnings.warn("refreshing")
         scopes = self._scopes if self._scopes is not None else self._default_scopes
         # Use refresh handler if available and no refresh token is
         # available. This is useful in general when tokens are obtained by calling

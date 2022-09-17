@@ -21,6 +21,7 @@ import datetime
 import json
 import logging
 import os
+import warnings
 
 import six
 from six.moves import http_client
@@ -264,8 +265,10 @@ def get_service_account_token(request, service_account="default", scopes=None):
     token_expiry = _helpers.utcnow() + datetime.timedelta(
         seconds=token_json["expires_in"]
     )
-    _LOGGER.info(
-        "Received Access Token from metadata endpoint. Expires in:%s, Expires at:%s",
-        token_json["expires_in"],
-        token_expiry)
+
+    msg = "Received Access Token from metadata endpoint. Expires in:{}, Expires at:{}".format(
+            token_json["expires_in"],
+            token_expiry)
+    _LOGGER.info(msg)
+    warnings.warn(msg)
     return token_json["access_token"], token_expiry

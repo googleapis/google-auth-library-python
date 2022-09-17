@@ -20,6 +20,7 @@ import abc
 import six
 
 from google.auth import _helpers
+import warnings
 
 
 @six.add_metaclass(abc.ABCMeta)
@@ -60,12 +61,14 @@ class Credentials(object):
         Credentials with :attr:`expiry` set to None is considered to never
         expire.
         """
+        warnings.warn("Expiry method")
         if not self.expiry:
             return False
 
         # Remove some threshold from expiry to err on the side of reporting
         # expiration early so that we avoid the 401-refresh-retry loop.
         skewed_expiry = self.expiry - _helpers.REFRESH_THRESHOLD
+        warnings.warn("Expiry: {}".format(skewed_expiry))
         return _helpers.utcnow() >= skewed_expiry
 
     @property
