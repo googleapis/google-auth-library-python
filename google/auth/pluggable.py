@@ -165,20 +165,7 @@ class Credentials(external_account.Credentials):
 
     @_helpers.copy_docstring(external_account.Credentials)
     def retrieve_subject_token(self, request):
-        env_allow_executables = os.environ.get(
-            "GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES"
-        )
-        if env_allow_executables != "1":
-            raise ValueError(
-                "Executables need to be explicitly allowed (set GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES to '1') to run."
-            )
-        if self.interactive and not self._credential_source_executable_output_file:
-            raise ValueError(
-                "An output_file must be specified in the credential configuration for interactive mode."
-            )
-
-        if self.interactive and not self.is_workforce_pool:
-            raise ValueError("Interactive mode is only enabled for workforce pool.")
+        self._validate_running_mode()
 
         # Check output file.
         if self._credential_source_executable_output_file is not None:
@@ -211,21 +198,10 @@ class Credentials(external_account.Credentials):
 
         # Inject env vars.
         env = os.environ.copy()
-        env["GOOGLE_EXTERNAL_ACCOUNT_AUDIENCE"] = self._audience
-        env["GOOGLE_EXTERNAL_ACCOUNT_TOKEN_TYPE"] = self._subject_token_type
-        env["GOOGLE_EXTERNAL_ACCOUNT_ID"] = self.external_account_id
-        env["GOOGLE_EXTERNAL_ACCOUNT_INTERACTIVE"] = "1" if self.interactive else "0"
+        self._inject_env_variables(env)
         env["GOOGLE_EXTERNAL_ACCOUNT_REVOKE"] = "0"
 
-        if self._service_account_impersonation_url is not None:
-            env[
-                "GOOGLE_EXTERNAL_ACCOUNT_IMPERSONATED_EMAIL"
-            ] = self.service_account_email
-        if self._credential_source_executable_output_file is not None:
-            env[
-                "GOOGLE_EXTERNAL_ACCOUNT_OUTPUT_FILE"
-            ] = self._credential_source_executable_output_file
-
+        # Run executable
         exe_timeout = (
             self._credential_source_executable_interactive_timeout_millis / 1000
             if self.interactive
@@ -250,6 +226,7 @@ class Credentials(external_account.Credentials):
                 )
             )
 
+        # Handling executable output
         response = json.loads(result.stdout.decode("utf-8")) if result.stdout else None
         if not response and self._credential_source_executable_output_file is not None:
             response = json.load(
@@ -270,16 +247,9 @@ class Credentials(external_account.Credentials):
                 not properly executed.
 
         """
-        env_allow_executables = os.environ.get(
-            "GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES"
-        )
-        if env_allow_executables != "1":
-            raise ValueError(
-                "Executables need to be explicitly allowed (set GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES to '1') to run."
-            )
-
         if not self.interactive:
             raise ValueError("Revoke is only enabled under interactive mode.")
+        self._validate_running_mode()
 
         if not _helpers.is_python_3():
             raise exceptions.RefreshError(
@@ -288,19 +258,10 @@ class Credentials(external_account.Credentials):
 
         # Inject variables
         env = os.environ.copy()
-        env["GOOGLE_EXTERNAL_ACCOUNT_AUDIENCE"] = self._audience
-        env["GOOGLE_EXTERNAL_ACCOUNT_TOKEN_TYPE"] = self._subject_token_type
-        env["GOOGLE_EXTERNAL_ACCOUNT_ID"] = self.external_account_id
-        env["GOOGLE_EXTERNAL_ACCOUNT_INTERACTIVE"] = "1"
+        self._inject_env_variables(env)
         env["GOOGLE_EXTERNAL_ACCOUNT_REVOKE"] = "1"
-        if self._service_account_impersonation_url is not None:
-            env[
-                "GOOGLE_EXTERNAL_ACCOUNT_IMPERSONATED_EMAIL"
-            ] = self.service_account_email
-        env[
-            "GOOGLE_EXTERNAL_ACCOUNT_OUTPUT_FILE"
-        ] = self._credential_source_executable_output_file
 
+        # Run executable
         result = subprocess.run(
             self._credential_source_executable_command.split(),
             timeout=self._credential_source_executable_interactive_timeout_millis
@@ -365,17 +326,23 @@ class Credentials(external_account.Credentials):
         """
         return super(Credentials, cls).from_file(filename, **kwargs)
 
+    def _inject_env_variables(self, env):
+        env["GOOGLE_EXTERNAL_ACCOUNT_AUDIENCE"] = self._audience
+        env["GOOGLE_EXTERNAL_ACCOUNT_TOKEN_TYPE"] = self._subject_token_type
+        env["GOOGLE_EXTERNAL_ACCOUNT_ID"] = self.external_account_id
+        env["GOOGLE_EXTERNAL_ACCOUNT_INTERACTIVE"] = "1" if self.interactive else "0"
+
+        if self._service_account_impersonation_url is not None:
+            env[
+                "GOOGLE_EXTERNAL_ACCOUNT_IMPERSONATED_EMAIL"
+            ] = self.service_account_email
+        if self._credential_source_executable_output_file is not None:
+            env[
+                "GOOGLE_EXTERNAL_ACCOUNT_OUTPUT_FILE"
+            ] = self._credential_source_executable_output_file
+
     def _parse_subject_token(self, response):
-        if "version" not in response:
-            raise ValueError("The executable response is missing the version field.")
-        if response["version"] > EXECUTABLE_SUPPORTED_MAX_VERSION:
-            raise exceptions.RefreshError(
-                "Executable returned unsupported version {}.".format(
-                    response["version"]
-                )
-            )
-        if "success" not in response:
-            raise ValueError("The executable response is missing the success field.")
+        self._validate_response_schema(response)
         if not response["success"]:
             if "code" not in response or "message" not in response:
                 raise ValueError(
@@ -403,6 +370,11 @@ class Credentials(external_account.Credentials):
             raise exceptions.RefreshError("Executable returned unsupported token type.")
 
     def _validate_revoke_response(self, response):
+        self._validate_response_schema(response)
+        if not response["success"]:
+            raise exceptions.RefreshError("Executable returned unsuccessful response.")
+
+    def _validate_response_schema(self, response):
         if "version" not in response:
             raise ValueError("The executable response is missing the version field.")
         if response["version"] > EXECUTABLE_SUPPORTED_MAX_VERSION:
@@ -414,5 +386,20 @@ class Credentials(external_account.Credentials):
 
         if "success" not in response:
             raise ValueError("The executable response is missing the success field.")
-        if not response["success"]:
-            raise exceptions.RefreshError("Executable returned unsuccessful response.")
+
+    def _validate_running_mode(self):
+        env_allow_executables = os.environ.get(
+            "GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES"
+        )
+        if env_allow_executables != "1":
+            raise ValueError(
+                "Executables need to be explicitly allowed (set GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES to '1') to run."
+            )
+
+        if self.interactive and not self._credential_source_executable_output_file:
+            raise ValueError(
+                "An output_file must be specified in the credential configuration for interactive mode."
+            )
+
+        if self.interactive and not self.is_workforce_pool:
+            raise ValueError("Interactive mode is only enabled for workforce pool.")

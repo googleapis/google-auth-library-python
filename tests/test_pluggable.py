@@ -1032,7 +1032,9 @@ class TestCredentials(object):
 
     @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "0"})
     def test_revoke_failed_executable_not_allowed(self):
-        credentials = self.make_pluggable(credential_source=self.CREDENTIAL_SOURCE)
+        credentials = self.make_pluggable(
+            credential_source=self.CREDENTIAL_SOURCE, interactive=True
+        )
         with pytest.raises(ValueError) as excinfo:
             _ = credentials.revoke(None)
 
@@ -1055,7 +1057,9 @@ class TestCredentials(object):
             ),
         ):
             credentials = self.make_pluggable(
-                credential_source=self.CREDENTIAL_SOURCE, interactive=True
+                audience=WORKFORCE_AUDIENCE,
+                credential_source=self.CREDENTIAL_SOURCE,
+                interactive=True,
             )
             with pytest.raises(exceptions.RefreshError) as excinfo:
                 _ = credentials.revoke(None)
@@ -1071,7 +1075,9 @@ class TestCredentials(object):
             ),
         ):
             credentials = self.make_pluggable(
-                credential_source=self.CREDENTIAL_SOURCE, interactive=True
+                audience=WORKFORCE_AUDIENCE,
+                credential_source=self.CREDENTIAL_SOURCE,
+                interactive=True,
             )
             with pytest.raises(ValueError) as excinfo:
                 _ = credentials.revoke(None)
@@ -1089,7 +1095,9 @@ class TestCredentials(object):
             ),
         ):
             credentials = self.make_pluggable(
-                credential_source=self.CREDENTIAL_SOURCE, interactive=True
+                audience=WORKFORCE_AUDIENCE,
+                credential_source=self.CREDENTIAL_SOURCE,
+                interactive=True,
             )
             with pytest.raises(exceptions.RefreshError) as excinfo:
                 _ = credentials.revoke(None)
@@ -1105,7 +1113,9 @@ class TestCredentials(object):
             ),
         ):
             credentials = self.make_pluggable(
-                credential_source=self.CREDENTIAL_SOURCE, interactive=True
+                audience=WORKFORCE_AUDIENCE,
+                credential_source=self.CREDENTIAL_SOURCE,
+                interactive=True,
             )
             with pytest.raises(ValueError) as excinfo:
                 _ = credentials.revoke(None)
@@ -1127,6 +1137,7 @@ class TestCredentials(object):
             ),
         ):
             credentials = self.make_pluggable(
+                audience=WORKFORCE_AUDIENCE,
                 service_account_impersonation_url=SERVICE_ACCOUNT_IMPERSONATION_URL,
                 credential_source=self.CREDENTIAL_SOURCE,
                 interactive=True,
@@ -1149,7 +1160,9 @@ class TestCredentials(object):
             ),
         ):
             credentials = self.make_pluggable(
-                credential_source=self.CREDENTIAL_SOURCE, interactive=True
+                audience=WORKFORCE_AUDIENCE,
+                credential_source=self.CREDENTIAL_SOURCE,
+                interactive=True,
             )
             _ = credentials.revoke(None)
 
