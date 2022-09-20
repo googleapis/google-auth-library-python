@@ -16,11 +16,14 @@
 """Interfaces for credentials."""
 
 import abc
+import logging
 
 import six
 
 from google.auth import _helpers
 
+
+_LOGGER = logging.getLogger(__name__)
 
 @six.add_metaclass(abc.ABCMeta)
 class Credentials(object):
@@ -109,6 +112,7 @@ class Credentials(object):
         headers["authorization"] = "Bearer {}".format(
             _helpers.from_bytes(token or self.token)
         )
+        _LOGGER.debug("Attached token with expiry:{} at {}".format(self.expiry, _helpers.utcnow()))
         if self.quota_project_id:
             headers["x-goog-user-project"] = self.quota_project_id
 
