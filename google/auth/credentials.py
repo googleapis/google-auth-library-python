@@ -114,7 +114,7 @@ class Credentials(object):
             _helpers.from_bytes(token or self.token)
         )
 
-        close_to_expiry = self.expiry - datetime.timedelta(seconds=3000)
+        close_to_expiry = self.expiry - datetime.timedelta(seconds=600)
         if _helpers.utcnow() >= close_to_expiry:
             _LOGGER.debug("Attached token with expiry:{} at {}".format(self.expiry, _helpers.utcnow()))
 

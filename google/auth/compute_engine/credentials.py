@@ -20,6 +20,7 @@ Compute Engine using the Compute Engine metadata server.
 """
 
 import datetime
+import logging
 
 import six
 
@@ -30,6 +31,8 @@ from google.auth import iam
 from google.auth import jwt
 from google.auth.compute_engine import _metadata
 from google.oauth2 import _client
+
+_LOGGER = logging.getLogger(__name__)
 
 
 class Credentials(credentials.Scoped, credentials.CredentialsWithQuotaProject):
@@ -107,12 +110,19 @@ class Credentials(credentials.Scoped, credentials.CredentialsWithQuotaProject):
                 credentials.
         """
         scopes = self._scopes if self._scopes is not None else self._default_scopes
+        _LOGGER.info(
+            "Refreshing access token."
+        )
+
         try:
             self._retrieve_info(request)
             self.token, self.expiry = _metadata.get_service_account_token(
                 request, service_account=self._service_account_email, scopes=scopes
             )
         except exceptions.TransportError as caught_exc:
+            _LOGGER.error(
+                f"Caught exception when refreshing access token. {caught_exc}"
+            )
             new_exc = exceptions.RefreshError(caught_exc)
             six.raise_from(new_exc, caught_exc)
 
