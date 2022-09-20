@@ -16,6 +16,7 @@
 """Interfaces for credentials."""
 
 import abc
+import datetime
 import logging
 
 import six
@@ -112,7 +113,11 @@ class Credentials(object):
         headers["authorization"] = "Bearer {}".format(
             _helpers.from_bytes(token or self.token)
         )
-        _LOGGER.debug("Attached token with expiry:{} at {}".format(self.expiry, _helpers.utcnow()))
+
+        close_to_expiry = self.expiry - datetime.timedelta(seconds=3000)
+        if _helpers.utcnow() >= close_to_expiry:
+            _LOGGER.debug("Attached token with expiry:{} at {}".format(self.expiry, _helpers.utcnow()))
+
         if self.quota_project_id:
             headers["x-goog-user-project"] = self.quota_project_id
 
