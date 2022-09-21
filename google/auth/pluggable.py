@@ -132,7 +132,6 @@ class Credentials(external_account.Credentials):
         self._credential_source_executable_output_file = self._credential_source_executable.get(
             "output_file"
         )
-        # TODO: remove this when the tokeninfo endpoint query implemented in auth library
         self._tokeninfo_username = kwargs.get("tokeninfo_username", "")  # dummy value
 
         if not self._credential_source_executable_command:
@@ -201,7 +200,7 @@ class Credentials(external_account.Credentials):
         self._inject_env_variables(env)
         env["GOOGLE_EXTERNAL_ACCOUNT_REVOKE"] = "0"
 
-        # Run executable
+        # Run executable.
         exe_timeout = (
             self._credential_source_executable_interactive_timeout_millis / 1000
             if self.interactive
@@ -226,7 +225,7 @@ class Credentials(external_account.Credentials):
                 )
             )
 
-        # Handling executable output
+        # Handle executable output.
         response = json.loads(result.stdout.decode("utf-8")) if result.stdout else None
         if not response and self._credential_source_executable_output_file is not None:
             response = json.load(
@@ -372,7 +371,7 @@ class Credentials(external_account.Credentials):
     def _validate_revoke_response(self, response):
         self._validate_response_schema(response)
         if not response["success"]:
-            raise exceptions.RefreshError("Executable returned unsuccessful response.")
+            raise exceptions.RefreshError("Revoke failed with unsuccessful response.")
 
     def _validate_response_schema(self, response):
         if "version" not in response:

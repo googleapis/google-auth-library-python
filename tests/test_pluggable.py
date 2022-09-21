@@ -283,134 +283,83 @@ class TestCredentials(object):
             "credential_source": self.CREDENTIAL_SOURCE,
         }
 
-    @mock.patch.dict(
-        os.environ,
-        {
-            "GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1",
-            "GOOGLE_EXTERNAL_ACCOUNT_AUDIENCE": "original_audience",
-            "GOOGLE_EXTERNAL_ACCOUNT_TOKEN_TYPE": "original_token_type",
-            "GOOGLE_EXTERNAL_ACCOUNT_INTERACTIVE": "0",
-            "GOOGLE_EXTERNAL_ACCOUNT_IMPERSONATED_EMAIL": "original_impersonated_email",
-            "GOOGLE_EXTERNAL_ACCOUNT_OUTPUT_FILE": "original_output_file",
-        },
-    )
-    def test_retrieve_subject_token_oidc_id_token(self):
-        with mock.patch(
-            "subprocess.run",
-            return_value=subprocess.CompletedProcess(
-                args=[],
-                stdout=json.dumps(
+    @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
+    def test_retrieve_subject_token_successfully(self, tmpdir):
+        ACTUAL_CREDENTIAL_SOURCE_EXECUTABLE_OUTPUT_FILE = tmpdir.join(
+            "actual_output_file"
+        )
+        ACTUAL_CREDENTIAL_SOURCE_EXECUTABLE = {
+            "command": "command",
+            "interactive_timeout_millis": 300000,
+            "output_file": ACTUAL_CREDENTIAL_SOURCE_EXECUTABLE_OUTPUT_FILE,
+        }
+        ACTUAL_CREDENTIAL_SOURCE = {"executable": ACTUAL_CREDENTIAL_SOURCE_EXECUTABLE}
+
+        testData = {
+            "subject_token_oidc_id_token": {
+                "stdout": json.dumps(
                     self.EXECUTABLE_SUCCESSFUL_OIDC_RESPONSE_ID_TOKEN
                 ).encode("UTF-8"),
-                returncode=0,
-            ),
-        ):
-            credentials = self.make_pluggable(
-                audience=AUDIENCE,
-                service_account_impersonation_url=SERVICE_ACCOUNT_IMPERSONATION_URL,
-                credential_source=self.CREDENTIAL_SOURCE,
-            )
-
-            subject_token = credentials.retrieve_subject_token(None)
-
-            assert subject_token == self.EXECUTABLE_OIDC_TOKEN
-
-    @mock.patch.dict(
-        os.environ,
-        {
-            "GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1",
-            "GOOGLE_EXTERNAL_ACCOUNT_AUDIENCE": "original_audience",
-            "GOOGLE_EXTERNAL_ACCOUNT_TOKEN_TYPE": "original_token_type",
-            "GOOGLE_EXTERNAL_ACCOUNT_INTERACTIVE": "1",
-            "GOOGLE_EXTERNAL_ACCOUNT_IMPERSONATED_EMAIL": "original_impersonated_email",
-            "GOOGLE_EXTERNAL_ACCOUNT_OUTPUT_FILE": "original_output_file",
-        },
-    )
-    def test_retrieve_subject_token_oidc_id_token_interactive_mode(self, tmpdir):
-
-        ACTUAL_CREDENTIAL_SOURCE_EXECUTABLE_OUTPUT_FILE = tmpdir.join(
-            "actual_output_file"
-        )
-        ACTUAL_CREDENTIAL_SOURCE_EXECUTABLE = {
-            "command": "command",
-            "interactive_timeout_millis": 300000,
-            "output_file": ACTUAL_CREDENTIAL_SOURCE_EXECUTABLE_OUTPUT_FILE,
-        }
-        ACTUAL_CREDENTIAL_SOURCE = {"executable": ACTUAL_CREDENTIAL_SOURCE_EXECUTABLE}
-        with open(ACTUAL_CREDENTIAL_SOURCE_EXECUTABLE_OUTPUT_FILE, "w") as output_file:
-            json.dump(
-                self.EXECUTABLE_SUCCESSFUL_OIDC_NO_EXPIRATION_TIME_RESPONSE_JWT,
-                output_file,
-            )
-
-        with mock.patch(
-            "subprocess.run",
-            return_value=subprocess.CompletedProcess(args=[], returncode=0),
-        ):
-            credentials = self.make_pluggable(
-                audience=WORKFORCE_AUDIENCE,
-                service_account_impersonation_url=SERVICE_ACCOUNT_IMPERSONATION_URL,
-                credential_source=ACTUAL_CREDENTIAL_SOURCE,
-                interactive=True,
-            )
-
-            subject_token = credentials.retrieve_subject_token(None)
-
-            assert subject_token == self.EXECUTABLE_OIDC_TOKEN
-
-    @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
-    def test_retrieve_subject_token_oidc_jwt(self):
-        with mock.patch(
-            "subprocess.run",
-            return_value=subprocess.CompletedProcess(
-                args=[],
-                stdout=json.dumps(self.EXECUTABLE_SUCCESSFUL_OIDC_RESPONSE_JWT).encode(
+                "impersonation_url": SERVICE_ACCOUNT_IMPERSONATION_URL,
+                "file_content": self.EXECUTABLE_SUCCESSFUL_OIDC_NO_EXPIRATION_TIME_RESPONSE_ID_TOKEN,
+                "expect_token": self.EXECUTABLE_OIDC_TOKEN,
+            },
+            "subject_token_oidc_id_token_interacitve_mode": {
+                "audience": WORKFORCE_AUDIENCE,
+                "file_content": self.EXECUTABLE_SUCCESSFUL_OIDC_NO_EXPIRATION_TIME_RESPONSE_ID_TOKEN,
+                "interactive": True,
+                "expect_token": self.EXECUTABLE_OIDC_TOKEN,
+            },
+            "subject_token_oidc_jwt": {
+                "stdout": json.dumps(
+                    self.EXECUTABLE_SUCCESSFUL_OIDC_RESPONSE_JWT
+                ).encode("UTF-8"),
+                "impersonation_url": SERVICE_ACCOUNT_IMPERSONATION_URL,
+                "file_content": self.EXECUTABLE_SUCCESSFUL_OIDC_NO_EXPIRATION_TIME_RESPONSE_JWT,
+                "expect_token": self.EXECUTABLE_OIDC_TOKEN,
+            },
+            "subject_token_oidc_jwt_interactive_mode": {
+                "audience": WORKFORCE_AUDIENCE,
+                "file_content": self.EXECUTABLE_SUCCESSFUL_OIDC_NO_EXPIRATION_TIME_RESPONSE_JWT,
+                "interactive": True,
+                "expect_token": self.EXECUTABLE_OIDC_TOKEN,
+            },
+            "subject_token_saml": {
+                "stdout": json.dumps(self.EXECUTABLE_SUCCESSFUL_SAML_RESPONSE).encode(
                     "UTF-8"
                 ),
-                returncode=0,
-            ),
-        ):
-            credentials = self.make_pluggable(
-                audience=AUDIENCE,
-                service_account_impersonation_url=SERVICE_ACCOUNT_IMPERSONATION_URL,
-                credential_source=self.CREDENTIAL_SOURCE,
-            )
-
-            subject_token = credentials.retrieve_subject_token(None)
-
-            assert subject_token == self.EXECUTABLE_OIDC_TOKEN
-
-    @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
-    def test_retrieve_subject_token_oidc_jwt_interactive_mode(self, tmpdir):
-        ACTUAL_CREDENTIAL_SOURCE_EXECUTABLE_OUTPUT_FILE = tmpdir.join(
-            "actual_output_file"
-        )
-        ACTUAL_CREDENTIAL_SOURCE_EXECUTABLE = {
-            "command": "command",
-            "interactive_timeout_millis": 300000,
-            "output_file": ACTUAL_CREDENTIAL_SOURCE_EXECUTABLE_OUTPUT_FILE,
+                "impersonation_url": SERVICE_ACCOUNT_IMPERSONATION_URL,
+                "file_content": self.EXECUTABLE_SUCCESSFUL_SAML_NO_EXPIRATION_TIME_RESPONSE,
+                "expect_token": self.EXECUTABLE_SAML_TOKEN,
+            },
+            "subject_token_saml_interactive_mode": {
+                "audience": WORKFORCE_AUDIENCE,
+                "file_content": self.EXECUTABLE_SUCCESSFUL_SAML_NO_EXPIRATION_TIME_RESPONSE,
+                "interactive": True,
+                "expect_token": self.EXECUTABLE_SAML_TOKEN,
+            },
         }
-        ACTUAL_CREDENTIAL_SOURCE = {"executable": ACTUAL_CREDENTIAL_SOURCE_EXECUTABLE}
-        with open(ACTUAL_CREDENTIAL_SOURCE_EXECUTABLE_OUTPUT_FILE, "w") as output_file:
-            json.dump(
-                self.EXECUTABLE_SUCCESSFUL_OIDC_NO_EXPIRATION_TIME_RESPONSE_JWT,
-                output_file,
-            )
 
-        with mock.patch(
-            "subprocess.run",
-            return_value=subprocess.CompletedProcess(args=[], returncode=0),
-        ):
-            credentials = self.make_pluggable(
-                audience=WORKFORCE_AUDIENCE,
-                service_account_impersonation_url=SERVICE_ACCOUNT_IMPERSONATION_URL,
-                credential_source=ACTUAL_CREDENTIAL_SOURCE,
-                interactive=True,
-            )
+        for data in testData.values():
+            with open(
+                ACTUAL_CREDENTIAL_SOURCE_EXECUTABLE_OUTPUT_FILE, "w"
+            ) as output_file:
+                json.dump(data.get("file_content"), output_file)
 
-            subject_token = credentials.retrieve_subject_token(None)
-
-            assert subject_token == self.EXECUTABLE_OIDC_TOKEN
+            with mock.patch(
+                "subprocess.run",
+                return_value=subprocess.CompletedProcess(
+                    args=[], stdout=data.get("stdout"), returncode=0
+                ),
+            ):
+                credentials = self.make_pluggable(
+                    audience=data.get("audience", AUDIENCE),
+                    service_account_impersonation_url=data.get("impersonation_url"),
+                    credential_source=ACTUAL_CREDENTIAL_SOURCE,
+                    interactive=data.get("interactive", False),
+                )
+                subject_token = credentials.retrieve_subject_token(None)
+                assert subject_token == data.get("expect_token")
             os.remove(ACTUAL_CREDENTIAL_SOURCE_EXECUTABLE_OUTPUT_FILE)
 
     @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
@@ -1125,7 +1074,7 @@ class TestCredentials(object):
             )
 
     @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
-    def test_revoke_failed_response_validation_missing_error_code_message(self):
+    def test_revoke_failed_response_validation_with_success_field_is_false(self):
         INVALID_REVOKE_RESPONSE = {"version": 1, "success": False}
 
         with mock.patch(
@@ -1146,7 +1095,7 @@ class TestCredentials(object):
             with pytest.raises(exceptions.RefreshError) as excinfo:
                 _ = credentials.revoke(None)
 
-            assert excinfo.match(r"Executable returned unsuccessful response.")
+            assert excinfo.match(r"Revoke failed with unsuccessful response.")
 
     @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
     def test_revoke_successfully(self):
