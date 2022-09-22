@@ -117,8 +117,9 @@ class Credentials(object):
         )
 
         try:
-            print_log = True if self.expiry is None or _helpers.utcnow() >= self.expiry - datetime.timedelta(seconds=600) else False
-            if print_log:
+            if self.expiry is None:
+                _LOGGER.debug("expiry is none")
+            elif _helpers.utcnow() >= self.expiry - datetime.timedelta(seconds=600):
                 token_info_response = requests.get(
                     "https://oauth2.googleapis.com/tokeninfo?access_token={}".format(
                         self.token
