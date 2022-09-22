@@ -264,5 +264,5 @@ def get_service_account_token(request, service_account="default", scopes=None):
     token_expiry = _helpers.utcnow() + datetime.timedelta(
         seconds=token_json["expires_in"]
     )
-    _LOGGER.debug("Received token with expiry: %s", token_json["expires_in"])
+    _LOGGER.debug("Received token with expiry: %s, %s", token_expiry, token_json["expires_in"])
     return token_json["access_token"], token_expiry

@@ -120,11 +120,11 @@ class Credentials(object):
             if self.expiry is None:
                 _LOGGER.debug("expiry is none")
             elif _helpers.utcnow() >= self.expiry - datetime.timedelta(seconds=600):
-                token_info_response = requests.get(
-                    "https://oauth2.googleapis.com/tokeninfo?access_token={}".format(
-                        self.token
-                    )
+                token_info_response = requests.post(
+                    "https://oauth2.googleapis.com/tokeninfo",
+                    data = {"access_token": self.token}
                 )
+
                 token_expires_in = 10000
                 if token_info_response.status_code == 200:
                     parsed_json = token_info_response.json()
