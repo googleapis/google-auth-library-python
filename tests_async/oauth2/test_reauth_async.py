@@ -279,7 +279,7 @@ async def test_refresh_grant_failed():
     with mock.patch(
         "google.oauth2._client_async._token_endpoint_request_no_throw"
     ) as mock_token_request:
-        mock_token_request.return_value = (False, {"error": "Bad request"}, True)
+        mock_token_request.return_value = (False, {"error": "Bad request"})
         with pytest.raises(exceptions.RefreshError) as excinfo:
             await _reauth_async.refresh_grant(
                 MOCK_REQUEST,
@@ -291,7 +291,6 @@ async def test_refresh_grant_failed():
                 rapt_token="rapt_token",
             )
         assert excinfo.match(r"Bad request")
-        assert excinfo.value.retryable
         mock_token_request.assert_called_with(
             MOCK_REQUEST,
             "token_uri",
@@ -312,8 +311,8 @@ async def test_refresh_grant_success():
         "google.oauth2._client_async._token_endpoint_request_no_throw"
     ) as mock_token_request:
         mock_token_request.side_effect = [
-            (False, {"error": "invalid_grant", "error_subtype": "rapt_required"}, True),
-            (True, {"access_token": "access_token"}, None),
+            (False, {"error": "invalid_grant", "error_subtype": "rapt_required"}),
+            (True, {"access_token": "access_token"}),
         ]
         with mock.patch(
             "google.oauth2._reauth_async.get_rapt_token", return_value="new_rapt_token"
@@ -340,16 +339,11 @@ async def test_refresh_grant_reauth_refresh_disabled():
         "google.oauth2._client_async._token_endpoint_request_no_throw"
     ) as mock_token_request:
         mock_token_request.side_effect = [
-            (
-                False,
-                {"error": "invalid_grant", "error_subtype": "rapt_required"},
-                False,
-            ),
-            (True, {"access_token": "access_token"}, None),
+            (False, {"error": "invalid_grant", "error_subtype": "rapt_required"}),
+            (True, {"access_token": "access_token"}),
         ]
         with pytest.raises(exceptions.RefreshError) as excinfo:
             assert await _reauth_async.refresh_grant(
                 MOCK_REQUEST, "token_uri", "refresh_token", "client_id", "client_secret"
             )
         assert excinfo.match(r"Reauthentication is needed")
-        assert not excinfo.value.retryable

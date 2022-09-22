@@ -18,15 +18,6 @@
 class GoogleAuthError(Exception):
     """Base class for all google.auth errors."""
 
-    def __init__(self, *args, **kwargs):
-        super(GoogleAuthError, self).__init__(*args)
-        retryable = kwargs.get("retryable", False)
-        self._retryable = retryable
-
-    @property
-    def retryable(self):
-        return self._retryable
-
 
 class TransportError(GoogleAuthError):
     """Used to indicate an error occurred during an HTTP request."""
@@ -53,10 +44,6 @@ class MutualTLSChannelError(GoogleAuthError):
 class ClientCertError(GoogleAuthError):
     """Used to indicate that client certificate is missing or invalid."""
 
-    @property
-    def retryable(self):
-        return False
-
 
 class OAuthError(GoogleAuthError):
     """Used to indicate an error occurred during an OAuth related HTTP
@@ -66,9 +53,9 @@ class OAuthError(GoogleAuthError):
 class ReauthFailError(RefreshError):
     """An exception for when reauth failed."""
 
-    def __init__(self, message=None, **kwargs):
+    def __init__(self, message=None):
         super(ReauthFailError, self).__init__(
-            "Reauthentication failed. {0}".format(message), **kwargs
+            "Reauthentication failed. {0}".format(message)
         )
 
 
