@@ -990,112 +990,59 @@ class TestCredentials(object):
         assert excinfo.match(r"Executables need to be explicitly allowed")
 
     @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
-    def test_revoke_failed_non_interactive_mode(self):
-        credentials = self.make_pluggable(credential_source=self.CREDENTIAL_SOURCE)
-        with pytest.raises(ValueError) as excinfo:
-            _ = credentials.revoke(None)
+    def test_revoke_failed(self):
+        testData = {
+            "non_interactive_mode": {
+                "interactive": False,
+                "expectErrType": ValueError,
+                "expectErrPattern": r"Revoke is only enabled under interactive mode.",
+            },
+            "executable_failed": {
+                "returncode": 1,
+                "expectErrType": exceptions.RefreshError,
+                "expectErrPattern": r"Auth revoke failed on executable.",
+            },
+            "response_validation_missing_version": {
+                "response": {},
+                "expectErrType": ValueError,
+                "expectErrPattern": r"The executable response is missing the version field.",
+            },
+            "response_validation_invalid_version": {
+                "response": {"version": 2},
+                "expectErrType": exceptions.RefreshError,
+                "expectErrPattern": r"Executable returned unsupported version.",
+            },
+            "response_validation_missing_success": {
+                "response": {"version": 1},
+                "expectErrType": ValueError,
+                "expectErrPattern": r"The executable response is missing the success field.",
+            },
+            "response_validation_failed_with_success_field_is_false": {
+                "response": {"version": 1, "success": False},
+                "expectErrType": exceptions.RefreshError,
+                "expectErrPattern": r"Revoke failed with unsuccessful response.",
+            },
+        }
+        for data in testData.values():
+            with mock.patch(
+                "subprocess.run",
+                return_value=subprocess.CompletedProcess(
+                    args=[],
+                    stdout=json.dumps(data.get("response")).encode("UTF-8"),
+                    returncode=data.get("returncode", 0),
+                ),
+            ):
+                credentials = self.make_pluggable(
+                    audience=WORKFORCE_AUDIENCE,
+                    service_account_impersonation_url=SERVICE_ACCOUNT_IMPERSONATION_URL,
+                    credential_source=self.CREDENTIAL_SOURCE,
+                    interactive=data.get("interactive", True),
+                )
 
-        assert excinfo.match(r"Revoke is only enabled under interactive mode.")
+                with pytest.raises(data.get("expectErrType")) as excinfo:
+                    _ = credentials.revoke(None)
 
-    @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
-    def test_revoke_failed_executable(self):
-        with mock.patch(
-            "subprocess.run",
-            return_value=subprocess.CompletedProcess(
-                args=[], stdout=None, returncode=1
-            ),
-        ):
-            credentials = self.make_pluggable(
-                audience=WORKFORCE_AUDIENCE,
-                credential_source=self.CREDENTIAL_SOURCE,
-                interactive=True,
-            )
-            with pytest.raises(exceptions.RefreshError) as excinfo:
-                _ = credentials.revoke(None)
-
-            assert excinfo.match(r"Auth revoke failed on executable.")
-
-    @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
-    def test_revoke_failed_response_validation_missing_version(self):
-        with mock.patch(
-            "subprocess.run",
-            return_value=subprocess.CompletedProcess(
-                args=[], stdout=json.dumps({}).encode("utf-8"), returncode=0
-            ),
-        ):
-            credentials = self.make_pluggable(
-                audience=WORKFORCE_AUDIENCE,
-                credential_source=self.CREDENTIAL_SOURCE,
-                interactive=True,
-            )
-            with pytest.raises(ValueError) as excinfo:
-                _ = credentials.revoke(None)
-
-            assert excinfo.match(
-                r"The executable response is missing the version field."
-            )
-
-    @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
-    def test_revoke_failed_response_validation_invalid_version(self):
-        with mock.patch(
-            "subprocess.run",
-            return_value=subprocess.CompletedProcess(
-                args=[], stdout=json.dumps({"version": 2}).encode("utf-8"), returncode=0
-            ),
-        ):
-            credentials = self.make_pluggable(
-                audience=WORKFORCE_AUDIENCE,
-                credential_source=self.CREDENTIAL_SOURCE,
-                interactive=True,
-            )
-            with pytest.raises(exceptions.RefreshError) as excinfo:
-                _ = credentials.revoke(None)
-
-            assert excinfo.match(r"Executable returned unsupported version.")
-
-    @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
-    def test_revoke_failed_response_validation_missing_success(self):
-        with mock.patch(
-            "subprocess.run",
-            return_value=subprocess.CompletedProcess(
-                args=[], stdout=json.dumps({"version": 1}).encode("utf-8"), returncode=0
-            ),
-        ):
-            credentials = self.make_pluggable(
-                audience=WORKFORCE_AUDIENCE,
-                credential_source=self.CREDENTIAL_SOURCE,
-                interactive=True,
-            )
-            with pytest.raises(ValueError) as excinfo:
-                _ = credentials.revoke(None)
-
-            assert excinfo.match(
-                r"The executable response is missing the success field."
-            )
-
-    @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
-    def test_revoke_failed_response_validation_with_success_field_is_false(self):
-        INVALID_REVOKE_RESPONSE = {"version": 1, "success": False}
-
-        with mock.patch(
-            "subprocess.run",
-            return_value=subprocess.CompletedProcess(
-                args=[],
-                stdout=json.dumps(INVALID_REVOKE_RESPONSE).encode("UTF-8"),
-                returncode=0,
-            ),
-        ):
-            credentials = self.make_pluggable(
-                audience=WORKFORCE_AUDIENCE,
-                service_account_impersonation_url=SERVICE_ACCOUNT_IMPERSONATION_URL,
-                credential_source=self.CREDENTIAL_SOURCE,
-                interactive=True,
-            )
-
-            with pytest.raises(exceptions.RefreshError) as excinfo:
-                _ = credentials.revoke(None)
-
-            assert excinfo.match(r"Revoke failed with unsuccessful response.")
+                assert excinfo.match(data.get("expectErrPattern"))
 
     @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
     def test_revoke_successfully(self):
