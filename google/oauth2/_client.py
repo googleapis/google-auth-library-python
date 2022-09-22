@@ -339,7 +339,7 @@ def id_token_jwt_grant(request, token_uri, assertion, can_retry=True):
         id_token = response_data["id_token"]
     except KeyError as caught_exc:
         new_exc = exceptions.RefreshError(
-            "No ID token in response.", response_data, retryable=True
+            "No ID token in response.", response_data, retryable=False
         )
         six.raise_from(new_exc, caught_exc)
 
@@ -370,7 +370,7 @@ def _handle_refresh_grant_response(response_data, refresh_token):
         access_token = response_data["access_token"]
     except KeyError as caught_exc:
         new_exc = exceptions.RefreshError(
-            "No access token in response.", response_data, retryable=True
+            "No access token in response.", response_data, retryable=False
         )
         six.raise_from(new_exc, caught_exc)
 

@@ -241,7 +241,7 @@ async def test_jwt_grant_no_access_token():
 
     with pytest.raises(exceptions.RefreshError) as excinfo:
         await _client.jwt_grant(request, "http://example.com", "assertion_value")
-    assert excinfo.value.retryable
+    assert not excinfo.value.retryable
 
 
 @pytest.mark.asyncio
@@ -283,7 +283,7 @@ async def test_id_token_jwt_grant_no_access_token():
         await _client.id_token_jwt_grant(
             request, "http://example.com", "assertion_value"
         )
-    assert excinfo.value.retryable
+    assert not excinfo.value.retryable
 
 
 @pytest.mark.asyncio
@@ -382,7 +382,7 @@ async def test_refresh_grant_no_access_token():
         await _client.refresh_grant(
             request, "http://example.com", "refresh_token", "client_id", "client_secret"
         )
-    assert excinfo.value.retryable
+    assert not excinfo.value.retryable
 
 
 @pytest.mark.asyncio
