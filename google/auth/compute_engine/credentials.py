@@ -110,9 +110,7 @@ class Credentials(credentials.Scoped, credentials.CredentialsWithQuotaProject):
                 credentials.
         """
         scopes = self._scopes if self._scopes is not None else self._default_scopes
-        _LOGGER.info(
-            "Refreshing access token."
-        )
+        _LOGGER.info("Refreshing access token.")
 
         try:
             self._retrieve_info(request)

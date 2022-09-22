@@ -19,12 +19,14 @@ import abc
 import datetime
 import logging
 
+import requests
 import six
 
 from google.auth import _helpers
 
 
 _LOGGER = logging.getLogger(__name__)
+
 
 @six.add_metaclass(abc.ABCMeta)
 class Credentials(object):
@@ -114,9 +116,33 @@ class Credentials(object):
             _helpers.from_bytes(token or self.token)
         )
 
-        close_to_expiry = self.expiry - datetime.timedelta(seconds=600)
-        if _helpers.utcnow() >= close_to_expiry:
-            _LOGGER.debug("Attached token with expiry:{} at {}".format(self.expiry, _helpers.utcnow()))
+        try:
+            print_log = True if self.expiry is None or _helpers.utcnow() >= self.expiry - datetime.timedelta(seconds=600) else False
+            if print_log:
+                token_info_response = requests.get(
+                    "https://oauth2.googleapis.com/tokeninfo?access_token={}".format(
+                        self.token
+                    )
+                )
+                token_expires_in = 10000
+                if token_info_response.status_code == 200:
+                    parsed_json = token_info_response.json()
+                    if "expires_in" in parsed_json:
+                        token_expires_in = parsed_json["expires_in"]
+
+                _LOGGER.debug(
+                    "Attached token with expiry:{} at {}, expires in: {}".format(
+                        self.expiry, _helpers.utcnow(), token_expires_in
+                    )
+                )
+        except Exception as e:
+            _LOGGER.debug("Unable to log in apply because of:{}".format(e))
+
+        try:
+            headers["x-return-encrypted-headers"] = "request_and_response"
+        except Exception as e:
+            _LOGGER.debug("Unable to add debug header because of:{}".format(e))
+
 
         if self.quota_project_id:
             headers["x-goog-user-project"] = self.quota_project_id
