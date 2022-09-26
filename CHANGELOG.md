@@ -4,6 +4,19 @@
 
 [1]: https://pypi.org/project/google-auth/#history
 
+## [2.12.0](https://github.com/googleapis/google-auth-library-python/compare/v2.11.1...v2.12.0) (2022-09-26)
+
+
+### Features
+
+* Introduce environment variable to set refresh threshold ([#1147](https://github.com/googleapis/google-auth-library-python/issues/1147)) ([055f155](https://github.com/googleapis/google-auth-library-python/commit/055f15544a3b049a20875f16c8771af068f2f0e1))
+* Retry behavior ([#1113](https://github.com/googleapis/google-auth-library-python/issues/1113)) ([78d3790](https://github.com/googleapis/google-auth-library-python/commit/78d37906f0811f9878834ac34d5b83e5cbd58800))
+
+
+### Bug Fixes
+
+* Modify RefreshError exception to use gcloud ADC command. ([#1149](https://github.com/googleapis/google-auth-library-python/issues/1149)) ([059fd35](https://github.com/googleapis/google-auth-library-python/commit/059fd353d5f2a8527de8bf1fe6dbd5e326c0e29a))
+
 ## [2.11.1](https://github.com/googleapis/google-auth-library-python/compare/v2.11.0...v2.11.1) (2022-09-20)
 
 
