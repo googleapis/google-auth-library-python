@@ -15,6 +15,7 @@
 ### Bug Fixes
 
 * Modify RefreshError exception to use gcloud ADC command. ([#1149](https://github.com/googleapis/google-auth-library-python/issues/1149)) ([059fd35](https://github.com/googleapis/google-auth-library-python/commit/059fd353d5f2a8527de8bf1fe6dbd5e326c0e29a))
+* Revert "Update token refresh threshold from 20 seconds to 5 minutes". ([186464b](https://github.com/googleapis/google-auth-library-python/commit/186464bf5920fb3b76499ac542b0fb90023629de))
 
 ## [2.11.1](https://github.com/googleapis/google-auth-library-python/compare/v2.11.0...v2.11.1) (2022-09-20)
 
