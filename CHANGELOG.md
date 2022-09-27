@@ -9,7 +9,6 @@
 
 ### Features
 
-* Introduce environment variable to set refresh threshold ([#1147](https://github.com/googleapis/google-auth-library-python/issues/1147)) ([055f155](https://github.com/googleapis/google-auth-library-python/commit/055f15544a3b049a20875f16c8771af068f2f0e1))
 * Retry behavior ([#1113](https://github.com/googleapis/google-auth-library-python/issues/1113)) ([78d3790](https://github.com/googleapis/google-auth-library-python/commit/78d37906f0811f9878834ac34d5b83e5cbd58800))
 
 
