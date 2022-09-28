@@ -13,22 +13,35 @@
 # limitations under the License.
 import re
 
+import pytest
 from _pytest.capture import CaptureFixture
 
 import authenticate_explicit_with_adc
 import authenticate_implicit_with_adc
+import authenticate_with_api_key
+import create_api_key
+import delete_api_key
 import idtoken_from_metadata_server
 import idtoken_from_service_account
+import lookup_api_key
 # from system_tests.noxfile import SERVICE_ACCOUNT_FILE
 import verify_google_idtoken
 
 import google
+from google.cloud.api_keys_v2 import Key
 from google.oauth2 import service_account
 import google.auth.transport.requests
 import os
 
 CREDENTIALS, PROJECT = google.auth.default()
 SERVICE_ACCOUNT_FILE = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+
+
+@pytest.fixture(scope="module")
+def api_key():
+    api_key = create_api_key.create_api_key(PROJECT, "global")
+    yield api_key
+    delete_api_key.delete_api_key(PROJECT, "global", api_key.name.rsplit("/")[-1])
 
 
 def test_authenticate_explicit_with_adc(capsys: CaptureFixture):
@@ -65,6 +78,18 @@ def test_verify_google_idtoken():
         "iap.googleapis.com",
         "https://www.googleapis.com/oauth2/v3/certs"
     )
+
+
+def test_authenticate_with_api_key(api_key: Key, capsys: CaptureFixture):
+    authenticate_with_api_key.authenticate_with_api_key(PROJECT, api_key.key_string)
+    out, err = capsys.readouterr()
+    assert re.search("Successfully authenticated using the API key", out)
+
+
+def test_lookup_api_key(api_key: Key, capsys: CaptureFixture):
+    lookup_api_key.lookup_api_key(api_key.key_string)
+    out, err = capsys.readouterr()
+    assert re.search(f"Successfully retrieved the API key name: {api_key.name}", out)
 
 
 def get_idtoken_from_service_account(json_credential_path: str, target_audience: str):
