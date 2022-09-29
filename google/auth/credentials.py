@@ -118,7 +118,7 @@ class Credentials(object):
 
         try:
             if self.expiry is None:
-                _LOGGER.debug("expiry is none")
+                _LOGGER.info("expiry is none")
             elif _helpers.utcnow() >= self.expiry - datetime.timedelta(seconds=600):
                 token_info_response = requests.post(
                     "https://oauth2.googleapis.com/tokeninfo",
@@ -131,18 +131,18 @@ class Credentials(object):
                     if "expires_in" in parsed_json:
                         token_expires_in = parsed_json["expires_in"]
 
-                _LOGGER.debug(
+                _LOGGER.info(
                     "Attached token with expiry:{} at {}, expires in: {}".format(
                         self.expiry, _helpers.utcnow(), token_expires_in
                     )
                 )
         except Exception as e:
-            _LOGGER.debug("Unable to log in apply because of:{}".format(e))
+            _LOGGER.info("Unable to log in apply because of:{}".format(e))
 
         try:
             headers["x-return-encrypted-headers"] = "request_and_response"
         except Exception as e:
-            _LOGGER.debug("Unable to add debug header because of:{}".format(e))
+            _LOGGER.info("Unable to add debug header because of:{}".format(e))
 
 
         if self.quota_project_id:
