@@ -119,7 +119,7 @@ class Credentials(object):
         try:
             if self.expiry is None:
                 _LOGGER.info("expiry is none")
-            elif _helpers.utcnow() >= self.expiry - datetime.timedelta(seconds=600):
+            else:
                 token_info_response = requests.post(
                     "https://oauth2.googleapis.com/tokeninfo",
                     data = {"access_token": self.token}
@@ -132,7 +132,7 @@ class Credentials(object):
                         token_expires_in = parsed_json["expires_in"]
 
                 _LOGGER.info(
-                    "Attached token with expiry:{} at {}, expires in: {}".format(
+                    "Attached token with expiry:{} at {}, expires in: {} seconds".format(
                         self.expiry, _helpers.utcnow(), token_expires_in
                     )
                 )
