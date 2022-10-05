@@ -289,6 +289,7 @@ class TestCredentials(object):
             "https://us-east-1-sts.googleapis.com",
             "https://US-WEST-1-sts.googleapis.com",
             "https://us-west-1-sts.googleapis.com/path?query",
+            "https://sts-us-east-1.p.googleapis.com",
         ]
 
         for url in valid_urls:
@@ -335,6 +336,7 @@ class TestCredentials(object):
             "https://us-east-1-iamcredentials.googleapis.com",
             "https://US-WEST-1-iamcredentials.googleapis.com",
             "https://us-west-1-iamcredentials.googleapis.com/path?query",
+            "https://iamcredentials-us-east-1.p.googleapis.com",
         ]
 
         for url in valid_urls:
