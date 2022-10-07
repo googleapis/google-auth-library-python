@@ -58,6 +58,48 @@ class Client(utils.OAuthClientAuthHandler):
         super(Client, self).__init__(client_authentication)
         self._token_exchange_endpoint = token_exchange_endpoint
 
+    def _make_request(self, request, headers, request_body):
+        # Initialize request headers.
+        request_headers = _URLENCODED_HEADERS.copy()
+
+        # Inject additional headers.
+        if headers:
+            for k, v in dict(headers).items():
+                request_headers[k] = v
+
+        # Apply OAuth client authentication.
+        self.apply_client_authentication_options(request_headers, request_body)
+
+        # Execute request.
+        response = request(
+            url=self._token_exchange_endpoint,
+            method="POST",
+            headers=request_headers,
+            body=urllib.parse.urlencode(request_body).encode("utf-8"),
+        )
+
+        response_body = (
+            response.data.decode("utf-8")
+            if hasattr(response.data, "decode")
+            else response.data
+        )
+
+        # If non-200 response received, translate to OAuthError exception.
+        if response.status != http_client.OK:
+            utils.handle_error_response(response_body)
+
+        response_data = json.loads(response_body)
+
+        # Return successful response.
+        return response_data
+
+    def refresh_token(self, request, refresh_token):
+        """"""
+        return _make_request(request, None, {
+            "grant_type": "refresh_token",
+            "refresh_token": refresh_token,
+        })
+
     def exchange_token(
         self,
         request,
@@ -102,8 +144,6 @@ class Client(utils.OAuthClientAuthHandler):
             google.auth.exceptions.OAuthError: If the token endpoint returned
                 an error.
         """
-        # Initialize request headers.
-        headers = _URLENCODED_HEADERS.copy()
         # Inject additional headers.
         if additional_headers:
             for k, v in dict(additional_headers).items():
@@ -128,28 +168,5 @@ class Client(utils.OAuthClientAuthHandler):
         for k, v in dict(request_body).items():
             if v is None or v == "":
                 del request_body[k]
-        # Apply OAuth client authentication.
-        self.apply_client_authentication_options(headers, request_body)
 
-        # Execute request.
-        response = request(
-            url=self._token_exchange_endpoint,
-            method="POST",
-            headers=headers,
-            body=urllib.parse.urlencode(request_body).encode("utf-8"),
-        )
-
-        response_body = (
-            response.data.decode("utf-8")
-            if hasattr(response.data, "decode")
-            else response.data
-        )
-
-        # If non-200 response received, translate to OAuthError exception.
-        if response.status != http_client.OK:
-            utils.handle_error_response(response_body)
-
-        response_data = json.loads(response_body)
-
-        # Return successful response.
-        return response_data
+        return _make_request(request, additional_headers, request_body)
