@@ -13,9 +13,13 @@
 # limitations under the License.
 
 """External Account Authorized User Credentials.
-This module provides credentials to access Google Cloud resources from on-prem
-or non-Google Cloud platforms which support external credentials (e.g. OIDC ID
-tokens) as part of a web-based 3-legged OAuth flow.
+This module provides credentials based on OAuth 2.0 access and refresh tokens.
+These credentials usually access resources on behalf of a user (resource
+owner).
+
+Specifically, these are sourced using external identities via Workforce Identity Federation.
+
+Obtaining the initial access and refresh token can be done through the Google Cloud CLI.
 
 Example credential:
 {
@@ -38,16 +42,23 @@ from google.auth import credentials
 from google.oauth2 import sts
 from google.oauth2 import utils
 
-
 _EXTERNAL_ACCOUNT_AUTHORIZED_USER_JSON_TYPE = "external_account_authorized_user"
 
 
-class Credentials(credentials.CredentialsWithQuotaProject, credentials.ReadOnlyScoped):
+class Credentials(
+    credentials.CredentialsWithQuotaProject,
+    credentials.ReadOnlyScoped,
+    credentials.CredentialsWithTokenUri,
+):
     """Credentials for External Account Authorized Users.
 
     This is used to instantiate Credentials for exchanging refresh tokens from
     authorized users for Google access token and authorizing requests to Google
     APIs.
+
+    The credentials are considered immutable. If you want to modify the
+    quota project, use `with_quota_project` and if you want to modify the token
+    uri, use `with_token_uri`
     """
 
     def __init__(
@@ -88,20 +99,10 @@ class Credentials(credentials.CredentialsWithQuotaProject, credentials.ReadOnlyS
                 useful for serializing the current credentials so it can deserialized
                 later.
         """
-        config_info = {
-            "type": _HEADFUL_JSON_TYPE,
-            "audience": self._audience,
-            "refresh_token": self._refresh_token,
-            "token_url": self._token_url,
-            "token_info_url": self._token_info_url,
-            "client_id": self._client_id,
-            "client_secret": self._client_secret,
-            "revoke_url": self._revoke_url,
-            "quota_project_id": self._quota_project_id,
-        }
+        config_info = self.constructor_args()
+        config_info.update(type=_EXTERNAL_ACCOUNT_AUTHORIZED_USER_JSON_TYPE)
         return {key: value for key, value in config_info.items() if value is not None}
 
-    @property
     def constructor_args(self):
         return {
             "audience": self._audience,
@@ -120,9 +121,6 @@ class Credentials(credentials.CredentialsWithQuotaProject, credentials.ReadOnlyS
         the initial token is requested and can not be changed."""
         return False
 
-    def _make_sts_request(self, request):
-        return self._sts_client.refresh_token(request, self._refresh_token)
-
     def get_project_id(self):
         return None
 
@@ -133,11 +131,20 @@ class Credentials(credentials.CredentialsWithQuotaProject, credentials.ReadOnlyS
         lifetime = datetime.timedelta(seconds=response_data.get("expires_in"))
         self.expiry = now + lifetime
 
+    def _make_sts_request(self, request):
+        return self._sts_client.refresh_token(request, self._refresh_token)
+
     @_helpers.copy_docstring(credentials.CredentialsWithQuotaProject)
     def with_quota_project(self, quota_project_id):
-        return self.__class__(
-            quota_project_id=quota_project_id, **self.constructor_args
-        )
+        kwargs = self.constructor_args()
+        kwargs.update(quota_project_id=quota_project_id)
+        return self.__class__(**kwargs)
+
+    @_helpers.copy_docstring(credentials.CredentialsWithTokenUri)
+    def with_token_uri(self, token_uri):
+        kwargs = self.constructor_args()
+        kwargs.update(token_url=token_uri)
+        return self.__class__(**kwargs)
 
     @classmethod
     def from_info(cls, info, **kwargs):
@@ -162,6 +169,8 @@ class Credentials(credentials.CredentialsWithQuotaProject, credentials.ReadOnlyS
             token_info_url=info.get("token_info_url"),
             client_id=info.get("client_id"),
             client_secret=info.get("client_secret"),
+            revoke_url=info.get("revoke_url"),
+            quota_project_id=info.get("quota_project_id"),
             **kwargs
         )
 

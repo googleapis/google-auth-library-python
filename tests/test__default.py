@@ -152,6 +152,9 @@ IMPERSONATED_SERVICE_ACCOUNT_SERVICE_ACCOUNT_SOURCE_FILE = os.path.join(
     DATA_DIR, "impersonated_service_account_service_account_source.json"
 )
 
+EXTERNAL_ACCOUNT_AUTHORIZED_USER_FILE = os.path.join(
+    DATA_DIR, "external_account_authorized_user.json"
+)
 
 MOCK_CREDENTIALS = mock.Mock(spec=credentials.CredentialsWithQuotaProject)
 MOCK_CREDENTIALS.with_quota_project.return_value = MOCK_CREDENTIALS
@@ -541,23 +544,9 @@ def test__get_explicit_environ_credentials_no_env():
     assert _default._get_explicit_environ_credentials() == (None, None)
 
 
-def test_load_credentials_from_file_external_account_authorized_user(tmpdir):
-    config_file = tmpdir.join("config.json")
-    config_file.write(
-        json.dumps(
-            {
-                "type": "external_account_authorized_user",
-                "audience": "//iam.googleapis.com/locations/global/workforcePools/$WORKFORCE_POOL_ID/providers/$PROVIDER_ID",
-                "refresh_token": "refreshToken",
-                "token_url": "https://sts.googleapis.com/v1/oauth/token",
-                "token_info_url": "https://sts.googleapis.com/v1/instrospect",
-                "client_id": "clientId",
-                "client_secret": "clientSecret",
-            }
-        )
-    )
+def test_load_credentials_from_file_external_account_authorized_user():
     credentials, project_id = _default.load_credentials_from_file(
-        str(config_file), request=mock.sentinel.request
+        EXTERNAL_ACCOUNT_AUTHORIZED_USER_FILE, request=mock.sentinel.request
     )
 
     assert isinstance(credentials, external_account_authorized_user.Credentials)

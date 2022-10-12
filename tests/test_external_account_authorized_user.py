@@ -1,3 +1,17 @@
+# Copyright 2022 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import datetime
 import json
 
@@ -15,6 +29,7 @@ class TestCredentials(object):
     TOKEN_INFO_URL = "https://sts.googleapis.com/v1/introspect"
     REVOKE_URL = "https://sts.googleapis.com/v1/revoke"
     PROJECT_NUMBER = "123456"
+    QUOTA_PROJECT_ID = "654321"
     POOL_ID = "POOL_ID"
     PROVIDER_ID = "PROVIDER_ID"
     AUDIENCE = (
@@ -22,7 +37,7 @@ class TestCredentials(object):
         "/locations/global/workloadIdentityPools/{}"
         "/providers/{}"
     ).format(PROJECT_NUMBER, POOL_ID, PROVIDER_ID)
-    REFRESH_TOKEN = "refreshtoken"
+    REFRESH_TOKEN = "REFRESH_TOKEN"
     ACCESS_TOKEN = "ACCESS_TOKEN"
     CLIENT_ID = "username"
     CLIENT_SECRET = "password"
@@ -103,12 +118,21 @@ class TestCredentials(object):
 
     def test_refresh_auth_failure(self):
         request = self.make_mock_request(
-            status=http_client.BAD_REQUEST, data={"error": "XXXXXX"}
+            status=http_client.BAD_REQUEST,
+            data={
+                "error": "invalid_request",
+                "error_description": "Invalid subject token",
+                "error_uri": "https://tools.ietf.org/html/rfc6749",
+            },
         )
         creds = self.make_credentials()
 
-        with pytest.raises(exceptions.OAuthError):
+        with pytest.raises(exceptions.OAuthError) as excinfo:
             creds.refresh(request)
+
+        assert excinfo.match(
+            r"Error code invalid_request: Invalid subject token - https://tools.ietf.org/html/rfc6749"
+        )
 
         assert not creds.expiry
         assert not creds.expired
@@ -127,3 +151,107 @@ class TestCredentials(object):
                 "grant_type=refresh_token&refresh_token=" + self.REFRESH_TOKEN, "UTF-8"
             ),
         )
+
+    def test_info(self):
+        creds = self.make_credentials()
+        info = creds.info
+
+        assert info["audience"] == self.AUDIENCE
+        assert info["refresh_token"] == self.REFRESH_TOKEN
+        assert info["token_url"] == self.TOKEN_URL
+        assert info["token_info_url"] == self.TOKEN_INFO_URL
+        assert info["client_id"] == self.CLIENT_ID
+        assert info["client_secret"] == self.CLIENT_SECRET
+        assert "revoke_url" not in info
+        assert "quota_project_id" not in info
+
+    def test_info_full(self):
+        creds = self.make_credentials(
+            revoke_url=self.REVOKE_URL, quota_project_id=self.QUOTA_PROJECT_ID
+        )
+        info = creds.info
+
+        assert info["audience"] == self.AUDIENCE
+        assert info["refresh_token"] == self.REFRESH_TOKEN
+        assert info["token_url"] == self.TOKEN_URL
+        assert info["token_info_url"] == self.TOKEN_INFO_URL
+        assert info["client_id"] == self.CLIENT_ID
+        assert info["client_secret"] == self.CLIENT_SECRET
+        assert info["revoke_url"] == self.REVOKE_URL
+        assert info["quota_project_id"] == self.QUOTA_PROJECT_ID
+
+    def test_get_project_id(self):
+        creds = self.make_credentials()
+        assert creds.get_project_id() is None
+
+    def test_with_quota_project(self):
+        creds = self.make_credentials()
+        new_creds = creds.with_quota_project(self.QUOTA_PROJECT_ID)
+        assert new_creds._audience == creds._audience
+        assert new_creds._refresh_token == creds._refresh_token
+        assert new_creds._token_url == creds._token_url
+        assert new_creds._token_info_url == creds._token_info_url
+        assert new_creds._client_id == creds._client_id
+        assert new_creds._client_secret == creds._client_secret
+        assert new_creds._revoke_url == creds._revoke_url
+        assert new_creds._quota_project_id == self.QUOTA_PROJECT_ID
+
+    def test_with_token_uri(self):
+        creds = self.make_credentials()
+        new_creds = creds.with_token_uri("https://google.com")
+        assert new_creds._audience == creds._audience
+        assert new_creds._refresh_token == creds._refresh_token
+        assert new_creds._token_url == "https://google.com"
+        assert new_creds._token_info_url == creds._token_info_url
+        assert new_creds._client_id == creds._client_id
+        assert new_creds._client_secret == creds._client_secret
+        assert new_creds._revoke_url == creds._revoke_url
+        assert new_creds._quota_project_id == creds._quota_project_id
+
+    def test_from_file_required_options_only(self, tmpdir):
+        info = {
+            "audience": self.AUDIENCE,
+            "refresh_token": self.REFRESH_TOKEN,
+            "token_url": self.TOKEN_URL,
+            "token_info_url": self.TOKEN_INFO_URL,
+            "client_id": self.CLIENT_ID,
+            "client_secret": self.CLIENT_SECRET,
+        }
+        config_file = tmpdir.join("config.json")
+        config_file.write(json.dumps(info))
+        creds = external_account_authorized_user.Credentials.from_file(str(config_file))
+
+        assert isinstance(creds, external_account_authorized_user.Credentials)
+        creds._audience == self.AUDIENCE
+        creds._refresh_token == self.REFRESH_TOKEN
+        creds._token_url == self.TOKEN_URL
+        creds._token_info_url == self.TOKEN_INFO_URL
+        creds._client_id == self.CLIENT_ID
+        creds._client_secret == self.CLIENT_SECRET
+        creds._revoke_url is None
+        creds._quota_project_id is None
+
+    def test_from_file_full_options(self, tmpdir):
+        info = {
+            "audience": self.AUDIENCE,
+            "refresh_token": self.REFRESH_TOKEN,
+            "token_url": self.TOKEN_URL,
+            "token_info_url": self.TOKEN_INFO_URL,
+            "client_id": self.CLIENT_ID,
+            "client_secret": self.CLIENT_SECRET,
+            "revoke_url": self.REVOKE_URL,
+            "quota_project_id": self.QUOTA_PROJECT_ID,
+        }
+        config_file = tmpdir.join("config.json")
+        config_file.write(json.dumps(info))
+        creds = external_account_authorized_user.Credentials.from_file(str(config_file))
+
+        assert isinstance(creds, external_account_authorized_user.Credentials)
+        creds._audience == self.AUDIENCE
+        creds._refresh_token == self.REFRESH_TOKEN
+        creds._token_url == self.TOKEN_URL
+        creds._token_info_url == self.TOKEN_INFO_URL
+        creds._client_id == self.CLIENT_ID
+        creds._client_secret == self.CLIENT_SECRET
+        creds._revoke_url == self.REVOKE_URL
+        creds._quota_project_id == self.QUOTA_PROJECT_ID

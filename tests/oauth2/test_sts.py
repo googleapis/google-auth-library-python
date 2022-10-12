@@ -443,7 +443,7 @@ class TestStsClient(object):
         self.assert_request_kwargs(request.call_args[1], headers, request_data)
         assert response == self.SUCCESS_RESPONSE
 
-    def test_refresh_token_failure(self):
+    def test_make_request_failure(self):
         """Test refresh token with failure response."""
         client = self.make_client(self.CLIENT_AUTH_BASIC)
         request = self.make_mock_request(
