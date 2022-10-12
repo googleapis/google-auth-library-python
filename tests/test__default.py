@@ -1227,7 +1227,6 @@ def test_quota_project_from_environment(get_adc_path):
     assert credentials.quota_project_id == "quota_project_id"
 
     quota_from_env = "quota_from_env"
-    # monkeypatch.setenv(environment_vars.GOOGLE_CLOUD_QUOTA_PROJECT, quota_from_env)
     os.environ[environment_vars.GOOGLE_CLOUD_QUOTA_PROJECT] = quota_from_env
     credentials, _ = _default.default(quota_project_id=None)
     assert credentials.quota_project_id == quota_from_env
