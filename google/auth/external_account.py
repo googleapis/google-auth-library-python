@@ -179,25 +179,6 @@ class Credentials(
         }
         return {key: value for key, value in config_info.items() if value is not None}
 
-    def constructor_args(self):
-        d = dict(
-            audience=self._audience,
-            subject_token_type=self._subject_token_type,
-            token_url=self._token_url,
-            credential_source=self._credential_source,
-            service_account_impersonation_url=self._service_account_impersonation_url,
-            service_account_impersonation_options=self._service_account_impersonation_options,
-            client_id=self._client_id,
-            client_secret=self._client_secret,
-            quota_project_id=self._quota_project_id,
-            scopes=self._scopes,
-            default_scopes=self._default_scopes,
-            workforce_pool_user_project=self._workforce_pool_user_project,
-        )
-        if not self.is_workforce_pool:
-            d.pop("workforce_pool_user_project")
-        return d
-
     @property
     def service_account_email(self):
         """Returns the service account email if service account impersonation is used.
@@ -276,9 +257,23 @@ class Credentials(
 
     @_helpers.copy_docstring(credentials.Scoped)
     def with_scopes(self, scopes, default_scopes=None):
-        kwargs = self.constructor_args()
-        kwargs.update(scopes=scopes, default_scopes=default_scopes)
-        return self.__class__(**kwargs)
+        d = dict(
+            audience=self._audience,
+            subject_token_type=self._subject_token_type,
+            token_url=self._token_url,
+            credential_source=self._credential_source,
+            service_account_impersonation_url=self._service_account_impersonation_url,
+            service_account_impersonation_options=self._service_account_impersonation_options,
+            client_id=self._client_id,
+            client_secret=self._client_secret,
+            quota_project_id=self._quota_project_id,
+            scopes=scopes,
+            default_scopes=default_scopes,
+            workforce_pool_user_project=self._workforce_pool_user_project,
+        )
+        if not self.is_workforce_pool:
+            d.pop("workforce_pool_user_project")
+        return self.__class__(**d)
 
     @abc.abstractmethod
     def retrieve_subject_token(self, request):
@@ -344,41 +339,52 @@ class Credentials(
 
     @_helpers.copy_docstring(credentials.Credentials)
     def refresh(self, request):
+        scopes = self._scopes if self._scopes is not None else self._default_scopes
         if self._impersonated_credentials:
             self._impersonated_credentials.refresh(request)
             self.token = self._impersonated_credentials.token
             self.expiry = self._impersonated_credentials.expiry
         else:
             now = _helpers.utcnow()
-            response_data = self._make_sts_request(request)
+            additional_options = None
+            # Do not pass workforce_pool_user_project when client authentication
+            # is used. The client ID is sufficient for determining the user project.
+            if self._workforce_pool_user_project and not self._client_id:
+                additional_options = {"userProject": self._workforce_pool_user_project}
+            response_data = self._sts_client.exchange_token(
+                request=request,
+                grant_type=_STS_GRANT_TYPE,
+                subject_token=self.retrieve_subject_token(request),
+                subject_token_type=self._subject_token_type,
+                audience=self._audience,
+                scopes=scopes,
+                requested_token_type=_STS_REQUESTED_TOKEN_TYPE,
+                additional_options=additional_options,
+            )
             self.token = response_data.get("access_token")
             lifetime = datetime.timedelta(seconds=response_data.get("expires_in"))
             self.expiry = now + lifetime
 
-    def _make_sts_request(self, request):
-        """This method is the default method for making STS requests."""
-        scopes = self._scopes if self._scopes is not None else self._default_scopes
-        additional_options = None
-        # Do not pass workforce_pool_user_project when client authentication
-        # is used. The client ID is sufficient for determining the user project.
-        if self._workforce_pool_user_project and not self._client_id:
-            additional_options = {"userProject": self._workforce_pool_user_project}
-        return self._sts_client.exchange_token(
-            request=request,
-            grant_type=_STS_GRANT_TYPE,
-            subject_token=self.retrieve_subject_token(request),
-            subject_token_type=self._subject_token_type,
-            audience=self._audience,
-            scopes=scopes,
-            requested_token_type=_STS_REQUESTED_TOKEN_TYPE,
-            additional_options=additional_options,
-        )
-
     @_helpers.copy_docstring(credentials.CredentialsWithQuotaProject)
     def with_quota_project(self, quota_project_id):
-        kwargs = self.constructor_args()
-        kwargs.update(quota_project_id=quota_project_id)
-        return self.__class__(**kwargs)
+        # Return copy of instance with the provided quota project ID.
+        d = dict(
+            audience=self._audience,
+            subject_token_type=self._subject_token_type,
+            token_url=self._token_url,
+            credential_source=self._credential_source,
+            service_account_impersonation_url=self._service_account_impersonation_url,
+            service_account_impersonation_options=self._service_account_impersonation_options,
+            client_id=self._client_id,
+            client_secret=self._client_secret,
+            quota_project_id=quota_project_id,
+            scopes=self._scopes,
+            default_scopes=self._default_scopes,
+            workforce_pool_user_project=self._workforce_pool_user_project,
+        )
+        if not self.is_workforce_pool:
+            d.pop("workforce_pool_user_project")
+        return self.__class__(**d)
 
     @_helpers.copy_docstring(credentials.CredentialsWithTokenUri)
     def with_token_uri(self, token_uri):
@@ -416,12 +422,23 @@ class Credentials(
                 endpoint returned an error.
         """
         # Return copy of instance with no service account impersonation.
-        kwargs = self.constructor_args()
-        kwargs.update(
+        d = dict(
+            audience=self._audience,
+            subject_token_type=self._subject_token_type,
+            token_url=self._token_url,
+            credential_source=self._credential_source,
             service_account_impersonation_url=None,
             service_account_impersonation_options={},
+            client_id=self._client_id,
+            client_secret=self._client_secret,
+            quota_project_id=self._quota_project_id,
+            scopes=self._scopes,
+            default_scopes=self._default_scopes,
+            workforce_pool_user_project=self._workforce_pool_user_project,
         )
-        source_credentials = self.__class__(**kwargs)
+        if not self.is_workforce_pool:
+            d.pop("workforce_pool_user_project")
+        source_credentials = self.__class__(**d)
 
         # Determine target_principal.
         target_principal = self.service_account_email
