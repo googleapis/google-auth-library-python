@@ -152,7 +152,7 @@ class CredentialsWithQuotaProject(Credentials):
 
     def with_quota_project_from_environment(self):
         quota_from_env = os.environ.get(environment_vars.GOOGLE_CLOUD_QUOTA_PROJECT)
-        if quota_from_env is not None:
+        if quota_from_env:
             return self.with_quota_project(quota_from_env)
         return self
 
