@@ -12,10 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Headful Credentials.
-Headful Credentials are …
+"""External Account Authorized User Credentials.
+This module provides credentials to access Google Cloud resources from on-prem
+or non-Google Cloud platforms which support external credentials (e.g. OIDC ID
+tokens) as part of a web-based 3-legged OAuth flow.
 
-Example headful credential:
+Example credential:
 {
   "type": "external_account_authorized_user",
   "audience": "//iam.googleapis.com/locations/global/workforcePools/$WORKFORCE_POOL_ID/providers/$PROVIDER_ID",
@@ -27,10 +29,25 @@ Example headful credential:
 }
 """
 
-_HEADFUL_JSON_TYPE = "external_account_authorized_user"
+import datetime
+import io
+import json
 
-class Credentials(external_account.Credentials):
-    """
+from google.auth import _helpers
+from google.auth import credentials
+from google.oauth2 import sts
+from google.oauth2 import utils
+
+
+_EXTERNAL_ACCOUNT_AUTHORIZED_USER_JSON_TYPE = "external_account_authorized_user"
+
+
+class Credentials(credentials.CredentialsWithQuotaProject):
+    """Credentials for External Account Authorized Users.
+
+    This is used to instantiate Credentials for exchanging refresh tokens from
+    authorized users for Google access token and authorizing requests to Google
+    APIs.
     """
 
     def __init__(
@@ -44,21 +61,22 @@ class Credentials(external_account.Credentials):
         revoke_url="",
         quota_project_id="",
     ):
-        """Instantiates a headful credentials object."""
-        super(Credentials, self).__init__(
-            audience=audience,
-            subject_token_type=None,
-            token_url=token_url,
-            token_info_url=token_info_url,
-            revoke_url=revoke_url,
-            credential_source=None,
-            client_id=client_id,
-            client_secret=client_secret,
-            quota_project_id=quota_project_id,
-        )
+        """Instantiates a external account authorized user credentials object."""
+        super(Credentials, self).__init__()
 
+        self._audience = audience
         self._refresh_token = refresh_token
+        self._token_url = token_url
         self._token_info_url = token_info_url
+        self._client_id = client_id
+        self._client_secret = client_secret
+        self._revoke_url = revoke_url
+        self._quota_project_id = quota_project_id
+
+        self._client_auth = utils.ClientAuthentication(
+            utils.ClientAuthType.basic, self._client_id, self._client_secret
+        )
+        self._sts_client = sts.Client(self._token_url, self._client_auth)
 
     @property
     def info(self):
@@ -78,36 +96,48 @@ class Credentials(external_account.Credentials):
             "token_info_url": self._token_info_url,
             "client_id": self._client_id,
             "client_secret": self._client_secret,
+            "revoke_url": self._revoke_url,
+            "quota_project_id": self._quota_project_id,
         }
         return {key: value for key, value in config_info.items() if value is not None}
 
     @property
     def constructor_args(self):
         return {
-            "audience": audience,
-            "refresh_token": refresh_token,
-            "token_url": token_url,
-            "token_info_url": token_info_url,
-            "client_id": client_id,
-            "client_secret": client_secret,
-            "revoke_url": revoke_url,
-            "quota_project_id": quota_project_id
-        )
+            "audience": self._audience,
+            "refresh_token": self._refresh_token,
+            "token_url": self._token_url,
+            "token_info_url": self._token_info_url,
+            "client_id": self._client_id,
+            "client_secret": self._client_secret,
+            "revoke_url": self._revoke_url,
+            "quota_project_id": self._quota_project_id,
+        }
 
     @property
     def requires_scopes(self):
-        """Checks if the credentials requires scopes.
-
-        Returns:
-            bool: True if there are no scopes set otherwise False.
-        """
+        """ False: OAuth 2.0 credentials have their scopes set when
+        the initial token is requested and can not be changed."""
         return False
 
     def _make_sts_request(self, request):
         return self._sts_client.refresh_token(request, self._refresh_token)
 
-    def with_scopes(self, scopes, default_scopes=None):
-        raise NotImplementedError("with_scopes is not available for this class")
+    def get_project_id(self):
+        return None
+
+    def refresh(self, request):
+        now = _helpers.utcnow()
+        response_data = self._make_sts_request(request)
+        self.token = response_data.get("access_token")
+        lifetime = datetime.timedelta(seconds=response_data.get("expires_in"))
+        self.expiry = now + lifetime
+
+    @_helpers.copy_docstring(credentials.CredentialsWithQuotaProject)
+    def with_quota_project(self, quota_project_id):
+        return self.__class__(
+            quota_project_id=quota_project_id, **self.constructor_args
+        )
 
     @classmethod
     def from_info(cls, info, **kwargs):
@@ -134,3 +164,19 @@ class Credentials(external_account.Credentials):
             client_secret=info.get("client_secret"),
             **kwargs
         )
+
+    @classmethod
+    def from_file(cls, filename, **kwargs):
+        """Creates a Credentials instance from an external account json file.
+
+        Args:
+            filename (str): The path to the external account json file.
+            kwargs: Additional arguments to pass to the constructor.
+
+        Returns:
+            google.auth.identity_pool.Credentials: The constructed
+                credentials.
+        """
+        with io.open(filename, "r", encoding="utf-8") as json_file:
+            data = json.load(json_file)
+            return cls.from_info(data, **kwargs)

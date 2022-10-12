@@ -93,13 +93,6 @@ class Client(utils.OAuthClientAuthHandler):
         # Return successful response.
         return response_data
 
-    def refresh_token(self, request, refresh_token):
-        """"""
-        return _make_request(request, None, {
-            "grant_type": "refresh_token",
-            "refresh_token": refresh_token,
-        })
-
     def exchange_token(
         self,
         request,
@@ -144,10 +137,6 @@ class Client(utils.OAuthClientAuthHandler):
             google.auth.exceptions.OAuthError: If the token endpoint returned
                 an error.
         """
-        # Inject additional headers.
-        if additional_headers:
-            for k, v in dict(additional_headers).items():
-                headers[k] = v
         # Initialize request body.
         request_body = {
             "grant_type": grant_type,
@@ -169,4 +158,20 @@ class Client(utils.OAuthClientAuthHandler):
             if v is None or v == "":
                 del request_body[k]
 
-        return _make_request(request, additional_headers, request_body)
+        return self._make_request(request, additional_headers, request_body)
+
+    def refresh_token(self, request, refresh_token):
+        """Exchanges a refresh token for an access token based on the
+        RFC6749 spec.
+
+        Args:
+            request (google.auth.transport.Request): A callable used to make
+                HTTP requests.
+            subject_token (str): The OAuth 2.0 refresh token.
+        """
+
+        return self._make_request(
+            request,
+            None,
+            {"grant_type": "refresh_token", "refresh_token": refresh_token},
+        )

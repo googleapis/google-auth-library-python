@@ -182,8 +182,8 @@ class Credentials(credentials.Scoped, credentials.CredentialsWithQuotaProject):
             subject_token_type=self._subject_token_type,
             token_url=self._token_url,
             credential_source=self._credential_source,
-            service_account_impersonation_url=None,
-            service_account_impersonation_options={},
+            service_account_impersonation_url=self._service_account_impersonation_url,
+            service_account_impersonation_options=self._service_account_impersonation_options,
             client_id=self._client_id,
             client_secret=self._client_secret,
             quota_project_id=self._quota_project_id,
@@ -273,11 +273,9 @@ class Credentials(credentials.Scoped, credentials.CredentialsWithQuotaProject):
 
     @_helpers.copy_docstring(credentials.Scoped)
     def with_scopes(self, scopes, default_scopes=None):
-        return self.__class__(
-            **self.constructor_args,
-            scopes=scopes,
-            default_scopes=default_scopes
-        )
+        kwargs = self.constructor_args
+        kwargs.update(scopes=scopes, default_scopes=default_scopes)
+        return self.__class__(**kwargs)
 
     @abc.abstractmethod
     def retrieve_subject_token(self, request):
@@ -343,7 +341,6 @@ class Credentials(credentials.Scoped, credentials.CredentialsWithQuotaProject):
 
     @_helpers.copy_docstring(credentials.Credentials)
     def refresh(self, request):
-        scopes = self._scopes if self._scopes is not None else self._default_scopes
         if self._impersonated_credentials:
             self._impersonated_credentials.refresh(request)
             self.token = self._impersonated_credentials.token
@@ -356,11 +353,8 @@ class Credentials(credentials.Scoped, credentials.CredentialsWithQuotaProject):
             self.expiry = now + lifetime
 
     def _make_sts_request(self, request):
-        """This method is the default method for making STS requests.
-
-        This method is overrideable, as some credential types have alternate
-        methods of making this request.
-        """
+        """This method is the default method for making STS requests."""
+        scopes = self._scopes if self._scopes is not None else self._default_scopes
         additional_options = None
         # Do not pass workforce_pool_user_project when client authentication
         # is used. The client ID is sufficient for determining the user project.
@@ -379,10 +373,9 @@ class Credentials(credentials.Scoped, credentials.CredentialsWithQuotaProject):
 
     @_helpers.copy_docstring(credentials.CredentialsWithQuotaProject)
     def with_quota_project(self, quota_project_id):
-        return self.__class__(
-            **self.constructor_args,
-            quota_project_id=quota_project_id
-        )
+        kwargs = self.constructor_args
+        kwargs.update(quota_project_id=quota_project_id)
+        return self.__class__(**kwargs)
 
     def _initialize_impersonated_credentials(self):
         """Generates an impersonated credentials.
@@ -400,7 +393,12 @@ class Credentials(credentials.Scoped, credentials.CredentialsWithQuotaProject):
                 endpoint returned an error.
         """
         # Return copy of instance with no service account impersonation.
-        source_credentials = self.__class__(**self.constructor_args)
+        kwargs = self.constructor_args
+        kwargs.update(
+            service_account_impersonation_url=None,
+            service_account_impersonation_options={},
+        )
+        source_credentials = self.__class__(**kwargs)
 
         # Determine target_principal.
         target_principal = self.service_account_email

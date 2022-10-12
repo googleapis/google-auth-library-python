@@ -162,7 +162,7 @@ def _load_credentials_from_info(
         )
 
     elif credential_type == _EXTERNAL_ACCOUNT_AUTHORIZED_USER_TYPE:
-        credentials, project_Id = _get_external_account_authorized_use_credentials(
+        credentials, project_Id = _get_external_account_authorized_user_credentials(
             filename, info, request
         )
 
@@ -371,7 +371,7 @@ def _get_external_account_credentials(
     return credentials, credentials.get_project_id(request=request)
 
 
-def _get_external_account_authorized_use_credentials(
+def _get_external_account_authorized_user_credentials(
     info, filename, scopes=None, default_scopes=None, request=None
 ):
     try:
