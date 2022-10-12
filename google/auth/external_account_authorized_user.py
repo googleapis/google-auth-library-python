@@ -23,7 +23,7 @@ Example credential:
   "audience": "//iam.googleapis.com/locations/global/workforcePools/$WORKFORCE_POOL_ID/providers/$PROVIDER_ID",
   "refresh_token": "refreshToken",
   "token_url": "https://sts.googleapis.com/v1/oauth/token",
-  "token_info_url": "https://sts.googleapis.com/v1/instrospect"
+  "token_info_url": "https://sts.googleapis.com/v1/instrospect",
   "client_id": "clientId",
   "client_secret": "clientSecret"
 }
@@ -42,7 +42,7 @@ from google.oauth2 import utils
 _EXTERNAL_ACCOUNT_AUTHORIZED_USER_JSON_TYPE = "external_account_authorized_user"
 
 
-class Credentials(credentials.CredentialsWithQuotaProject):
+class Credentials(credentials.CredentialsWithQuotaProject, credentials.ReadOnlyScoped):
     """Credentials for External Account Authorized Users.
 
     This is used to instantiate Credentials for exchanging refresh tokens from

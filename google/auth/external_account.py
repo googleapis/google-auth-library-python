@@ -179,7 +179,6 @@ class Credentials(
         }
         return {key: value for key, value in config_info.items() if value is not None}
 
-    @property
     def constructor_args(self):
         d = dict(
             audience=self._audience,
@@ -277,7 +276,7 @@ class Credentials(
 
     @_helpers.copy_docstring(credentials.Scoped)
     def with_scopes(self, scopes, default_scopes=None):
-        kwargs = self.constructor_args
+        kwargs = self.constructor_args()
         kwargs.update(scopes=scopes, default_scopes=default_scopes)
         return self.__class__(**kwargs)
 
@@ -377,7 +376,7 @@ class Credentials(
 
     @_helpers.copy_docstring(credentials.CredentialsWithQuotaProject)
     def with_quota_project(self, quota_project_id):
-        kwargs = self.constructor_args
+        kwargs = self.constructor_args()
         kwargs.update(quota_project_id=quota_project_id)
         return self.__class__(**kwargs)
 
@@ -417,7 +416,7 @@ class Credentials(
                 endpoint returned an error.
         """
         # Return copy of instance with no service account impersonation.
-        kwargs = self.constructor_args
+        kwargs = self.constructor_args()
         kwargs.update(
             service_account_impersonation_url=None,
             service_account_impersonation_options={},

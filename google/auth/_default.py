@@ -162,7 +162,7 @@ def _load_credentials_from_info(
         )
 
     elif credential_type == _EXTERNAL_ACCOUNT_AUTHORIZED_USER_TYPE:
-        credentials, project_Id = _get_external_account_authorized_user_credentials(
+        credentials, project_id = _get_external_account_authorized_user_credentials(
             filename, info, request
         )
 
@@ -372,12 +372,12 @@ def _get_external_account_credentials(
 
 
 def _get_external_account_authorized_user_credentials(
-    info, filename, scopes=None, default_scopes=None, request=None
+    filename, info, scopes=None, default_scopes=None, request=None
 ):
     try:
-        from google.auth import headful
+        from google.auth import external_account_authorized_user
 
-        credentials = headful.Credentials.from_info(info)
+        credentials = external_account_authorized_user.Credentials.from_info(info)
     except ValueError:
         raise exceptions.DefaultCredentialsError(
             "Failed to load external account authorized user credentials from {}".format(

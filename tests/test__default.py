@@ -26,6 +26,7 @@ from google.auth import credentials
 from google.auth import environment_vars
 from google.auth import exceptions
 from google.auth import external_account
+from google.auth import external_account_authorized_user
 from google.auth import identity_pool
 from google.auth import impersonated_credentials
 from google.auth import pluggable
@@ -538,6 +539,29 @@ def test_load_credentials_from_file_external_account_explicit_request(
 @mock.patch.dict(os.environ, {}, clear=True)
 def test__get_explicit_environ_credentials_no_env():
     assert _default._get_explicit_environ_credentials() == (None, None)
+
+
+def test_load_credentials_from_file_external_account_authorized_user(tmpdir):
+    config_file = tmpdir.join("config.json")
+    config_file.write(
+        json.dumps(
+            {
+                "type": "external_account_authorized_user",
+                "audience": "//iam.googleapis.com/locations/global/workforcePools/$WORKFORCE_POOL_ID/providers/$PROVIDER_ID",
+                "refresh_token": "refreshToken",
+                "token_url": "https://sts.googleapis.com/v1/oauth/token",
+                "token_info_url": "https://sts.googleapis.com/v1/instrospect",
+                "client_id": "clientId",
+                "client_secret": "clientSecret",
+            }
+        )
+    )
+    credentials, project_id = _default.load_credentials_from_file(
+        str(config_file), request=mock.sentinel.request
+    )
+
+    assert isinstance(credentials, external_account_authorized_user.Credentials)
+    assert project_id is None
 
 
 @pytest.mark.parametrize("quota_project_id", [None, "project-foo"])
