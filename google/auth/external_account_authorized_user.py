@@ -39,6 +39,7 @@ import json
 
 from google.auth import _helpers
 from google.auth import credentials
+from google.auth import exceptions
 from google.oauth2 import sts
 from google.oauth2 import utils
 
@@ -63,35 +64,43 @@ class Credentials(
 
     def __init__(
         self,
-        audience,
-        refresh_token,
-        token_url,
-        token_info_url,
-        client_id,
-        client_secret,
         token=None,
         expiry=None,
+        refresh_token=None,
+        audience=None,
+        client_id=None,
+        client_secret=None,
+        token_url=None,
+        token_info_url=None,
         revoke_url=None,
         quota_project_id=None,
     ):
         """Instantiates a external account authorized user credentials object.
 
         Args:
-            audience (str): The STS audience field.
-            refresh_token (str): The STS refresh token to use to get a new access token
-            token_url (str): The STS endpoint URL for new access tokens.
-            token_info_url (str): The STS endpoint URL for token introspection.
-            client_id (str): The client ID for OAuth security.
-            client_secret (str): The client secret for OAuth security.
-            token (str): The optional initial OAuth access token.
-            expiry (datetime.datetime): The expiration datetime of the OAuth access token.
-            revoke_url (str): The STS endpoint URL for revoking tokens.
-            quota_project_id (str): The optional quota project ID.
+        audience (str): The STS audience which contains the resource name for the workforce pool and the provider identifier in that pool.
+        token_url (str): The STS token exchange endpoint.
+        token_info_url (str): The optional STS endpoint URL for token introspection.
+        client_id (str): The OAuth 2.0 client ID. Must be specified for
+            refresh, can be left as None if the token can not be refreshed.
+        client_secret (str): The OAuth 2.0 client secret. Must be specified
+            for refresh, can be left as None if the token can not be
+            refreshed.
+        token (str): The OAuth 2.0 access token. Can be None
+            if refresh information is provided.
+        expiry (datetime.datetime): The expiration datetime of the OAuth 2.0 access token.
+        revoke_url (str): The optional STS endpoint URL for revoking tokens.
+        quota_project_id (str): The optional project ID used for quota and billing.
+            This project may be different from the project used to
+            create the credentials.
 
         Returns:
             google.auth.external_account_authorized_user.Credentials: The
                 constructed credentials.
         """
+        if not any((refresh_token, token)):
+            raise ValueError("Either `refresh_token` or `token` should be set")
+
         super(Credentials, self).__init__()
 
         self.token = token
@@ -105,9 +114,11 @@ class Credentials(
         self._revoke_url = revoke_url
         self._quota_project_id = quota_project_id
 
-        self._client_auth = utils.ClientAuthentication(
-            utils.ClientAuthType.basic, self._client_id, self._client_secret
-        )
+        self._client_auth = None
+        if self._client_id:
+            self._client_auth = utils.ClientAuthentication(
+                utils.ClientAuthType.basic, self._client_id, self._client_secret
+            )
         self._sts_client = sts.Client(self._token_url, self._client_auth)
 
     @property
@@ -188,6 +199,15 @@ class Credentials(
             google.auth.exceptions.RefreshError: If the credentials could
                 not be refreshed.
         """
+        if not all(
+            (self._refresh_token, self._token_url, self._client_id, self._client_secret)
+        ):
+            raise exceptions.RefreshError(
+                "The credentials do not contain the necessary fields need to "
+                "refresh the access token. You must specify refresh_token, "
+                "token_url, client_id, and client_secret."
+            )
+
         now = _helpers.utcnow()
         response_data = self._make_sts_request(request)
 
