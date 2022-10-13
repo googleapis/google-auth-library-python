@@ -58,7 +58,7 @@ class Credentials(
 
     The credentials are considered immutable. If you want to modify the
     quota project, use `with_quota_project` and if you want to modify the token
-    uri, use `with_token_uri`
+    uri, use `with_token_uri`.
     """
 
     def __init__(
@@ -69,12 +69,33 @@ class Credentials(
         token_info_url,
         client_id,
         client_secret,
-        revoke_url="",
-        quota_project_id="",
+        token=None,
+        expiry=None,
+        revoke_url=None,
+        quota_project_id=None,
     ):
-        """Instantiates a external account authorized user credentials object."""
+        """Instantiates a external account authorized user credentials object.
+
+        Args:
+            audience (str): The STS audience field.
+            refresh_token (str): The STS refresh token to use to get a new access token
+            token_url (str): The STS endpoint URL for new access tokens.
+            token_info_url (str): The STS endpoint URL for token introspection.
+            client_id (str): The client ID for OAuth security.
+            client_secret (str): The client secret for OAuth security.
+            token (str): The optional initial OAuth access token.
+            expiry (datetime.datetime): The expiration datetime of the OAuth access token.
+            revoke_url (str): The STS endpoint URL for revoking tokens.
+            quota_project_id (str): The optional quota project ID.
+
+        Returns:
+            google.auth.external_account_authorized_user.Credentials: The
+                constructed credentials.
+        """
         super(Credentials, self).__init__()
 
+        self.token = token
+        self.expiry = expiry
         self._audience = audience
         self._refresh_token = refresh_token
         self._token_url = token_url
@@ -91,7 +112,8 @@ class Credentials(
 
     @property
     def info(self):
-        """Generates the dictionary representation of the current credentials.
+        """Generates the serializable dictionary representation of the current
+        credentials.
 
         Returns:
             Mapping: The dictionary representation of the credentials. This is the
@@ -101,6 +123,9 @@ class Credentials(
         """
         config_info = self.constructor_args()
         config_info.update(type=_EXTERNAL_ACCOUNT_AUTHORIZED_USER_JSON_TYPE)
+        if config_info["expiry"]:
+            config_info["expiry"] = config_info["expiry"].isoformat() + "Z"
+
         return {key: value for key, value in config_info.items() if value is not None}
 
     def constructor_args(self):
@@ -111,6 +136,8 @@ class Credentials(
             "token_info_url": self._token_info_url,
             "client_id": self._client_id,
             "client_secret": self._client_secret,
+            "token": self.token,
+            "expiry": self.expiry,
             "revoke_url": self._revoke_url,
             "quota_project_id": self._quota_project_id,
         }
@@ -121,15 +148,25 @@ class Credentials(
         the initial token is requested and can not be changed."""
         return False
 
+    @property
+    def is_user(self):
+        """ True: This credential always represents a user."""
+        return True
+
     def get_project_id(self):
         return None
 
     def refresh(self, request):
         now = _helpers.utcnow()
         response_data = self._make_sts_request(request)
+
         self.token = response_data.get("access_token")
+
         lifetime = datetime.timedelta(seconds=response_data.get("expires_in"))
         self.expiry = now + lifetime
+
+        if "refresh_token" in response_data:
+            self._refresh_token = response_data["refresh_token"]
 
     def _make_sts_request(self, request):
         return self._sts_client.refresh_token(request, self._refresh_token)
@@ -156,12 +193,17 @@ class Credentials(
             kwargs: Additional arguments to pass to the constructor.
 
         Returns:
-            google.auth.identity_pool.Credentials: The constructed
-                credentials.
+            google.auth.external_account_authorized_user.Credentials: The
+                constructed credentials.
 
         Raises:
             ValueError: For invalid parameters.
         """
+        expiry = info.get("expiry")
+        if expiry:
+            expiry = datetime.datetime.strptime(
+                expiry.rstrip("Z").split(".")[0], "%Y-%m-%dT%H:%M:%S"
+            )
         return cls(
             audience=info.get("audience"),
             refresh_token=info.get("refresh_token"),
@@ -169,6 +211,8 @@ class Credentials(
             token_info_url=info.get("token_info_url"),
             client_id=info.get("client_id"),
             client_secret=info.get("client_secret"),
+            token=info.get("token"),
+            expiry=expiry,
             revoke_url=info.get("revoke_url"),
             quota_project_id=info.get("quota_project_id"),
             **kwargs
@@ -183,8 +227,8 @@ class Credentials(
             kwargs: Additional arguments to pass to the constructor.
 
         Returns:
-            google.auth.identity_pool.Credentials: The constructed
-                credentials.
+            google.auth.external_account_authorized_user.Credentials: The
+                constructed credentials.
         """
         with io.open(filename, "r", encoding="utf-8") as json_file:
             data = json.load(json_file)

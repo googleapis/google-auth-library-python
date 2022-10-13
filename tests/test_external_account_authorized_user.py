@@ -38,6 +38,7 @@ class TestCredentials(object):
         "/providers/{}"
     ).format(PROJECT_NUMBER, POOL_ID, PROVIDER_ID)
     REFRESH_TOKEN = "REFRESH_TOKEN"
+    NEW_REFRESH_TOKEN = "NEW_REFRESH_TOKEN"
     ACCESS_TOKEN = "ACCESS_TOKEN"
     CLIENT_ID = "username"
     CLIENT_SECRET = "password"
@@ -53,6 +54,8 @@ class TestCredentials(object):
         token_info_url=None,
         client_id=None,
         client_secret=None,
+        token=None,
+        expiry=None,
         revoke_url=None,
         quota_project_id=None,
     ):
@@ -63,6 +66,8 @@ class TestCredentials(object):
             token_info_url=(token_info_url or cls.TOKEN_INFO_URL),
             client_id=(client_id or cls.CLIENT_ID),
             client_secret=(client_secret or cls.CLIENT_SECRET),
+            token=token,
+            expiry=expiry,
             revoke_url=revoke_url,
             quota_project_id=quota_project_id,
         )
@@ -88,8 +93,10 @@ class TestCredentials(object):
         assert not creds.token
         assert not creds.valid
         assert not creds.requires_scopes
+        assert creds.is_user
 
-    def test_refresh_auth_success(self):
+    @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+    def test_refresh_auth_success(self, utcnow):
         request = self.make_mock_request(
             status=http_client.OK,
             data={"access_token": self.ACCESS_TOKEN, "expires_in": 3600},
@@ -98,11 +105,47 @@ class TestCredentials(object):
 
         creds.refresh(request)
 
-        assert creds.expiry
+        assert creds.expiry == utcnow() + datetime.timedelta(seconds=3600)
         assert not creds.expired
         assert creds.token == self.ACCESS_TOKEN
         assert creds.valid
         assert not creds.requires_scopes
+        assert creds.is_user
+        assert creds._refresh_token == self.REFRESH_TOKEN
+
+        request.assert_called_once_with(
+            url=self.TOKEN_URL,
+            method="POST",
+            headers={
+                "Content-Type": "application/x-www-form-urlencoded",
+                "Authorization": "Basic " + self.BASIC_AUTH_ENCODING,
+            },
+            body=bytes(
+                "grant_type=refresh_token&refresh_token=" + self.REFRESH_TOKEN, "UTF-8"
+            ),
+        )
+
+    @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+    def test_refresh_auth_success_new_refresh_token(self, utcnow):
+        request = self.make_mock_request(
+            status=http_client.OK,
+            data={
+                "access_token": self.ACCESS_TOKEN,
+                "expires_in": 3600,
+                "refresh_token": self.NEW_REFRESH_TOKEN,
+            },
+        )
+        creds = self.make_credentials()
+
+        creds.refresh(request)
+
+        assert creds.expiry == utcnow() + datetime.timedelta(seconds=3600)
+        assert not creds.expired
+        assert creds.token == self.ACCESS_TOKEN
+        assert creds.valid
+        assert not creds.requires_scopes
+        assert creds.is_user
+        assert creds._refresh_token == self.NEW_REFRESH_TOKEN
 
         request.assert_called_once_with(
             url=self.TOKEN_URL,
@@ -139,6 +182,7 @@ class TestCredentials(object):
         assert not creds.token
         assert not creds.valid
         assert not creds.requires_scopes
+        assert creds.is_user
 
         request.assert_called_once_with(
             url=self.TOKEN_URL,
@@ -162,12 +206,17 @@ class TestCredentials(object):
         assert info["token_info_url"] == self.TOKEN_INFO_URL
         assert info["client_id"] == self.CLIENT_ID
         assert info["client_secret"] == self.CLIENT_SECRET
+        assert "token" not in info
+        assert "expiry" not in info
         assert "revoke_url" not in info
         assert "quota_project_id" not in info
 
     def test_info_full(self):
         creds = self.make_credentials(
-            revoke_url=self.REVOKE_URL, quota_project_id=self.QUOTA_PROJECT_ID
+            token=self.ACCESS_TOKEN,
+            expiry=datetime.datetime.min,
+            revoke_url=self.REVOKE_URL,
+            quota_project_id=self.QUOTA_PROJECT_ID,
         )
         info = creds.info
 
@@ -177,6 +226,8 @@ class TestCredentials(object):
         assert info["token_info_url"] == self.TOKEN_INFO_URL
         assert info["client_id"] == self.CLIENT_ID
         assert info["client_secret"] == self.CLIENT_SECRET
+        assert info["token"] == self.ACCESS_TOKEN
+        assert info["expiry"] == datetime.datetime.min.isoformat() + "Z"
         assert info["revoke_url"] == self.REVOKE_URL
         assert info["quota_project_id"] == self.QUOTA_PROJECT_ID
 
@@ -185,7 +236,12 @@ class TestCredentials(object):
         assert creds.get_project_id() is None
 
     def test_with_quota_project(self):
-        creds = self.make_credentials()
+        creds = self.make_credentials(
+            token=self.ACCESS_TOKEN,
+            expiry=datetime.datetime.min,
+            revoke_url=self.REVOKE_URL,
+            quota_project_id=self.QUOTA_PROJECT_ID,
+        )
         new_creds = creds.with_quota_project(self.QUOTA_PROJECT_ID)
         assert new_creds._audience == creds._audience
         assert new_creds._refresh_token == creds._refresh_token
@@ -193,11 +249,18 @@ class TestCredentials(object):
         assert new_creds._token_info_url == creds._token_info_url
         assert new_creds._client_id == creds._client_id
         assert new_creds._client_secret == creds._client_secret
+        assert new_creds.token == creds.token
+        assert new_creds.expiry == creds.expiry
         assert new_creds._revoke_url == creds._revoke_url
         assert new_creds._quota_project_id == self.QUOTA_PROJECT_ID
 
     def test_with_token_uri(self):
-        creds = self.make_credentials()
+        creds = self.make_credentials(
+            token=self.ACCESS_TOKEN,
+            expiry=datetime.datetime.min,
+            revoke_url=self.REVOKE_URL,
+            quota_project_id=self.QUOTA_PROJECT_ID,
+        )
         new_creds = creds.with_token_uri("https://google.com")
         assert new_creds._audience == creds._audience
         assert new_creds._refresh_token == creds._refresh_token
@@ -205,53 +268,48 @@ class TestCredentials(object):
         assert new_creds._token_info_url == creds._token_info_url
         assert new_creds._client_id == creds._client_id
         assert new_creds._client_secret == creds._client_secret
+        assert new_creds.token == creds.token
+        assert new_creds.expiry == creds.expiry
         assert new_creds._revoke_url == creds._revoke_url
         assert new_creds._quota_project_id == creds._quota_project_id
 
     def test_from_file_required_options_only(self, tmpdir):
-        info = {
-            "audience": self.AUDIENCE,
-            "refresh_token": self.REFRESH_TOKEN,
-            "token_url": self.TOKEN_URL,
-            "token_info_url": self.TOKEN_INFO_URL,
-            "client_id": self.CLIENT_ID,
-            "client_secret": self.CLIENT_SECRET,
-        }
+        from_creds = self.make_credentials()
         config_file = tmpdir.join("config.json")
-        config_file.write(json.dumps(info))
+        config_file.write(json.dumps(from_creds.info))
         creds = external_account_authorized_user.Credentials.from_file(str(config_file))
 
         assert isinstance(creds, external_account_authorized_user.Credentials)
-        creds._audience == self.AUDIENCE
-        creds._refresh_token == self.REFRESH_TOKEN
-        creds._token_url == self.TOKEN_URL
-        creds._token_info_url == self.TOKEN_INFO_URL
-        creds._client_id == self.CLIENT_ID
-        creds._client_secret == self.CLIENT_SECRET
-        creds._revoke_url is None
-        creds._quota_project_id is None
+        assert creds._audience == self.AUDIENCE
+        assert creds._refresh_token == self.REFRESH_TOKEN
+        assert creds._token_url == self.TOKEN_URL
+        assert creds._token_info_url == self.TOKEN_INFO_URL
+        assert creds._client_id == self.CLIENT_ID
+        assert creds._client_secret == self.CLIENT_SECRET
+        assert creds.token is None
+        assert creds.expiry is None
+        assert creds._revoke_url is None
+        assert creds._quota_project_id is None
 
     def test_from_file_full_options(self, tmpdir):
-        info = {
-            "audience": self.AUDIENCE,
-            "refresh_token": self.REFRESH_TOKEN,
-            "token_url": self.TOKEN_URL,
-            "token_info_url": self.TOKEN_INFO_URL,
-            "client_id": self.CLIENT_ID,
-            "client_secret": self.CLIENT_SECRET,
-            "revoke_url": self.REVOKE_URL,
-            "quota_project_id": self.QUOTA_PROJECT_ID,
-        }
+        from_creds = self.make_credentials(
+            token=self.ACCESS_TOKEN,
+            expiry=datetime.datetime.min,
+            revoke_url=self.REVOKE_URL,
+            quota_project_id=self.QUOTA_PROJECT_ID,
+        )
         config_file = tmpdir.join("config.json")
-        config_file.write(json.dumps(info))
+        config_file.write(json.dumps(from_creds.info))
         creds = external_account_authorized_user.Credentials.from_file(str(config_file))
 
         assert isinstance(creds, external_account_authorized_user.Credentials)
-        creds._audience == self.AUDIENCE
-        creds._refresh_token == self.REFRESH_TOKEN
-        creds._token_url == self.TOKEN_URL
-        creds._token_info_url == self.TOKEN_INFO_URL
-        creds._client_id == self.CLIENT_ID
-        creds._client_secret == self.CLIENT_SECRET
-        creds._revoke_url == self.REVOKE_URL
-        creds._quota_project_id == self.QUOTA_PROJECT_ID
+        assert creds._audience == self.AUDIENCE
+        assert creds._refresh_token == self.REFRESH_TOKEN
+        assert creds._token_url == self.TOKEN_URL
+        assert creds._token_info_url == self.TOKEN_INFO_URL
+        assert creds._client_id == self.CLIENT_ID
+        assert creds._client_secret == self.CLIENT_SECRET
+        assert creds.token == self.ACCESS_TOKEN
+        assert creds.expiry == datetime.datetime.min
+        assert creds._revoke_url == self.REVOKE_URL
+        assert creds._quota_project_id == self.QUOTA_PROJECT_ID
