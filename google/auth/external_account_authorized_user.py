@@ -45,7 +45,6 @@ from google.oauth2 import utils
 
 _EXTERNAL_ACCOUNT_AUTHORIZED_USER_JSON_TYPE = "external_account_authorized_user"
 
-
 class Credentials(
     credentials.CredentialsWithQuotaProject,
     credentials.ReadOnlyScoped,
@@ -103,7 +102,7 @@ class Credentials(
                 constructed credentials.
         """
         if not any((refresh_token, token)):
-            raise ValueError("Either `refresh_token` or `token` should be set")
+            raise ValueError("Either `refresh_token` or `token` should be set.")
 
         super(Credentials, self).__init__()
 
@@ -203,9 +202,7 @@ class Credentials(
             google.auth.exceptions.RefreshError: If the credentials could
                 not be refreshed.
         """
-        if not all(
-            (self._refresh_token, self._token_url, self._client_id, self._client_secret)
-        ):
+        if not all((self._refresh_token, self._token_url, self._client_id, self._client_secret)):
             raise exceptions.RefreshError(
                 "The credentials do not contain the necessary fields need to "
                 "refresh the access token. You must specify refresh_token, "
