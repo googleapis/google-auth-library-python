@@ -44,7 +44,6 @@ from google.oauth2 import utils
 
 _EXTERNAL_ACCOUNT_AUTHORIZED_USER_JSON_TYPE = "external_account_authorized_user"
 
-
 class Credentials(
     credentials.CredentialsWithQuotaProject,
     credentials.ReadOnlyScoped,
@@ -117,7 +116,7 @@ class Credentials(
 
         Returns:
             Mapping: The dictionary representation of the credentials. This is the
-                reverse of "from_info" defined on the subclasses of this class. It is
+                reverse of the "from_info" method defined in this class. It is
                 useful for serializing the current credentials so it can deserialized
                 later.
         """
