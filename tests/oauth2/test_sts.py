@@ -50,6 +50,11 @@ class TestStsClient(object):
         "expires_in": 3600,
         "scope": "scope1 scope2",
     }
+    SUCCESS_RESPONSE_WITH_REFRESH = {
+        "access_token": "abc",
+        "refresh_token": "xyz",
+        "expires_in": 3600,
+    }
     ERROR_RESPONSE = {
         "error": "invalid_request",
         "error_description": "Invalid subject token",
@@ -410,6 +415,23 @@ class TestStsClient(object):
         request_data = {"grant_type": "refresh_token", "refresh_token": "refreshtoken"}
         self.assert_request_kwargs(request.call_args[1], headers, request_data)
         assert response == self.SUCCESS_RESPONSE
+
+    def test_refresh_token_success_with_refresh(self):
+        """Test refresh token with successful response."""
+        client = self.make_client(self.CLIENT_AUTH_BASIC)
+        request = self.make_mock_request(
+            status=http_client.OK, data=self.SUCCESS_RESPONSE_WITH_REFRESH
+        )
+
+        response = client.refresh_token(request, "refreshtoken")
+
+        headers = {
+            "Authorization": "Basic dXNlcm5hbWU6cGFzc3dvcmQ=",
+            "Content-Type": "application/x-www-form-urlencoded",
+        }
+        request_data = {"grant_type": "refresh_token", "refresh_token": "refreshtoken"}
+        self.assert_request_kwargs(request.call_args[1], headers, request_data)
+        assert response == self.SUCCESS_RESPONSE_WITH_REFRESH
 
     def test_refresh_token_failure(self):
         """Test refresh token with failure response."""
