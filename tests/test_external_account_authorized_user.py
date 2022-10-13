@@ -268,6 +268,27 @@ class TestCredentials(object):
         assert info["revoke_url"] == self.REVOKE_URL
         assert info["quota_project_id"] == self.QUOTA_PROJECT_ID
 
+    def test_to_json_full_with_strip(self):
+        creds = self.make_credentials(
+            token=self.ACCESS_TOKEN,
+            expiry=datetime.datetime.min,
+            revoke_url=self.REVOKE_URL,
+            quota_project_id=self.QUOTA_PROJECT_ID,
+        )
+        json_info = creds.to_json(strip=["token", "expiry"])
+        info = json.loads(json_info)
+
+        assert info["audience"] == self.AUDIENCE
+        assert info["refresh_token"] == self.REFRESH_TOKEN
+        assert info["token_url"] == self.TOKEN_URL
+        assert info["token_info_url"] == self.TOKEN_INFO_URL
+        assert info["client_id"] == self.CLIENT_ID
+        assert info["client_secret"] == self.CLIENT_SECRET
+        assert "token" not in info
+        assert "expiry" not in info
+        assert info["revoke_url"] == self.REVOKE_URL
+        assert info["quota_project_id"] == self.QUOTA_PROJECT_ID
+
     def test_get_project_id(self):
         creds = self.make_credentials()
         assert creds.get_project_id() is None

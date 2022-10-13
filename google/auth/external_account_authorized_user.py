@@ -156,8 +156,9 @@ class Credentials(
     def get_project_id(self):
         return None
 
-    def to_json(self):
-        return json.dumps(self.info)
+    def to_json(self, strip=None):
+        strip = strip if strip else []
+        return json.dumps({k: v for (k, v) in self.info.items() if k not in strip})
 
     def refresh(self, request):
         now = _helpers.utcnow()
