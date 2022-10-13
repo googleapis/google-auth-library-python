@@ -45,6 +45,7 @@ from google.oauth2 import utils
 
 _EXTERNAL_ACCOUNT_AUTHORIZED_USER_JSON_TYPE = "external_account_authorized_user"
 
+
 class Credentials(
     credentials.CredentialsWithQuotaProject,
     credentials.ReadOnlyScoped,
@@ -77,18 +78,20 @@ class Credentials(
         """Instantiates a external account authorized user credentials object.
 
         Args:
-        token (str): The OAuth 2.0 access token. Can be None
-            if refresh information is provided.
-        expiry (datetime.datetime): The expiration datetime of the OAuth 2.0 access token.
+        token (str): The OAuth 2.0 access token. Can be None if refresh information
+            is provided.
+        expiry (datetime.datetime): The optional expiration datetime of the OAuth 2.0 access
+            token.
         refresh_token (str): The optional OAuth 2.0 refresh token. If specified,
             credentials can be refreshed.
-        audience (str): The STS audience which contains the resource name for the workforce pool and the provider identifier in that pool.
-        client_id (str): The OAuth 2.0 client ID. Must be specified for
-            refresh, can be left as None if the token can not be refreshed.
-        client_secret (str): The OAuth 2.0 client secret. Must be specified
-            for refresh, can be left as None if the token can not be
-            refreshed.
-        token_url (str): The STS token exchange endpoint.
+        audience (str): The optional STS audience which contains the resource name for the workforce
+            pool and the provider identifier in that pool.
+        client_id (str): The OAuth 2.0 client ID. Must be specified for refresh, can be left as
+            None if the token can not be refreshed.
+        client_secret (str): The OAuth 2.0 client secret. Must be specified for refresh, can be
+            left as None if the token can not be refreshed.
+        token_url (str): The optional STS token exchange endpoint. Must be specified fro refresh,
+            can be leftas None if the token can not be refreshed.
         token_info_url (str): The optional STS endpoint URL for token introspection.
         revoke_url (str): The optional STS endpoint URL for revoking tokens.
         quota_project_id (str): The optional project ID used for quota and billing.
@@ -200,7 +203,9 @@ class Credentials(
             google.auth.exceptions.RefreshError: If the credentials could
                 not be refreshed.
         """
-        if not all((self._refresh_token, self._token_url, self._client_id, self._client_secret)):
+        if not all(
+            (self._refresh_token, self._token_url, self._client_id, self._client_secret)
+        ):
             raise exceptions.RefreshError(
                 "The credentials do not contain the necessary fields need to "
                 "refresh the access token. You must specify refresh_token, "

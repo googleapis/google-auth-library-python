@@ -92,6 +92,18 @@ class TestCredentials(object):
         assert not creds.requires_scopes
         assert creds.is_user
 
+    def test_basic_create(self):
+        creds = external_account_authorized_user.Credentials(
+            token=ACCESS_TOKEN, expiry=datetime.datetime.max
+        )
+
+        assert creds.expiry == datetime.datetime.max
+        assert not creds.expired
+        assert creds.token == ACCESS_TOKEN
+        assert creds.valid
+        assert not creds.requires_scopes
+        assert creds.is_user
+
     def test_stunted_create(self):
         with pytest.raises(ValueError) as excinfo:
             self.make_credentials(token=None, refresh_token=None)
