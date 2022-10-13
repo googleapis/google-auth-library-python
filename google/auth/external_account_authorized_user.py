@@ -154,13 +154,40 @@ class Credentials(
         return True
 
     def get_project_id(self):
+        """Retrieves the project ID corresponding to the workload identity or workforce pool.
+        For workforce pool credentials, it returns the project ID corresponding to
+        the workforce_pool_user_project.
+
+        When not determinable, None is returned.
+        """
+
         return None
 
     def to_json(self, strip=None):
+        """Utility function that creates a JSON representation of this
+        credential.
+        Args:
+            strip (Sequence[str]): Optional list of members to exclude from the
+                                   generated JSON.
+        Returns:
+            str: A JSON representation of this instance. When converted into
+            a dictionary, it can be passed to from_info()
+            to create a new instance.
+        """
         strip = strip if strip else []
         return json.dumps({k: v for (k, v) in self.info.items() if k not in strip})
 
     def refresh(self, request):
+        """Refreshes the access token.
+
+        Args:
+            request (google.auth.transport.Request): The object used to make
+                HTTP requests.
+
+        Raises:
+            google.auth.exceptions.RefreshError: If the credentials could
+                not be refreshed.
+        """
         now = _helpers.utcnow()
         response_data = self._make_sts_request(request)
 
