@@ -44,6 +44,7 @@ from google.oauth2 import utils
 
 _EXTERNAL_ACCOUNT_AUTHORIZED_USER_JSON_TYPE = "external_account_authorized_user"
 
+
 class Credentials(
     credentials.CredentialsWithQuotaProject,
     credentials.ReadOnlyScoped,
@@ -154,6 +155,9 @@ class Credentials(
 
     def get_project_id(self):
         return None
+
+    def to_json(self):
+        return json.dumps(self.info)
 
     def refresh(self, request):
         now = _helpers.utcnow()

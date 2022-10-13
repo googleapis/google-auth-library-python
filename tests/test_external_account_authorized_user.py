@@ -231,6 +231,43 @@ class TestCredentials(object):
         assert info["revoke_url"] == self.REVOKE_URL
         assert info["quota_project_id"] == self.QUOTA_PROJECT_ID
 
+    def test_to_json(self):
+        creds = self.make_credentials()
+        json_info = creds.to_json()
+        info = json.loads(json_info)
+
+        assert info["audience"] == self.AUDIENCE
+        assert info["refresh_token"] == self.REFRESH_TOKEN
+        assert info["token_url"] == self.TOKEN_URL
+        assert info["token_info_url"] == self.TOKEN_INFO_URL
+        assert info["client_id"] == self.CLIENT_ID
+        assert info["client_secret"] == self.CLIENT_SECRET
+        assert "token" not in info
+        assert "expiry" not in info
+        assert "revoke_url" not in info
+        assert "quota_project_id" not in info
+
+    def test_to_json_full(self):
+        creds = self.make_credentials(
+            token=self.ACCESS_TOKEN,
+            expiry=datetime.datetime.min,
+            revoke_url=self.REVOKE_URL,
+            quota_project_id=self.QUOTA_PROJECT_ID,
+        )
+        json_info = creds.to_json()
+        info = json.loads(json_info)
+
+        assert info["audience"] == self.AUDIENCE
+        assert info["refresh_token"] == self.REFRESH_TOKEN
+        assert info["token_url"] == self.TOKEN_URL
+        assert info["token_info_url"] == self.TOKEN_INFO_URL
+        assert info["client_id"] == self.CLIENT_ID
+        assert info["client_secret"] == self.CLIENT_SECRET
+        assert info["token"] == self.ACCESS_TOKEN
+        assert info["expiry"] == datetime.datetime.min.isoformat() + "Z"
+        assert info["revoke_url"] == self.REVOKE_URL
+        assert info["quota_project_id"] == self.QUOTA_PROJECT_ID
+
     def test_get_project_id(self):
         creds = self.make_credentials()
         assert creds.get_project_id() is None
@@ -276,7 +313,7 @@ class TestCredentials(object):
     def test_from_file_required_options_only(self, tmpdir):
         from_creds = self.make_credentials()
         config_file = tmpdir.join("config.json")
-        config_file.write(json.dumps(from_creds.info))
+        config_file.write(from_creds.to_json())
         creds = external_account_authorized_user.Credentials.from_file(str(config_file))
 
         assert isinstance(creds, external_account_authorized_user.Credentials)
@@ -299,7 +336,7 @@ class TestCredentials(object):
             quota_project_id=self.QUOTA_PROJECT_ID,
         )
         config_file = tmpdir.join("config.json")
-        config_file.write(json.dumps(from_creds.info))
+        config_file.write(from_creds.to_json())
         creds = external_account_authorized_user.Credentials.from_file(str(config_file))
 
         assert isinstance(creds, external_account_authorized_user.Credentials)
