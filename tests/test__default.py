@@ -553,6 +553,20 @@ def test_load_credentials_from_file_external_account_authorized_user():
     assert project_id is None
 
 
+def test_load_credentials_from_file_external_account_authorized_user_bad_format(tmpdir):
+    filename = tmpdir.join("external_account_authorized_user_bad.json")
+    filename.write(json.dumps({"type": "external_account_authorized_user"}))
+
+    with pytest.raises(exceptions.DefaultCredentialsError) as excinfo:
+        _default.load_credentials_from_file(str(filename))
+
+    assert excinfo.match(
+        "Failed to load external account authorized user credentials from {}".format(
+            str(filename)
+        )
+    )
+
+
 @pytest.mark.parametrize("quota_project_id", [None, "project-foo"])
 @LOAD_FILE_PATCH
 def test__get_explicit_environ_credentials(load, quota_project_id, monkeypatch):
