@@ -43,10 +43,7 @@ CLIENT_SECRET = "password"
 # Base64 encoding of "username:password".
 BASIC_AUTH_ENCODING = "dXNlcm5hbWU6cGFzc3dvcmQ="
 
-
 class TestCredentials(object):
-    class Sentinel(object):
-        pass
 
     @classmethod
     def make_credentials(
@@ -94,7 +91,8 @@ class TestCredentials(object):
 
     def test_basic_create(self):
         creds = external_account_authorized_user.Credentials(
-            token=ACCESS_TOKEN, expiry=datetime.datetime.max
+            token=ACCESS_TOKEN,
+            expiry=datetime.datetime.max
         )
 
         assert creds.expiry == datetime.datetime.max
@@ -108,7 +106,9 @@ class TestCredentials(object):
         with pytest.raises(ValueError) as excinfo:
             self.make_credentials(token=None, refresh_token=None)
 
-        assert excinfo.match(r"Either `refresh_token` or `token` should be set")
+        assert excinfo.match(
+            r"Either `refresh_token` or `token` should be set"
+        )
 
     @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
     def test_refresh_auth_success(self, utcnow):
@@ -135,9 +135,7 @@ class TestCredentials(object):
                 "Content-Type": "application/x-www-form-urlencoded",
                 "Authorization": "Basic " + BASIC_AUTH_ENCODING,
             },
-            body=bytes(
-                "grant_type=refresh_token&refresh_token=" + REFRESH_TOKEN, "UTF-8"
-            ),
+            body=("grant_type=refresh_token&refresh_token=" + REFRESH_TOKEN).encode("UTF-8"),
         )
 
     @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
@@ -169,19 +167,16 @@ class TestCredentials(object):
                 "Content-Type": "application/x-www-form-urlencoded",
                 "Authorization": "Basic " + BASIC_AUTH_ENCODING,
             },
-            body=bytes(
-                "grant_type=refresh_token&refresh_token=" + REFRESH_TOKEN, "UTF-8"
-            ),
+            body=("grant_type=refresh_token&refresh_token=" + REFRESH_TOKEN).encode("UTF-8"),
         )
 
     def test_refresh_auth_failure(self):
         request = self.make_mock_request(
-            status=http_client.BAD_REQUEST,
-            data={
+            status=http_client.BAD_REQUEST, data={
                 "error": "invalid_request",
                 "error_description": "Invalid subject token",
                 "error_uri": "https://tools.ietf.org/html/rfc6749",
-            },
+            }
         )
         creds = self.make_credentials()
 
@@ -206,14 +201,12 @@ class TestCredentials(object):
                 "Content-Type": "application/x-www-form-urlencoded",
                 "Authorization": "Basic " + BASIC_AUTH_ENCODING,
             },
-            body=bytes(
-                "grant_type=refresh_token&refresh_token=" + REFRESH_TOKEN, "UTF-8"
-            ),
+            body=("grant_type=refresh_token&refresh_token=" + REFRESH_TOKEN).encode("UTF-8"),
         )
 
     def test_refresh_without_refresh_token(self):
         request = self.make_mock_request()
-        creds = self.make_credentials(refresh_token=None, token=ACCESS_TOKEN)
+        creds = self.make_credentials(refresh_token=None,token=ACCESS_TOKEN)
 
         with pytest.raises(exceptions.RefreshError) as excinfo:
             creds.refresh(request)
@@ -309,7 +302,7 @@ class TestCredentials(object):
             token=ACCESS_TOKEN,
             expiry=datetime.datetime.min,
             revoke_url=REVOKE_URL,
-            quota_project_id=QUOTA_PROJECT_ID,
+            quota_project_id=QUOTA_PROJECT_ID
         )
         info = creds.info
 
@@ -345,7 +338,7 @@ class TestCredentials(object):
             token=ACCESS_TOKEN,
             expiry=datetime.datetime.min,
             revoke_url=REVOKE_URL,
-            quota_project_id=QUOTA_PROJECT_ID,
+            quota_project_id=QUOTA_PROJECT_ID
         )
         json_info = creds.to_json()
         info = json.loads(json_info)
@@ -366,7 +359,7 @@ class TestCredentials(object):
             token=ACCESS_TOKEN,
             expiry=datetime.datetime.min,
             revoke_url=REVOKE_URL,
-            quota_project_id=QUOTA_PROJECT_ID,
+            quota_project_id=QUOTA_PROJECT_ID
         )
         json_info = creds.to_json(strip=["token", "expiry"])
         info = json.loads(json_info)
@@ -391,7 +384,7 @@ class TestCredentials(object):
             token=ACCESS_TOKEN,
             expiry=datetime.datetime.min,
             revoke_url=REVOKE_URL,
-            quota_project_id=QUOTA_PROJECT_ID,
+            quota_project_id=QUOTA_PROJECT_ID
         )
         new_creds = creds.with_quota_project(QUOTA_PROJECT_ID)
         assert new_creds._audience == creds._audience
@@ -410,7 +403,7 @@ class TestCredentials(object):
             token=ACCESS_TOKEN,
             expiry=datetime.datetime.min,
             revoke_url=REVOKE_URL,
-            quota_project_id=QUOTA_PROJECT_ID,
+            quota_project_id=QUOTA_PROJECT_ID
         )
         new_creds = creds.with_token_uri("https://google.com")
         assert new_creds._audience == creds._audience
