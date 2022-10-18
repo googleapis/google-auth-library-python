@@ -35,21 +35,8 @@ def create_api_key(project_id: str, location: str) -> Key:
     # Create the API Keys client.
     client = api_keys_v2.ApiKeysClient()
 
-    # Restrict the API key usage by specifying the target service and methods.
-    # The API key can only be used to authenticate the specified methods in the service.
-    api_target = api_keys_v2.ApiTarget()
-    api_target.service = "translate.googleapis.com"
-    api_target.methods = ["transate.googleapis.com.TranslateText"]
-
-    # Set the API restriction.
-    # You can also set browser/ server/ android/ ios based restrictions.
-    # For more information on API key restriction, see: https://cloud.google.com/docs/authentication/api-keys#api_key_restrictions
-    restrictions = api_keys_v2.Restrictions()
-    restrictions.api_targets = [api_target]
-
     key = api_keys_v2.Key()
     key.display_name = "My first API key"
-    key.restrictions = restrictions
 
     # Initialize request and set arguments.
     request = api_keys_v2.CreateKeyRequest()
@@ -61,6 +48,7 @@ def create_api_key(project_id: str, location: str) -> Key:
 
     print(f"Successfully created an API key: {response.name}")
     # Use response.key_string to authenticate.
+    # Use response.name to restrict the key.
     return response
 
 # [END auth_cloud_create_api_key]

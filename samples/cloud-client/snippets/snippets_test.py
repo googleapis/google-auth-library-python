@@ -24,6 +24,11 @@ import delete_api_key
 import idtoken_from_metadata_server
 import idtoken_from_service_account
 import lookup_api_key
+import restrict_api_key_android
+import restrict_api_key_api
+import restrict_api_key_http
+import restrict_api_key_ios
+import restrict_api_key_server
 # from system_tests.noxfile import SERVICE_ACCOUNT_FILE
 import verify_google_idtoken
 
@@ -90,6 +95,36 @@ def test_lookup_api_key(api_key: Key, capsys: CaptureFixture):
     lookup_api_key.lookup_api_key(api_key.key_string)
     out, err = capsys.readouterr()
     assert re.search(f"Successfully retrieved the API key name: {api_key.name}", out)
+
+
+def test_restrict_api_key_android(api_key: Key, capsys: CaptureFixture):
+    restrict_api_key_android.restrict_api_key_android(PROJECT, "global", api_key.name.rsplit("/")[-1])
+    out, err = capsys.readouterr()
+    assert re.search(f"Successfully updated the API key: {api_key.name}", out)
+
+
+def test_restrict_api_key_api(api_key: Key, capsys: CaptureFixture):
+    restrict_api_key_api.restrict_api_key_api(PROJECT, "global", api_key.name.rsplit("/")[-1])
+    out, err = capsys.readouterr()
+    assert re.search(f"Successfully updated the API key: {api_key.name}", out)
+
+
+def test_restrict_api_key_http(api_key: Key, capsys: CaptureFixture):
+    restrict_api_key_http.restrict_api_key_http(PROJECT, "global", api_key.name.rsplit("/")[-1])
+    out, err = capsys.readouterr()
+    assert re.search(f"Successfully updated the API key: {api_key.name}", out)
+
+
+def test_restrict_api_key_ios(api_key: Key, capsys: CaptureFixture):
+    restrict_api_key_ios.restrict_api_key_ios(PROJECT, "global", api_key.name.rsplit("/")[-1])
+    out, err = capsys.readouterr()
+    assert re.search(f"Successfully updated the API key: {api_key.name}", out)
+
+
+def test_restrict_api_key_server(api_key: Key, capsys: CaptureFixture):
+    restrict_api_key_server.restrict_api_key_server(PROJECT, "global", api_key.name.rsplit("/")[-1])
+    out, err = capsys.readouterr()
+    assert re.search(f"Successfully updated the API key: {api_key.name}", out)
 
 
 def get_idtoken_from_service_account(json_credential_path: str, target_audience: str):

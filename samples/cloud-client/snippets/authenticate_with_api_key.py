@@ -21,10 +21,7 @@ def authenticate_with_api_key(quota_project_id: str, api_key_string: str) -> Non
     """
     Demonstrate authenticating with an API key for Google Language service.
 
-    // TODO(Developer):
-    //  1. Before running this sample,
-    //  set up ADC as described in https://cloud.google.com/docs/authentication/external/set-up-adc
-    //  2. Make sure you have the necessary permission to use Google Language service.
+    // TODO(Developer): Replace these variables before running the sample.
 
     Args:
         quota_project_id: Google Cloud project id that should be used for quota and billing purposes.
