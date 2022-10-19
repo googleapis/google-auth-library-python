@@ -433,6 +433,7 @@ class IDTokenCredentials(credentials.CredentialsWithQuotaProject):
             headers=headers,
             data=json.dumps(body).encode("utf-8"),
         )
+        response.raise_for_status()
 
         id_token = response.json()["token"]
         self.token = id_token
