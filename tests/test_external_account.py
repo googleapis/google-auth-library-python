@@ -289,6 +289,7 @@ class TestCredentials(object):
             "https://us-east-1-sts.googleapis.com",
             "https://US-WEST-1-sts.googleapis.com",
             "https://us-west-1-sts.googleapis.com/path?query",
+            "https://sts-us-east-1.p.googleapis.com",
         ]
 
         for url in valid_urls:
@@ -316,6 +317,15 @@ class TestCredentials(object):
             "https://us- -1.sts.googleapis.com",
             "https://-sts.googleapis.com",
             "https://us-east-1.sts.googleapis.com.evil.com",
+            "https://sts.pgoogleapis.com",
+            "https://p.googleapis.com",
+            "https://sts.p.com",
+            "http://sts.p.googleapis.com",
+            "https://xyz-sts.p.googleapis.com",
+            "https://sts-xyz.123.p.googleapis.com",
+            "https://sts-xyz.p1.googleapis.com",
+            "https://sts-xyz.p.foo.com",
+            "https://sts-xyz.p.foo.googleapis.com",
         ]
 
         for url in invalid_urls:
@@ -335,6 +345,7 @@ class TestCredentials(object):
             "https://us-east-1-iamcredentials.googleapis.com",
             "https://US-WEST-1-iamcredentials.googleapis.com",
             "https://us-west-1-iamcredentials.googleapis.com/path?query",
+            "https://iamcredentials-us-east-1.p.googleapis.com",
         ]
 
         for url in valid_urls:
@@ -362,6 +373,15 @@ class TestCredentials(object):
             "https://us- -1.iamcredentials.googleapis.com",
             "https://-iamcredentials.googleapis.com",
             "https://us-east-1.iamcredentials.googleapis.com.evil.com",
+            "https://iamcredentials.pgoogleapis.com",
+            "https://p.googleapis.com",
+            "https://iamcredentials.p.com",
+            "http://iamcredentials.p.googleapis.com",
+            "https://xyz-iamcredentials.p.googleapis.com",
+            "https://iamcredentials-xyz.123.p.googleapis.com",
+            "https://iamcredentials-xyz.p1.googleapis.com",
+            "https://iamcredentials-xyz.p.foo.com",
+            "https://iamcredentials-xyz.p.foo.googleapis.com",
         ]
 
         for url in invalid_urls:
@@ -520,6 +540,33 @@ class TestCredentials(object):
             scopes=["email"],
             default_scopes=["default2"],
             workforce_pool_user_project=None,
+        )
+
+    def test_with_token_uri(self):
+        credentials = self.make_credentials()
+        new_token_uri = "https://eu-sts.googleapis.com/v1/token"
+
+        assert credentials._token_url == self.TOKEN_URL
+
+        creds_with_new_token_uri = credentials.with_token_uri(new_token_uri)
+
+        assert creds_with_new_token_uri._token_url == new_token_uri
+
+    def test_with_token_uri_workforce_pool(self):
+        credentials = self.make_workforce_pool_credentials(
+            workforce_pool_user_project=self.WORKFORCE_POOL_USER_PROJECT
+        )
+
+        new_token_uri = "https://eu-sts.googleapis.com/v1/token"
+
+        assert credentials._token_url == self.TOKEN_URL
+
+        creds_with_new_token_uri = credentials.with_token_uri(new_token_uri)
+
+        assert creds_with_new_token_uri._token_url == new_token_uri
+        assert (
+            creds_with_new_token_uri.info.get("workforce_pool_user_project")
+            == self.WORKFORCE_POOL_USER_PROJECT
         )
 
     def test_with_quota_project(self):
