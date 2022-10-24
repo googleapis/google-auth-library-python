@@ -45,6 +45,7 @@ SCOPES = ["scope1", "scope2"]
 SUBJECT_TOKEN_FIELD_NAME = "access_token"
 
 TOKEN_URL = "https://sts.googleapis.com/v1/token"
+TOKEN_INFO_URL = "https://sts.googleapis.com/v1/introspect"
 SUBJECT_TOKEN_TYPE = "urn:ietf:params:oauth:token-type:jwt"
 AUDIENCE = "//iam.googleapis.com/projects/123456/locations/global/workloadIdentityPools/POOL_ID/providers/PROVIDER_ID"
 
@@ -129,6 +130,7 @@ class TestCredentials(object):
             audience=audience,
             subject_token_type=subject_token_type,
             token_url=TOKEN_URL,
+            token_info_url=TOKEN_INFO_URL,
             service_account_impersonation_url=service_account_impersonation_url,
             credential_source=credential_source,
             client_id=client_id,
@@ -147,6 +149,7 @@ class TestCredentials(object):
                 "audience": AUDIENCE,
                 "subject_token_type": SUBJECT_TOKEN_TYPE,
                 "token_url": TOKEN_URL,
+                "token_info_url": TOKEN_INFO_URL,
                 "service_account_impersonation_url": SERVICE_ACCOUNT_IMPERSONATION_URL,
                 "service_account_impersonation": {"token_lifetime_seconds": 2800},
                 "client_id": CLIENT_ID,
@@ -162,6 +165,7 @@ class TestCredentials(object):
             audience=AUDIENCE,
             subject_token_type=SUBJECT_TOKEN_TYPE,
             token_url=TOKEN_URL,
+            token_info_url=TOKEN_INFO_URL,
             service_account_impersonation_url=SERVICE_ACCOUNT_IMPERSONATION_URL,
             service_account_impersonation_options={"token_lifetime_seconds": 2800},
             client_id=CLIENT_ID,
@@ -188,6 +192,7 @@ class TestCredentials(object):
             audience=AUDIENCE,
             subject_token_type=SUBJECT_TOKEN_TYPE,
             token_url=TOKEN_URL,
+            token_info_url=None,
             service_account_impersonation_url=None,
             service_account_impersonation_options={},
             client_id=None,
@@ -203,6 +208,7 @@ class TestCredentials(object):
             "audience": AUDIENCE,
             "subject_token_type": SUBJECT_TOKEN_TYPE,
             "token_url": TOKEN_URL,
+            "token_info_url": TOKEN_INFO_URL,
             "service_account_impersonation_url": SERVICE_ACCOUNT_IMPERSONATION_URL,
             "service_account_impersonation": {"token_lifetime_seconds": 2800},
             "client_id": CLIENT_ID,
@@ -220,6 +226,7 @@ class TestCredentials(object):
             audience=AUDIENCE,
             subject_token_type=SUBJECT_TOKEN_TYPE,
             token_url=TOKEN_URL,
+            token_info_url=TOKEN_INFO_URL,
             service_account_impersonation_url=SERVICE_ACCOUNT_IMPERSONATION_URL,
             service_account_impersonation_options={"token_lifetime_seconds": 2800},
             client_id=CLIENT_ID,
@@ -247,6 +254,7 @@ class TestCredentials(object):
             audience=AUDIENCE,
             subject_token_type=SUBJECT_TOKEN_TYPE,
             token_url=TOKEN_URL,
+            token_info_url=None,
             service_account_impersonation_url=None,
             service_account_impersonation_options={},
             client_id=None,
@@ -280,8 +288,16 @@ class TestCredentials(object):
             "audience": AUDIENCE,
             "subject_token_type": SUBJECT_TOKEN_TYPE,
             "token_url": TOKEN_URL,
+            "token_info_url": TOKEN_INFO_URL,
             "credential_source": self.CREDENTIAL_SOURCE,
         }
+
+    def test_token_info_url(self):
+        credentials = self.make_pluggable(
+            credential_source=self.CREDENTIAL_SOURCE.copy()
+        )
+
+        assert credentials.token_info_url == TOKEN_INFO_URL
 
     @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
     def test_retrieve_subject_token_successfully(self, tmpdir):

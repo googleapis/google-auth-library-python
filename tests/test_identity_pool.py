@@ -51,6 +51,7 @@ with open(SUBJECT_TOKEN_JSON_FILE) as fh:
     JSON_FILE_SUBJECT_TOKEN = JSON_FILE_CONTENT.get(SUBJECT_TOKEN_FIELD_NAME)
 
 TOKEN_URL = "https://sts.googleapis.com/v1/token"
+TOKEN_INFO_URL = "https://sts.googleapis.com/v1/introspect"
 SUBJECT_TOKEN_TYPE = "urn:ietf:params:oauth:token-type:jwt"
 AUDIENCE = "//iam.googleapis.com/projects/123456/locations/global/workloadIdentityPools/POOL_ID/providers/PROVIDER_ID"
 WORKFORCE_AUDIENCE = (
@@ -275,6 +276,7 @@ class TestCredentials(object):
             audience=audience,
             subject_token_type=subject_token_type,
             token_url=TOKEN_URL,
+            token_info_url=TOKEN_INFO_URL,
             service_account_impersonation_url=service_account_impersonation_url,
             credential_source=credential_source,
             client_id=client_id,
@@ -292,6 +294,7 @@ class TestCredentials(object):
                 "audience": AUDIENCE,
                 "subject_token_type": SUBJECT_TOKEN_TYPE,
                 "token_url": TOKEN_URL,
+                "token_info_url": TOKEN_INFO_URL,
                 "service_account_impersonation_url": SERVICE_ACCOUNT_IMPERSONATION_URL,
                 "service_account_impersonation": {"token_lifetime_seconds": 2800},
                 "client_id": CLIENT_ID,
@@ -307,6 +310,7 @@ class TestCredentials(object):
             audience=AUDIENCE,
             subject_token_type=SUBJECT_TOKEN_TYPE,
             token_url=TOKEN_URL,
+            token_info_url=TOKEN_INFO_URL,
             service_account_impersonation_url=SERVICE_ACCOUNT_IMPERSONATION_URL,
             service_account_impersonation_options={"token_lifetime_seconds": 2800},
             client_id=CLIENT_ID,
@@ -333,6 +337,7 @@ class TestCredentials(object):
             audience=AUDIENCE,
             subject_token_type=SUBJECT_TOKEN_TYPE,
             token_url=TOKEN_URL,
+            token_info_url=None,
             service_account_impersonation_url=None,
             service_account_impersonation_options={},
             client_id=None,
@@ -360,6 +365,7 @@ class TestCredentials(object):
             audience=WORKFORCE_AUDIENCE,
             subject_token_type=WORKFORCE_SUBJECT_TOKEN_TYPE,
             token_url=TOKEN_URL,
+            token_info_url=None,
             service_account_impersonation_url=None,
             service_account_impersonation_options={},
             client_id=None,
@@ -375,6 +381,7 @@ class TestCredentials(object):
             "audience": AUDIENCE,
             "subject_token_type": SUBJECT_TOKEN_TYPE,
             "token_url": TOKEN_URL,
+            "token_info_url": TOKEN_INFO_URL,
             "service_account_impersonation_url": SERVICE_ACCOUNT_IMPERSONATION_URL,
             "service_account_impersonation": {"token_lifetime_seconds": 2800},
             "client_id": CLIENT_ID,
@@ -392,6 +399,7 @@ class TestCredentials(object):
             audience=AUDIENCE,
             subject_token_type=SUBJECT_TOKEN_TYPE,
             token_url=TOKEN_URL,
+            token_info_url=TOKEN_INFO_URL,
             service_account_impersonation_url=SERVICE_ACCOUNT_IMPERSONATION_URL,
             service_account_impersonation_options={"token_lifetime_seconds": 2800},
             client_id=CLIENT_ID,
@@ -419,6 +427,7 @@ class TestCredentials(object):
             audience=AUDIENCE,
             subject_token_type=SUBJECT_TOKEN_TYPE,
             token_url=TOKEN_URL,
+            token_info_url=None,
             service_account_impersonation_url=None,
             service_account_impersonation_options={},
             client_id=None,
@@ -447,6 +456,7 @@ class TestCredentials(object):
             audience=WORKFORCE_AUDIENCE,
             subject_token_type=WORKFORCE_SUBJECT_TOKEN_TYPE,
             token_url=TOKEN_URL,
+            token_info_url=None,
             service_account_impersonation_url=None,
             service_account_impersonation_options={},
             client_id=None,
@@ -534,6 +544,7 @@ class TestCredentials(object):
             "audience": WORKFORCE_AUDIENCE,
             "subject_token_type": WORKFORCE_SUBJECT_TOKEN_TYPE,
             "token_url": TOKEN_URL,
+            "token_info_url": TOKEN_INFO_URL,
             "credential_source": self.CREDENTIAL_SOURCE_TEXT_URL,
             "workforce_pool_user_project": WORKFORCE_POOL_USER_PROJECT,
         }
@@ -548,6 +559,7 @@ class TestCredentials(object):
             "audience": AUDIENCE,
             "subject_token_type": SUBJECT_TOKEN_TYPE,
             "token_url": TOKEN_URL,
+            "token_info_url": TOKEN_INFO_URL,
             "credential_source": self.CREDENTIAL_SOURCE_TEXT_URL,
         }
 
@@ -561,6 +573,7 @@ class TestCredentials(object):
             "audience": AUDIENCE,
             "subject_token_type": SUBJECT_TOKEN_TYPE,
             "token_url": TOKEN_URL,
+            "token_info_url": TOKEN_INFO_URL,
             "credential_source": self.CREDENTIAL_SOURCE_JSON_URL,
         }
 
@@ -637,6 +650,13 @@ class TestCredentials(object):
             credentials.retrieve_subject_token(None)
 
         assert excinfo.match(r"File './not_found.txt' was not found")
+
+    def test_token_info_url(self):
+        credentials = self.make_credentials(
+            credential_source=self.CREDENTIAL_SOURCE_JSON
+        )
+
+        assert credentials.token_info_url == TOKEN_INFO_URL
 
     def test_refresh_text_file_success_without_impersonation_ignore_default_scopes(
         self,

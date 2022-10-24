@@ -39,6 +39,7 @@ SERVICE_ACCOUNT_IMPERSONATION_URL = (
 QUOTA_PROJECT_ID = "QUOTA_PROJECT_ID"
 SCOPES = ["scope1", "scope2"]
 TOKEN_URL = "https://sts.googleapis.com/v1/token"
+TOKEN_INFO_URL = "https://sts.googleapis.com/v1/introspect"
 SUBJECT_TOKEN_TYPE = "urn:ietf:params:aws:token-type:aws4_request"
 AUDIENCE = "//iam.googleapis.com/projects/123456/locations/global/workloadIdentityPools/POOL_ID/providers/PROVIDER_ID"
 REGION_URL = "http://169.254.169.254/latest/meta-data/placement/availability-zone"
@@ -738,6 +739,7 @@ class TestCredentials(object):
             audience=AUDIENCE,
             subject_token_type=SUBJECT_TOKEN_TYPE,
             token_url=TOKEN_URL,
+            token_info_url=TOKEN_INFO_URL,
             service_account_impersonation_url=service_account_impersonation_url,
             credential_source=credential_source,
             client_id=client_id,
@@ -796,6 +798,7 @@ class TestCredentials(object):
                 "audience": AUDIENCE,
                 "subject_token_type": SUBJECT_TOKEN_TYPE,
                 "token_url": TOKEN_URL,
+                "token_info_url": TOKEN_INFO_URL,
                 "service_account_impersonation_url": SERVICE_ACCOUNT_IMPERSONATION_URL,
                 "service_account_impersonation": {"token_lifetime_seconds": 2800},
                 "client_id": CLIENT_ID,
@@ -811,6 +814,7 @@ class TestCredentials(object):
             audience=AUDIENCE,
             subject_token_type=SUBJECT_TOKEN_TYPE,
             token_url=TOKEN_URL,
+            token_info_url=TOKEN_INFO_URL,
             service_account_impersonation_url=SERVICE_ACCOUNT_IMPERSONATION_URL,
             service_account_impersonation_options={"token_lifetime_seconds": 2800},
             client_id=CLIENT_ID,
@@ -837,6 +841,7 @@ class TestCredentials(object):
             audience=AUDIENCE,
             subject_token_type=SUBJECT_TOKEN_TYPE,
             token_url=TOKEN_URL,
+            token_info_url=None,
             service_account_impersonation_url=None,
             service_account_impersonation_options={},
             client_id=None,
@@ -852,6 +857,7 @@ class TestCredentials(object):
             "audience": AUDIENCE,
             "subject_token_type": SUBJECT_TOKEN_TYPE,
             "token_url": TOKEN_URL,
+            "token_info_url": TOKEN_INFO_URL,
             "service_account_impersonation_url": SERVICE_ACCOUNT_IMPERSONATION_URL,
             "service_account_impersonation": {"token_lifetime_seconds": 2800},
             "client_id": CLIENT_ID,
@@ -869,6 +875,7 @@ class TestCredentials(object):
             audience=AUDIENCE,
             subject_token_type=SUBJECT_TOKEN_TYPE,
             token_url=TOKEN_URL,
+            token_info_url=TOKEN_INFO_URL,
             service_account_impersonation_url=SERVICE_ACCOUNT_IMPERSONATION_URL,
             service_account_impersonation_options={"token_lifetime_seconds": 2800},
             client_id=CLIENT_ID,
@@ -896,6 +903,7 @@ class TestCredentials(object):
             audience=AUDIENCE,
             subject_token_type=SUBJECT_TOKEN_TYPE,
             token_url=TOKEN_URL,
+            token_info_url=None,
             service_account_impersonation_url=None,
             service_account_impersonation_options={},
             client_id=None,
@@ -954,8 +962,16 @@ class TestCredentials(object):
             "audience": AUDIENCE,
             "subject_token_type": SUBJECT_TOKEN_TYPE,
             "token_url": TOKEN_URL,
+            "token_info_url": TOKEN_INFO_URL,
             "credential_source": self.CREDENTIAL_SOURCE,
         }
+
+    def test_token_info_url(self):
+        credentials = self.make_credentials(
+            credential_source=self.CREDENTIAL_SOURCE.copy()
+        )
+
+        assert credentials.token_info_url == TOKEN_INFO_URL
 
     def test_retrieve_subject_token_missing_region_url(self):
         # When AWS_REGION envvar is not available, region_url is required for
