@@ -164,18 +164,18 @@ class Credentials(
                 useful for serializing the current credentials so it can deserialized
                 later.
         """
-        config_info = self.constructor_args()
+        config_info = self._constructor_args()
         config_info.update(
             type=_EXTERNAL_ACCOUNT_JSON_TYPE,
             service_account_impersonation=config_info.pop(
-                "service_account_impersonation_options"
+                "service_account_impersonation_options", None
             ),
         )
-        config_info.pop("scopes")
-        config_info.pop("default_scopes")
+        config_info.pop("scopes", None)
+        config_info.pop("default_scopes", None)
         return {key: value for key, value in config_info.items() if value is not None}
 
-    def constructor_args(self):
+    def _constructor_args(self):
         args = {
             "audience": self._audience,
             "subject_token_type": self._subject_token_type,
@@ -282,7 +282,7 @@ class Credentials(
 
     @_helpers.copy_docstring(credentials.Scoped)
     def with_scopes(self, scopes, default_scopes=None):
-        kwargs = self.constructor_args()
+        kwargs = self._constructor_args()
         kwargs.update(scopes=scopes, default_scopes=default_scopes)
         return self.__class__(**kwargs)
 
@@ -379,13 +379,13 @@ class Credentials(
     @_helpers.copy_docstring(credentials.CredentialsWithQuotaProject)
     def with_quota_project(self, quota_project_id):
         # Return copy of instance with the provided quota project ID.
-        kwargs = self.constructor_args()
+        kwargs = self._constructor_args()
         kwargs.update(quota_project_id=quota_project_id)
         return self.__class__(**kwargs)
 
     @_helpers.copy_docstring(credentials.CredentialsWithTokenUri)
     def with_token_uri(self, token_uri):
-        kwargs = self.constructor_args()
+        kwargs = self._constructor_args()
         kwargs.update(token_url=token_uri)
         return self.__class__(**kwargs)
 
@@ -405,7 +405,7 @@ class Credentials(
                 endpoint returned an error.
         """
         # Return copy of instance with no service account impersonation.
-        kwargs = self.constructor_args()
+        kwargs = self._constructor_args()
         kwargs.update(
             service_account_impersonation_url=None,
             service_account_impersonation_options={},

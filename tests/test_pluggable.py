@@ -116,6 +116,7 @@ class TestCredentials(object):
         cls,
         audience=AUDIENCE,
         subject_token_type=SUBJECT_TOKEN_TYPE,
+        token_info_url=TOKEN_INFO_URL,
         client_id=None,
         client_secret=None,
         quota_project_id=None,
@@ -130,7 +131,7 @@ class TestCredentials(object):
             audience=audience,
             subject_token_type=subject_token_type,
             token_url=TOKEN_URL,
-            token_info_url=TOKEN_INFO_URL,
+            token_info_url=token_info_url,
             service_account_impersonation_url=service_account_impersonation_url,
             credential_source=credential_source,
             client_id=client_id,
@@ -298,6 +299,13 @@ class TestCredentials(object):
         )
 
         assert credentials.token_info_url == TOKEN_INFO_URL
+
+    def test_token_info_url_negative(self):
+        credentials = self.make_pluggable(
+            credential_source=self.CREDENTIAL_SOURCE.copy(), token_info_url=None
+        )
+
+        assert not credentials.token_info_url
 
     @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
     def test_retrieve_subject_token_successfully(self, tmpdir):

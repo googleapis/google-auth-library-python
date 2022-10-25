@@ -728,6 +728,7 @@ class TestCredentials(object):
     def make_credentials(
         cls,
         credential_source,
+        token_info_url=TOKEN_INFO_URL,
         client_id=None,
         client_secret=None,
         quota_project_id=None,
@@ -739,7 +740,7 @@ class TestCredentials(object):
             audience=AUDIENCE,
             subject_token_type=SUBJECT_TOKEN_TYPE,
             token_url=TOKEN_URL,
-            token_info_url=TOKEN_INFO_URL,
+            token_info_url=token_info_url,
             service_account_impersonation_url=service_account_impersonation_url,
             credential_source=credential_source,
             client_id=client_id,
@@ -972,6 +973,13 @@ class TestCredentials(object):
         )
 
         assert credentials.token_info_url == TOKEN_INFO_URL
+
+    def test_token_info_url_negative(self):
+        credentials = self.make_credentials(
+            credential_source=self.CREDENTIAL_SOURCE.copy(), token_info_url=None
+        )
+
+        assert not credentials.token_info_url
 
     def test_retrieve_subject_token_missing_region_url(self):
         # When AWS_REGION envvar is not available, region_url is required for
