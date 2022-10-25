@@ -89,6 +89,7 @@ class TestCredentials(object):
         assert not creds.valid
         assert not creds.requires_scopes
         assert not creds.scopes
+        assert creds.token_info_url
         assert creds.client_id
         assert creds.client_secret
         assert creds.is_user

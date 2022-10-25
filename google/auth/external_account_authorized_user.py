@@ -186,6 +186,11 @@ class Credentials(
         """ True: This credential always represents a user."""
         return True
 
+    @property
+    def token_info_url(self):
+        """Optional[str]: The STS endpoint for token info."""
+        return self._token_info_url
+
     def get_project_id(self):
         """Retrieves the project ID corresponding to the workload identity or workforce pool.
         For workforce pool credentials, it returns the project ID corresponding to
