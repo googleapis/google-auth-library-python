@@ -73,6 +73,7 @@ class Credentials(
         token_url=None,
         token_info_url=None,
         revoke_url=None,
+        scopes=None,
         quota_project_id=None,
     ):
         """Instantiates a external account authorized user credentials object.
@@ -117,6 +118,7 @@ class Credentials(
         self._client_secret = client_secret
         self._revoke_url = revoke_url
         self._quota_project_id = quota_project_id
+        self._scopes = scopes
 
         self._client_auth = None
         if self._client_id:
@@ -154,14 +156,30 @@ class Credentials(
             "token": self.token,
             "expiry": self.expiry,
             "revoke_url": self._revoke_url,
+            "scopes": self._scopes,
             "quota_project_id": self._quota_project_id,
         }
+
+    @property
+    def scopes(self):
+        """Optional[str]: The OAuth 2.0 permission scopes."""
+        return self._scopes
 
     @property
     def requires_scopes(self):
         """ False: OAuth 2.0 credentials have their scopes set when
         the initial token is requested and can not be changed."""
         return False
+
+    @property
+    def client_id(self):
+        """Optional[str]: The OAuth 2.0 client ID."""
+        return self._client_id
+
+    @property
+    def client_secret(self):
+        """Optional[str]: The OAuth 2.0 client secret."""
+        return self._client_secret
 
     @property
     def is_user(self):

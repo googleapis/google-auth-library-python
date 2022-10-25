@@ -42,6 +42,7 @@ CLIENT_ID = "username"
 CLIENT_SECRET = "password"
 # Base64 encoding of "username:password".
 BASIC_AUTH_ENCODING = "dXNlcm5hbWU6cGFzc3dvcmQ="
+SCOPES = ["email", "profile"]
 
 
 class TestCredentials(object):
@@ -87,11 +88,14 @@ class TestCredentials(object):
         assert not creds.token
         assert not creds.valid
         assert not creds.requires_scopes
+        assert not creds.scopes
+        assert creds.client_id
+        assert creds.client_secret
         assert creds.is_user
 
     def test_basic_create(self):
         creds = external_account_authorized_user.Credentials(
-            token=ACCESS_TOKEN, expiry=datetime.datetime.max
+            token=ACCESS_TOKEN, expiry=datetime.datetime.max, scopes=SCOPES,
         )
 
         assert creds.expiry == datetime.datetime.max
@@ -99,6 +103,7 @@ class TestCredentials(object):
         assert creds.token == ACCESS_TOKEN
         assert creds.valid
         assert not creds.requires_scopes
+        assert creds.scopes == SCOPES
         assert creds.is_user
 
     def test_stunted_create(self):
