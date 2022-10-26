@@ -128,6 +128,7 @@ class Credentials(
         self._workforce_pool_user_project = workforce_pool_user_project
 
         Credentials.validate_token_url(token_url)
+        # TODO: validate token info url
         if service_account_impersonation_url:
             Credentials.validate_service_account_impersonation_url(
                 service_account_impersonation_url
@@ -276,7 +277,7 @@ class Credentials(
 
     @property
     def token_info_url(self):
-        """Optional[str]: The STS endpoint for token info."""
+        """Optional[str]: The STS token introspection endpoint."""
 
         return self._token_info_url
 
