@@ -126,6 +126,17 @@ def test_decode_valid(token_factory):
     assert payload["metadata"]["meta"] == "data"
 
 
+def test_decode_header_object(token_factory):
+    payload = token_factory()
+    # Create a malformed JWT token with a number as a header instead of a
+    # dictionary (3 == base64d(M7==))
+    payload = b"M7." + b".".join(payload.split(b".")[1:])
+
+    with pytest.raises(ValueError) as excinfo:
+        jwt.decode(payload, certs=PUBLIC_CERT_BYTES)
+    assert excinfo.match(r"Header segment should be a JSON object: " + str(b"M7"))
+
+
 def test_decode_valid_es256(token_factory):
     payload = jwt.decode(
         token_factory(use_es256_signer=True), certs=EC_PUBLIC_CERT_BYTES

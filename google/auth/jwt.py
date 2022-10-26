@@ -133,11 +133,12 @@ def _unverified_decode(token):
         token (Union[str, bytes]): The encoded JWT.
 
     Returns:
-        Tuple[str, str, str, str]: header, payload, signed_section, and
+        Tuple[Mapping, str, str, str]: header, payload, signed_section, and
             signature.
 
     Raises:
-        ValueError: if there are an incorrect amount of segments in the token.
+        ValueError: if there are an incorrect amount of segments in the token or
+        segments of the wrong type.
     """
     token = _helpers.to_bytes(token)
 
@@ -151,6 +152,9 @@ def _unverified_decode(token):
     # Parse segments
     header = _decode_jwt_segment(encoded_header)
     payload = _decode_jwt_segment(encoded_payload)
+
+    if not isinstance(header, Mapping):
+        raise ValueError("Header segment should be a JSON object: {0}".format(encoded_header))
 
     return header, payload, signed_section, signature
 
