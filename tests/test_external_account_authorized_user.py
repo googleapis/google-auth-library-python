@@ -100,7 +100,7 @@ class TestCredentials(object):
 
     def test_basic_create(self):
         creds = external_account_authorized_user.Credentials(
-            token=ACCESS_TOKEN, expiry=datetime.datetime.max, scopes=SCOPES,
+            token=ACCESS_TOKEN, expiry=datetime.datetime.max, scopes=SCOPES
         )
 
         assert creds.expiry == datetime.datetime.max
@@ -432,14 +432,15 @@ class TestCredentials(object):
         creds = external_account_authorized_user.Credentials.from_file(str(config_file))
 
         assert isinstance(creds, external_account_authorized_user.Credentials)
-        assert creds._audience == AUDIENCE
-        assert creds._refresh_token == REFRESH_TOKEN
-        assert creds._token_url == TOKEN_URL
-        assert creds._token_info_url == TOKEN_INFO_URL
-        assert creds._client_id == CLIENT_ID
-        assert creds._client_secret == CLIENT_SECRET
+        assert creds.audience == AUDIENCE
+        assert creds.refresh_token == REFRESH_TOKEN
+        assert creds.token_url == TOKEN_URL
+        assert creds.token_info_url == TOKEN_INFO_URL
+        assert creds.client_id == CLIENT_ID
+        assert creds.client_secret == CLIENT_SECRET
         assert creds.token is None
         assert creds.expiry is None
+        assert creds.scopes is None
         assert creds._revoke_url is None
         assert creds._quota_project_id is None
 
@@ -449,19 +450,21 @@ class TestCredentials(object):
             expiry=NOW,
             revoke_url=REVOKE_URL,
             quota_project_id=QUOTA_PROJECT_ID,
+            scopes=SCOPES,
         )
         config_file = tmpdir.join("config.json")
         config_file.write(from_creds.to_json())
         creds = external_account_authorized_user.Credentials.from_file(str(config_file))
 
         assert isinstance(creds, external_account_authorized_user.Credentials)
-        assert creds._audience == AUDIENCE
-        assert creds._refresh_token == REFRESH_TOKEN
-        assert creds._token_url == TOKEN_URL
-        assert creds._token_info_url == TOKEN_INFO_URL
-        assert creds._client_id == CLIENT_ID
-        assert creds._client_secret == CLIENT_SECRET
+        assert creds.audience == AUDIENCE
+        assert creds.refresh_token == REFRESH_TOKEN
+        assert creds.token_url == TOKEN_URL
+        assert creds.token_info_url == TOKEN_INFO_URL
+        assert creds.client_id == CLIENT_ID
+        assert creds.client_secret == CLIENT_SECRET
         assert creds.token == ACCESS_TOKEN
         assert creds.expiry == NOW
+        assert creds.scopes == SCOPES
         assert creds._revoke_url == REVOKE_URL
         assert creds._quota_project_id == QUOTA_PROJECT_ID

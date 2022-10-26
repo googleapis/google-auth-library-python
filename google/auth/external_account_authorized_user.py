@@ -313,6 +313,7 @@ class Credentials(
             expiry=expiry,
             revoke_url=info.get("revoke_url"),
             quota_project_id=info.get("quota_project_id"),
+            scopes=info.get("scopes"),
             **kwargs
         )
 
