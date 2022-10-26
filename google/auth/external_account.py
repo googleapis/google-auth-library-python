@@ -128,7 +128,8 @@ class Credentials(
         self._workforce_pool_user_project = workforce_pool_user_project
 
         Credentials.validate_token_url(token_url)
-        # TODO: validate token info url
+        if token_info_url:
+            Credentials.validate_token_url(token_info_url)
         if service_account_impersonation_url:
             Credentials.validate_service_account_impersonation_url(
                 service_account_impersonation_url
