@@ -43,6 +43,7 @@ CLIENT_SECRET = "password"
 # Base64 encoding of "username:password".
 BASIC_AUTH_ENCODING = "dXNlcm5hbWU6cGFzc3dvcmQ="
 SCOPES = ["email", "profile"]
+NOW = datetime.datetime(1990, 8, 27, 6, 54, 30)
 
 
 class TestCredentials(object):
@@ -93,6 +94,9 @@ class TestCredentials(object):
         assert creds.client_id
         assert creds.client_secret
         assert creds.is_user
+        assert creds.refresh_token == REFRESH_TOKEN
+        assert creds.audience == AUDIENCE
+        assert creds.token_url == TOKEN_URL
 
     def test_basic_create(self):
         creds = external_account_authorized_user.Credentials(
@@ -111,9 +115,9 @@ class TestCredentials(object):
         with pytest.raises(ValueError) as excinfo:
             self.make_credentials(token=None, refresh_token=None)
 
-        assert excinfo.match(r"Either `refresh_token` or `token` should be set")
+        assert excinfo.match(r"Resulting credential can never be valid\.")
 
-    @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+    @mock.patch("google.auth._helpers.utcnow", return_value=NOW)
     def test_refresh_auth_success(self, utcnow):
         request = self.make_mock_request(
             status=http_client.OK,
@@ -143,7 +147,7 @@ class TestCredentials(object):
             ),
         )
 
-    @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+    @mock.patch("google.auth._helpers.utcnow", return_value=NOW)
     def test_refresh_auth_success_new_refresh_token(self, utcnow):
         request = self.make_mock_request(
             status=http_client.OK,
@@ -234,7 +238,7 @@ class TestCredentials(object):
 
     def test_refresh_without_token_url(self):
         request = self.make_mock_request()
-        creds = self.make_credentials(token_url=None)
+        creds = self.make_credentials(token_url=None, token=ACCESS_TOKEN)
 
         with pytest.raises(exceptions.RefreshError) as excinfo:
             creds.refresh(request)
@@ -245,8 +249,6 @@ class TestCredentials(object):
 
         assert not creds.expiry
         assert not creds.expired
-        assert not creds.token
-        assert not creds.valid
         assert not creds.requires_scopes
         assert creds.is_user
 
@@ -254,7 +256,7 @@ class TestCredentials(object):
 
     def test_refresh_without_client_id(self):
         request = self.make_mock_request()
-        creds = self.make_credentials(client_id=None)
+        creds = self.make_credentials(client_id=None, token=ACCESS_TOKEN)
 
         with pytest.raises(exceptions.RefreshError) as excinfo:
             creds.refresh(request)
@@ -265,8 +267,6 @@ class TestCredentials(object):
 
         assert not creds.expiry
         assert not creds.expired
-        assert not creds.token
-        assert not creds.valid
         assert not creds.requires_scopes
         assert creds.is_user
 
@@ -274,7 +274,7 @@ class TestCredentials(object):
 
     def test_refresh_without_client_secret(self):
         request = self.make_mock_request()
-        creds = self.make_credentials(client_secret=None)
+        creds = self.make_credentials(client_secret=None, token=ACCESS_TOKEN)
 
         with pytest.raises(exceptions.RefreshError) as excinfo:
             creds.refresh(request)
@@ -285,8 +285,6 @@ class TestCredentials(object):
 
         assert not creds.expiry
         assert not creds.expired
-        assert not creds.token
-        assert not creds.valid
         assert not creds.requires_scopes
         assert creds.is_user
 
@@ -310,7 +308,7 @@ class TestCredentials(object):
     def test_info_full(self):
         creds = self.make_credentials(
             token=ACCESS_TOKEN,
-            expiry=datetime.datetime.min,
+            expiry=NOW,
             revoke_url=REVOKE_URL,
             quota_project_id=QUOTA_PROJECT_ID,
         )
@@ -323,7 +321,7 @@ class TestCredentials(object):
         assert info["client_id"] == CLIENT_ID
         assert info["client_secret"] == CLIENT_SECRET
         assert info["token"] == ACCESS_TOKEN
-        assert info["expiry"] == datetime.datetime.min.isoformat() + "Z"
+        assert info["expiry"] == NOW.isoformat() + "Z"
         assert info["revoke_url"] == REVOKE_URL
         assert info["quota_project_id"] == QUOTA_PROJECT_ID
 
@@ -346,7 +344,7 @@ class TestCredentials(object):
     def test_to_json_full(self):
         creds = self.make_credentials(
             token=ACCESS_TOKEN,
-            expiry=datetime.datetime.min,
+            expiry=NOW,
             revoke_url=REVOKE_URL,
             quota_project_id=QUOTA_PROJECT_ID,
         )
@@ -360,14 +358,14 @@ class TestCredentials(object):
         assert info["client_id"] == CLIENT_ID
         assert info["client_secret"] == CLIENT_SECRET
         assert info["token"] == ACCESS_TOKEN
-        assert info["expiry"] == datetime.datetime.min.isoformat() + "Z"
+        assert info["expiry"] == NOW.isoformat() + "Z"
         assert info["revoke_url"] == REVOKE_URL
         assert info["quota_project_id"] == QUOTA_PROJECT_ID
 
     def test_to_json_full_with_strip(self):
         creds = self.make_credentials(
             token=ACCESS_TOKEN,
-            expiry=datetime.datetime.min,
+            expiry=NOW,
             revoke_url=REVOKE_URL,
             quota_project_id=QUOTA_PROJECT_ID,
         )
@@ -392,7 +390,7 @@ class TestCredentials(object):
     def test_with_quota_project(self):
         creds = self.make_credentials(
             token=ACCESS_TOKEN,
-            expiry=datetime.datetime.min,
+            expiry=NOW,
             revoke_url=REVOKE_URL,
             quota_project_id=QUOTA_PROJECT_ID,
         )
@@ -411,7 +409,7 @@ class TestCredentials(object):
     def test_with_token_uri(self):
         creds = self.make_credentials(
             token=ACCESS_TOKEN,
-            expiry=datetime.datetime.min,
+            expiry=NOW,
             revoke_url=REVOKE_URL,
             quota_project_id=QUOTA_PROJECT_ID,
         )
@@ -448,7 +446,7 @@ class TestCredentials(object):
     def test_from_file_full_options(self, tmpdir):
         from_creds = self.make_credentials(
             token=ACCESS_TOKEN,
-            expiry=datetime.datetime.min,
+            expiry=NOW,
             revoke_url=REVOKE_URL,
             quota_project_id=QUOTA_PROJECT_ID,
         )
@@ -464,6 +462,6 @@ class TestCredentials(object):
         assert creds._client_id == CLIENT_ID
         assert creds._client_secret == CLIENT_SECRET
         assert creds.token == ACCESS_TOKEN
-        assert creds.expiry == datetime.datetime.min
+        assert creds.expiry == NOW
         assert creds._revoke_url == REVOKE_URL
         assert creds._quota_project_id == QUOTA_PROJECT_ID
