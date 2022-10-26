@@ -95,7 +95,7 @@ class Credentials(
                 impersonation generateAccessToken URL.
             client_id (Optional[str]): The optional client ID.
             client_secret (Optional[str]): The optional client secret.
-            token_info_url (Optional[str]): The optional STS endpoint for token info.
+            token_info_url (str): The optional STS endpoint URL for token introspection.
             quota_project_id (Optional[str]): The optional quota project ID.
             scopes (Optional[Sequence[str]]): Optional scopes to request during the
                 authorization grant.
