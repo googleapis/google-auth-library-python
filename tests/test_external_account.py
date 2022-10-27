@@ -150,23 +150,8 @@ INVALID_SERVICE_ACCOUNT_IMPERSONATION_URLS = [
 
 
 class CredentialsImpl(external_account.Credentials):
-    def __init__(
-        self,
-        audience,
-        subject_token_type,
-        token_url,
-        credential_source,
-        *args,
-        **kwargs,
-    ):
-        super(CredentialsImpl, self).__init__(
-            audience=audience,
-            subject_token_type=subject_token_type,
-            token_url=token_url,
-            credential_source=credential_source,
-            *args,
-            **kwargs,
-        )
+    def __init__(self, **kwargs):
+        super(CredentialsImpl, self).__init__(**kwargs)
         self._counter = 0
 
     def retrieve_subject_token(self, request):
