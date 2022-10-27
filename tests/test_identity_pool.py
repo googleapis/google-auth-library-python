@@ -659,6 +659,25 @@ class TestCredentials(object):
 
         assert credentials.token_info_url == TOKEN_INFO_URL
 
+    def test_token_info_url_custom(self):
+        credentials = self.make_credentials(
+            credential_source=self.CREDENTIAL_SOURCE_JSON.copy(),
+            token_info_url="https://custom-sts.googleapis.com/introspect",
+        )
+
+        assert (
+            credentials.token_info_url == "https://custom-sts.googleapis.com/introspect"
+        )
+
+    def test_token_info_url_bad(self):
+        with pytest.raises(ValueError) as excinfo:
+            credentials = self.make_credentials(
+                credential_source=self.CREDENTIAL_SOURCE_JSON.copy(),
+                token_info_url="https://invalid.org/introspect",
+            )
+
+        assert excinfo.match(r"The provided token info URL is invalid.")
+
     def test_token_info_url_negative(self):
         credentials = self.make_credentials(
             credential_source=self.CREDENTIAL_SOURCE_JSON.copy(), token_info_url=None

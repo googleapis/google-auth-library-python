@@ -129,7 +129,7 @@ class Credentials(
 
         Credentials.validate_token_url(token_url)
         if token_info_url:
-            Credentials.validate_token_url(token_info_url)
+            Credentials.validate_token_url(token_info_url, url_type="token info")
         if service_account_impersonation_url:
             Credentials.validate_service_account_impersonation_url(
                 service_account_impersonation_url
@@ -435,7 +435,7 @@ class Credentials(
         )
 
     @staticmethod
-    def validate_token_url(token_url):
+    def validate_token_url(token_url, url_type="token"):
         _TOKEN_URL_PATTERNS = [
             "^[^\\.\\s\\/\\\\]+\\.sts\\.googleapis\\.com$",
             "^sts\\.googleapis\\.com$",
@@ -445,7 +445,7 @@ class Credentials(
         ]
 
         if not Credentials.is_valid_url(_TOKEN_URL_PATTERNS, token_url):
-            raise ValueError("The provided token URL is invalid.")
+            raise ValueError("The provided {} URL is invalid.".format(url_type))
 
     @staticmethod
     def validate_service_account_impersonation_url(url):
