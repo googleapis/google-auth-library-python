@@ -762,7 +762,7 @@ class TestCredentials(object):
     def test_token_info_url_bad(self):
         for url in INVALID_TOKEN_URLS:
             with pytest.raises(ValueError) as excinfo:
-                credentials = self.make_credentials(
+                self.make_credentials(
                     credential_source=self.CREDENTIAL_SOURCE_JSON.copy(),
                     token_info_url=(url + "/introspect"),
                 )
@@ -788,7 +788,7 @@ class TestCredentials(object):
     def test_token_url_bad(self):
         for url in INVALID_TOKEN_URLS:
             with pytest.raises(ValueError) as excinfo:
-                credentials = self.make_credentials(
+                self.make_credentials(
                     credential_source=self.CREDENTIAL_SOURCE_JSON.copy(),
                     token_url=(url + "/token"),
                 )
@@ -811,7 +811,7 @@ class TestCredentials(object):
     def test_service_account_impersonation_url_bad(self):
         for url in INVALID_SERVICE_ACCOUNT_IMPERSONATION_URLS:
             with pytest.raises(ValueError) as excinfo:
-                credentials = self.make_credentials(
+                self.make_credentials(
                     credential_source=self.CREDENTIAL_SOURCE_JSON.copy(),
                     service_account_impersonation_url=(
                         url + SERVICE_ACCOUNT_IMPERSONATION_URL_ROUTE
