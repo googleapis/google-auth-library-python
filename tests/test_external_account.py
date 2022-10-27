@@ -65,6 +65,89 @@ TEST_NON_USER_AUDIENCES = [
     "//iam.googleapis.com/locations//workforcePool/pool-id/providers/provider-id",
 ]
 
+VALID_TOKEN_URLS = [
+    "https://sts.googleapis.com",
+    "https://us-east-1.sts.googleapis.com",
+    "https://US-EAST-1.sts.googleapis.com",
+    "https://sts.us-east-1.googleapis.com",
+    "https://sts.US-WEST-1.googleapis.com",
+    "https://us-east-1-sts.googleapis.com",
+    "https://US-WEST-1-sts.googleapis.com",
+    "https://us-west-1-sts.googleapis.com/path?query",
+    "https://sts-us-east-1.p.googleapis.com",
+]
+INVALID_TOKEN_URLS = [
+    "https://iamcredentials.googleapis.com",
+    "sts.googleapis.com",
+    "https://",
+    "http://sts.googleapis.com",
+    "https://st.s.googleapis.com",
+    "https://us-eas\t-1.sts.googleapis.com",
+    "https:/us-east-1.sts.googleapis.com",
+    "https://US-WE/ST-1-sts.googleapis.com",
+    "https://sts-us-east-1.googleapis.com",
+    "https://sts-US-WEST-1.googleapis.com",
+    "testhttps://us-east-1.sts.googleapis.com",
+    "https://us-east-1.sts.googleapis.comevil.com",
+    "https://us-east-1.us-east-1.sts.googleapis.com",
+    "https://us-ea.s.t.sts.googleapis.com",
+    "https://sts.googleapis.comevil.com",
+    "hhttps://us-east-1.sts.googleapis.com",
+    "https://us- -1.sts.googleapis.com",
+    "https://-sts.googleapis.com",
+    "https://us-east-1.sts.googleapis.com.evil.com",
+    "https://sts.pgoogleapis.com",
+    "https://p.googleapis.com",
+    "https://sts.p.com",
+    "http://sts.p.googleapis.com",
+    "https://xyz-sts.p.googleapis.com",
+    "https://sts-xyz.123.p.googleapis.com",
+    "https://sts-xyz.p1.googleapis.com",
+    "https://sts-xyz.p.foo.com",
+    "https://sts-xyz.p.foo.googleapis.com",
+]
+VALID_SERVICE_ACCOUNT_IMPERSONATION_URLS = [
+    "https://iamcredentials.googleapis.com",
+    "https://us-east-1.iamcredentials.googleapis.com",
+    "https://US-EAST-1.iamcredentials.googleapis.com",
+    "https://iamcredentials.us-east-1.googleapis.com",
+    "https://iamcredentials.US-WEST-1.googleapis.com",
+    "https://us-east-1-iamcredentials.googleapis.com",
+    "https://US-WEST-1-iamcredentials.googleapis.com",
+    "https://us-west-1-iamcredentials.googleapis.com/path?query",
+    "https://iamcredentials-us-east-1.p.googleapis.com",
+]
+INVALID_SERVICE_ACCOUNT_IMPERSONATION_URLS = [
+    "https://sts.googleapis.com",
+    "iamcredentials.googleapis.com",
+    "https://",
+    "http://iamcredentials.googleapis.com",
+    "https://iamcre.dentials.googleapis.com",
+    "https://us-eas\t-1.iamcredentials.googleapis.com",
+    "https:/us-east-1.iamcredentials.googleapis.com",
+    "https://US-WE/ST-1-iamcredentials.googleapis.com",
+    "https://iamcredentials-us-east-1.googleapis.com",
+    "https://iamcredentials-US-WEST-1.googleapis.com",
+    "testhttps://us-east-1.iamcredentials.googleapis.com",
+    "https://us-east-1.iamcredentials.googleapis.comevil.com",
+    "https://us-east-1.us-east-1.iamcredentials.googleapis.com",
+    "https://us-ea.s.t.iamcredentials.googleapis.com",
+    "https://iamcredentials.googleapis.comevil.com",
+    "hhttps://us-east-1.iamcredentials.googleapis.com",
+    "https://us- -1.iamcredentials.googleapis.com",
+    "https://-iamcredentials.googleapis.com",
+    "https://us-east-1.iamcredentials.googleapis.com.evil.com",
+    "https://iamcredentials.pgoogleapis.com",
+    "https://p.googleapis.com",
+    "https://iamcredentials.p.com",
+    "http://iamcredentials.p.googleapis.com",
+    "https://xyz-iamcredentials.p.googleapis.com",
+    "https://iamcredentials-xyz.123.p.googleapis.com",
+    "https://iamcredentials-xyz.p1.googleapis.com",
+    "https://iamcredentials-xyz.p.foo.com",
+    "https://iamcredentials-xyz.p.foo.googleapis.com",
+]
+
 
 class CredentialsImpl(external_account.Credentials):
     def __init__(
@@ -271,53 +354,14 @@ class TestCredentials(object):
         assert "body" not in request_kwargs
 
     def test_valid_token_url_shall_pass_validation(self):
-        valid_urls = [
-            "https://sts.googleapis.com",
-            "https://us-east-1.sts.googleapis.com",
-            "https://US-EAST-1.sts.googleapis.com",
-            "https://sts.us-east-1.googleapis.com",
-            "https://sts.US-WEST-1.googleapis.com",
-            "https://us-east-1-sts.googleapis.com",
-            "https://US-WEST-1-sts.googleapis.com",
-            "https://us-west-1-sts.googleapis.com/path?query",
-            "https://sts-us-east-1.p.googleapis.com",
-        ]
+        valid_urls = VALID_TOKEN_URLS
 
         for url in valid_urls:
             # A valid url shouldn't throw exception and a None value should be returned
             external_account.Credentials.validate_token_url(url)
 
     def test_invalid_token_url_shall_throw_exceptions(self):
-        invalid_urls = [
-            "https://iamcredentials.googleapis.com",
-            "sts.googleapis.com",
-            "https://",
-            "http://sts.googleapis.com",
-            "https://st.s.googleapis.com",
-            "https://us-eas\t-1.sts.googleapis.com",
-            "https:/us-east-1.sts.googleapis.com",
-            "https://US-WE/ST-1-sts.googleapis.com",
-            "https://sts-us-east-1.googleapis.com",
-            "https://sts-US-WEST-1.googleapis.com",
-            "testhttps://us-east-1.sts.googleapis.com",
-            "https://us-east-1.sts.googleapis.comevil.com",
-            "https://us-east-1.us-east-1.sts.googleapis.com",
-            "https://us-ea.s.t.sts.googleapis.com",
-            "https://sts.googleapis.comevil.com",
-            "hhttps://us-east-1.sts.googleapis.com",
-            "https://us- -1.sts.googleapis.com",
-            "https://-sts.googleapis.com",
-            "https://us-east-1.sts.googleapis.com.evil.com",
-            "https://sts.pgoogleapis.com",
-            "https://p.googleapis.com",
-            "https://sts.p.com",
-            "http://sts.p.googleapis.com",
-            "https://xyz-sts.p.googleapis.com",
-            "https://sts-xyz.123.p.googleapis.com",
-            "https://sts-xyz.p1.googleapis.com",
-            "https://sts-xyz.p.foo.com",
-            "https://sts-xyz.p.foo.googleapis.com",
-        ]
+        invalid_urls = INVALID_TOKEN_URLS
 
         for url in invalid_urls:
             # An invalid url should throw a ValueError exception
@@ -327,53 +371,14 @@ class TestCredentials(object):
             assert excinfo.match("The provided token URL is invalid.")
 
     def test_valid_service_account_impersonation_url_shall_pass_validation(self):
-        valid_urls = [
-            "https://iamcredentials.googleapis.com",
-            "https://us-east-1.iamcredentials.googleapis.com",
-            "https://US-EAST-1.iamcredentials.googleapis.com",
-            "https://iamcredentials.us-east-1.googleapis.com",
-            "https://iamcredentials.US-WEST-1.googleapis.com",
-            "https://us-east-1-iamcredentials.googleapis.com",
-            "https://US-WEST-1-iamcredentials.googleapis.com",
-            "https://us-west-1-iamcredentials.googleapis.com/path?query",
-            "https://iamcredentials-us-east-1.p.googleapis.com",
-        ]
+        valid_urls = VALID_SERVICE_ACCOUNT_IMPERSONATION_URLS
 
         for url in valid_urls:
             # A valid url shouldn't throw exception and a None value should be returned
             external_account.Credentials.validate_service_account_impersonation_url(url)
 
     def test_invalid_service_account_impersonate_url_shall_throw_exceptions(self):
-        invalid_urls = [
-            "https://sts.googleapis.com",
-            "iamcredentials.googleapis.com",
-            "https://",
-            "http://iamcredentials.googleapis.com",
-            "https://iamcre.dentials.googleapis.com",
-            "https://us-eas\t-1.iamcredentials.googleapis.com",
-            "https:/us-east-1.iamcredentials.googleapis.com",
-            "https://US-WE/ST-1-iamcredentials.googleapis.com",
-            "https://iamcredentials-us-east-1.googleapis.com",
-            "https://iamcredentials-US-WEST-1.googleapis.com",
-            "testhttps://us-east-1.iamcredentials.googleapis.com",
-            "https://us-east-1.iamcredentials.googleapis.comevil.com",
-            "https://us-east-1.us-east-1.iamcredentials.googleapis.com",
-            "https://us-ea.s.t.iamcredentials.googleapis.com",
-            "https://iamcredentials.googleapis.comevil.com",
-            "hhttps://us-east-1.iamcredentials.googleapis.com",
-            "https://us- -1.iamcredentials.googleapis.com",
-            "https://-iamcredentials.googleapis.com",
-            "https://us-east-1.iamcredentials.googleapis.com.evil.com",
-            "https://iamcredentials.pgoogleapis.com",
-            "https://p.googleapis.com",
-            "https://iamcredentials.p.com",
-            "http://iamcredentials.p.googleapis.com",
-            "https://xyz-iamcredentials.p.googleapis.com",
-            "https://iamcredentials-xyz.123.p.googleapis.com",
-            "https://iamcredentials-xyz.p1.googleapis.com",
-            "https://iamcredentials-xyz.p.foo.com",
-            "https://iamcredentials-xyz.p.foo.googleapis.com",
-        ]
+        invalid_urls = INVALID_SERVICE_ACCOUNT_IMPERSONATION_URLS
 
         for url in invalid_urls:
             # An invalid url should throw a ValueError exception
