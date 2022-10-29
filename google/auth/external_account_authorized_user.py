@@ -118,7 +118,11 @@ class Credentials(
         self._scopes = scopes
 
         if not self.valid and not self.can_refresh:
-            raise ValueError("Resulting credential can never be valid.")
+            raise ValueError(
+                "Token should be created with fields to make it valid (`token` and "
+                "`expiry`), or fields to allow it to refresh (`refresh_token`, "
+                "`token_url`, `client_id`, `client_secret`)."
+            )
 
         self._client_auth = None
         if self._client_id:
@@ -198,14 +202,19 @@ class Credentials(
         return self._token_url
 
     @property
-    def is_user(self):
-        """ True: This credential always represents a user."""
-        return True
-
-    @property
     def token_info_url(self):
         """Optional[str]: The STS endpoint for token info."""
         return self._token_info_url
+
+    @property
+    def revoke_url(self):
+        """Optional[str]: The STS endpoint for token revocation."""
+        return self._revoke_url
+
+    @property
+    def is_user(self):
+        """ True: This credential always represents a user."""
+        return True
 
     @property
     def can_refresh(self):

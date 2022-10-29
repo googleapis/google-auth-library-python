@@ -90,6 +90,7 @@ class TestCredentials(object):
         assert not creds.valid
         assert not creds.requires_scopes
         assert not creds.scopes
+        assert not creds.revoke_url
         assert creds.token_info_url
         assert creds.client_id
         assert creds.client_secret
@@ -100,7 +101,10 @@ class TestCredentials(object):
 
     def test_basic_create(self):
         creds = external_account_authorized_user.Credentials(
-            token=ACCESS_TOKEN, expiry=datetime.datetime.max, scopes=SCOPES
+            token=ACCESS_TOKEN,
+            expiry=datetime.datetime.max,
+            scopes=SCOPES,
+            revoke_url=REVOKE_URL,
         )
 
         assert creds.expiry == datetime.datetime.max
@@ -110,12 +114,47 @@ class TestCredentials(object):
         assert not creds.requires_scopes
         assert creds.scopes == SCOPES
         assert creds.is_user
+        assert creds.revoke_url == REVOKE_URL
 
-    def test_stunted_create(self):
+    def test_stunted_create_no_refresh_token(self):
         with pytest.raises(ValueError) as excinfo:
             self.make_credentials(token=None, refresh_token=None)
 
-        assert excinfo.match(r"Resulting credential can never be valid\.")
+        assert excinfo.match(
+            r"Token should be created with fields to make it valid \(`token` and "
+            r"`expiry`\), or fields to allow it to refresh \(`refresh_token`, "
+            r"`token_url`, `client_id`, `client_secret`\)\."
+        )
+
+    def test_stunted_create_no_token_url(self):
+        with pytest.raises(ValueError) as excinfo:
+            self.make_credentials(token=None, token_url=None)
+
+        assert excinfo.match(
+            r"Token should be created with fields to make it valid \(`token` and "
+            r"`expiry`\), or fields to allow it to refresh \(`refresh_token`, "
+            r"`token_url`, `client_id`, `client_secret`\)\."
+        )
+
+    def test_stunted_create_no_client_id(self):
+        with pytest.raises(ValueError) as excinfo:
+            self.make_credentials(token=None, client_id=None)
+
+        assert excinfo.match(
+            r"Token should be created with fields to make it valid \(`token` and "
+            r"`expiry`\), or fields to allow it to refresh \(`refresh_token`, "
+            r"`token_url`, `client_id`, `client_secret`\)\."
+        )
+
+    def test_stunted_create_no_client_secret(self):
+        with pytest.raises(ValueError) as excinfo:
+            self.make_credentials(token=None, client_secret=None)
+
+        assert excinfo.match(
+            r"Token should be created with fields to make it valid \(`token` and "
+            r"`expiry`\), or fields to allow it to refresh \(`refresh_token`, "
+            r"`token_url`, `client_id`, `client_secret`\)\."
+        )
 
     @mock.patch("google.auth._helpers.utcnow", return_value=NOW)
     def test_refresh_auth_success(self, utcnow):
