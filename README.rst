@@ -24,10 +24,11 @@ For more information on setting up your Python development environment, please r
 
 Extras
 ------
-google-auth has few extras that you can install. For example:
+
+google-auth has few extras that you can install. For example::
     $ pip install google-auth[pyopenssl]
 
-Note that the extras `pyopenssl` and `enterprise_cert` should not be used together because they use conflicting versions of `cryptography`_.
+Note that the extras pyopenssl and enterprise_cert should not be used together because they use conflicting versions of `cryptography`_.
 
 .. _`cryptography`: https://cryptography.io/en/latest/
 
