@@ -319,7 +319,7 @@ def refresh_grant(
     if rapt_token:
         body["rapt"] = rapt_token
 
-    response_status_ok, response_data = _client._token_endpoint_request_no_throw(
+    response_status_ok, response_data, retryable_error = _client._token_endpoint_request_no_throw(
         request, token_uri, body
     )
     if (
@@ -332,19 +332,21 @@ def refresh_grant(
     ):
         if not enable_reauth_refresh:
             raise exceptions.RefreshError(
-                "Reauthentication is needed. Please run `gcloud auth login --update-adc` to reauthenticate."
+                "Reauthentication is needed. Please run `gcloud auth application-default login` to reauthenticate."
             )
 
         rapt_token = get_rapt_token(
             request, client_id, client_secret, refresh_token, token_uri, scopes=scopes
         )
         body["rapt"] = rapt_token
-        (response_status_ok, response_data) = _client._token_endpoint_request_no_throw(
-            request, token_uri, body
-        )
+        (
+            response_status_ok,
+            response_data,
+            retryable_error,
+        ) = _client._token_endpoint_request_no_throw(request, token_uri, body)
 
     if not response_status_ok:
-        _client._handle_error_response(response_data)
+        _client._handle_error_response(response_data, retryable_error)
     return _client._handle_refresh_grant_response(response_data, refresh_token) + (
         rapt_token,
     )

@@ -4,6 +4,61 @@
 
 [1]: https://pypi.org/project/google-auth/#history
 
+## [2.14.0](https://github.com/googleapis/google-auth-library-python/compare/v2.13.0...v2.14.0) (2022-10-31)
+
+
+### Features
+
+* Add token_info_url to external account credentials ([#1168](https://github.com/googleapis/google-auth-library-python/issues/1168)) ([9adee75](https://github.com/googleapis/google-auth-library-python/commit/9adee75712202234aa0b124a9ca0424654022428))
+* Read Quota Project from Environment Variable ([#1163](https://github.com/googleapis/google-auth-library-python/issues/1163)) ([57b3e42](https://github.com/googleapis/google-auth-library-python/commit/57b3e424927a5d86fbab8b231109a5aae1233745))
+
+
+### Bug Fixes
+
+* Adding more properties to external_account_authorized_user ([#1169](https://github.com/googleapis/google-auth-library-python/issues/1169)) ([a12b96d](https://github.com/googleapis/google-auth-library-python/commit/a12b96dcfa7cb58d9171fd7f2a7ea8331a228419))
+
+## [2.13.0](https://github.com/googleapis/google-auth-library-python/compare/v2.12.0...v2.13.0) (2022-10-14)
+
+
+### Features
+
+* Adds new external account authorized user credentials ([#1160](https://github.com/googleapis/google-auth-library-python/issues/1160)) ([523f811](https://github.com/googleapis/google-auth-library-python/commit/523f8117a72548d91f1bb169a3c91b095477ce3b))
+* Implement pluggable auth interactive mode ([#1131](https://github.com/googleapis/google-auth-library-python/issues/1131)) ([44a189f](https://github.com/googleapis/google-auth-library-python/commit/44a189fc6185bf33e9d5609cf8d57a846cd98aaf))
+* Introduce the functionality to override token_uri in credentials ([#1159](https://github.com/googleapis/google-auth-library-python/issues/1159)) ([73bc7e9](https://github.com/googleapis/google-auth-library-python/commit/73bc7e9e0e72b6c5057a13cdb4ac996b754ddb58))
+
+
+### Bug Fixes
+
+* Adding one more pattern to relax the regex check for sts and impersonation url endpoints ([#1158](https://github.com/googleapis/google-auth-library-python/issues/1158)) ([75326e3](https://github.com/googleapis/google-auth-library-python/commit/75326e397c619a2b58963d3fd9fc1a1a5eda13a0))
+
+## [2.12.0](https://github.com/googleapis/google-auth-library-python/compare/v2.11.1...v2.12.0) (2022-09-26)
+
+
+### Features
+
+* Retry behavior ([#1113](https://github.com/googleapis/google-auth-library-python/issues/1113)) ([78d3790](https://github.com/googleapis/google-auth-library-python/commit/78d37906f0811f9878834ac34d5b83e5cbd58800))
+
+
+### Bug Fixes
+
+* Modify RefreshError exception to use gcloud ADC command. ([#1149](https://github.com/googleapis/google-auth-library-python/issues/1149)) ([059fd35](https://github.com/googleapis/google-auth-library-python/commit/059fd353d5f2a8527de8bf1fe6dbd5e326c0e29a))
+* Revert "Update token refresh threshold from 20 seconds to 5 minutes". ([186464b](https://github.com/googleapis/google-auth-library-python/commit/186464bf5920fb3b76499ac542b0fb90023629de))
+
+## [2.11.1](https://github.com/googleapis/google-auth-library-python/compare/v2.11.0...v2.11.1) (2022-09-20)
+
+
+### Bug Fixes
+
+* Fix socket leak in impersonated_credentials ([#1123](https://github.com/googleapis/google-auth-library-python/issues/1123)) ([b1eb467](https://github.com/googleapis/google-auth-library-python/commit/b1eb467f50f0c080e89a122426061b28f0be0567)), closes [#1122](https://github.com/googleapis/google-auth-library-python/issues/1122)
+* Make pluggable auth tests work in all environments ([#1114](https://github.com/googleapis/google-auth-library-python/issues/1114)) ([bb5c979](https://github.com/googleapis/google-auth-library-python/commit/bb5c9791c64e2472a90ba7191f79f4c5fedb2538))
+* Skip oauth2client adapter tests if oauth2client is not installed ([#1132](https://github.com/googleapis/google-auth-library-python/issues/1132)) ([d15092f](https://github.com/googleapis/google-auth-library-python/commit/d15092ff8b66b3039641d482a0debafde4ba0077))
+* Update token refresh threshold from 20 seconds to 5 minutes ([#1146](https://github.com/googleapis/google-auth-library-python/issues/1146)) ([261a561](https://github.com/googleapis/google-auth-library-python/commit/261a56138fba33ff7d898ab5907a6098125fefef))
+
+
+### Documentation
+
+* **samples:** Add auth samples and tests ([#1102](https://github.com/googleapis/google-auth-library-python/issues/1102)) ([ac87520](https://github.com/googleapis/google-auth-library-python/commit/ac875201bc8ba5d638a9eafcd3ccfdeb73a2f0ec))
+
 ## [2.11.0](https://github.com/googleapis/google-auth-library-python/compare/v2.10.0...v2.11.0) (2022-08-18)
 
 

@@ -35,12 +35,14 @@ _LOGGER = logging.getLogger(__name__)
 _AUTHORIZED_USER_TYPE = "authorized_user"
 _SERVICE_ACCOUNT_TYPE = "service_account"
 _EXTERNAL_ACCOUNT_TYPE = "external_account"
+_EXTERNAL_ACCOUNT_AUTHORIZED_USER_TYPE = "external_account_authorized_user"
 _IMPERSONATED_SERVICE_ACCOUNT_TYPE = "impersonated_service_account"
 _GDCH_SERVICE_ACCOUNT_TYPE = "gdch_service_account"
 _VALID_TYPES = (
     _AUTHORIZED_USER_TYPE,
     _SERVICE_ACCOUNT_TYPE,
     _EXTERNAL_ACCOUNT_TYPE,
+    _EXTERNAL_ACCOUNT_AUTHORIZED_USER_TYPE,
     _IMPERSONATED_SERVICE_ACCOUNT_TYPE,
     _GDCH_SERVICE_ACCOUNT_TYPE,
 )
@@ -158,6 +160,12 @@ def _load_credentials_from_info(
             default_scopes=default_scopes,
             request=request,
         )
+
+    elif credential_type == _EXTERNAL_ACCOUNT_AUTHORIZED_USER_TYPE:
+        credentials, project_id = _get_external_account_authorized_user_credentials(
+            filename, info, request
+        )
+
     elif credential_type == _IMPERSONATED_SERVICE_ACCOUNT_TYPE:
         credentials, project_id = _get_impersonated_service_account_credentials(
             filename, info, scopes
@@ -259,7 +267,7 @@ def _get_gae_credentials():
         return None, None
 
 
-def _get_gce_credentials(request=None):
+def _get_gce_credentials(request=None, quota_project_id=None):
     """Gets credentials and project ID from the GCE Metadata Service."""
     # Ping requires a transport, but we want application default credentials
     # to require no arguments. So, we'll use the _http_client transport which
@@ -285,7 +293,10 @@ def _get_gce_credentials(request=None):
         except exceptions.TransportError:
             project_id = None
 
-        return compute_engine.Credentials(), project_id
+        cred = compute_engine.Credentials()
+        cred = _apply_quota_project_id(cred, quota_project_id)
+
+        return cred, project_id
     else:
         _LOGGER.warning(
             "Authentication failed using Compute Engine authentication due to unavailable metadata server."
@@ -361,6 +372,23 @@ def _get_external_account_credentials(
         request = google.auth.transport.requests.Request()
 
     return credentials, credentials.get_project_id(request=request)
+
+
+def _get_external_account_authorized_user_credentials(
+    filename, info, scopes=None, default_scopes=None, request=None
+):
+    try:
+        from google.auth import external_account_authorized_user
+
+        credentials = external_account_authorized_user.Credentials.from_info(info)
+    except ValueError:
+        raise exceptions.DefaultCredentialsError(
+            "Failed to load external account authorized user credentials from {}".format(
+                filename
+            )
+        )
+
+    return credentials, None
 
 
 def _get_authorized_user_credentials(filename, info, scopes=None):
@@ -454,6 +482,8 @@ def _get_gdch_service_account_credentials(filename, info):
 def _apply_quota_project_id(credentials, quota_project_id):
     if quota_project_id:
         credentials = credentials.with_quota_project(quota_project_id)
+    else:
+        credentials = credentials.with_quota_project_from_environment()
 
     from google.oauth2 import credentials as authorized_user_credentials
 
@@ -576,7 +606,7 @@ def default(scopes=None, request=None, quota_project_id=None, default_scopes=Non
         lambda: _get_explicit_environ_credentials(quota_project_id=quota_project_id),
         lambda: _get_gcloud_sdk_credentials(quota_project_id=quota_project_id),
         _get_gae_credentials,
-        lambda: _get_gce_credentials(request),
+        lambda: _get_gce_credentials(request, quota_project_id=quota_project_id),
     )
 
     for checker in checkers:
