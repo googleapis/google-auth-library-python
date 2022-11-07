@@ -1344,37 +1344,17 @@ class TestCredentials(object):
             )
         assert excinfo.match("Invalid hostname 'abc.com' for 'url'")
 
-    def test_retrieve_subject_token_invalid_url(self):
-        credential_source_token_url = self.CREDENTIAL_SOURCE.copy()
-        credential_source_token_url[
-            "url"
-        ] = "http://abc.com/latest/meta-data/iam/security-credentials"
+    def test_retrieve_subject_token_invalid_hosts(self):
+        keys = ["url", "region_url", "imdsv2_session_token_url"]
+        for key in keys:
+            credential_source = self.CREDENTIAL_SOURCE.copy()
+            credential_source[
+                key
+            ] = "http://abc.com/latest/meta-data/iam/security-credentials"
 
-        with pytest.raises(ValueError) as excinfo:
-            self.make_credentials(credential_source=credential_source_token_url)
-        assert excinfo.match("Invalid hostname 'abc.com' for 'url'")
-
-    def test_retrieve_subject_token_invalid_region_url(self):
-        credential_source_token_url = self.CREDENTIAL_SOURCE.copy()
-        credential_source_token_url[
-            "region_url"
-        ] = "http://abc.com/latest/meta-data/placement/availability-zone"
-
-        with pytest.raises(ValueError) as excinfo:
-            self.make_credentials(credential_source=credential_source_token_url)
-        assert excinfo.match("Invalid hostname 'abc.com' for 'region_url'")
-
-    def test_retrieve_subject_token_invalid_imdsv2_session_token_url(self):
-        credential_source_token_url = self.CREDENTIAL_SOURCE.copy()
-        credential_source_token_url[
-            "imdsv2_session_token_url"
-        ] = "http://abc.com/latest/api/token"
-
-        with pytest.raises(ValueError) as excinfo:
-            self.make_credentials(credential_source=credential_source_token_url)
-        assert excinfo.match(
-            "Invalid hostname 'abc.com' for 'imdsv2_session_token_url'"
-        )
+            with pytest.raises(ValueError) as excinfo:
+                self.make_credentials(credential_source=credential_source)
+            assert excinfo.match("Invalid hostname 'abc.com' for '{}'".format(key))
 
     @mock.patch("google.auth._helpers.utcnow")
     def test_retrieve_subject_token_success_ipv6(self, utcnow):
@@ -1405,7 +1385,7 @@ class TestCredentials(object):
                 "security_token": TOKEN,
             }
         )
-        # Assert session token request
+        # Assert session token request.
         self.assert_aws_metadata_request_kwargs(
             request.call_args_list[0][1],
             IMDSV2_SESSION_TOKEN_URL_IPV6,
