@@ -241,7 +241,7 @@ class TestCredentials(object):
             credential_source=self.CREDENTIAL_SOURCE,
             interactive=True,
         )
-        setattr(credentials, '_tokeninfo_username', 'mock_external_account_id')
+        setattr(credentials, "_tokeninfo_username", "mock_external_account_id")
 
         assert isinstance(credentials, pluggable.Credentials)
         assert credentials.interactive

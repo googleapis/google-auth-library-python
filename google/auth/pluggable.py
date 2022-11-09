@@ -132,7 +132,9 @@ class Credentials(external_account.Credentials):
         self._credential_source_executable_output_file = self._credential_source_executable.get(
             "output_file"
         )
-        self._tokeninfo_username = "" # dummy value. This variable is only used via injection, not exposed to ctor
+
+        # Dummy value. This variable is only used via injection, not exposed to ctor
+        self._tokeninfo_username = ""
 
         if not self._credential_source_executable_command:
             raise ValueError(
