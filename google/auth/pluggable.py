@@ -53,7 +53,7 @@ EXECUTABLE_TIMEOUT_MILLIS_LOWER_BOUND = 5 * 1000  # 5 seconds
 EXECUTABLE_TIMEOUT_MILLIS_UPPER_BOUND = 120 * 1000  # 2 minutes
 
 EXECUTABLE_INTERACTIVE_TIMEOUT_MILLIS_DEFAULT = 5 * 60 * 1000  # 5 minutes
-EXECUTABLE_INTERACTIVE_TIMEOUT_MILLIS_LOWER_BOUND = 5 * 60 * 1000  # 5 minutes
+EXECUTABLE_INTERACTIVE_TIMEOUT_MILLIS_LOWER_BOUND = 30 * 1000  # 30 seconds
 EXECUTABLE_INTERACTIVE_TIMEOUT_MILLIS_UPPER_BOUND = 30 * 60 * 1000  # 30 minutes
 
 
@@ -132,7 +132,7 @@ class Credentials(external_account.Credentials):
         self._credential_source_executable_output_file = self._credential_source_executable.get(
             "output_file"
         )
-        self._tokeninfo_username = kwargs.get("tokeninfo_username", "")  # dummy value
+        self._tokeninfo_username = kwargs.get("_tokeninfo_username", "")  # dummy value
 
         if not self._credential_source_executable_command:
             raise ValueError(
