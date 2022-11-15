@@ -439,6 +439,7 @@ class Credentials(
         _TOKEN_URL_PATTERNS = [
             "^[^\\.\\s\\/\\\\]+\\.sts\\.googleapis\\.com$",
             "^sts\\.googleapis\\.com$",
+            "^sts\\.mtls\\.googleapis\\.com$",
             "^sts\\.[^\\.\\s\\/\\\\]+\\.googleapis\\.com$",
             "^[^\\.\\s\\/\\\\]+\\-sts\\.googleapis\\.com$",
             "^sts\\-[^\\.\\s\\/\\\\]+\\.p\\.googleapis\\.com$",

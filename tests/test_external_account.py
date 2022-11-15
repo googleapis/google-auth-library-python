@@ -67,6 +67,7 @@ TEST_NON_USER_AUDIENCES = [
 
 VALID_TOKEN_URLS = [
     "https://sts.googleapis.com",
+    "https://sts.mtls.googleapis.com",
     "https://us-east-1.sts.googleapis.com",
     "https://US-EAST-1.sts.googleapis.com",
     "https://sts.us-east-1.googleapis.com",
