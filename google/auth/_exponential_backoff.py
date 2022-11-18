@@ -17,6 +17,8 @@ import time
 
 import six
 
+from google.auth import exceptions
+
 # The default amount of retry attempts
 _DEFAULT_RETRY_TOTAL_ATTEMPTS = 3
 
@@ -86,7 +88,7 @@ class ExponentialBackoff(six.Iterator):
 
     def __next__(self):
         if self._backoff_count >= self._total_attempts:
-            raise StopIteration
+            raise exceptions.StopIteration
         self._backoff_count += 1
 
         jitter_variance = self._current_wait_in_seconds * self._randomization_factor
