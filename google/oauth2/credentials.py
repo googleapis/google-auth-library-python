@@ -121,7 +121,7 @@ class Credentials(credentials.ReadOnlyScoped, credentials.CredentialsWithQuotaPr
                 retrieving downscoped tokens from a token broker.
             enable_reauth_refresh (Optional[bool]): Whether reauth refresh flow
                 should be used. This flag is for gcloud to use only.
-            granted_scopes (Sequence[str]): The scopes that were consented/granted by the user.
+            granted_scopes (Optional[Sequence[str]]): The scopes that were consented/granted by the user.
                 This could be different from the requested scopes and it could be empty if granted
                 and requested scopes were same.
         """
@@ -185,7 +185,7 @@ class Credentials(credentials.ReadOnlyScoped, credentials.CredentialsWithQuotaPr
 
     @property
     def granted_scopes(self):
-        """Optional[str]: The OAuth 2.0 permission scopes that were granted by the user."""
+        """Optional[Sequence[str]]: The OAuth 2.0 permission scopes that were granted by the user."""
         return self._granted_scopes
 
     @property
@@ -355,6 +355,10 @@ class Credentials(credentials.ReadOnlyScoped, credentials.CredentialsWithQuotaPr
             granted_scopes = frozenset(self._granted_scopes)
             scopes_requested_but_not_granted = requested_scopes - granted_scopes
             if scopes_requested_but_not_granted:
+                # User might be presented with unbundled scopes at the time of
+                # consent. So it is a valid scenario to not have all the requested
+                # scopes as part of granted scopes but log a warning in case the
+                # developer wants to debug the scenario.
                 _LOGGER.warning(
                     "Not all requested scopes were granted by the "
                     "authorization server, missing scopes {}.".format(
