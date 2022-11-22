@@ -267,7 +267,7 @@ class _MutualTlsOffloadAdapter(requests.adapters.HTTPAdapter):
             creation failed for any reason.
     """
 
-    def __init__(self, enterprise_cert_file_path):
+    def __init__(self, enterprise_cert_file_path, signer=None):
         import certifi
         import urllib3.contrib.pyopenssl
 
@@ -279,9 +279,12 @@ class _MutualTlsOffloadAdapter(requests.adapters.HTTPAdapter):
         # (2) mTLS example: https://github.com/urllib3/urllib3/issues/474#issuecomment-253168415
         urllib3.contrib.pyopenssl.inject_into_urllib3()
 
-        self.signer = _custom_tls_signer.CustomTlsSigner(enterprise_cert_file_path)
-        self.signer.load_libraries()
-        self.signer.set_up_custom_key()
+        if signer:
+            self.signer = signer
+        else:
+            self.signer = _custom_tls_signer.CustomTlsSigner(enterprise_cert_file_path)
+            self.signer.load_libraries()
+            self.signer.set_up_custom_key()
 
         poolmanager = create_urllib3_context()
         poolmanager.load_verify_locations(cafile=certifi.where())

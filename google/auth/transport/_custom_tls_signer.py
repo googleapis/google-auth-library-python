@@ -30,50 +30,6 @@ from google.auth import exceptions
 
 _LOGGER = logging.getLogger(__name__)
 
-# C++ offload lib requires google-auth lib to provide the following callback:
-#     using SignFunc = int (*)(unsigned char *sig, size_t *sig_len,
-#             const unsigned char *tbs, size_t tbs_len)
-# The bytes to be signed and the length are provided via `tbs` and `tbs_len`,
-# the callback computes the signature, and write the signature and its length
-# into `sig` and `sig_len`.
-# If the signing is successful, the callback returns 1, otherwise it returns 0.
-SIGN_CALLBACK_CTYPE = ctypes.CFUNCTYPE(
-    ctypes.c_int,  # return type
-    ctypes.POINTER(ctypes.c_ubyte),  # sig
-    ctypes.POINTER(ctypes.c_size_t),  # sig_len
-    ctypes.POINTER(ctypes.c_ubyte),  # tbs
-    ctypes.c_size_t,  # tbs_len
-)
-
-
-# Cast SSL_CTX* to void*
-def _cast_ssl_ctx_to_void_p(ssl_ctx):
-    return ctypes.cast(int(cffi.FFI().cast("intptr_t", ssl_ctx)), ctypes.c_void_p)
-
-
-# Load offload library and set up the function types.
-def load_offload_lib(offload_lib_path):
-    _LOGGER.debug("loading offload library from %s", offload_lib_path)
-
-    # winmode parameter is only available for python 3.8+.
-    lib = (
-        ctypes.CDLL(offload_lib_path, winmode=0)
-        if sys.version_info >= (3, 8) and os.name == "nt"
-        else ctypes.CDLL(offload_lib_path)
-    )
-
-    # Set up types for:
-    # int ConfigureSslContext(SignFunc sign_func, const char *cert, SSL_CTX *ctx)
-    lib.ConfigureSslContext.argtypes = [
-        SIGN_CALLBACK_CTYPE,
-        ctypes.c_char_p,
-        ctypes.c_void_p,
-    ]
-    lib.ConfigureSslContext.restype = ctypes.c_int
-
-    return lib
-
-
 # Load signer library and set up the function types.
 # See: https://github.com/googleapis/enterprise-certificate-proxy/blob/main/cshared/main.go
 def load_signer_lib(signer_lib_path):
@@ -121,6 +77,8 @@ def _compute_sha256_digest(to_be_signed, to_be_signed_len):
 # Create the signing callback. The actual signing work is done by the
 # `SignForPython` method from the signer lib.
 def get_sign_callback(signer_lib, config_file_path):
+    from cryptography.hazmat.bindings._openssl import ffi
+    @ffi.callback("int(unsigned char *sig, size_t *sig_len,const unsigned char *tbs, size_t tbs_len)")
     def sign_callback(sig, sig_len, tbs, tbs_len):
         _LOGGER.debug("calling sign callback...")
 
@@ -151,7 +109,7 @@ def get_sign_callback(signer_lib, config_file_path):
 
         return 1
 
-    return SIGN_CALLBACK_CTYPE(sign_callback)
+    return sign_callback
 
 
 # Obtain the certificate bytes by calling the `GetCertPemForPython` method from
@@ -207,13 +165,11 @@ class CustomTlsSigner(object):
                 enterprise_cert_json = json.load(f)
                 libs = enterprise_cert_json["libs"]
                 signer_library = libs["ecp_client"]
-                offload_library = libs["tls_offload"]
         except (KeyError, ValueError) as caught_exc:
             new_exc = exceptions.MutualTLSChannelError(
                 "enterprise cert file is invalid", caught_exc
             )
             six.raise_from(new_exc, caught_exc)
-        self._offload_lib = load_offload_lib(offload_library)
         self._signer_lib = load_signer_lib(signer_library)
 
     def set_up_custom_key(self):
@@ -227,9 +183,11 @@ class CustomTlsSigner(object):
     def attach_to_ssl_context(self, ctx):
         # In the TLS handshake, the signing operation will be done by the
         # sign_callback.
-        if not self._offload_lib.ConfigureSslContext(
+        print("calling attach_to_ssl_context")
+        from cryptography.hazmat.bindings._openssl import lib
+        if not lib.ConfigureSslContext(
             self._sign_callback,
-            ctypes.c_char_p(self._cert),
-            _cast_ssl_ctx_to_void_p(ctx._ctx._context),
+            self._cert,
+            ctx._ctx._context,
         ):
             raise exceptions.MutualTLSChannelError("failed to configure SSL context")
