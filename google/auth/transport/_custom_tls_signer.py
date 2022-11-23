@@ -23,7 +23,6 @@ import logging
 import os
 import sys
 
-import cffi  # type: ignore
 import six
 
 from google.auth import exceptions
@@ -66,9 +65,10 @@ def load_signer_lib(signer_lib_path):
 
 # Computes SHA256 hash.
 def _compute_sha256_digest(to_be_signed, to_be_signed_len):
+    from cryptography.hazmat.bindings._openssl import ffi
     from cryptography.hazmat.primitives import hashes
 
-    data = ctypes.string_at(to_be_signed, to_be_signed_len)
+    data = bytes(ffi.buffer(to_be_signed, to_be_signed_len))
     hash = hashes.Hash(hashes.SHA256())
     hash.update(data)
     return hash.finalize()
@@ -103,9 +103,10 @@ def get_sign_callback(signer_lib, config_file_path):
             return 0
 
         sig_len[0] = signature_len
-        bs = bytearray(sig_holder)
-        for i in range(signature_len):
-            sig[i] = bs[i]
+        if sig:
+            bs = bytearray(sig_holder)
+            for i in range(signature_len):
+                sig[i] = bs[i]
 
         return 1
 
@@ -151,7 +152,6 @@ class CustomTlsSigner(object):
                     {
                         "libs": {
                             "ecp_client": "...",
-                            "tls_offload": "..."
                         }
                     }
         """
