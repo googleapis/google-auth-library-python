@@ -24,10 +24,11 @@ See the `nox docs`_ for details on how this file works:
 
 import os
 import subprocess
+import tempfile
 
 from nox.command import which
 import nox
-import py.path
+import pathlib
 
 HERE = os.path.abspath(os.path.dirname(__file__))
 LIBRARY_DIR = os.path.abspath(os.path.dirname(HERE))
@@ -59,10 +60,12 @@ CLOUD_SDK_CONFIG_ENV = "CLOUDSDK_CONFIG"
 CLOUD_SDK_ROOT = os.environ.get("CLOUD_SDK_ROOT")
 
 if CLOUD_SDK_ROOT is not None:
-    CLOUD_SDK_ROOT = py.path.local(CLOUD_SDK_ROOT)
-    CLOUD_SDK_ROOT.ensure(dir=True)  # Makes sure the directory exists.
+    CLOUD_SDK_ROOT = pathlib.Path(CLOUD_SDK_ROOT)
+    if not CLOUD_SDK_ROOT.exists() or not CLOUD_SDK_ROOT.is_dir():
+        print("{} did not exist! Please set the CLOUD_SDK_ROOT environment variable to a directory that exists".format(CLOUD_SDK_ROOT))
+        exit(1)
 else:
-    CLOUD_SDK_ROOT = py.path.local.mkdtemp()
+    CLOUD_SDK_ROOT = pathlib.Path(tempfile.mkdtemp())
 
 # The full path the cloud sdk install directory
 CLOUD_SDK_INSTALL_DIR = CLOUD_SDK_ROOT.join("google-cloud-sdk")
@@ -94,7 +97,7 @@ def install_cloud_sdk(session):
     )
 
     # If gcloud cli executable already exists, just update it.
-    if py.path.local(GCLOUD).exists():
+    if pathlib.Path(GCLOUD).exists():
         session.run(GCLOUD, "components", "update", "-q")
         return
 
@@ -126,7 +129,7 @@ def copy_credentials(credentials_path):
     dest = CLOUD_SDK_ROOT.join("application_default_credentials.json")
     if dest.exists():
         dest.remove()
-    py.path.local(credentials_path).copy(dest)
+    pathlib.Path(credentials_path).copy(dest)
 
 
 def configure_cloud_sdk(session, application_default_credentials, project=False):
