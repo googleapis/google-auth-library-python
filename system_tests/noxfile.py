@@ -25,6 +25,7 @@ See the `nox docs`_ for details on how this file works:
 import os
 import pathlib
 import subprocess
+import shutil
 import tempfile
 
 from nox.command import which
@@ -129,7 +130,7 @@ def copy_credentials(credentials_path):
     dest = CLOUD_SDK_ROOT.joinpath("application_default_credentials.json")
     if dest.exists():
         dest.remove()
-    pathlib.Path(credentials_path).copy(dest)
+    shutil.copyfile(pathlib.Path(credentials_path), dest)
 
 
 def configure_cloud_sdk(session, application_default_credentials, project=False):
