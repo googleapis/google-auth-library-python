@@ -129,7 +129,7 @@ def copy_credentials(credentials_path):
     credentials."""
     dest = CLOUD_SDK_ROOT.joinpath("application_default_credentials.json")
     if dest.exists():
-        dest.remove()
+        dest.unlink()
     shutil.copyfile(pathlib.Path(credentials_path), dest)
 
 
