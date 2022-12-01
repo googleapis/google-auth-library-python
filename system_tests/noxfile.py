@@ -109,7 +109,7 @@ def install_cloud_sdk(session):
 
     # Extract the release.
     session.run("tar", "xzf", str(tar_path), "-C", str(CLOUD_SDK_ROOT))
-    session.run(tar_path.unlink())
+    tar_path.unlink()
 
     # Run the install script.
     session.run(
