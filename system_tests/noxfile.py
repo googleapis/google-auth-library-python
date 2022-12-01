@@ -93,7 +93,7 @@ def install_cloud_sdk(session):
     # This set the $PATH for the subprocesses so they can find the gcloud
     # executable.
     session.env["PATH"] = (
-        str(CLOUD_SDK_INSTALL_DIR.join("bin")) + os.pathsep + os.environ["PATH"]
+        str(CLOUD_SDK_INSTALL_DIR.joinpath("bin")) + os.pathsep + os.environ["PATH"]
     )
 
     # If gcloud cli executable already exists, just update it.
@@ -112,7 +112,7 @@ def install_cloud_sdk(session):
 
     # Run the install script.
     session.run(
-        str(CLOUD_SDK_INSTALL_DIR.join("install.sh")),
+        str(CLOUD_SDK_INSTALL_DIR.joinpath("install.sh")),
         "--usage-reporting",
         "false",
         "--path-update",
