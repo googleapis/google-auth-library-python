@@ -465,7 +465,11 @@ class Credentials(external_account.Credentials):
             str: The retrieved subject token.
         """
         # Fetch the session token required to make meta data endpoint calls to aws
-        if request is not None and self._imdsv2_session_token_url is not None:
+        if (
+            request is not None
+            and self._imdsv2_session_token_url is not None
+            and self._should_use_metadata_server()
+        ):
             headers = {"X-aws-ec2-metadata-token-ttl-seconds": "300"}
 
             imdsv2_session_token_response = request(
@@ -735,6 +739,21 @@ class Credentials(external_account.Credentials):
             )
 
         return response_body
+
+    def _should_use_metadata_server(self):
+        # Cannot retrieve either region or default region from enviornment variables.
+        if not os.environ.get(environment_vars.AWS_REGION) and not os.environ.get(
+            environment_vars.AWS_DEFAULT_REGION
+        ):
+            return True
+
+        # Cannot retrieve access key id and secret from enviornment variables.
+        if not os.environ.get(environment_vars.AWS_ACCESS_KEY_ID) or not os.environ.get(
+            environment_vars.AWS_SECRET_ACCESS_KEY
+        ):
+            return True
+
+        return False
 
     @classmethod
     def from_info(cls, info, **kwargs):
