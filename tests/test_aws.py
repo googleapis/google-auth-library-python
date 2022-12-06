@@ -1405,6 +1405,7 @@ class TestCredentials(object):
         )
 
         credentials.retrieve_subject_token(request)
+        assert not request.called
 
     def test_validate_metadata_server_url_if_any(self):
         aws.Credentials.validate_metadata_server_url_if_any(
