@@ -466,7 +466,7 @@ class Credentials(external_account.Credentials):
         Returns:
             str: The retrieved subject token.
         """
-        # Fetch the session token required to make meta data endpoint calls to aws
+        # Fetch the session token required to make meta data endpoint calls to aws.
         if (
             request is not None
             and self._imdsv2_session_token_url is not None
