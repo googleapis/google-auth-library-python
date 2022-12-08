@@ -123,7 +123,7 @@ class RequestSigner(object):
         )
         # Validate provided URL.
         if not uri.hostname or uri.scheme != "https":
-            raise ValueError("Invalid AWS service URL")
+            raise exceptions.InvalidResource("Invalid AWS service URL")
 
         header_map = _generate_authentication_header_map(
             host=uri.hostname,
@@ -408,9 +408,11 @@ class Credentials(external_account.Credentials):
             env_id, env_version = (None, None)
 
         if env_id != "aws" or self._cred_verification_url is None:
-            raise ValueError("No valid AWS 'credential_source' provided")
+            raise exceptions.InvalidResource(
+                "No valid AWS 'credential_source' provided"
+            )
         elif int(env_version or "") != 1:
-            raise ValueError(
+            raise exceptions.InvalidValue(
                 "aws version '{}' is not supported in the current build.".format(
                     env_version
                 )
@@ -428,7 +430,7 @@ class Credentials(external_account.Credentials):
         if url_string:
             url = urlparse(url_string)
             if url.hostname != "169.254.169.254" and url.hostname != "fd00:ec2::254":
-                raise ValueError(
+                raise exceptions.InvalidResource(
                     "Invalid hostname '{}' for '{}'".format(url.hostname, name_of_data)
                 )
 
@@ -464,8 +466,12 @@ class Credentials(external_account.Credentials):
         Returns:
             str: The retrieved subject token.
         """
-        # Fetch the session token required to make meta data endpoint calls to aws
-        if request is not None and self._imdsv2_session_token_url is not None:
+        # Fetch the session token required to make meta data endpoint calls to aws.
+        if (
+            request is not None
+            and self._imdsv2_session_token_url is not None
+            and self._should_use_metadata_server()
+        ):
             headers = {"X-aws-ec2-metadata-token-ttl-seconds": "300"}
 
             imdsv2_session_token_response = request(
@@ -735,6 +741,25 @@ class Credentials(external_account.Credentials):
             )
 
         return response_body
+
+    def _should_use_metadata_server(self):
+        # The AWS region can be provided through AWS_REGION or AWS_DEFAULT_REGION.
+        # The metadata server should be used if it cannot be retrieved from one of
+        # these environment variables.
+        if not os.environ.get(environment_vars.AWS_REGION) and not os.environ.get(
+            environment_vars.AWS_DEFAULT_REGION
+        ):
+            return True
+
+        # AWS security credentials can be retrieved from the AWS_ACCESS_KEY_ID
+        # and AWS_SECRET_ACCESS_KEY environment variables. The metadata server
+        # should be used if either of these are not available.
+        if not os.environ.get(environment_vars.AWS_ACCESS_KEY_ID) or not os.environ.get(
+            environment_vars.AWS_SECRET_ACCESS_KEY
+        ):
+            return True
+
+        return False
 
     @classmethod
     def from_info(cls, info, **kwargs):
