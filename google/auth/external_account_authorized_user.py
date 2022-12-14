@@ -168,7 +168,7 @@ class Credentials(
         """ True: This credential always represents a user."""
         return True
 
-    def get_project_id(self):
+    def get_project_id(self, request=None):
         """Retrieves the project ID corresponding to the workload identity or workforce pool.
         For workforce pool credentials, it returns the project ID corresponding to
         the workforce_pool_user_project.
