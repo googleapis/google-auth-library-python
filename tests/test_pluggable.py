@@ -36,17 +36,106 @@ CLIENT_SECRET = "password"
 # Base64 encoding of "username:password".
 BASIC_AUTH_ENCODING = "dXNlcm5hbWU6cGFzc3dvcmQ="
 SERVICE_ACCOUNT_EMAIL = "service-1234@service-name.iam.gserviceaccount.com"
+SERVICE_ACCOUNT_IMPERSONATION_URL_BASE = (
+    "https://us-east1-iamcredentials.googleapis.com"
+)
+SERVICE_ACCOUNT_IMPERSONATION_URL_ROUTE = "/v1/projects/-/serviceAccounts/{}:generateAccessToken".format(
+    SERVICE_ACCOUNT_EMAIL
+)
 SERVICE_ACCOUNT_IMPERSONATION_URL = (
-    "https://us-east1-iamcredentials.googleapis.com/v1/projects/-"
-    + "/serviceAccounts/{}:generateAccessToken".format(SERVICE_ACCOUNT_EMAIL)
+    SERVICE_ACCOUNT_IMPERSONATION_URL_BASE + SERVICE_ACCOUNT_IMPERSONATION_URL_ROUTE
 )
 QUOTA_PROJECT_ID = "QUOTA_PROJECT_ID"
 SCOPES = ["scope1", "scope2"]
 SUBJECT_TOKEN_FIELD_NAME = "access_token"
 
 TOKEN_URL = "https://sts.googleapis.com/v1/token"
+TOKEN_INFO_URL = "https://sts.googleapis.com/v1/introspect"
 SUBJECT_TOKEN_TYPE = "urn:ietf:params:oauth:token-type:jwt"
 AUDIENCE = "//iam.googleapis.com/projects/123456/locations/global/workloadIdentityPools/POOL_ID/providers/PROVIDER_ID"
+
+VALID_TOKEN_URLS = [
+    "https://sts.googleapis.com",
+    "https://us-east-1.sts.googleapis.com",
+    "https://US-EAST-1.sts.googleapis.com",
+    "https://sts.us-east-1.googleapis.com",
+    "https://sts.US-WEST-1.googleapis.com",
+    "https://us-east-1-sts.googleapis.com",
+    "https://US-WEST-1-sts.googleapis.com",
+    "https://us-west-1-sts.googleapis.com/path?query",
+    "https://sts-us-east-1.p.googleapis.com",
+]
+INVALID_TOKEN_URLS = [
+    "https://iamcredentials.googleapis.com",
+    "sts.googleapis.com",
+    "https://",
+    "http://sts.googleapis.com",
+    "https://st.s.googleapis.com",
+    "https://us-eas\t-1.sts.googleapis.com",
+    "https:/us-east-1.sts.googleapis.com",
+    "https://US-WE/ST-1-sts.googleapis.com",
+    "https://sts-us-east-1.googleapis.com",
+    "https://sts-US-WEST-1.googleapis.com",
+    "testhttps://us-east-1.sts.googleapis.com",
+    "https://us-east-1.sts.googleapis.comevil.com",
+    "https://us-east-1.us-east-1.sts.googleapis.com",
+    "https://us-ea.s.t.sts.googleapis.com",
+    "https://sts.googleapis.comevil.com",
+    "hhttps://us-east-1.sts.googleapis.com",
+    "https://us- -1.sts.googleapis.com",
+    "https://-sts.googleapis.com",
+    "https://us-east-1.sts.googleapis.com.evil.com",
+    "https://sts.pgoogleapis.com",
+    "https://p.googleapis.com",
+    "https://sts.p.com",
+    "http://sts.p.googleapis.com",
+    "https://xyz-sts.p.googleapis.com",
+    "https://sts-xyz.123.p.googleapis.com",
+    "https://sts-xyz.p1.googleapis.com",
+    "https://sts-xyz.p.foo.com",
+    "https://sts-xyz.p.foo.googleapis.com",
+]
+VALID_SERVICE_ACCOUNT_IMPERSONATION_URLS = [
+    "https://iamcredentials.googleapis.com",
+    "https://us-east-1.iamcredentials.googleapis.com",
+    "https://US-EAST-1.iamcredentials.googleapis.com",
+    "https://iamcredentials.us-east-1.googleapis.com",
+    "https://iamcredentials.US-WEST-1.googleapis.com",
+    "https://us-east-1-iamcredentials.googleapis.com",
+    "https://US-WEST-1-iamcredentials.googleapis.com",
+    "https://us-west-1-iamcredentials.googleapis.com/path?query",
+    "https://iamcredentials-us-east-1.p.googleapis.com",
+]
+INVALID_SERVICE_ACCOUNT_IMPERSONATION_URLS = [
+    "https://sts.googleapis.com",
+    "iamcredentials.googleapis.com",
+    "https://",
+    "http://iamcredentials.googleapis.com",
+    "https://iamcre.dentials.googleapis.com",
+    "https://us-eas\t-1.iamcredentials.googleapis.com",
+    "https:/us-east-1.iamcredentials.googleapis.com",
+    "https://US-WE/ST-1-iamcredentials.googleapis.com",
+    "https://iamcredentials-us-east-1.googleapis.com",
+    "https://iamcredentials-US-WEST-1.googleapis.com",
+    "testhttps://us-east-1.iamcredentials.googleapis.com",
+    "https://us-east-1.iamcredentials.googleapis.comevil.com",
+    "https://us-east-1.us-east-1.iamcredentials.googleapis.com",
+    "https://us-ea.s.t.iamcredentials.googleapis.com",
+    "https://iamcredentials.googleapis.comevil.com",
+    "hhttps://us-east-1.iamcredentials.googleapis.com",
+    "https://us- -1.iamcredentials.googleapis.com",
+    "https://-iamcredentials.googleapis.com",
+    "https://us-east-1.iamcredentials.googleapis.com.evil.com",
+    "https://iamcredentials.pgoogleapis.com",
+    "https://p.googleapis.com",
+    "https://iamcredentials.p.com",
+    "http://iamcredentials.p.googleapis.com",
+    "https://xyz-iamcredentials.p.googleapis.com",
+    "https://iamcredentials-xyz.123.p.googleapis.com",
+    "https://iamcredentials-xyz.p1.googleapis.com",
+    "https://iamcredentials-xyz.p.foo.com",
+    "https://iamcredentials-xyz.p.foo.googleapis.com",
+]
 
 
 class TestCredentials(object):
@@ -115,6 +204,8 @@ class TestCredentials(object):
         cls,
         audience=AUDIENCE,
         subject_token_type=SUBJECT_TOKEN_TYPE,
+        token_url=TOKEN_URL,
+        token_info_url=TOKEN_INFO_URL,
         client_id=None,
         client_secret=None,
         quota_project_id=None,
@@ -128,7 +219,8 @@ class TestCredentials(object):
         return pluggable.Credentials(
             audience=audience,
             subject_token_type=subject_token_type,
-            token_url=TOKEN_URL,
+            token_url=token_url,
+            token_info_url=token_info_url,
             service_account_impersonation_url=service_account_impersonation_url,
             credential_source=credential_source,
             client_id=client_id,
@@ -140,6 +232,21 @@ class TestCredentials(object):
             interactive=interactive,
         )
 
+    def test_from_constructor_and_injection(self):
+        credentials = pluggable.Credentials(
+            audience=AUDIENCE,
+            subject_token_type=SUBJECT_TOKEN_TYPE,
+            token_url=TOKEN_URL,
+            token_info_url=TOKEN_INFO_URL,
+            credential_source=self.CREDENTIAL_SOURCE,
+            interactive=True,
+        )
+        setattr(credentials, "_tokeninfo_username", "mock_external_account_id")
+
+        assert isinstance(credentials, pluggable.Credentials)
+        assert credentials.interactive
+        assert credentials.external_account_id == "mock_external_account_id"
+
     @mock.patch.object(pluggable.Credentials, "__init__", return_value=None)
     def test_from_info_full_options(self, mock_init):
         credentials = pluggable.Credentials.from_info(
@@ -147,6 +254,7 @@ class TestCredentials(object):
                 "audience": AUDIENCE,
                 "subject_token_type": SUBJECT_TOKEN_TYPE,
                 "token_url": TOKEN_URL,
+                "token_info_url": TOKEN_INFO_URL,
                 "service_account_impersonation_url": SERVICE_ACCOUNT_IMPERSONATION_URL,
                 "service_account_impersonation": {"token_lifetime_seconds": 2800},
                 "client_id": CLIENT_ID,
@@ -162,6 +270,7 @@ class TestCredentials(object):
             audience=AUDIENCE,
             subject_token_type=SUBJECT_TOKEN_TYPE,
             token_url=TOKEN_URL,
+            token_info_url=TOKEN_INFO_URL,
             service_account_impersonation_url=SERVICE_ACCOUNT_IMPERSONATION_URL,
             service_account_impersonation_options={"token_lifetime_seconds": 2800},
             client_id=CLIENT_ID,
@@ -188,6 +297,7 @@ class TestCredentials(object):
             audience=AUDIENCE,
             subject_token_type=SUBJECT_TOKEN_TYPE,
             token_url=TOKEN_URL,
+            token_info_url=None,
             service_account_impersonation_url=None,
             service_account_impersonation_options={},
             client_id=None,
@@ -203,6 +313,7 @@ class TestCredentials(object):
             "audience": AUDIENCE,
             "subject_token_type": SUBJECT_TOKEN_TYPE,
             "token_url": TOKEN_URL,
+            "token_info_url": TOKEN_INFO_URL,
             "service_account_impersonation_url": SERVICE_ACCOUNT_IMPERSONATION_URL,
             "service_account_impersonation": {"token_lifetime_seconds": 2800},
             "client_id": CLIENT_ID,
@@ -220,6 +331,7 @@ class TestCredentials(object):
             audience=AUDIENCE,
             subject_token_type=SUBJECT_TOKEN_TYPE,
             token_url=TOKEN_URL,
+            token_info_url=TOKEN_INFO_URL,
             service_account_impersonation_url=SERVICE_ACCOUNT_IMPERSONATION_URL,
             service_account_impersonation_options={"token_lifetime_seconds": 2800},
             client_id=CLIENT_ID,
@@ -247,6 +359,7 @@ class TestCredentials(object):
             audience=AUDIENCE,
             subject_token_type=SUBJECT_TOKEN_TYPE,
             token_url=TOKEN_URL,
+            token_info_url=None,
             service_account_impersonation_url=None,
             service_account_impersonation_options={},
             client_id=None,
@@ -280,8 +393,88 @@ class TestCredentials(object):
             "audience": AUDIENCE,
             "subject_token_type": SUBJECT_TOKEN_TYPE,
             "token_url": TOKEN_URL,
+            "token_info_url": TOKEN_INFO_URL,
             "credential_source": self.CREDENTIAL_SOURCE,
         }
+
+    def test_token_info_url(self):
+        credentials = self.make_pluggable(
+            credential_source=self.CREDENTIAL_SOURCE.copy()
+        )
+
+        assert credentials.token_info_url == TOKEN_INFO_URL
+
+    def test_token_info_url_custom(self):
+        for url in VALID_TOKEN_URLS:
+            credentials = self.make_pluggable(
+                credential_source=self.CREDENTIAL_SOURCE.copy(),
+                token_info_url=(url + "/introspect"),
+            )
+
+            assert credentials.token_info_url == url + "/introspect"
+
+    def test_token_info_url_bad(self):
+        for url in INVALID_TOKEN_URLS:
+            with pytest.raises(ValueError) as excinfo:
+                self.make_pluggable(
+                    credential_source=self.CREDENTIAL_SOURCE.copy(),
+                    token_info_url=(url + "/introspect"),
+                )
+
+            assert excinfo.match(r"The provided token info URL is invalid.")
+
+    def test_token_info_url_negative(self):
+        credentials = self.make_pluggable(
+            credential_source=self.CREDENTIAL_SOURCE.copy(), token_info_url=None
+        )
+
+        assert not credentials.token_info_url
+
+    def test_token_url_custom(self):
+        for url in VALID_TOKEN_URLS:
+            credentials = self.make_pluggable(
+                credential_source=self.CREDENTIAL_SOURCE.copy(),
+                token_url=(url + "/token"),
+            )
+
+            assert credentials._token_url == (url + "/token")
+
+    def test_token_url_bad(self):
+        for url in INVALID_TOKEN_URLS:
+            with pytest.raises(ValueError) as excinfo:
+                self.make_pluggable(
+                    credential_source=self.CREDENTIAL_SOURCE.copy(),
+                    token_url=(url + "/token"),
+                )
+
+            assert excinfo.match(r"The provided token URL is invalid\.")
+
+    def test_service_account_impersonation_url_custom(self):
+        for url in VALID_SERVICE_ACCOUNT_IMPERSONATION_URLS:
+            credentials = self.make_pluggable(
+                credential_source=self.CREDENTIAL_SOURCE.copy(),
+                service_account_impersonation_url=(
+                    url + SERVICE_ACCOUNT_IMPERSONATION_URL_ROUTE
+                ),
+            )
+
+            assert credentials._service_account_impersonation_url == (
+                url + SERVICE_ACCOUNT_IMPERSONATION_URL_ROUTE
+            )
+
+    def test_service_account_impersonation_url_bad(self):
+        for url in INVALID_SERVICE_ACCOUNT_IMPERSONATION_URLS:
+            with pytest.raises(ValueError) as excinfo:
+                self.make_pluggable(
+                    credential_source=self.CREDENTIAL_SOURCE.copy(),
+                    service_account_impersonation_url=(
+                        url + SERVICE_ACCOUNT_IMPERSONATION_URL_ROUTE
+                    ),
+                )
+
+            assert excinfo.match(
+                r"The provided service account impersonation URL is invalid\."
+            )
 
     @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
     def test_retrieve_subject_token_successfully(self, tmpdir):
@@ -887,23 +1080,6 @@ class TestCredentials(object):
         assert excinfo.match(r"Timeout must be between 5 and 120 seconds.")
 
     @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
-    def test_credential_source_interactive_timeout_missing_will_use_default_interactive_timeout_value(
-        self
-    ):
-        CREDENTIAL_SOURCE = {
-            "executable": {
-                "command": self.CREDENTIAL_SOURCE_EXECUTABLE_COMMAND,
-                "output_file": self.CREDENTIAL_SOURCE_EXECUTABLE_OUTPUT_FILE,
-            }
-        }
-        credentials = self.make_pluggable(credential_source=CREDENTIAL_SOURCE)
-
-        assert (
-            credentials._credential_source_executable_interactive_timeout_millis
-            == pluggable.EXECUTABLE_INTERACTIVE_TIMEOUT_MILLIS_DEFAULT
-        )
-
-    @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
     def test_credential_source_interactive_timeout_small(self):
         with pytest.raises(ValueError) as excinfo:
             CREDENTIAL_SOURCE = {
@@ -915,7 +1091,9 @@ class TestCredentials(object):
             }
             _ = self.make_pluggable(credential_source=CREDENTIAL_SOURCE)
 
-        assert excinfo.match(r"Interactive timeout must be between 5 and 30 minutes.")
+        assert excinfo.match(
+            r"Interactive timeout must be between 30 seconds and 30 minutes."
+        )
 
     @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
     def test_credential_source_interactive_timeout_large(self):
@@ -929,7 +1107,9 @@ class TestCredentials(object):
             }
             _ = self.make_pluggable(credential_source=CREDENTIAL_SOURCE)
 
-        assert excinfo.match(r"Interactive timeout must be between 5 and 30 minutes.")
+        assert excinfo.match(
+            r"Interactive timeout must be between 30 seconds and 30 minutes."
+        )
 
     @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
     def test_retrieve_subject_token_executable_fail(self):
@@ -957,6 +1137,25 @@ class TestCredentials(object):
             _ = credentials.retrieve_subject_token(None)
 
         assert excinfo.match(r"Interactive mode is only enabled for workforce pool.")
+
+    @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
+    def test_retrieve_subject_token_fail_on_validation_missing_interactive_timeout(
+        self
+    ):
+        CREDENTIAL_SOURCE_EXECUTABLE = {
+            "command": self.CREDENTIAL_SOURCE_EXECUTABLE_COMMAND,
+            "output_file": self.CREDENTIAL_SOURCE_EXECUTABLE_OUTPUT_FILE,
+        }
+        CREDENTIAL_SOURCE = {"executable": CREDENTIAL_SOURCE_EXECUTABLE}
+        credentials = self.make_pluggable(
+            credential_source=CREDENTIAL_SOURCE, interactive=True
+        )
+        with pytest.raises(ValueError) as excinfo:
+            _ = credentials.retrieve_subject_token(None)
+
+        assert excinfo.match(
+            r"Interactive mode cannot run without an interactive timeout."
+        )
 
     @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
     def test_retrieve_subject_token_executable_fail_interactive_mode(self):

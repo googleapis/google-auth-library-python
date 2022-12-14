@@ -16,10 +16,12 @@
 """Interfaces for credentials."""
 
 import abc
+import os
 
 import six
 
-from google.auth import _helpers
+from google.auth import _helpers, environment_vars
+from google.auth import exceptions
 
 
 @six.add_metaclass(abc.ABCMeta)
@@ -149,6 +151,12 @@ class CredentialsWithQuotaProject(Credentials):
         """
         raise NotImplementedError("This credential does not support quota project.")
 
+    def with_quota_project_from_environment(self):
+        quota_from_env = os.environ.get(environment_vars.GOOGLE_CLOUD_QUOTA_PROJECT)
+        if quota_from_env:
+            return self.with_quota_project(quota_from_env)
+        return self
+
 
 class CredentialsWithTokenUri(Credentials):
     """Abstract base for credentials supporting ``with_token_uri`` factory"""
@@ -183,9 +191,9 @@ class AnonymousCredentials(Credentials):
         return True
 
     def refresh(self, request):
-        """Raises :class:`ValueError``, anonymous credentials cannot be
+        """Raises :class:``InvalidOperation``, anonymous credentials cannot be
         refreshed."""
-        raise ValueError("Anonymous credentials cannot be refreshed.")
+        raise exceptions.InvalidOperation("Anonymous credentials cannot be refreshed.")
 
     def apply(self, headers, token=None):
         """Anonymous credentials do nothing to the request.
@@ -193,10 +201,10 @@ class AnonymousCredentials(Credentials):
         The optional ``token`` argument is not supported.
 
         Raises:
-            ValueError: If a token was specified.
+            google.auth.exceptions.InvalidValue: If a token was specified.
         """
         if token is not None:
-            raise ValueError("Anonymous credentials don't support tokens.")
+            raise exceptions.InvalidValue("Anonymous credentials don't support tokens.")
 
     def before_request(self, request, method, url, headers):
         """Anonymous credentials do nothing to the request."""
