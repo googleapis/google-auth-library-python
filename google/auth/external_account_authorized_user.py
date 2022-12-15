@@ -228,6 +228,14 @@ class Credentials(
         the workforce_pool_user_project.
 
         When not determinable, None is returned.
+
+        Args:
+            request (google.auth.transport.requests.Request): Request object.
+                Unused here, but passed from _default.default().
+
+        Return:
+          None — project ID is not determinable for this credential type.
+                 Would return str if it were determinable.
         """
 
         return None
