@@ -63,7 +63,6 @@ setup(
     long_description=long_description,
     url="https://github.com/googleapis/google-auth-library-python",
     packages=find_packages(exclude=("tests*", "system_tests*")),
-    namespace_packages=("google",),
     install_requires=DEPENDENCIES,
     extras_require=extras,
     python_requires=">=2.7,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,!=3.5.*",

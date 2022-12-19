@@ -16,10 +16,7 @@ import os
 import subprocess
 import sys
 
-import pytest
 
-
-@pytest.mark.xfail(reason="known limitation")
 def test_namespace_package_compat(tmp_path):
     """
     The ``google`` namespace package should not be masked
