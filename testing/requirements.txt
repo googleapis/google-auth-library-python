@@ -10,7 +10,7 @@ pytest-localserver
 pyu2f
 requests
 urllib3
-cryptography
+cryptography==38.0.1
 responses
 grpcio
 # Async Dependencies
