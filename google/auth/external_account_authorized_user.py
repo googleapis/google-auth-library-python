@@ -234,8 +234,7 @@ class Credentials(
                 Unused here, but passed from _default.default().
 
         Return:
-          None — project ID is not determinable for this credential type.
-                 Would return str if it were determinable.
+          str: project ID is not determinable for this credential type so it returns None
         """
 
         return None
