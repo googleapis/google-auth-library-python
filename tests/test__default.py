@@ -19,6 +19,7 @@ import mock
 import pytest  # type: ignore
 
 from google.auth import _default
+from google.auth import api_key
 from google.auth import app_engine
 from google.auth import aws
 from google.auth import compute_engine
@@ -683,6 +684,12 @@ def test__get_gdch_service_account_credentials_invalid_format_version():
     assert excinfo.match("Failed to load GDCH service account credentials")
 
 
+def test_get_api_key_credentials():
+    creds = _default.get_api_key_credentials("api_key")
+    assert isinstance(creds, api_key.Credentials)
+    assert creds.token == "api_key"
+
+
 class _AppIdentityModule(object):
     """The interface of the App Idenity app engine module.
     See https://cloud.google.com/appengine/docs/standard/python/refdocs\
@@ -1233,4 +1240,33 @@ def test_quota_project_from_environment(get_adc_path):
 
     explicit_quota = "explicit_quota"
     credentials, _ = _default.default(quota_project_id=explicit_quota)
+    assert credentials.quota_project_id == explicit_quota
+
+
+@mock.patch(
+    "google.auth.compute_engine._metadata.ping", return_value=True, autospec=True
+)
+@mock.patch(
+    "google.auth.compute_engine._metadata.get_project_id",
+    return_value="example-project",
+    autospec=True,
+)
+@mock.patch.dict(os.environ)
+def test_quota_gce_credentials(unused_get, unused_ping):
+    # No quota
+    credentials, project_id = _default._get_gce_credentials()
+    assert project_id == "example-project"
+    assert credentials.quota_project_id is None
+
+    # Quota from environment
+    quota_from_env = "quota_from_env"
+    os.environ[environment_vars.GOOGLE_CLOUD_QUOTA_PROJECT] = quota_from_env
+    credentials, project_id = _default._get_gce_credentials()
+    assert credentials.quota_project_id == quota_from_env
+
+    # Explicit quota
+    explicit_quota = "explicit_quota"
+    credentials, project_id = _default._get_gce_credentials(
+        quota_project_id=explicit_quota
+    )
     assert credentials.quota_project_id == explicit_quota

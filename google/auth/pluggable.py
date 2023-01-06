@@ -52,8 +52,7 @@ EXECUTABLE_TIMEOUT_MILLIS_DEFAULT = 30 * 1000  # 30 seconds
 EXECUTABLE_TIMEOUT_MILLIS_LOWER_BOUND = 5 * 1000  # 5 seconds
 EXECUTABLE_TIMEOUT_MILLIS_UPPER_BOUND = 120 * 1000  # 2 minutes
 
-EXECUTABLE_INTERACTIVE_TIMEOUT_MILLIS_DEFAULT = 5 * 60 * 1000  # 5 minutes
-EXECUTABLE_INTERACTIVE_TIMEOUT_MILLIS_LOWER_BOUND = 5 * 60 * 1000  # 5 minutes
+EXECUTABLE_INTERACTIVE_TIMEOUT_MILLIS_LOWER_BOUND = 30 * 1000  # 30 seconds
 EXECUTABLE_INTERACTIVE_TIMEOUT_MILLIS_UPPER_BOUND = 30 * 60 * 1000  # 30 minutes
 
 
@@ -94,7 +93,8 @@ class Credentials(external_account.Credentials):
         Raises:
             google.auth.exceptions.RefreshError: If an error is encountered during
                 access token retrieval logic.
-            ValueError: For invalid parameters.
+            google.auth.exceptions.InvalidValue: For invalid parameters.
+            google.auth.exceptions.MalformedError: For invalid parameters.
 
         .. note:: Typically one of the helper constructors
             :meth:`from_file` or
@@ -112,12 +112,12 @@ class Credentials(external_account.Credentials):
         )
         if not isinstance(credential_source, Mapping):
             self._credential_source_executable = None
-            raise ValueError(
+            raise exceptions.MalformedError(
                 "Missing credential_source. The credential_source is not a dict."
             )
         self._credential_source_executable = credential_source.get("executable")
         if not self._credential_source_executable:
-            raise ValueError(
+            raise exceptions.MalformedError(
                 "Missing credential_source. An 'executable' must be provided."
             )
         self._credential_source_executable_command = self._credential_source_executable.get(
@@ -132,10 +132,12 @@ class Credentials(external_account.Credentials):
         self._credential_source_executable_output_file = self._credential_source_executable.get(
             "output_file"
         )
-        self._tokeninfo_username = kwargs.get("tokeninfo_username", "")  # dummy value
+
+        # Dummy value. This variable is only used via injection, not exposed to ctor
+        self._tokeninfo_username = ""
 
         if not self._credential_source_executable_command:
-            raise ValueError(
+            raise exceptions.MalformedError(
                 "Missing command field. Executable command must be provided."
             )
         if not self._credential_source_executable_timeout_millis:
@@ -148,19 +150,18 @@ class Credentials(external_account.Credentials):
             or self._credential_source_executable_timeout_millis
             > EXECUTABLE_TIMEOUT_MILLIS_UPPER_BOUND
         ):
-            raise ValueError("Timeout must be between 5 and 120 seconds.")
+            raise exceptions.InvalidValue("Timeout must be between 5 and 120 seconds.")
 
-        if not self._credential_source_executable_interactive_timeout_millis:
-            self._credential_source_executable_interactive_timeout_millis = (
-                EXECUTABLE_INTERACTIVE_TIMEOUT_MILLIS_DEFAULT
-            )
-        elif (
-            self._credential_source_executable_interactive_timeout_millis
-            < EXECUTABLE_INTERACTIVE_TIMEOUT_MILLIS_LOWER_BOUND
-            or self._credential_source_executable_interactive_timeout_millis
-            > EXECUTABLE_INTERACTIVE_TIMEOUT_MILLIS_UPPER_BOUND
-        ):
-            raise ValueError("Interactive timeout must be between 5 and 30 minutes.")
+        if self._credential_source_executable_interactive_timeout_millis:
+            if (
+                self._credential_source_executable_interactive_timeout_millis
+                < EXECUTABLE_INTERACTIVE_TIMEOUT_MILLIS_LOWER_BOUND
+                or self._credential_source_executable_interactive_timeout_millis
+                > EXECUTABLE_INTERACTIVE_TIMEOUT_MILLIS_UPPER_BOUND
+            ):
+                raise exceptions.InvalidValue(
+                    "Interactive timeout must be between 30 seconds and 30 minutes."
+                )
 
     @_helpers.copy_docstring(external_account.Credentials)
     def retrieve_subject_token(self, request):
@@ -183,7 +184,7 @@ class Credentials(external_account.Credentials):
                         "expiration_time" not in response
                     ):  # Always treat missing expiration_time as expired and proceed to executable run.
                         raise exceptions.RefreshError
-                except ValueError:
+                except (exceptions.MalformedError, exceptions.InvalidValue):
                     raise
                 except exceptions.RefreshError:
                     pass
@@ -247,7 +248,9 @@ class Credentials(external_account.Credentials):
 
         """
         if not self.interactive:
-            raise ValueError("Revoke is only enabled under interactive mode.")
+            raise exceptions.InvalidValue(
+                "Revoke is only enabled under interactive mode."
+            )
         self._validate_running_mode()
 
         if not _helpers.is_python_3():
@@ -307,7 +310,8 @@ class Credentials(external_account.Credentials):
                 credentials.
 
         Raises:
-            ValueError: For invalid parameters.
+            google.auth.exceptions.InvalidValue: For invalid parameters.
+            google.auth.exceptions.MalformedError: For invalid parameters.
         """
         return super(Credentials, cls).from_info(info, **kwargs)
 
@@ -344,7 +348,7 @@ class Credentials(external_account.Credentials):
         self._validate_response_schema(response)
         if not response["success"]:
             if "code" not in response or "message" not in response:
-                raise ValueError(
+                raise exceptions.MalformedError(
                     "Error code and message fields are required in the response."
                 )
             raise exceptions.RefreshError(
@@ -357,7 +361,9 @@ class Credentials(external_account.Credentials):
                 "The token returned by the executable is expired."
             )
         if "token_type" not in response:
-            raise ValueError("The executable response is missing the token_type field.")
+            raise exceptions.MalformedError(
+                "The executable response is missing the token_type field."
+            )
         if (
             response["token_type"] == "urn:ietf:params:oauth:token-type:jwt"
             or response["token_type"] == "urn:ietf:params:oauth:token-type:id_token"
@@ -375,7 +381,9 @@ class Credentials(external_account.Credentials):
 
     def _validate_response_schema(self, response):
         if "version" not in response:
-            raise ValueError("The executable response is missing the version field.")
+            raise exceptions.MalformedError(
+                "The executable response is missing the version field."
+            )
         if response["version"] > EXECUTABLE_SUPPORTED_MAX_VERSION:
             raise exceptions.RefreshError(
                 "Executable returned unsupported version {}.".format(
@@ -384,21 +392,33 @@ class Credentials(external_account.Credentials):
             )
 
         if "success" not in response:
-            raise ValueError("The executable response is missing the success field.")
+            raise exceptions.MalformedError(
+                "The executable response is missing the success field."
+            )
 
     def _validate_running_mode(self):
         env_allow_executables = os.environ.get(
             "GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES"
         )
         if env_allow_executables != "1":
-            raise ValueError(
+            raise exceptions.MalformedError(
                 "Executables need to be explicitly allowed (set GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES to '1') to run."
             )
 
         if self.interactive and not self._credential_source_executable_output_file:
-            raise ValueError(
+            raise exceptions.MalformedError(
                 "An output_file must be specified in the credential configuration for interactive mode."
             )
 
+        if (
+            self.interactive
+            and not self._credential_source_executable_interactive_timeout_millis
+        ):
+            raise exceptions.InvalidOperation(
+                "Interactive mode cannot run without an interactive timeout."
+            )
+
         if self.interactive and not self.is_workforce_pool:
-            raise ValueError("Interactive mode is only enabled for workforce pool.")
+            raise exceptions.InvalidValue(
+                "Interactive mode is only enabled for workforce pool."
+            )

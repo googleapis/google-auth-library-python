@@ -4,6 +4,31 @@
 
 [1]: https://pypi.org/project/google-auth/#history
 
+## [2.15.0](https://github.com/googleapis/google-auth-library-python/compare/v2.14.1...v2.15.0) (2022-12-01)
+
+
+### Features
+
+* Add api_key credentials ([#1184](https://github.com/googleapis/google-auth-library-python/issues/1184)) ([370293e](https://github.com/googleapis/google-auth-library-python/commit/370293e84a14af0d6c6b34287bdcad020e0580e4))
+* Introduce a way to provide scopes granted by user ([#1189](https://github.com/googleapis/google-auth-library-python/issues/1189)) ([189f504](https://github.com/googleapis/google-auth-library-python/commit/189f504cbdfe043949688dfe55f3f449befad991))
+
+
+### Bug Fixes
+
+* Allow mtls sts endpoint for external account token urls. ([#1185](https://github.com/googleapis/google-auth-library-python/issues/1185)) ([c86dd69](https://github.com/googleapis/google-auth-library-python/commit/c86dd69cf79809e2d532a745a236db840fd8bc5d))
+* CI broken by removal of py.path ([#1194](https://github.com/googleapis/google-auth-library-python/issues/1194)) ([f719415](https://github.com/googleapis/google-auth-library-python/commit/f719415475e10e5af9ec75b3b13c57c25682bea0))
+* Ensure JWT segments have the right types ([#1162](https://github.com/googleapis/google-auth-library-python/issues/1162)) ([fc843cd](https://github.com/googleapis/google-auth-library-python/commit/fc843cd318e4ac4f40cf83bbcd7c6eae2b597ff8))
+* Updated the lower bound of interactive timeout and fix the kwarg… ([#1182](https://github.com/googleapis/google-auth-library-python/issues/1182)) ([50c0fd2](https://github.com/googleapis/google-auth-library-python/commit/50c0fd29a3b6a4fd6dc4b801d883f5d2b6de88c6))
+
+## [2.14.1](https://github.com/googleapis/google-auth-library-python/compare/v2.14.0...v2.14.1) (2022-11-07)
+
+
+### Bug Fixes
+
+* Apply quota project for compute cred in adc ([#1177](https://github.com/googleapis/google-auth-library-python/issues/1177)) ([b9aa92a](https://github.com/googleapis/google-auth-library-python/commit/b9aa92a1f1640f9c8bc4beb7b13051a01cb263a4))
+* Update minimum required version of cryptography in pyopenssl extra ([#1176](https://github.com/googleapis/google-auth-library-python/issues/1176)) ([e9e76d1](https://github.com/googleapis/google-auth-library-python/commit/e9e76d1ee4e4b39edcd6821ced7a5bc3ed60eba0))
+* Validate url domain for aws metadata urls ([#1174](https://github.com/googleapis/google-auth-library-python/issues/1174)) ([f9d7d77](https://github.com/googleapis/google-auth-library-python/commit/f9d7d77739db86870c9b87b003e8ce0c93d53e53))
+
 ## [2.14.0](https://github.com/googleapis/google-auth-library-python/compare/v2.13.0...v2.14.0) (2022-10-31)
 
 
