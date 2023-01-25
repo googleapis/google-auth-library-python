@@ -70,6 +70,7 @@ async def _token_endpoint_request_no_throw(
         headers["Authorization"] = "Bearer {}".format(access_token)
 
     async def _perform_request():
+        print("ahihi", token_uri)
         response = await request(
             method="POST", url=token_uri, headers=headers, body=body
         )
