@@ -823,6 +823,16 @@ in the target project. Using `ImpersonatedCredentials` will allow the source_cre
 to assume the identity of a target_principal that does have access.
 
 
+Security considerations on configuration External and Impersonated credentials
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+Note that this library does not perform any validation on the token_url,
+token_info_url, or service_account_impersonation_url fields of the credential
+configuration. It is not recommended to use a credential configuration that you
+did not generate with the gcloud CLI unless you verify that the URL fields point
+to a googleapis.com domain.
+
+
 Downscoped credentials
 ++++++++++++++++++++++
 
