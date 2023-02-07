@@ -548,6 +548,16 @@ For AWS providers, use :meth:`aws.Credentials.from_info
         ['https://www.googleapis.com/auth/cloud-platform'])
 
 
+Security considerations
+~~~~~~~~~~~~~~~~~~~~~~~
+
+Note that this library does not perform any validation on the token_url,
+token_info_url, or service_account_impersonation_url fields of the credential
+configuration. It is not recommended to use a credential configuration that you
+did not generate with the gcloud CLI unless you verify that the URL fields point
+to a googleapis.com domain.
+
+
 External credentials (Workforce identity federation)
 ++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -793,6 +803,13 @@ Cloud resources from an OIDC or SAML provider.
     https://cloud.google.com/iam/docs/workforce-identity-federation#workforce-pools-user-project
 
 
+Note that this library does not perform any validation on the token_url,
+token_info_url, or service_account_impersonation_url fields of the credential
+configuration. It is not recommended to use a credential configuration that you
+did not generate with the gcloud CLI unless you verify that the URL fields point
+to a googleapis.com domain.
+
+
 Impersonated credentials
 ++++++++++++++++++++++++
 
@@ -821,16 +838,6 @@ the "Service Account Token Creator" IAM role. ::
 In the example above `source_credentials` does not have direct access to list buckets
 in the target project. Using `ImpersonatedCredentials` will allow the source_credentials
 to assume the identity of a target_principal that does have access.
-
-
-Security considerations on configuration External and Impersonated credentials
-++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-Note that this library does not perform any validation on the token_url,
-token_info_url, or service_account_impersonation_url fields of the credential
-configuration. It is not recommended to use a credential configuration that you
-did not generate with the gcloud CLI unless you verify that the URL fields point
-to a googleapis.com domain.
 
 
 Downscoped credentials
