@@ -921,6 +921,7 @@ def test_default_fail(unused_gce, unused_gae, unused_sdk, unused_explicit):
 
     assert excinfo.match(_default._CLOUD_SDK_MISSING_CREDENTIALS)
 
+
 @mock.patch(
     "google.auth._default._get_explicit_environ_credentials",
     return_value=(MOCK_CREDENTIALS, mock.sentinel.project_id),
