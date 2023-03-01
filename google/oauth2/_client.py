@@ -98,8 +98,9 @@ def _can_retry(status_code, response_data):
             "temporarily_unavailable",
         }
 
-        if any(e in retryable_error_descriptions for e in (error_code, error_desc)):
-            return True
+        if isinstance(error_code, str) and isinstance(error_desc, str):
+            if any(e in retryable_error_descriptions for e in (error_code, error_desc)):
+                return True
 
     except AttributeError:
         pass
