@@ -87,16 +87,21 @@ def test__can_retry_retryable():
             assert not _client._can_retry(status_code, {"error": "invalid_scope"})
 
 
-@pytest.mark.parametrize(
-    "response_data", [{"error": "internal_failure"}, {"error": "server_error"}]
-)
-def test__can_retry_message(response_data):
-    assert _client._can_retry(http_client.OK, response_data)
+def test__can_retry_error_message_dict():
+    response_data = {"error": {"code": 403, "message": "arbitrary message"}}
+    assert not _client._can_retry(http_client.FORBIDDEN, response_data)
 
 
 @pytest.mark.parametrize("response_data", [{"error": "invalid_scope"}])
 def test__can_retry_no_retry_message(response_data):
     assert not _client._can_retry(http_client.OK, response_data)
+
+
+@pytest.mark.parametrize(
+    "response_data", [{"error": "internal_failure"}, {"error": "server_error"}]
+)
+def test__can_retry_message(response_data):
+    assert _client._can_retry(http_client.OK, response_data)
 
 
 @pytest.mark.parametrize("mock_expires_in", [500, "500"])
