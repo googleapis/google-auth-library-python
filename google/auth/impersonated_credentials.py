@@ -407,7 +407,7 @@ class IDTokenCredentials(credentials.CredentialsWithQuotaProject):
             include_email=self._include_email,
             quota_project_id=quota_project_id,
         )
-
+    
     @_helpers.copy_docstring(credentials.Credentials)
     def refresh(self, request):
         from google.auth.transport.requests import AuthorizedSession
@@ -428,11 +428,19 @@ class IDTokenCredentials(credentials.CredentialsWithQuotaProject):
             self._target_credentials._source_credentials, auth_request=request
         )
 
-        response = authed_session.post(
-            url=iam_sign_endpoint,
-            headers=headers,
-            data=json.dumps(body).encode("utf-8"),
-        )
+        try:
+            response = authed_session.post(
+                url=iam_sign_endpoint,
+                headers=headers,
+                data=json.dumps(body).encode("utf-8"),
+            )
+        finally:
+            authed_session.close()
+
+        if response.status_code != http_client.OK:
+            raise exceptions.TransportError(
+                "Error getting ID Token: {}".format(response.json())
+            )
 
         id_token = response.json()["token"]
         self.token = id_token
