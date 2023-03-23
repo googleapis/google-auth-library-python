@@ -36,6 +36,10 @@ extras = {
         "aiohttp >= 3.6.2, < 4.0.0dev; python_version>='3.6'",
         "requests >= 2.20.0, < 3.0.0dev",
     ],
+    "httpx": [
+        "httpx >= 0.23.0, < 1.0.0dev; python_version > '3.6'",
+        "requests >= 2.20.0, < 3.0.0dev",
+    ],
     "pyopenssl": ["pyopenssl>=20.0.0", "cryptography>=38.0.3"],
     "requests": "requests >= 2.20.0, < 3.0.0dev",
     "reauth": "pyu2f>=0.1.5",
