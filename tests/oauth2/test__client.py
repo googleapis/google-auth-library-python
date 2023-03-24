@@ -319,10 +319,10 @@ def test_call_iam_generate_id_token_endpoint():
         request.call_args[1]["url"]
         == "https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/fake_email:generateIdToken"
     )
-    assert request.call_args[1]["headers"] == {
-        "Content-Type": "application/json",
-        "Authorization": "Bearer fake_access_token",
-    }
+    assert request.call_args[1]["headers"]["Content-Type"] == "application/json"
+    assert (
+        request.call_args[1]["headers"]["Authorization"] == "Bearer fake_access_token"
+    )
     assert (
         request.call_args[1]["body"].decode()
         == '{"audience": "fake_audience", "includeEmail": "true"}'

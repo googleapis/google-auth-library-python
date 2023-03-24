@@ -722,14 +722,18 @@ class IDTokenCredentials(
         """Use IAM generateIdToken endpoint to obtain an ID token.
 
         It works as follows:
+        
         1. First we create a self signed jwt with
         https://www.googleapis.com/auth/iam being the scope.
+
         2. Next we use the self signed jwt as the access token, and make a POST
         request to IAM generateIdToken endpoint. The request body is:
             {
-                "audience": self._targetn_audience,
+                "audience": self._target_audience,
                 "includeEmail": "true"
             }
+        TODO: add "set_azp_to_email": "true" once it's ready from server side.
+
         If the request is succesfully, it will return {"token":"the ID token"},
         and we can extract the ID token and compute its expiry.
         """
