@@ -47,7 +47,6 @@ import re
 from six.moves import http_client
 from six.moves import urllib
 from six.moves.urllib.parse import urljoin
-from six.moves.urllib.parse import urlparse
 
 from google.auth import _helpers
 from google.auth import environment_vars
