@@ -722,7 +722,7 @@ class IDTokenCredentials(
         """Use IAM generateIdToken endpoint to obtain an ID token.
 
         It works as follows:
-        
+
         1. First we create a self signed jwt with
         https://www.googleapis.com/auth/iam being the scope.
 
