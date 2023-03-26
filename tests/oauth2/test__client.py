@@ -323,10 +323,9 @@ def test_call_iam_generate_id_token_endpoint():
     assert (
         request.call_args[1]["headers"]["Authorization"] == "Bearer fake_access_token"
     )
-    assert (
-        request.call_args[1]["body"].decode()
-        == '{"audience": "fake_audience", "includeEmail": "true"}'
-    )
+    response_body = json.loads(request.call_args[1]["body"])
+    assert response_body["audience"] == "fake_audience"
+    assert response_body["includeEmail"] == "true"
 
     # Check result
     assert token == id_token
