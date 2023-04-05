@@ -591,8 +591,8 @@ class Credentials(
         return self._signer
 
     @property  # type: ignore
-    def additonal_claims(self):
-        """Additional claims the JWT object was created with."""
+    def additional_claims(self):
+        """ Additional claims the JWT object was created with."""
         return self._additional_claims
 
 
