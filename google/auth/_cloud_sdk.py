@@ -24,7 +24,7 @@ from google.auth import environment_vars
 from google.auth import exceptions
 
 
-# The ~/.config subdirectory containing gcloud credentials.
+# The ~/.config subdirectory  containing gcloud credentials.
 _CONFIG_DIRECTORY = "gcloud"
 # Windows systems store config at %APPDATA%\gcloud
 _WINDOWS_CONFIG_ROOT_ENV_VAR = "APPDATA"
