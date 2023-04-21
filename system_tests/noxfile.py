@@ -24,7 +24,6 @@ See the `nox docs`_ for details on how this file works:
 
 import os
 import pathlib
-import subprocess
 import shutil
 import tempfile
 
@@ -41,9 +40,6 @@ EXPLICIT_PROJECT_ENV = "GOOGLE_CLOUD_PROJECT"
 EXPECT_PROJECT_ENV = "EXPECT_PROJECT_ID"
 ALLOW_PLUGGABLE_ENV = "GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES"
 
-SKIP_GAE_TEST_ENV = "SKIP_APP_ENGINE_SYSTEM_TEST"
-GAE_APP_URL_TMPL = "https://{}-dot-{}.appspot.com"
-GAE_TEST_APP_SERVICE = "google-auth-system-tests"
 
 # The download location for the Cloud SDK
 CLOUD_SDK_DIST_FILENAME = "google-cloud-sdk.tar.gz"
@@ -289,50 +285,6 @@ def compute_engine(session):
         session,
         "system_tests_sync/test_compute_engine.py",
         *session.posargs,
-    )
-
-
-@nox.session(python=["2.7"])
-def app_engine(session):
-    if SKIP_GAE_TEST_ENV in os.environ:
-        session.log("Skipping App Engine tests.")
-        return
-
-    session.install(LIBRARY_DIR)
-    # Unlike the default tests above, the App Engine system test require a
-    # 'real' gcloud sdk installation that is configured to deploy to an
-    # app engine project.
-    # Grab the project ID from the cloud sdk.
-    project_id = (
-        subprocess.check_output(
-            ["gcloud", "config", "list", "project", "--format", "value(core.project)"]
-        )
-        .decode("utf-8")
-        .strip()
-    )
-
-    if not project_id:
-        session.error(
-            "The Cloud SDK must be installed and configured to deploy to App " "Engine."
-        )
-
-    application_url = GAE_APP_URL_TMPL.format(GAE_TEST_APP_SERVICE, project_id)
-
-    # Vendor in the test application's dependencies
-    session.chdir(os.path.join(HERE, "system_tests_sync/app_engine_test_app"))
-    session.install(*TEST_DEPENDENCIES_SYNC)
-    session.run(
-        "pip", "install", "--target", "lib", "-r", "requirements.txt", silent=True
-    )
-
-    # Deploy the application.
-    session.run("gcloud", "app", "deploy", "-q", "app.yaml")
-
-    # Run the tests
-    session.env["TEST_APP_URL"] = application_url
-    session.chdir(HERE)
-    default(
-        session, "system_tests_sync/test_app_engine.py",
     )
 
 
