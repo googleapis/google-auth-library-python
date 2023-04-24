@@ -20,8 +20,13 @@ import os
 
 import six
 
+import logging
+
 from google.auth import _helpers, environment_vars
 from google.auth import exceptions
+
+
+from opentelemetry import trace
 
 
 @six.add_metaclass(abc.ABCMeta)
@@ -53,6 +58,8 @@ class Credentials(object):
         If this is None, the token is assumed to never expire."""
         self._quota_project_id = None
         """Optional[str]: Project to use for quota and billing purposes."""
+        self._logger = logging.getLogger(__name__)
+        self._tracer = trace.get_tracer(__name__)
 
     @property
     def expired(self):
@@ -77,6 +84,10 @@ class Credentials(object):
         This is True if the credentials have a :attr:`token` and the token
         is not :attr:`expired`.
         """
+        with self._tracer.start_as_current_span("valid_check") as valid_span:
+            valid_span.set_attribute("token.ispresent", self.token is not None)
+            valid_span.set_attribute("token.expired", self.expired)
+
         return self.token is not None and not self.expired
 
     @property
@@ -108,11 +119,18 @@ class Credentials(object):
             token (Optional[str]): If specified, overrides the current access
                 token.
         """
+        # with self._tracer.start_as_current_span("apply_headers") as applyspan:
         headers["authorization"] = "Bearer {}".format(
             _helpers.from_bytes(token or self.token)
         )
+        
         if self.quota_project_id:
             headers["x-goog-user-project"] = self.quota_project_id
+
+        # applyspan.set_attribute("header.quota", self.quota_project_id)
+        self._logger.debug("Set quota project as " + self.quota_project_id)
+
+        return
 
     def before_request(self, request, method, url, headers):
         """Performs credential-specific before request logic.

@@ -39,6 +39,7 @@ from six.moves import range
 from google.auth import exceptions
 from google.oauth2 import _client
 from google.oauth2 import challenges
+from opentelemetry import trace
 
 
 _REAUTH_SCOPE = "https://www.googleapis.com/auth/accounts.reauth"
@@ -56,6 +57,8 @@ _CHALLENGE_PENDING = "CHALLENGE_PENDING"
 # Override this global variable to set custom max number of rounds of reauth
 # challenges should be run.
 RUN_CHALLENGE_RETRY_LIMIT = 5
+
+_TRACER = trace.get_tracer(__name__)
 
 
 def is_interactive():
@@ -321,34 +324,35 @@ def refresh_grant(
     if rapt_token:
         body["rapt"] = rapt_token
 
-    response_status_ok, response_data, retryable_error = _client._token_endpoint_request_no_throw(
-        request, token_uri, body
-    )
-    if (
-        not response_status_ok
-        and response_data.get("error") == _REAUTH_NEEDED_ERROR
-        and (
-            response_data.get("error_subtype") == _REAUTH_NEEDED_ERROR_INVALID_RAPT
-            or response_data.get("error_subtype") == _REAUTH_NEEDED_ERROR_RAPT_REQUIRED
+    with _TRACER.start_as_current_span("reauth_refresh_grant") as reauth_refresh_span:
+        response_status_ok, response_data, retryable_error = _client._token_endpoint_request_no_throw(
+            request, token_uri, body
         )
-    ):
-        if not enable_reauth_refresh:
-            raise exceptions.RefreshError(
-                "Reauthentication is needed. Please run `gcloud auth application-default login` to reauthenticate."
+        if (
+            not response_status_ok
+            and response_data.get("error") == _REAUTH_NEEDED_ERROR
+            and (
+                response_data.get("error_subtype") == _REAUTH_NEEDED_ERROR_INVALID_RAPT
+                or response_data.get("error_subtype") == _REAUTH_NEEDED_ERROR_RAPT_REQUIRED
             )
+        ):
+            if not enable_reauth_refresh:
+                raise exceptions.RefreshError(
+                    "Reauthentication is needed. Please run `gcloud auth application-default login` to reauthenticate."
+                )
 
-        rapt_token = get_rapt_token(
-            request, client_id, client_secret, refresh_token, token_uri, scopes=scopes
+            rapt_token = get_rapt_token(
+                request, client_id, client_secret, refresh_token, token_uri, scopes=scopes
+            )
+            body["rapt"] = rapt_token
+            (
+                response_status_ok,
+                response_data,
+                retryable_error,
+            ) = _client._token_endpoint_request_no_throw(request, token_uri, body)
+
+        if not response_status_ok:
+            _client._handle_error_response(response_data, retryable_error)
+        return _client._handle_refresh_grant_response(response_data, refresh_token) + (
+            rapt_token,
         )
-        body["rapt"] = rapt_token
-        (
-            response_status_ok,
-            response_data,
-            retryable_error,
-        ) = _client._token_endpoint_request_no_throw(request, token_uri, body)
-
-    if not response_status_ok:
-        _client._handle_error_response(response_data, retryable_error)
-    return _client._handle_refresh_grant_response(response_data, refresh_token) + (
-        rapt_token,
-    )

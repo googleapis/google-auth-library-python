@@ -44,6 +44,8 @@ from google.auth import credentials
 from google.auth import exceptions
 from google.oauth2 import reauth
 
+from opentelemetry import trace
+
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -140,6 +142,7 @@ class Credentials(credentials.ReadOnlyScoped, credentials.CredentialsWithQuotaPr
         self._rapt_token = rapt_token
         self.refresh_handler = refresh_handler
         self._enable_reauth_refresh = enable_reauth_refresh
+        self._tracer = trace.get_tracer(__name__)
 
     def __getstate__(self):
         """A __getstate__ method must exist for the __setstate__ to be called
@@ -289,82 +292,83 @@ class Credentials(credentials.ReadOnlyScoped, credentials.CredentialsWithQuotaPr
 
     @_helpers.copy_docstring(credentials.Credentials)
     def refresh(self, request):
-        scopes = self._scopes if self._scopes is not None else self._default_scopes
-        # Use refresh handler if available and no refresh token is
-        # available. This is useful in general when tokens are obtained by calling
-        # some external process on demand. It is particularly useful for retrieving
-        # downscoped tokens from a token broker.
-        if self._refresh_token is None and self.refresh_handler:
-            token, expiry = self.refresh_handler(request, scopes=scopes)
-            # Validate returned data.
-            if not isinstance(token, six.string_types):
-                raise exceptions.RefreshError(
-                    "The refresh_handler returned token is not a string."
-                )
-            if not isinstance(expiry, datetime):
-                raise exceptions.RefreshError(
-                    "The refresh_handler returned expiry is not a datetime object."
-                )
-            if _helpers.utcnow() >= expiry - _helpers.REFRESH_THRESHOLD:
-                raise exceptions.RefreshError(
-                    "The credentials returned by the refresh_handler are "
-                    "already expired."
-                )
-            self.token = token
-            self.expiry = expiry
-            return
+        with self._tracer.start_as_current_span("refresh_user_cred") as refresh_span:
+            scopes = self._scopes if self._scopes is not None else self._default_scopes
+            # Use refresh handler if available and no refresh token is
+            # available. This is useful in general when tokens are obtained by calling
+            # some external process on demand. It is particularly useful for retrieving
+            # downscoped tokens from a token broker.
+            if self._refresh_token is None and self.refresh_handler:
+                token, expiry = self.refresh_handler(request, scopes=scopes)
+                # Validate returned data.
+                if not isinstance(token, six.string_types):
+                    raise exceptions.RefreshError(
+                        "The refresh_handler returned token is not a string."
+                    )
+                if not isinstance(expiry, datetime):
+                    raise exceptions.RefreshError(
+                        "The refresh_handler returned expiry is not a datetime object."
+                    )
+                if _helpers.utcnow() >= expiry - _helpers.REFRESH_THRESHOLD:
+                    raise exceptions.RefreshError(
+                        "The credentials returned by the refresh_handler are "
+                        "already expired."
+                    )
+                self.token = token
+                self.expiry = expiry
+                return
 
-        if (
-            self._refresh_token is None
-            or self._token_uri is None
-            or self._client_id is None
-            or self._client_secret is None
-        ):
-            raise exceptions.RefreshError(
-                "The credentials do not contain the necessary fields need to "
-                "refresh the access token. You must specify refresh_token, "
-                "token_uri, client_id, and client_secret."
+            if (
+                self._refresh_token is None
+                or self._token_uri is None
+                or self._client_id is None
+                or self._client_secret is None
+            ):
+                raise exceptions.RefreshError(
+                    "The credentials do not contain the necessary fields need to "
+                    "refresh the access token. You must specify refresh_token, "
+                    "token_uri, client_id, and client_secret."
+                )
+
+            (
+                access_token,
+                refresh_token,
+                expiry,
+                grant_response,
+                rapt_token,
+            ) = reauth.refresh_grant(
+                request,
+                self._token_uri,
+                self._refresh_token,
+                self._client_id,
+                self._client_secret,
+                scopes=scopes,
+                rapt_token=self._rapt_token,
+                enable_reauth_refresh=self._enable_reauth_refresh,
             )
 
-        (
-            access_token,
-            refresh_token,
-            expiry,
-            grant_response,
-            rapt_token,
-        ) = reauth.refresh_grant(
-            request,
-            self._token_uri,
-            self._refresh_token,
-            self._client_id,
-            self._client_secret,
-            scopes=scopes,
-            rapt_token=self._rapt_token,
-            enable_reauth_refresh=self._enable_reauth_refresh,
-        )
+            self.token = access_token
+            self.expiry = expiry
+            self._refresh_token = refresh_token
+            self._id_token = grant_response.get("id_token")
+            self._rapt_token = rapt_token
 
-        self.token = access_token
-        self.expiry = expiry
-        self._refresh_token = refresh_token
-        self._id_token = grant_response.get("id_token")
-        self._rapt_token = rapt_token
-
-        if scopes and "scope" in grant_response:
-            requested_scopes = frozenset(scopes)
-            self._granted_scopes = grant_response["scope"].split()
-            granted_scopes = frozenset(self._granted_scopes)
-            scopes_requested_but_not_granted = requested_scopes - granted_scopes
-            if scopes_requested_but_not_granted:
-                # User might be presented with unbundled scopes at the time of
-                # consent. So it is a valid scenario to not have all the requested
-                # scopes as part of granted scopes but log a warning in case the
-                # developer wants to debug the scenario.
-                _LOGGER.warning(
-                    "Not all requested scopes were granted by the "
-                    "authorization server, missing scopes {}.".format(
-                        ", ".join(scopes_requested_but_not_granted)
+            if scopes and "scope" in grant_response:
+                requested_scopes = frozenset(scopes)
+                self._granted_scopes = grant_response["scope"].split()
+                granted_scopes = frozenset(self._granted_scopes)
+                scopes_requested_but_not_granted = requested_scopes - granted_scopes
+                if scopes_requested_but_not_granted:
+                    # User might be presented with unbundled scopes at the time of
+                    # consent. So it is a valid scenario to not have all the requested
+                    # scopes as part of granted scopes but log a warning in case the
+                    # developer wants to debug the scenario.
+                    _LOGGER.warning(
+                        "Not all requested scopes were granted by the "
+                        "authorization server, missing scopes {}.".format(
+                            ", ".join(scopes_requested_but_not_granted)
+                        )
                     )
-                )
 
     @classmethod
     def from_authorized_user_info(cls, info, scopes=None):
