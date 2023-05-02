@@ -14,9 +14,13 @@
 
 import json
 
+import mock
 import pytest  # type: ignore
+from six.moves import http_client
+from six.moves import urllib
 
 from google.auth import exceptions
+from google.auth import transport
 from google.oauth2 import utils
 
 
@@ -213,6 +217,96 @@ class TestOAuthClientAuthHandler(object):
         }
         assert request_body == {"foo": "bar"}
 
+
+class TestIntrospectionClient(object):
+    TOKEN_INTROSPECTION_URL = "https://dummy.token.url/introspection/v1"
+
+    @classmethod
+    def make_client_auth(cls, client_secret=None):
+        return utils.ClientAuthentication(
+            utils.ClientAuthType.basic, CLIENT_ID, client_secret
+        )
+
+    @classmethod
+    def make_mock_request(cls, data, status=http_client.OK):
+        response = mock.create_autospec(transport.Response, instance=True)
+        response.status = status
+        response.data = json.dumps(data).encode("utf-8")
+
+        request = mock.create_autospec(transport.Request)
+        request.return_value = response
+        return request
+
+    def test_initialization(self):
+        client_auth = self.make_client_auth(CLIENT_SECRET)
+        client = utils.IntrospectionClient(self.TOKEN_INTROSPECTION_URL, client_auth)
+
+        assert getattr(client, "_client_authentication") == client_auth
+        assert getattr(client, "_token_introspect_endpoint") == self.TOKEN_INTROSPECTION_URL
+
+    def test_introspect(self):
+        test_cases = {
+            "happy case": {
+                "token": "dummy_token",
+                "response": {
+                    "status": 200,
+                    "data": {
+                        "active": True,
+                        "client_id": "l238j323ds-23ij4",
+                        "username": "jdoe",
+                        "scope": "read write dolphin",
+                        "sub": "Z5O3upPC88QrAjx00dis",
+                        "aud": "https://protected.example.net/resource",
+                        "iss": "https://server.example.com/",
+                        "exp": 1419356238,
+                        "iat": 1419350238,
+                        "extension_field": "twenty-seven"
+                    }
+                },
+                "expected_error": None,
+            },
+            "transpotation error": {
+                "token": "dummy_token",
+                "response": {
+                    "status": 404,
+                    "data": {
+                    }
+                },
+                "expected_error": exceptions.TransportError
+            },
+            "inactive token": {
+                "token": "dummy_token",
+                "response": {
+                    "status": 200,
+                    "data": {
+                        "client_id": "l238j323ds-23ij4",
+                        "username": "jdoe",
+                        "scope": "read write dolphin",
+                        "sub": "Z5O3upPC88QrAjx00dis",
+                        "aud": "https://protected.example.net/resource",
+                        "iss": "https://server.example.com/",
+                        "exp": 1419356238,
+                        "iat": 1419350238,
+                        "extension_field": "twenty-seven"
+                    }
+                },
+                "expected_error": exceptions.UserAccessTokenError,
+            }
+        }
+
+        for case in test_cases.values():
+            client_auth = self.make_client_auth(CLIENT_SECRET)
+            client = utils.IntrospectionClient(self.TOKEN_INTROSPECTION_URL, client_auth)
+            request = self.make_mock_request(
+                status = case["response"]["status"],
+                data = case["response"]["data"]
+            )
+            if not case["expected_error"]:
+                response = client.introspect(request, case["token"])
+                assert response["username"] == case["response"]["data"]["username"]
+            else:
+                with pytest.raises(case["expected_error"]) as excinfo:
+                    _ = client.introspect(request, case["token"])
 
 def test__handle_error_response_code_only():
     error_resp = {"error": "unsupported_grant_type"}
