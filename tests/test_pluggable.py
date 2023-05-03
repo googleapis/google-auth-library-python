@@ -232,7 +232,7 @@ class TestCredentials(object):
             interactive=interactive,
         )
 
-    def test_from_constructor_and_injection(self):
+    def test_from_constructor(self):
         credentials = pluggable.Credentials(
             audience=AUDIENCE,
             subject_token_type=SUBJECT_TOKEN_TYPE,
@@ -241,11 +241,8 @@ class TestCredentials(object):
             credential_source=self.CREDENTIAL_SOURCE,
             interactive=True,
         )
-        setattr(credentials, "_tokeninfo_username", "mock_external_account_id")
-
         assert isinstance(credentials, pluggable.Credentials)
         assert credentials.interactive
-        assert credentials.external_account_id == "mock_external_account_id"
 
     @mock.patch.object(pluggable.Credentials, "__init__", return_value=None)
     def test_from_info_full_options(self, mock_init):

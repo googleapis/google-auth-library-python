@@ -133,9 +133,6 @@ class Credentials(external_account.Credentials):
             "output_file"
         )
 
-        # Dummy value. This variable is only used via injection, not exposed to ctor
-        self._tokeninfo_username = ""
-
         if not self._credential_source_executable_command:
             raise exceptions.MalformedError(
                 "Missing command field. Executable command must be provided."
@@ -282,19 +279,6 @@ class Credentials(external_account.Credentials):
 
         response = json.loads(result.stdout.decode("utf-8"))
         self._validate_revoke_response(response)
-
-    @property
-    def external_account_id(self):
-        """Returns the external account identifier.
-
-        When service account impersonation is used the identifier is the service
-        account email.
-
-        Without service account impersonation, this returns None, unless it is
-        being used by the Google Cloud CLI which populates this field.
-        """
-
-        return self.service_account_email or self._tokeninfo_username
 
     @classmethod
     def from_info(cls, info, **kwargs):
