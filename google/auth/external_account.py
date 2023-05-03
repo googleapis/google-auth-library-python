@@ -40,6 +40,7 @@ from google.auth import _helpers
 from google.auth import credentials
 from google.auth import exceptions
 from google.auth import impersonated_credentials
+from google.auth.transport import requests
 from google.oauth2 import sts
 from google.oauth2 import utils
 
@@ -138,7 +139,6 @@ class Credentials(
             self._impersonated_credentials = self._initialize_impersonated_credentials()
         else:
             self._impersonated_credentials = None
-        self._project_id = None
 
         if not self.is_workforce_pool and self._workforce_pool_user_project:
             # Workload identity pools do not support workforce pool user projects.
@@ -146,6 +146,10 @@ class Credentials(
                 "workforce_pool_user_project should not be set for non-workforce pool "
                 "credentials"
             )
+
+        # Lazy load properties
+        self._token_info_introspection = None
+        self._project_id = None
 
     @property
     def info(self):
@@ -209,6 +213,17 @@ class Credentials(
                 start_index = start_index + 1
                 return url[start_index:end_index]
         return None
+
+    @property
+    def external_account_id(self):
+        """Return the external account id.
+        When service account impersonation is used, it will return the service account email.
+        When no service account impersonation is used, it will return the principal.
+
+        Returns:
+            Optional[str]: service account email or the pool principal.
+        """
+        return self.service_account_email or self._token_info_username()
 
     @property
     def is_user(self):
@@ -382,6 +397,50 @@ class Credentials(
         kwargs.update(token_url=token_uri)
         return self.__class__(**kwargs)
 
+    def token_info_introspection(self, request):
+        """Introspection of token info.
+
+        If the credential object has a token_info_url provided, we can
+        introspect token info by request that endpoint.
+
+        Returns:
+            Mapping: The active token meta-information returned by the
+                introspection endpoint.
+
+        Raises:
+            google.auth.exceptions.InvalidResource:
+                If no token_info_url in config.
+            google.auth.exceptions.InvalidOperation:
+                If no token provided.
+            google.auth.exceptions.UserAccessTokenError:
+                If the credentials are invalid or expired.
+            google.auth.exceptions.TransportError:
+                If an error is encountered while calling the token
+                introspection endpoint.
+        """
+        # Token info introspection. following standard of RFC7662:
+        #    https://datatracker.ietf.org/doc/html/rfc7662
+        #
+        if not self._token_info_url:
+            raise exceptions.InvalidResource("Missing token_info_url")
+
+        if not self.token:
+            raise exceptions.InvalidOperation("Missing token for introspection")
+
+        oauth_introspection_client = utils.IntrospectionClient(
+            self._token_info_introspection, self._client_auth
+        )
+        if not request:
+            request = requests.Request()
+
+        # Update cache in case of introspect success. Otherwise, the exception
+        # would be thrown out of this method and the cache value remains.
+        self._token_info_introspection = oauth_introspection_client.introspect(
+            request, self.token
+        )
+
+        return self._token_info_introspection
+
     def _initialize_impersonated_credentials(self):
         """Generates an impersonated credentials.
 
@@ -423,6 +482,23 @@ class Credentials(
             lifetime=self._service_account_impersonation_options.get(
                 "token_lifetime_seconds"
             ),
+        )
+
+    def _token_info_username(self):
+        if not self._token_info_introspection:
+            try:
+                self.token_info_introspection(None)
+            except exceptions.GoogleAuthError:
+                # A failure of introspection shouldn't break the flow
+                pass
+
+        # One runnig of token_info_introspection() is not guaranteed we have a
+        # valid inspection result cached. A failed introspection may results an
+        # empty cache still there.
+        return (
+            None
+            if not self._token_info_introspection
+            else self._token_info_introspection.get("username")
         )
 
     @classmethod

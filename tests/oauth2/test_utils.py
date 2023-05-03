@@ -17,7 +17,6 @@ import json
 import mock
 import pytest  # type: ignore
 from six.moves import http_client
-from six.moves import urllib
 
 from google.auth import exceptions
 from google.auth import transport
@@ -242,7 +241,10 @@ class TestIntrospectionClient(object):
         client = utils.IntrospectionClient(self.TOKEN_INTROSPECTION_URL, client_auth)
 
         assert getattr(client, "_client_authentication") == client_auth
-        assert getattr(client, "_token_introspect_endpoint") == self.TOKEN_INTROSPECTION_URL
+        assert (
+            getattr(client, "_token_introspect_endpoint")
+            == self.TOKEN_INTROSPECTION_URL
+        )
 
     def test_introspect(self):
         test_cases = {
@@ -260,19 +262,15 @@ class TestIntrospectionClient(object):
                         "iss": "https://server.example.com/",
                         "exp": 1419356238,
                         "iat": 1419350238,
-                        "extension_field": "twenty-seven"
-                    }
+                        "extension_field": "twenty-seven",
+                    },
                 },
                 "expected_error": None,
             },
             "transpotation error": {
                 "token": "dummy_token",
-                "response": {
-                    "status": 404,
-                    "data": {
-                    }
-                },
-                "expected_error": exceptions.TransportError
+                "response": {"status": 404, "data": {}},
+                "expected_error": exceptions.TransportError,
             },
             "inactive token": {
                 "token": "dummy_token",
@@ -287,26 +285,28 @@ class TestIntrospectionClient(object):
                         "iss": "https://server.example.com/",
                         "exp": 1419356238,
                         "iat": 1419350238,
-                        "extension_field": "twenty-seven"
-                    }
+                        "extension_field": "twenty-seven",
+                    },
                 },
                 "expected_error": exceptions.UserAccessTokenError,
-            }
+            },
         }
 
         for case in test_cases.values():
             client_auth = self.make_client_auth(CLIENT_SECRET)
-            client = utils.IntrospectionClient(self.TOKEN_INTROSPECTION_URL, client_auth)
+            client = utils.IntrospectionClient(
+                self.TOKEN_INTROSPECTION_URL, client_auth
+            )
             request = self.make_mock_request(
-                status = case["response"]["status"],
-                data = case["response"]["data"]
+                status=case["response"]["status"], data=case["response"]["data"]
             )
             if not case["expected_error"]:
                 response = client.introspect(request, case["token"])
                 assert response["username"] == case["response"]["data"]["username"]
             else:
-                with pytest.raises(case["expected_error"]) as excinfo:
+                with pytest.raises(case["expected_error"]):
                     _ = client.introspect(request, case["token"])
+
 
 def test__handle_error_response_code_only():
     error_resp = {"error": "unsupported_grant_type"}

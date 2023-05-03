@@ -24,6 +24,7 @@ from google.auth import _helpers
 from google.auth import exceptions
 from google.auth import external_account
 from google.auth import transport
+from google.oauth2.utils import IntrospectionClient
 
 
 CLIENT_ID = "username"
@@ -1711,3 +1712,154 @@ class TestCredentials(object):
         assert project_id is None
         # Only 2 requests to STS and cloud resource manager should be sent.
         assert len(request.call_args_list) == 2
+
+    def test_token_introspection(self):
+        test_cases = {
+            "happy_case": {
+                "credential": {
+                    "client_id": CLIENT_ID,
+                    "client_secret": CLIENT_SECRET,
+                    "token_info_url": self.TOKEN_INFO_URL,
+                },
+                "token": "dummy_token",
+                "expect_introspection_value": {
+                    "client_id": "l238j323ds-23ij4",
+                    "username": "jdoe",
+                    "scope": "read write dolphin",
+                    "sub": "Z5O3upPC88QrAjx00dis",
+                    "aud": "https://protected.example.net/resource",
+                    "iss": "https://server.example.com/",
+                    "exp": 1419356238,
+                    "iat": 1419350238,
+                    "extension_field": "twenty-seven",
+                },
+                "expect_introspection_error": None,
+                "expect_error": None,
+            },
+            "missing token_info_url": {
+                "credential": {
+                    "client_id": CLIENT_ID,
+                    "client_secret": CLIENT_SECRET,
+                },
+                "expect_introspection_value": None,
+                "expect_introspection_error": None,
+                "expect_error": exceptions.InvalidResource
+            },
+            "missing token": {
+                "credential": {
+                    "client_id": CLIENT_ID,
+                    "client_secret": CLIENT_SECRET,
+                    "token_info_url": self.TOKEN_INFO_URL,
+                },
+                "expect_introspection_value": None,
+                "expect_introspection_error": None,
+                "expect_error": exceptions.InvalidOperation
+            },
+            "introspection_error": {
+                "credential": {
+                    "client_id": CLIENT_ID,
+                    "client_secret": CLIENT_SECRET,
+                    "token_info_url": self.TOKEN_INFO_URL,
+                },
+                "token": "dummy_token",
+                "request": self.make_mock_request(),
+                "expect_introspection_value": None,
+                "expect_introspection_error": exceptions.TransportError(),
+                "expect_error": exceptions.TransportError,
+            },
+            "non active token": {
+                "credential": {
+                    "client_id": CLIENT_ID,
+                    "client_secret": CLIENT_SECRET,
+                    "token_info_url": self.TOKEN_INFO_URL,
+                },
+                "token": "dummy_token",
+                "expect_introspection_value": None,
+                "expect_introspection_error": exceptions.TransportError(),
+                "expect_error": exceptions.TransportError,
+            },
+        }
+        for case in test_cases.values():
+            credentials = self.make_credentials(
+                client_id=case["credential"].get("client_id"),
+                client_secret=case["credential"].get("client_secret"),
+                token_info_url=case["credential"].get("token_info_url"),
+            )
+            credentials.token = case.get("token")
+            assert not credentials._token_info_introspection
+            request = case.get("request")
+
+            with mock.patch.object(IntrospectionClient, "introspect") as mock_method:
+                if not case.get("expect_introspection_error"):
+                    mock_method.return_value = case.get("expect_introspection_value")
+                else:
+                    mock_method.side_effect = case.get("expect_introspection_error")
+
+                if not case.get("expect_error"):
+                    actual_result = credentials.token_info_introspection(request)
+                    assert actual_result == case.get("expect_introspection_value")
+                    assert credentials._token_info_introspection == actual_result
+
+                else:
+                    with pytest.raises(case.get("expect_error")):
+                        credentials.token_info_introspection(request)
+
+    def test_external_account_id(self):
+        test_cases = {
+            "from service account email": {
+                "service_account_impersonation_url": self.SERVICE_ACCOUNT_IMPERSONATION_URL,
+                "expect_result": SERVICE_ACCOUNT_EMAIL,
+            },
+            "from introspection cache": {
+                "introspection_cache": {
+                   "client_id": "l238j323ds-23ij4",
+                    "username": "jdoe",
+                    "scope": "read write dolphin",
+                    "sub": "Z5O3upPC88QrAjx00dis",
+                    "aud": "https://protected.example.net/resource",
+                    "iss": "https://server.example.com/",
+                    "exp": 1419356238,
+                    "iat": 1419350238,
+                    "extension_field": "twenty-seven", 
+                },
+                "expect_result": "jdoe"
+            },
+            "from introspection": {
+                "introspection_result": {
+                    "client_id": "l238j323ds-23ij4",
+                    "username": "jdoe",
+                    "scope": "read write dolphin",
+                    "sub": "Z5O3upPC88QrAjx00dis",
+                    "aud": "https://protected.example.net/resource",
+                    "iss": "https://server.example.com/",
+                    "exp": 1419356238,
+                    "iat": 1419350238,
+                    "extension_field": "twenty-seven",
+                },
+                "expect_result": "jdoe"
+            },
+            "failed from introspection": {
+                "token_info_introspection_error": exceptions.UserAccessTokenError,
+                "expect_result": None,
+            },
+        }
+        for case in test_cases.values():
+            credentials = self.make_credentials(
+                client_id = CLIENT_ID,
+                client_secret = CLIENT_SECRET,
+                token_info_url = self.TOKEN_INFO_URL,
+                service_account_impersonation_url = case.get("service_account_impersonation_url"))
+            credentials._token_info_introspection = case.get("introspection_cache")
+            mock_method = mock.MagicMock()
+            introspect_return = case.get("introspection_result")
+            mock_method.return_value = introspect_return
+            if introspect_return:
+                mock_method.side_effect = setattr(credentials, '_token_info_introspection', introspect_return)
+            introspect_err = case.get("token_info_introspection_error")
+            if introspect_err:
+                mock_method.side_effect = introspect_err
+
+            with mock.patch.object(CredentialsImpl, "token_info_introspection", mock_method):
+
+                actual_result = credentials.external_account_id
+                assert actual_result == case.get("expect_result")

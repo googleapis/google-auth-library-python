@@ -210,8 +210,9 @@ class IntrospectionClient(OAuthClientAuthHandler):
             endpoint.
 
         Raises:
-            UserAccessTokenError: If the credentials are invalid or expired.
-            TransportError:
+            google.auth.exceptions.UserAccessTokenError:
+                If the credentials are invalid or expired.
+            google.auth.exceptions.TransportError:
                 If an error is encountered while calling the token
                 introspection endpoint.
         """
