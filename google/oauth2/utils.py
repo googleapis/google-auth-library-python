@@ -174,7 +174,7 @@ def handle_error_response(response_body):
     raise exceptions.OAuthError(error_details, response_body)
 
 
-class IntrospectionClient(OAuthClientAuthHandler):
+class TokenIntrospectionClient(OAuthClientAuthHandler):
     """Implements the OAuth 2.0 token introspection spec.
 
     This is based on https://tools.ietf.org/html/rfc7662.
@@ -191,7 +191,7 @@ class IntrospectionClient(OAuthClientAuthHandler):
             client_authentication (Optional[oauth2_utils.ClientAuthentication]):
                 The optional OAuth client authentication credentials if available.
         """
-        super(IntrospectionClient, self).__init__(client_authentication)
+        super(TokenIntrospectionClient, self).__init__(client_authentication)
         self._token_introspect_endpoint = token_introspect_endpoint
 
     def introspect(self, request, token, token_type_hint=_ACCESS_TOKEN_TYPE):
@@ -201,7 +201,7 @@ class IntrospectionClient(OAuthClientAuthHandler):
             request (google.auth.transport.Request):
                 A callable that makes HTTP requests.
             token (str):
-                The OAuth token whose meta-information are to be returned.
+                The OAuth token whose meta-information is to be returned.
             token_type_hint (Optional[str]):
                 The optional token type. The default is access_token.
 

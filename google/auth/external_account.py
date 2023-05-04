@@ -401,7 +401,7 @@ class Credentials(
         """Introspection of token info.
 
         If the credential object has a token_info_url provided, we can
-        introspect token info by request that endpoint.
+        introspect token info by requesting that endpoint.
 
         Returns:
             Mapping: The active token meta-information returned by the
@@ -418,7 +418,7 @@ class Credentials(
                 If an error is encountered while calling the token
                 introspection endpoint.
         """
-        # Token info introspection. following standard of RFC7662:
+        # Token info introspection following RFC7662 standard:
         #    https://datatracker.ietf.org/doc/html/rfc7662
         #
         if not self._token_info_url:
@@ -427,14 +427,14 @@ class Credentials(
         if not self.token:
             raise exceptions.InvalidOperation("Missing token for introspection")
 
-        oauth_introspection_client = utils.IntrospectionClient(
+        oauth_introspection_client = utils.TokenIntrospectionClient(
             self._token_info_introspection, self._client_auth
         )
         if not request:
             request = requests.Request()
 
-        # Update cache in case of introspect success. Otherwise, the exception
-        # would be thrown out of this method and the cache value remains.
+        # Update cache if introspection success. Otherwise this method will
+        # throw an exception and the cache value will not change.
         self._token_info_introspection = oauth_introspection_client.introspect(
             request, self.token
         )
@@ -489,12 +489,12 @@ class Credentials(
             try:
                 self.token_info_introspection(None)
             except exceptions.GoogleAuthError:
-                # A failure of introspection shouldn't break the flow
+                # A failure of introspection shouldn't break the flow.
                 pass
 
         # One runnig of token_info_introspection() is not guaranteed we have a
-        # valid inspection result cached. A failed introspection may results an
-        # empty cache still there.
+        # valid inspection result cached. A failed introspection may results
+        # the cache unchanged and an empty cache still there.
         return (
             None
             if not self._token_info_introspection

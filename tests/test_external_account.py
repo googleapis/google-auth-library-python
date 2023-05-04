@@ -24,7 +24,7 @@ from google.auth import _helpers
 from google.auth import exceptions
 from google.auth import external_account
 from google.auth import transport
-from google.oauth2.utils import IntrospectionClient
+from google.oauth2.utils import TokenIntrospectionClient
 
 
 CLIENT_ID = "username"
@@ -1786,7 +1786,9 @@ class TestCredentials(object):
             assert not credentials._token_info_introspection
             request = case.get("request")
 
-            with mock.patch.object(IntrospectionClient, "introspect") as mock_method:
+            with mock.patch.object(
+                TokenIntrospectionClient, "introspect"
+            ) as mock_method:
                 if not case.get("expect_introspection_error"):
                     mock_method.return_value = case.get("expect_introspection_value")
                 else:

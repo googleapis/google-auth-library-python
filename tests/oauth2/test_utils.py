@@ -238,7 +238,9 @@ class TestIntrospectionClient(object):
 
     def test_initialization(self):
         client_auth = self.make_client_auth(CLIENT_SECRET)
-        client = utils.IntrospectionClient(self.TOKEN_INTROSPECTION_URL, client_auth)
+        client = utils.TokenIntrospectionClient(
+            self.TOKEN_INTROSPECTION_URL, client_auth
+        )
 
         assert getattr(client, "_client_authentication") == client_auth
         assert (
@@ -294,7 +296,7 @@ class TestIntrospectionClient(object):
 
         for case in test_cases.values():
             client_auth = self.make_client_auth(CLIENT_SECRET)
-            client = utils.IntrospectionClient(
+            client = utils.TokenIntrospectionClient(
                 self.TOKEN_INTROSPECTION_URL, client_auth
             )
             request = self.make_mock_request(
