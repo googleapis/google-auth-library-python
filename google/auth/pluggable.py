@@ -160,6 +160,9 @@ class Credentials(external_account.Credentials):
                     "Interactive timeout must be between 30 seconds and 30 minutes."
                 )
 
+        # Lazy load cache.
+        self._tokeninfo_username = None
+
     @_helpers.copy_docstring(external_account.Credentials)
     def retrieve_subject_token(self, request):
         self._validate_running_mode()
@@ -195,7 +198,7 @@ class Credentials(external_account.Credentials):
 
         # Inject env vars.
         env = os.environ.copy()
-        self._inject_env_variables(env)
+        self._inject_env_variables(env, request)
         env["GOOGLE_EXTERNAL_ACCOUNT_REVOKE"] = "0"
 
         # Run executable.
@@ -257,7 +260,7 @@ class Credentials(external_account.Credentials):
 
         # Inject variables
         env = os.environ.copy()
-        self._inject_env_variables(env)
+        self._inject_env_variables(env, request)
         env["GOOGLE_EXTERNAL_ACCOUNT_REVOKE"] = "1"
 
         # Run executable
@@ -279,6 +282,20 @@ class Credentials(external_account.Credentials):
 
         response = json.loads(result.stdout.decode("utf-8"))
         self._validate_revoke_response(response)
+
+    def external_account_id(self, request):
+        if self.service_account_email:
+            return self.service_account_email
+
+        if not self._tokeninfo_username:
+            try:
+                self._tokeninfo_username = self.token_info_introspection(request)["username"]
+            except:
+                # Do not panic when there is a failed introspection.
+                # There could just no valid introspection result by design.
+                pass
+
+        return self._tokeninfo_username
 
     @classmethod
     def from_info(cls, info, **kwargs):
@@ -313,10 +330,10 @@ class Credentials(external_account.Credentials):
         """
         return super(Credentials, cls).from_file(filename, **kwargs)
 
-    def _inject_env_variables(self, env):
+    def _inject_env_variables(self, env, request):
         env["GOOGLE_EXTERNAL_ACCOUNT_AUDIENCE"] = self._audience
         env["GOOGLE_EXTERNAL_ACCOUNT_TOKEN_TYPE"] = self._subject_token_type
-        env["GOOGLE_EXTERNAL_ACCOUNT_ID"] = self.external_account_id
+        env["GOOGLE_EXTERNAL_ACCOUNT_ID"] = self.external_account_id(request) or ""
         env["GOOGLE_EXTERNAL_ACCOUNT_INTERACTIVE"] = "1" if self.interactive else "0"
 
         if self._service_account_impersonation_url is not None:

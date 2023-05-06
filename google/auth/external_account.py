@@ -40,7 +40,6 @@ from google.auth import _helpers
 from google.auth import credentials
 from google.auth import exceptions
 from google.auth import impersonated_credentials
-from google.auth.transport import requests
 from google.oauth2 import sts
 from google.oauth2 import utils
 
@@ -148,7 +147,6 @@ class Credentials(
             )
 
         # Lazy load properties
-        self._token_info_introspection = None
         self._project_id = None
 
     @property
@@ -213,17 +211,6 @@ class Credentials(
                 start_index = start_index + 1
                 return url[start_index:end_index]
         return None
-
-    @property
-    def external_account_id(self):
-        """Return the external account id.
-        When service account impersonation is used, it will return the service account email.
-        When no service account impersonation is used, it will return the principal.
-
-        Returns:
-            Optional[str]: service account email or the pool principal.
-        """
-        return self.service_account_email or self._token_info_username()
 
     @property
     def is_user(self):
@@ -410,6 +397,8 @@ class Credentials(
         Raises:
             google.auth.exceptions.InvalidResource:
                 If no token_info_url in config.
+            google.auth.exceptions.ClientCertError:
+                If no client auth given.
             google.auth.exceptions.InvalidOperation:
                 If no token provided.
             google.auth.exceptions.UserAccessTokenError:
@@ -424,22 +413,16 @@ class Credentials(
         if not self._token_info_url:
             raise exceptions.InvalidResource("Missing token_info_url")
 
+        if not self._client_auth:
+            raise exceptions.ClientCertError("Token introspection needs client basic auth")
+
         if not self.token:
             raise exceptions.InvalidOperation("Missing token for introspection")
 
         oauth_introspection_client = utils.TokenIntrospectionClient(
-            self._token_info_introspection, self._client_auth
+            self._token_info_url, self._client_auth
         )
-        if not request:
-            request = requests.Request()
-
-        # Update cache if introspection success. Otherwise this method will
-        # throw an exception and the cache value will not change.
-        self._token_info_introspection = oauth_introspection_client.introspect(
-            request, self.token
-        )
-
-        return self._token_info_introspection
+        return oauth_introspection_client.introspect(request, self.token)
 
     def _initialize_impersonated_credentials(self):
         """Generates an impersonated credentials.
@@ -482,23 +465,6 @@ class Credentials(
             lifetime=self._service_account_impersonation_options.get(
                 "token_lifetime_seconds"
             ),
-        )
-
-    def _token_info_username(self):
-        if not self._token_info_introspection:
-            try:
-                self.token_info_introspection(None)
-            except exceptions.GoogleAuthError:
-                # A failure of introspection shouldn't break the flow.
-                pass
-
-        # One runnig of token_info_introspection() is not guaranteed we have a
-        # valid inspection result cached. A failed introspection may results
-        # the cache unchanged and an empty cache still there.
-        return (
-            None
-            if not self._token_info_introspection
-            else self._token_info_introspection.get("username")
         )
 
     @classmethod

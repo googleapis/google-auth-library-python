@@ -65,36 +65,7 @@ VALID_TOKEN_URLS = [
     "https://us-west-1-sts.googleapis.com/path?query",
     "https://sts-us-east-1.p.googleapis.com",
 ]
-INVALID_TOKEN_URLS = [
-    "https://iamcredentials.googleapis.com",
-    "sts.googleapis.com",
-    "https://",
-    "http://sts.googleapis.com",
-    "https://st.s.googleapis.com",
-    "https://us-eas\t-1.sts.googleapis.com",
-    "https:/us-east-1.sts.googleapis.com",
-    "https://US-WE/ST-1-sts.googleapis.com",
-    "https://sts-us-east-1.googleapis.com",
-    "https://sts-US-WEST-1.googleapis.com",
-    "testhttps://us-east-1.sts.googleapis.com",
-    "https://us-east-1.sts.googleapis.comevil.com",
-    "https://us-east-1.us-east-1.sts.googleapis.com",
-    "https://us-ea.s.t.sts.googleapis.com",
-    "https://sts.googleapis.comevil.com",
-    "hhttps://us-east-1.sts.googleapis.com",
-    "https://us- -1.sts.googleapis.com",
-    "https://-sts.googleapis.com",
-    "https://us-east-1.sts.googleapis.com.evil.com",
-    "https://sts.pgoogleapis.com",
-    "https://p.googleapis.com",
-    "https://sts.p.com",
-    "http://sts.p.googleapis.com",
-    "https://xyz-sts.p.googleapis.com",
-    "https://sts-xyz.123.p.googleapis.com",
-    "https://sts-xyz.p1.googleapis.com",
-    "https://sts-xyz.p.foo.com",
-    "https://sts-xyz.p.foo.googleapis.com",
-]
+
 VALID_SERVICE_ACCOUNT_IMPERSONATION_URLS = [
     "https://iamcredentials.googleapis.com",
     "https://us-east-1.iamcredentials.googleapis.com",
@@ -105,36 +76,6 @@ VALID_SERVICE_ACCOUNT_IMPERSONATION_URLS = [
     "https://US-WEST-1-iamcredentials.googleapis.com",
     "https://us-west-1-iamcredentials.googleapis.com/path?query",
     "https://iamcredentials-us-east-1.p.googleapis.com",
-]
-INVALID_SERVICE_ACCOUNT_IMPERSONATION_URLS = [
-    "https://sts.googleapis.com",
-    "iamcredentials.googleapis.com",
-    "https://",
-    "http://iamcredentials.googleapis.com",
-    "https://iamcre.dentials.googleapis.com",
-    "https://us-eas\t-1.iamcredentials.googleapis.com",
-    "https:/us-east-1.iamcredentials.googleapis.com",
-    "https://US-WE/ST-1-iamcredentials.googleapis.com",
-    "https://iamcredentials-us-east-1.googleapis.com",
-    "https://iamcredentials-US-WEST-1.googleapis.com",
-    "testhttps://us-east-1.iamcredentials.googleapis.com",
-    "https://us-east-1.iamcredentials.googleapis.comevil.com",
-    "https://us-east-1.us-east-1.iamcredentials.googleapis.com",
-    "https://us-ea.s.t.iamcredentials.googleapis.com",
-    "https://iamcredentials.googleapis.comevil.com",
-    "hhttps://us-east-1.iamcredentials.googleapis.com",
-    "https://us- -1.iamcredentials.googleapis.com",
-    "https://-iamcredentials.googleapis.com",
-    "https://us-east-1.iamcredentials.googleapis.com.evil.com",
-    "https://iamcredentials.pgoogleapis.com",
-    "https://p.googleapis.com",
-    "https://iamcredentials.p.com",
-    "http://iamcredentials.p.googleapis.com",
-    "https://xyz-iamcredentials.p.googleapis.com",
-    "https://iamcredentials-xyz.123.p.googleapis.com",
-    "https://iamcredentials-xyz.p1.googleapis.com",
-    "https://iamcredentials-xyz.p.foo.com",
-    "https://iamcredentials-xyz.p.foo.googleapis.com",
 ]
 
 
@@ -438,6 +379,30 @@ class TestCredentials(object):
             assert credentials._service_account_impersonation_url == (
                 url + SERVICE_ACCOUNT_IMPERSONATION_URL_ROUTE
             )
+
+    def test_external_account_id(self):
+        test_cases = {
+            "from service_account_email": {
+                "credentials": {
+                    "impersonation_url": SERVICE_ACCOUNT_IMPERSONATION_URL,
+                },
+                "expected_result": SERVICE_ACCOUNT_EMAIL
+            },
+            "from cache": {
+                "credentials": {},
+                "cached_username": "dummy_username",
+                "expected_result": "dummy_username",
+            },
+        }
+        for case in test_cases.values():
+            credentials = self.make_pluggable(
+                credential_source=self.CREDENTIAL_SOURCE.copy(),
+                service_account_impersonation_url=case["credentials"].get("impersonation_url")
+            )
+            if case.get("cached_username"):
+                credentials._tokeninfo_username = case.get("cached_username")
+
+            assert case["expected_result"] == credentials.external_account_id(None)
 
     @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
     def test_retrieve_subject_token_successfully(self, tmpdir):
