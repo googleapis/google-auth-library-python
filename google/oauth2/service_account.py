@@ -76,10 +76,12 @@ import datetime
 from google.auth import _helpers
 from google.auth import _service_account_info
 from google.auth import credentials
+from google.auth import exceptions
 from google.auth import jwt
 from google.oauth2 import _client
 
 _DEFAULT_TOKEN_LIFETIME_SECS = 3600  # 1 hour in seconds
+_DEFAULT_UNIVERSE_DOMAIN = "googleapis.com"
 _GOOGLE_OAUTH2_TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token"
 
 
@@ -136,6 +138,7 @@ class Credentials(
         quota_project_id=None,
         additional_claims=None,
         always_use_jwt_access=False,
+        universe_domain=_DEFAULT_UNIVERSE_DOMAIN,
     ):
         """
         Args:
@@ -156,6 +159,9 @@ class Credentials(
                 the JWT assertion used in the authorization grant.
             always_use_jwt_access (Optional[bool]): Whether self signed JWT should
                 be always used.
+            universe_domain (Optional[str]): The universe domain. The default
+                universe domain is googleapis.com. If this value is the default
+                value, then self signed jwt will be used for token refresh.
 
         .. note:: Typically one of the helper constructors
             :meth:`from_service_account_file` or
@@ -173,6 +179,10 @@ class Credentials(
         self._quota_project_id = quota_project_id
         self._token_uri = token_uri
         self._always_use_jwt_access = always_use_jwt_access
+        self._universe_domain = universe_domain
+
+        if universe_domain != _DEFAULT_UNIVERSE_DOMAIN:
+            self._always_use_jwt_access = True
 
         self._jwt_credentials = None
 
@@ -202,6 +212,7 @@ class Credentials(
             service_account_email=info["client_email"],
             token_uri=info["token_uri"],
             project_id=info.get("project_id"),
+            universe_domain=info.get("universe_domain", _DEFAULT_UNIVERSE_DOMAIN),
             **kwargs
         )
 
@@ -262,20 +273,28 @@ class Credentials(
         """
         return True if not self._scopes else False
 
-    @_helpers.copy_docstring(credentials.Scoped)
-    def with_scopes(self, scopes, default_scopes=None):
-        return self.__class__(
+    def _make_copy(self):
+        cred = self.__class__(
             self._signer,
             service_account_email=self._service_account_email,
-            scopes=scopes,
-            default_scopes=default_scopes,
+            scopes=self._scopes,
+            default_scopes=self._default_scopes,
             token_uri=self._token_uri,
             subject=self._subject,
             project_id=self._project_id,
             quota_project_id=self._quota_project_id,
             additional_claims=self._additional_claims.copy(),
             always_use_jwt_access=self._always_use_jwt_access,
+            universe_domain=self._universe_domain,
         )
+        return cred
+
+    @_helpers.copy_docstring(credentials.Scoped)
+    def with_scopes(self, scopes, default_scopes=None):
+        cred = self._make_copy()
+        cred._scopes = scopes
+        cred._default_scopes = default_scopes
+        return cred
 
     def with_always_use_jwt_access(self, always_use_jwt_access):
         """Create a copy of these credentials with the specified always_use_jwt_access value.
@@ -287,18 +306,9 @@ class Credentials(
             google.auth.service_account.Credentials: A new credentials
                 instance.
         """
-        return self.__class__(
-            self._signer,
-            service_account_email=self._service_account_email,
-            scopes=self._scopes,
-            default_scopes=self._default_scopes,
-            token_uri=self._token_uri,
-            subject=self._subject,
-            project_id=self._project_id,
-            quota_project_id=self._quota_project_id,
-            additional_claims=self._additional_claims.copy(),
-            always_use_jwt_access=always_use_jwt_access,
-        )
+        cred = self._make_copy()
+        cred._always_use_jwt_access = always_use_jwt_access
+        return cred
 
     def with_subject(self, subject):
         """Create a copy of these credentials with the specified subject.
@@ -310,18 +320,9 @@ class Credentials(
             google.auth.service_account.Credentials: A new credentials
                 instance.
         """
-        return self.__class__(
-            self._signer,
-            service_account_email=self._service_account_email,
-            scopes=self._scopes,
-            default_scopes=self._default_scopes,
-            token_uri=self._token_uri,
-            subject=subject,
-            project_id=self._project_id,
-            quota_project_id=self._quota_project_id,
-            additional_claims=self._additional_claims.copy(),
-            always_use_jwt_access=self._always_use_jwt_access,
-        )
+        cred = self._make_copy()
+        cred._subject = subject
+        return cred
 
     def with_claims(self, additional_claims):
         """Returns a copy of these credentials with modified claims.
@@ -337,51 +338,21 @@ class Credentials(
         """
         new_additional_claims = copy.deepcopy(self._additional_claims)
         new_additional_claims.update(additional_claims or {})
-
-        return self.__class__(
-            self._signer,
-            service_account_email=self._service_account_email,
-            scopes=self._scopes,
-            default_scopes=self._default_scopes,
-            token_uri=self._token_uri,
-            subject=self._subject,
-            project_id=self._project_id,
-            quota_project_id=self._quota_project_id,
-            additional_claims=new_additional_claims,
-            always_use_jwt_access=self._always_use_jwt_access,
-        )
+        cred = self._make_copy()
+        cred._additional_claims = new_additional_claims
+        return cred
 
     @_helpers.copy_docstring(credentials.CredentialsWithQuotaProject)
     def with_quota_project(self, quota_project_id):
-
-        return self.__class__(
-            self._signer,
-            service_account_email=self._service_account_email,
-            default_scopes=self._default_scopes,
-            scopes=self._scopes,
-            token_uri=self._token_uri,
-            subject=self._subject,
-            project_id=self._project_id,
-            quota_project_id=quota_project_id,
-            additional_claims=self._additional_claims.copy(),
-            always_use_jwt_access=self._always_use_jwt_access,
-        )
+        cred = self._make_copy()
+        cred._quota_project_id = quota_project_id
+        return cred
 
     @_helpers.copy_docstring(credentials.CredentialsWithTokenUri)
     def with_token_uri(self, token_uri):
-
-        return self.__class__(
-            self._signer,
-            service_account_email=self._service_account_email,
-            default_scopes=self._default_scopes,
-            scopes=self._scopes,
-            token_uri=token_uri,
-            subject=self._subject,
-            project_id=self._project_id,
-            quota_project_id=self._quota_project_id,
-            additional_claims=self._additional_claims.copy(),
-            always_use_jwt_access=self._always_use_jwt_access,
-        )
+        cred = self._make_copy()
+        cred._token_uri = token_uri
+        return cred
 
     def _make_authorization_grant_assertion(self):
         """Create the OAuth 2.0 assertion.
@@ -418,6 +389,18 @@ class Credentials(
 
     @_helpers.copy_docstring(credentials.Credentials)
     def refresh(self, request):
+        if (
+            self._universe_domain != _DEFAULT_UNIVERSE_DOMAIN
+            and not self._jwt_credentials
+        ):
+            raise exceptions.RefreshError(
+                "self._jwt_credentials is missing for non-default universe domain"
+            )
+        if self._universe_domain != _DEFAULT_UNIVERSE_DOMAIN and self._subject:
+            raise exceptions.RefreshError(
+                "domain wide delegation is not supported for non-default universe domain"
+            )
+
         # Since domain wide delegation doesn't work with self signed JWT. If
         # subject exists, then we should not use self signed JWT.
         if self._subject is None and self._jwt_credentials is not None:
@@ -544,6 +527,7 @@ class IDTokenCredentials(
         target_audience,
         additional_claims=None,
         quota_project_id=None,
+        universe_domain=_DEFAULT_UNIVERSE_DOMAIN,
     ):
         """
         Args:
@@ -556,6 +540,11 @@ class IDTokenCredentials(
             additional_claims (Mapping[str, str]): Any additional claims for
                 the JWT assertion used in the authorization grant.
             quota_project_id (Optional[str]): The project ID used for quota and billing.
+            universe_domain (Optional[str]): The universe domain. The default
+                universe domain is googleapis.com. If this value is the default
+                value, then IAM ID token endponint will be used for token
+                refresh. Note that iam.serviceAccountTokenCreator role is
+                required to use the IAM endpoint.
         .. note:: Typically one of the helper constructors
             :meth:`from_service_account_file` or
             :meth:`from_service_account_info` are used instead of calling the
@@ -568,6 +557,9 @@ class IDTokenCredentials(
         self._target_audience = target_audience
         self._quota_project_id = quota_project_id
         self._use_iam_endpoint = False
+        self._universe_domain = universe_domain
+        if universe_domain != _DEFAULT_UNIVERSE_DOMAIN:
+            self._use_iam_endpoint = True
 
         if additional_claims is not None:
             self._additional_claims = additional_claims
@@ -592,6 +584,8 @@ class IDTokenCredentials(
         """
         kwargs.setdefault("service_account_email", info["client_email"])
         kwargs.setdefault("token_uri", info["token_uri"])
+        if "universe_domain" in info:
+            kwargs["universe_domain"] = info["universe_domain"]
         return cls(signer, **kwargs)
 
     @classmethod
@@ -632,6 +626,20 @@ class IDTokenCredentials(
         )
         return cls._from_signer_and_info(signer, info, **kwargs)
 
+    def _make_copy(self):
+        cred = self.__class__(
+            self._signer,
+            service_account_email=self._service_account_email,
+            token_uri=self._token_uri,
+            target_audience=self._target_audience,
+            additional_claims=self._additional_claims.copy(),
+            quota_project_id=self.quota_project_id,
+            universe_domain=self._universe_domain,
+        )
+        # _use_iam_endpoint is not exposed in the constructor
+        cred._use_iam_endpoint = self._use_iam_endpoint
+        return cred
+
     def with_target_audience(self, target_audience):
         """Create a copy of these credentials with the specified target
         audience.
@@ -644,14 +652,9 @@ class IDTokenCredentials(
             google.auth.service_account.IDTokenCredentials: A new credentials
                 instance.
         """
-        return self.__class__(
-            self._signer,
-            service_account_email=self._service_account_email,
-            token_uri=self._token_uri,
-            target_audience=target_audience,
-            additional_claims=self._additional_claims.copy(),
-            quota_project_id=self.quota_project_id,
-        )
+        cred = self._make_copy()
+        cred._target_audience = target_audience
+        return cred
 
     def _with_use_iam_endpoint(self, use_iam_endpoint):
         """Create a copy of these credentials with the use_iam_endpoint value.
@@ -667,38 +670,21 @@ class IDTokenCredentials(
             google.auth.service_account.IDTokenCredentials: A new credentials
                 instance.
         """
-        cred = self.__class__(
-            self._signer,
-            service_account_email=self._service_account_email,
-            token_uri=self._token_uri,
-            target_audience=self._target_audience,
-            additional_claims=self._additional_claims.copy(),
-            quota_project_id=self.quota_project_id,
-        )
+        cred = self._make_copy()
         cred._use_iam_endpoint = use_iam_endpoint
         return cred
 
     @_helpers.copy_docstring(credentials.CredentialsWithQuotaProject)
     def with_quota_project(self, quota_project_id):
-        return self.__class__(
-            self._signer,
-            service_account_email=self._service_account_email,
-            token_uri=self._token_uri,
-            target_audience=self._target_audience,
-            additional_claims=self._additional_claims.copy(),
-            quota_project_id=quota_project_id,
-        )
+        cred = self._make_copy()
+        cred._quota_project_id = quota_project_id
+        return cred
 
     @_helpers.copy_docstring(credentials.CredentialsWithTokenUri)
     def with_token_uri(self, token_uri):
-        return self.__class__(
-            self._signer,
-            service_account_email=self._service_account_email,
-            token_uri=token_uri,
-            target_audience=self._target_audience,
-            additional_claims=self._additional_claims.copy(),
-            quota_project_id=self._quota_project_id,
-        )
+        cred = self._make_copy()
+        cred._token_uri = token_uri
+        return cred
 
     def _make_authorization_grant_assertion(self):
         """Create the OAuth 2.0 assertion.
