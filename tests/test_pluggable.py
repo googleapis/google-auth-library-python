@@ -25,6 +25,7 @@ import pytest  # type: ignore
 
 # from google.auth import _helpers
 from google.auth import exceptions
+from google.auth import external_account
 from google.auth import pluggable
 from tests.test__default import WORKFORCE_AUDIENCE
 
@@ -383,26 +384,42 @@ class TestCredentials(object):
     def test_external_account_id(self):
         test_cases = {
             "from service_account_email": {
-                "credentials": {
-                    "impersonation_url": SERVICE_ACCOUNT_IMPERSONATION_URL,
-                },
-                "expected_result": SERVICE_ACCOUNT_EMAIL
+                "credentials": {"impersonation_url": SERVICE_ACCOUNT_IMPERSONATION_URL},
+                "expected_result": SERVICE_ACCOUNT_EMAIL,
             },
             "from cache": {
                 "credentials": {},
                 "cached_username": "dummy_username",
                 "expected_result": "dummy_username",
             },
+            "from introspection": {
+                "credentials": {},
+                "introspection_result": {"username": "dummy_username"},
+                "expected_result": "dummy_username",
+            },
+            "failed introspection": {
+                "credentials": {},
+                "introspection_error": exceptions.ClientCertError(),
+                "expected_result": None,
+            },
         }
         for case in test_cases.values():
             credentials = self.make_pluggable(
                 credential_source=self.CREDENTIAL_SOURCE.copy(),
-                service_account_impersonation_url=case["credentials"].get("impersonation_url")
+                service_account_impersonation_url=case["credentials"].get(
+                    "impersonation_url"
+                ),
             )
             if case.get("cached_username"):
                 credentials._tokeninfo_username = case.get("cached_username")
 
-            assert case["expected_result"] == credentials.external_account_id(None)
+            with mock.patch.object(
+                external_account.Credentials, "token_info_introspection"
+            ) as mock_method:
+                mock_method.return_value = case.get("introspection_result")
+                if case.get("introspection_error"):
+                    mock_method.side_effect = case["introspection_error"]
+                assert case["expected_result"] == credentials.external_account_id(None)
 
     @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
     def test_retrieve_subject_token_successfully(self, tmpdir):

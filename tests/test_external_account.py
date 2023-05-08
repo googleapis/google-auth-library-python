@@ -1743,7 +1743,7 @@ class TestCredentials(object):
                 "expect_error": exceptions.InvalidResource,
             },
             "missing base credential": {
-                "credential": { "token_info_url": self.TOKEN_INFO_URL, },
+                "credential": {"token_info_url": self.TOKEN_INFO_URL},
                 "expect_introspection_value": None,
                 "expect_introspection_error": exceptions.ClientCertError(),
                 "expect_error": exceptions.ClientCertError,

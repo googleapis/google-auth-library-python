@@ -414,7 +414,9 @@ class Credentials(
             raise exceptions.InvalidResource("Missing token_info_url")
 
         if not self._client_auth:
-            raise exceptions.ClientCertError("Token introspection needs client basic auth")
+            raise exceptions.ClientCertError(
+                "Token introspection needs client basic auth"
+            )
 
         if not self.token:
             raise exceptions.InvalidOperation("Missing token for introspection")
