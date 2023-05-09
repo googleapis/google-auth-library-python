@@ -384,7 +384,7 @@ class Credentials(
         kwargs.update(token_url=token_uri)
         return self.__class__(**kwargs)
 
-    def token_info_introspection(self, request):
+    def introspect_token(self, request):
         """Introspection of token info.
 
         If the credential object has a token_info_url provided, we can

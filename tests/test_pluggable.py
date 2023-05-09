@@ -414,7 +414,7 @@ class TestCredentials(object):
                 credentials._tokeninfo_username = case.get("cached_username")
 
             with mock.patch.object(
-                external_account.Credentials, "token_info_introspection"
+                external_account.Credentials, "introspect_token"
             ) as mock_method:
                 mock_method.return_value = case.get("introspection_result")
                 if case.get("introspection_error"):
