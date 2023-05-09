@@ -289,7 +289,8 @@ class Credentials(external_account.Credentials):
 
         if not self._tokeninfo_username:
             try:
-                self._tokeninfo_username = self.introspect_token(request)["username"]
+                token_info = self.introspect_token(request)
+                self._tokeninfo_username = token_info.get("username")
             except exceptions.GoogleAuthError:
                 # Do not panic when there is a failed introspection.
                 # There could just no valid introspection result by design.
