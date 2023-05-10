@@ -160,8 +160,8 @@ class Credentials(
             always_use_jwt_access (Optional[bool]): Whether self signed JWT should
                 be always used.
             universe_domain (str): The universe domain. The default
-                universe domain is googleapis.com. If this value is the default
-                value, then self signed jwt will be used for token refresh.
+                universe domain is googleapis.com. For default value self
+                signed jwt is used for token refresh.
 
         .. note:: Typically one of the helper constructors
             :meth:`from_service_account_file` or
@@ -308,8 +308,18 @@ class Credentials(
         Returns:
             google.auth.service_account.Credentials: A new credentials
                 instance.
+        Raises:
+            google.auth.exceptions.InvalidValue: If the universe domain is not
+                default and always_use_jwt_access is False.
         """
         cred = self._make_copy()
+        if (
+            cred._universe_domain != _DEFAULT_UNIVERSE_DOMAIN
+            and not always_use_jwt_access
+        ):
+            raise exceptions.InvalidValue(
+                "always_use_jwt_access should be True for non-default universe domain"
+            )
         cred._always_use_jwt_access = always_use_jwt_access
         return cred
 
@@ -544,10 +554,10 @@ class IDTokenCredentials(
                 the JWT assertion used in the authorization grant.
             quota_project_id (Optional[str]): The project ID used for quota and billing.
             universe_domain (str): The universe domain. The default
-                universe domain is googleapis.com. If this value is the default
-                value, then IAM ID token endponint will be used for token
-                refresh. Note that iam.serviceAccountTokenCreator role is
-                required to use the IAM endpoint.
+                universe domain is googleapis.com. For default value IAM ID
+                token endponint is used for token refresh. Note that
+                iam.serviceAccountTokenCreator role is required to use the IAM
+                endpoint.
         .. note:: Typically one of the helper constructors
             :meth:`from_service_account_file` or
             :meth:`from_service_account_info` are used instead of calling the
@@ -677,8 +687,15 @@ class IDTokenCredentials(
         Returns:
             google.auth.service_account.IDTokenCredentials: A new credentials
                 instance.
+        Raises:
+            google.auth.exceptions.InvalidValue: If the universe domain is not
+                default and use_iam_endpoint is False.
         """
         cred = self._make_copy()
+        if cred._universe_domain != _DEFAULT_UNIVERSE_DOMAIN and not use_iam_endpoint:
+            raise exceptions.InvalidValue(
+                "use_iam_endpoint should be True for non-default universe domain"
+            )
         cred._use_iam_endpoint = use_iam_endpoint
         return cred
 

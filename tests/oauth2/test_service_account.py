@@ -212,6 +212,15 @@ class TestCredentials(object):
         new_credentials = credentials.with_always_use_jwt_access(True)
         assert new_credentials._always_use_jwt_access
 
+    def test__with_always_use_jwt_access_non_default_universe_domain(self):
+        credentials = self.make_credentials(universe_domain=FAKE_UNIVERSE_DOMAIN)
+        with pytest.raises(exceptions.InvalidValue) as excinfo:
+            credentials.with_always_use_jwt_access(False)
+
+        assert excinfo.match(
+            "always_use_jwt_access should be True for non-default universe domain"
+        )
+
     def test__make_authorization_grant_assertion(self):
         credentials = self.make_credentials()
         token = credentials._make_authorization_grant_assertion()
@@ -631,6 +640,15 @@ class TestIDTokenCredentials(object):
         credentials = self.make_credentials()
         new_credentials = credentials._with_use_iam_endpoint(True)
         assert new_credentials._use_iam_endpoint
+
+    def test__with_use_iam_endpoint_non_default_universe_domain(self):
+        credentials = self.make_credentials(universe_domain=FAKE_UNIVERSE_DOMAIN)
+        with pytest.raises(exceptions.InvalidValue) as excinfo:
+            credentials._with_use_iam_endpoint(False)
+
+        assert excinfo.match(
+            "use_iam_endpoint should be True for non-default universe domain"
+        )
 
     def test_with_quota_project(self):
         credentials = self.make_credentials()
