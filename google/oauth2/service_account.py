@@ -159,7 +159,7 @@ class Credentials(
                 the JWT assertion used in the authorization grant.
             always_use_jwt_access (Optional[bool]): Whether self signed JWT should
                 be always used.
-            universe_domain (Optional[str]): The universe domain. The default
+            universe_domain (str): The universe domain. The default
                 universe domain is googleapis.com. If this value is the default
                 value, then self signed jwt will be used for token refresh.
 
@@ -179,7 +179,10 @@ class Credentials(
         self._quota_project_id = quota_project_id
         self._token_uri = token_uri
         self._always_use_jwt_access = always_use_jwt_access
-        self._universe_domain = universe_domain
+        if not universe_domain:
+            self._universe_domain = _DEFAULT_UNIVERSE_DOMAIN
+        else:
+            self._universe_domain = universe_domain
 
         if universe_domain != _DEFAULT_UNIVERSE_DOMAIN:
             self._always_use_jwt_access = True
@@ -277,8 +280,8 @@ class Credentials(
         cred = self.__class__(
             self._signer,
             service_account_email=self._service_account_email,
-            scopes=self._scopes,
-            default_scopes=self._default_scopes,
+            scopes=copy.copy(self._scopes),
+            default_scopes=copy.copy(self._default_scopes),
             token_uri=self._token_uri,
             subject=self._subject,
             project_id=self._project_id,
@@ -540,7 +543,7 @@ class IDTokenCredentials(
             additional_claims (Mapping[str, str]): Any additional claims for
                 the JWT assertion used in the authorization grant.
             quota_project_id (Optional[str]): The project ID used for quota and billing.
-            universe_domain (Optional[str]): The universe domain. The default
+            universe_domain (str): The universe domain. The default
                 universe domain is googleapis.com. If this value is the default
                 value, then IAM ID token endponint will be used for token
                 refresh. Note that iam.serviceAccountTokenCreator role is
@@ -557,7 +560,12 @@ class IDTokenCredentials(
         self._target_audience = target_audience
         self._quota_project_id = quota_project_id
         self._use_iam_endpoint = False
-        self._universe_domain = universe_domain
+
+        if not universe_domain:
+            self._universe_domain = _DEFAULT_UNIVERSE_DOMAIN
+        else:
+            self._universe_domain = universe_domain
+
         if universe_domain != _DEFAULT_UNIVERSE_DOMAIN:
             self._use_iam_endpoint = True
 

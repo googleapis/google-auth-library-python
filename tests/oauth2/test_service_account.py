@@ -66,6 +66,12 @@ class TestCredentials(object):
             universe_domain=universe_domain,
         )
 
+    def test_constructor_no_universe_domain(self):
+        credentials = service_account.Credentials(
+            SIGNER, self.SERVICE_ACCOUNT_EMAIL, self.TOKEN_URI, universe_domain=None
+        )
+        assert credentials._universe_domain == service_account._DEFAULT_UNIVERSE_DOMAIN
+
     def test_from_service_account_info(self):
         credentials = service_account.Credentials.from_service_account_info(
             SERVICE_ACCOUNT_INFO
@@ -532,6 +538,16 @@ class TestIDTokenCredentials(object):
             cls.TARGET_AUDIENCE,
             universe_domain=universe_domain,
         )
+
+    def test_constructor_no_universe_domain(self):
+        credentials = service_account.IDTokenCredentials(
+            SIGNER,
+            self.SERVICE_ACCOUNT_EMAIL,
+            self.TOKEN_URI,
+            self.TARGET_AUDIENCE,
+            universe_domain=None,
+        )
+        assert credentials._universe_domain == service_account._DEFAULT_UNIVERSE_DOMAIN
 
     def test_from_service_account_info(self):
         credentials = service_account.IDTokenCredentials.from_service_account_info(
