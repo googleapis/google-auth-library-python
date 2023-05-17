@@ -422,7 +422,7 @@ class IDTokenCredentials(credentials.CredentialsWithQuotaProject):
             "includeEmail": self._include_email,
         }
 
-        headers = {"Content-Type": "application/json"
+        headers = {"Content-Type": "application/json"}
 
         authed_session = AuthorizedSession(
             self._target_credentials._source_credentials, auth_request=request
