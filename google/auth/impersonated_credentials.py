@@ -424,9 +424,12 @@ class IDTokenCredentials(credentials.CredentialsWithQuotaProject):
 
         headers = {"Content-Type": "application/json"}
 
-        authed_session = AuthorizedSession(
-            self._target_credentials._source_credentials, auth_request=request
-        )
+        try:
+            authed_session = AuthorizedSession(
+                self._target_credentials._source_credentials, auth_request=request
+            )
+        finally:
+            authed_session.close()
 
         response = authed_session.post(
             url=iam_sign_endpoint,
