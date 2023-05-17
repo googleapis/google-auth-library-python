@@ -422,20 +422,20 @@ class IDTokenCredentials(credentials.CredentialsWithQuotaProject):
             "includeEmail": self._include_email,
         }
 
-        headers = {"Content-Type": "application/json"}
+        headers = {"Content-Type": "application/json"
+
+        authed_session = AuthorizedSession(
+            self._target_credentials._source_credentials, auth_request=request
+        )
 
         try:
-            authed_session = AuthorizedSession(
-                self._target_credentials._source_credentials, auth_request=request
+            response = authed_session.post(
+                url=iam_sign_endpoint,
+                headers=headers,
+                data=json.dumps(body).encode("utf-8"),
             )
         finally:
             authed_session.close()
-
-        response = authed_session.post(
-            url=iam_sign_endpoint,
-            headers=headers,
-            data=json.dumps(body).encode("utf-8"),
-        )
 
         id_token = response.json()["token"]
         self.token = id_token
