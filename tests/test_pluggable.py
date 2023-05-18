@@ -400,6 +400,7 @@ class TestCredentials(object):
             "token_url": TOKEN_URL,
             "token_info_url": TOKEN_INFO_URL,
             "credential_source": self.CREDENTIAL_SOURCE,
+            "universe_domain": DEFAULT_UNIVERSE_DOMAIN,
         }
 
     def test_token_info_url(self):

@@ -646,6 +646,7 @@ class TestCredentials(object):
             "token_info_url": TOKEN_INFO_URL,
             "credential_source": self.CREDENTIAL_SOURCE_TEXT_URL,
             "workforce_pool_user_project": WORKFORCE_POOL_USER_PROJECT,
+            "universe_domain": DEFAULT_UNIVERSE_DOMAIN,
         }
 
     def test_info_with_file_credential_source(self):
@@ -660,6 +661,7 @@ class TestCredentials(object):
             "token_url": TOKEN_URL,
             "token_info_url": TOKEN_INFO_URL,
             "credential_source": self.CREDENTIAL_SOURCE_TEXT_URL,
+            "universe_domain": DEFAULT_UNIVERSE_DOMAIN,
         }
 
     def test_info_with_url_credential_source(self):
@@ -674,6 +676,7 @@ class TestCredentials(object):
             "token_url": TOKEN_URL,
             "token_info_url": TOKEN_INFO_URL,
             "credential_source": self.CREDENTIAL_SOURCE_JSON_URL,
+            "universe_domain": DEFAULT_UNIVERSE_DOMAIN,
         }
 
     def test_retrieve_subject_token_missing_subject_token(self, tmpdir):

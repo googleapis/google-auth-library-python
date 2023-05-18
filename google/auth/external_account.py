@@ -192,6 +192,7 @@ class Credentials(
             "workforce_pool_user_project": self._workforce_pool_user_project,
             "scopes": self._scopes,
             "default_scopes": self._default_scopes,
+            "universe_domain": self._universe_domain,
         }
         if not self.is_workforce_pool:
             args.pop("workforce_pool_user_project")
