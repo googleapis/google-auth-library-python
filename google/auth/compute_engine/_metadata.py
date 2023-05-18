@@ -29,6 +29,7 @@ from six.moves.urllib import parse as urlparse
 from google.auth import _helpers
 from google.auth import environment_vars
 from google.auth import exceptions
+from google.auth import metrics
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -121,12 +122,16 @@ def ping(request, timeout=_METADATA_DEFAULT_TIMEOUT, retry_count=3):
     #       the metadata resolution was particularly slow. The latter case is
     #       "unlikely".
     retries = 0
+    _HEADERS_FOR_PING = {
+        _METADATA_FLAVOR_HEADER: _METADATA_FLAVOR_VALUE,
+        metrics.API_CLIENT_HEADER: metrics.MDS_PING,
+    }
     while retries < retry_count:
         try:
             response = request(
                 url=_METADATA_IP_ROOT,
                 method="GET",
-                headers=_METADATA_HEADERS,
+                headers=_HEADERS_FOR_PING,
                 timeout=timeout,
             )
 
@@ -150,7 +155,13 @@ def ping(request, timeout=_METADATA_DEFAULT_TIMEOUT, retry_count=3):
 
 
 def get(
-    request, path, root=_METADATA_ROOT, params=None, recursive=False, retry_count=5
+    request,
+    path,
+    root=_METADATA_ROOT,
+    params=None,
+    recursive=False,
+    retry_count=5,
+    headers=_METADATA_HEADERS,
 ):
     """Fetch a resource from the metadata server.
 
@@ -167,6 +178,7 @@ def get(
             details.
         retry_count (int): How many times to attempt connecting to metadata
             server using above timeout.
+        headers (Mapping[str, str]): Headers for request.
 
     Returns:
         Union[Mapping, str]: If the metadata server returns JSON, a mapping of
@@ -188,7 +200,7 @@ def get(
     retries = 0
     while retries < retry_count:
         try:
-            response = request(url=url, method="GET", headers=_METADATA_HEADERS)
+            response = request(url=url, method="GET", headers=headers)
             break
 
         except exceptions.TransportError as e:
@@ -275,7 +287,9 @@ def get_service_account_info(request, service_account="default"):
     return get(request, path, params={"recursive": "true"})
 
 
-def get_service_account_token(request, service_account="default", scopes=None):
+def get_service_account_token(
+    request, service_account="default", scopes=None, headers=_METADATA_HEADERS
+):
     """Get the OAuth 2.0 access token for a service account.
 
     Args:
@@ -286,6 +300,7 @@ def get_service_account_token(request, service_account="default", scopes=None):
             an access token.
         scopes (Optional[Union[str, List[str]]]): Optional string or list of
             strings with auth scopes.
+        headers (Mapping[str, str]): Headers for request.
     Returns:
         Tuple[str, datetime]: The access token and its expiration.
 
@@ -301,7 +316,7 @@ def get_service_account_token(request, service_account="default", scopes=None):
         params = None
 
     path = "instance/service-accounts/{0}/token".format(service_account)
-    token_json = get(request, path, params=params)
+    token_json = get(request, path, params=params, headers=headers)
     token_expiry = _helpers.utcnow() + datetime.timedelta(
         seconds=token_json["expires_in"]
     )

@@ -37,6 +37,7 @@ import sys
 from six.moves import range
 
 from google.auth import exceptions
+from google.auth import metrics
 from google.oauth2 import _client
 from google.oauth2 import challenges
 
@@ -96,7 +97,12 @@ def _get_challenges(
         body["oauthScopesForDomainPolicyLookup"] = requested_scopes
 
     return _client._token_endpoint_request(
-        request, _REAUTH_API + ":start", body, access_token=access_token, use_json=True
+        request,
+        _REAUTH_API + ":start",
+        body,
+        access_token=access_token,
+        use_json=True,
+        headers={metrics.API_CLIENT_HEADER: metrics.REAUTH_START},
     )
 
 
@@ -130,6 +136,7 @@ def _send_challenge_result(
         body,
         access_token=access_token,
         use_json=True,
+        headers={metrics.API_CLIENT_HEADER: metrics.REAUTH_CONTINUE},
     )
 
 
@@ -321,8 +328,9 @@ def refresh_grant(
     if rapt_token:
         body["rapt"] = rapt_token
 
+    headers = {metrics.API_CLIENT_HEADER: metrics.TOKEN_REQUEST_USER}
     response_status_ok, response_data, retryable_error = _client._token_endpoint_request_no_throw(
-        request, token_uri, body
+        request, token_uri, body, headers=headers
     )
     if (
         not response_status_ok
@@ -345,7 +353,9 @@ def refresh_grant(
             response_status_ok,
             response_data,
             retryable_error,
-        ) = _client._token_endpoint_request_no_throw(request, token_uri, body)
+        ) = _client._token_endpoint_request_no_throw(
+            request, token_uri, body, headers=headers
+        )
 
     if not response_status_ok:
         _client._handle_error_response(response_data, retryable_error)

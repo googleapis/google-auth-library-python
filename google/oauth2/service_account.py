@@ -78,6 +78,7 @@ from google.auth import _service_account_info
 from google.auth import credentials
 from google.auth import exceptions
 from google.auth import jwt
+from google.auth import metrics
 from google.oauth2 import _client
 
 _DEFAULT_TOKEN_LIFETIME_SECS = 3600  # 1 hour in seconds
@@ -400,6 +401,12 @@ class Credentials(
 
         return token
 
+    def _metric_header_for_usage(self):
+        if self._subject is None and self._jwt_credentials is not None:
+            # self signed jwt flow is used
+            return metrics.CRED_TYPE_SA_JWT
+        return metrics.CRED_TYPE_SA_ASSERTION
+
     @_helpers.copy_docstring(credentials.Credentials)
     def refresh(self, request):
         if (
@@ -423,7 +430,13 @@ class Credentials(
         else:
             assertion = self._make_authorization_grant_assertion()
             access_token, expiry, _ = _client.jwt_grant(
-                request, self._token_uri, assertion
+                request,
+                self._token_uri,
+                assertion,
+                headers={
+                    metrics.API_CLIENT_HEADER,
+                    metrics.TOKEN_REQUEST_ACCESS_ASSERTION,
+                },
             )
             self.token = access_token
             self.expiry = expiry
@@ -781,7 +794,12 @@ class IDTokenCredentials(
         else:
             assertion = self._make_authorization_grant_assertion()
             access_token, expiry, _ = _client.id_token_jwt_grant(
-                request, self._token_uri, assertion
+                request,
+                self._token_uri,
+                assertion,
+                headers={
+                    metrics.API_CLIENT_HEADER: metrics.TOKEN_REQUEST_ID_TOKEN_ASSERTION
+                },
             )
             self.token = access_token
             self.expiry = expiry

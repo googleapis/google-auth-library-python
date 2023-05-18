@@ -146,6 +146,7 @@ def _token_endpoint_request_no_throw(
     access_token=None,
     use_json=False,
     can_retry=True,
+    headers=None,
     **kwargs
 ):
     """Makes a request to the OAuth 2.0 authorization server's token endpoint.
@@ -161,6 +162,7 @@ def _token_endpoint_request_no_throw(
         use_json (Optional(bool)): Use urlencoded format or json format for the
             content type. The default value is False.
         can_retry (bool): Enable or disable request retry behavior.
+        headers (Optional[Mapping[str, str]]): Headers for request.
         kwargs: Additional arguments passed on to the request method. The
             kwargs will be passed to `requests.request` method, see:
             https://docs.python-requests.org/en/latest/api/#requests.request.
@@ -175,11 +177,13 @@ def _token_endpoint_request_no_throw(
           data and in the case of an error a boolean indicating if the error
           is retryable.
     """
+    headers = headers.copy() if headers else {}
+
     if use_json:
-        headers = {"Content-Type": _JSON_CONTENT_TYPE}
+        headers["Content-Type"] = _JSON_CONTENT_TYPE
         body = json.dumps(body).encode("utf-8")
     else:
-        headers = {"Content-Type": _URLENCODED_CONTENT_TYPE}
+        headers["Content-Type"] = _URLENCODED_CONTENT_TYPE
         body = urllib.parse.urlencode(body).encode("utf-8")
 
     if access_token:
@@ -231,6 +235,7 @@ def _token_endpoint_request(
     access_token=None,
     use_json=False,
     can_retry=True,
+    headers=None,
     **kwargs
 ):
     """Makes a request to the OAuth 2.0 authorization server's token endpoint.
@@ -245,6 +250,7 @@ def _token_endpoint_request(
         use_json (Optional(bool)): Use urlencoded format or json format for the
             content type. The default value is False.
         can_retry (bool): Enable or disable request retry behavior.
+        headers (Optional[Mapping[str, str]]): Headers for request.
         kwargs: Additional arguments passed on to the request method. The
             kwargs will be passed to `requests.request` method, see:
             https://docs.python-requests.org/en/latest/api/#requests.request.
@@ -268,6 +274,7 @@ def _token_endpoint_request(
         access_token=access_token,
         use_json=use_json,
         can_retry=can_retry,
+        headers=headers,
         **kwargs
     )
     if not response_status_ok:
@@ -275,7 +282,7 @@ def _token_endpoint_request(
     return response_data
 
 
-def jwt_grant(request, token_uri, assertion, can_retry=True):
+def jwt_grant(request, token_uri, assertion, can_retry=True, headers=None):
     """Implements the JWT Profile for OAuth 2.0 Authorization Grants.
 
     For more details, see `rfc7523 section 4`_.
@@ -287,6 +294,7 @@ def jwt_grant(request, token_uri, assertion, can_retry=True):
             URI.
         assertion (str): The OAuth 2.0 assertion.
         can_retry (bool): Enable or disable request retry behavior.
+        headers (Optional[Mapping[str, str]]): Headers for request.
 
     Returns:
         Tuple[str, Optional[datetime], Mapping[str, str]]: The access token,
@@ -301,7 +309,7 @@ def jwt_grant(request, token_uri, assertion, can_retry=True):
     body = {"assertion": assertion, "grant_type": _JWT_GRANT_TYPE}
 
     response_data = _token_endpoint_request(
-        request, token_uri, body, can_retry=can_retry
+        request, token_uri, body, can_retry=can_retry, headers=headers
     )
 
     try:
@@ -355,7 +363,7 @@ def call_iam_generate_id_token_endpoint(request, signer_email, audience, access_
     return id_token, expiry
 
 
-def id_token_jwt_grant(request, token_uri, assertion, can_retry=True):
+def id_token_jwt_grant(request, token_uri, assertion, can_retry=True, headers=None):
     """Implements the JWT Profile for OAuth 2.0 Authorization Grants, but
     requests an OpenID Connect ID Token instead of an access token.
 
@@ -371,6 +379,7 @@ def id_token_jwt_grant(request, token_uri, assertion, can_retry=True):
         assertion (str): JWT token signed by a service account. The token's
             payload must include a ``target_audience`` claim.
         can_retry (bool): Enable or disable request retry behavior.
+        headers (Optional[Mapping[str, str]]): Headers for request.
 
     Returns:
         Tuple[str, Optional[datetime], Mapping[str, str]]:
@@ -384,7 +393,7 @@ def id_token_jwt_grant(request, token_uri, assertion, can_retry=True):
     body = {"assertion": assertion, "grant_type": _JWT_GRANT_TYPE}
 
     response_data = _token_endpoint_request(
-        request, token_uri, body, can_retry=can_retry
+        request, token_uri, body, can_retry=can_retry, headers=headers
     )
 
     try:

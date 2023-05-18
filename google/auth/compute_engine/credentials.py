@@ -28,8 +28,20 @@ from google.auth import credentials
 from google.auth import exceptions
 from google.auth import iam
 from google.auth import jwt
+from google.auth import metrics
 from google.auth.compute_engine import _metadata
 from google.oauth2 import _client
+
+
+# x-goog-api-client headers for metrics purposes
+_HEADERS_FOR_ACCESS_TOKEN = {
+    _metadata._METADATA_FLAVOR_HEADER: _metadata._METADATA_FLAVOR_VALUE,
+    metrics.API_CLIENT_HEADER: metrics.TOKEN_REQUEST_ACCESS_TOKEN_MDS,
+}
+_HEADERS_FOR_ID_TOKEN = {
+    _metadata._METADATA_FLAVOR_HEADER: _metadata._METADATA_FLAVOR_VALUE,
+    metrics.API_CLIENT_HEADER: metrics.TOKEN_REQUEST_ID_TOKEN__MDS,
+}
 
 
 class Credentials(credentials.Scoped, credentials.CredentialsWithQuotaProject):
@@ -94,6 +106,9 @@ class Credentials(credentials.Scoped, credentials.CredentialsWithQuotaProject):
         if self._scopes is None:
             self._scopes = info["scopes"]
 
+    def _metric_header_for_usage(self):
+        return metrics.CRED_TYPE_SA_MDS
+
     def refresh(self, request):
         """Refresh the access token and scopes.
 
@@ -110,7 +125,10 @@ class Credentials(credentials.Scoped, credentials.CredentialsWithQuotaProject):
         try:
             self._retrieve_info(request)
             self.token, self.expiry = _metadata.get_service_account_token(
-                request, service_account=self._service_account_email, scopes=scopes
+                request,
+                service_account=self._service_account_email,
+                scopes=scopes,
+                headers=_HEADERS_FOR_ACCESS_TOKEN,
             )
         except exceptions.TransportError as caught_exc:
             new_exc = exceptions.RefreshError(caught_exc)
@@ -399,7 +417,7 @@ class IDTokenCredentials(
         else:
             assertion = self._make_authorization_grant_assertion()
             access_token, expiry, _ = _client.id_token_jwt_grant(
-                request, self._token_uri, assertion
+                request, self._token_uri, assertion, headers=_HEADERS_FOR_ID_TOKEN
             )
             self.token = access_token
             self.expiry = expiry
