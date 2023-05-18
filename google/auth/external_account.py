@@ -465,7 +465,7 @@ class Credentials(
             credential_source=info.get("credential_source"),
             quota_project_id=info.get("quota_project_id"),
             workforce_pool_user_project=info.get("workforce_pool_user_project"),
-            universe_domain=info.get("universe", _DEFAULT_UNIVERSE_DOMAIN),
+            universe_domain=info.get("universe_domain", _DEFAULT_UNIVERSE_DOMAIN),
             **kwargs
         )
 
