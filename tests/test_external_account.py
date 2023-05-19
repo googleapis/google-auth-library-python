@@ -482,7 +482,9 @@ class TestCredentials(object):
         )
 
     def test_info(self):
-        credentials = self.make_credentials()
+        credentials = self.make_credentials(
+            universe_domain="dummy_universe.com"
+        )
 
         assert credentials.info == {
             "type": "external_account",
@@ -490,7 +492,7 @@ class TestCredentials(object):
             "subject_token_type": self.SUBJECT_TOKEN_TYPE,
             "token_url": self.TOKEN_URL,
             "credential_source": self.CREDENTIAL_SOURCE.copy(),
-            "universe_domain": external_account._DEFAULT_UNIVERSE_DOMAIN,
+            "universe_domain": "dummy_universe.com",
         }
 
     def test_info_workforce_pool(self):
