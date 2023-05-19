@@ -482,9 +482,7 @@ class TestCredentials(object):
         )
 
     def test_info(self):
-        credentials = self.make_credentials(
-            universe_domain="dummy_universe.com"
-        )
+        credentials = self.make_credentials(universe_domain="dummy_universe.com")
 
         assert credentials.info == {
             "type": "external_account",
