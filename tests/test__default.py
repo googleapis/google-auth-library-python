@@ -781,7 +781,7 @@ def test__get_gae_credentials_no_apis():
 
 
 @mock.patch(
-    "google.auth.compute_engine._metadata.ping", return_value=True, autospec=True
+    "google.auth.compute_engine._metadata.is_on_gce", return_value=True, autospec=True
 )
 @mock.patch(
     "google.auth.compute_engine._metadata.get_project_id",
@@ -796,7 +796,7 @@ def test__get_gce_credentials(unused_get, unused_ping):
 
 
 @mock.patch(
-    "google.auth.compute_engine._metadata.ping", return_value=False, autospec=True
+    "google.auth.compute_engine._metadata.is_on_gce", return_value=False, autospec=True
 )
 def test__get_gce_credentials_no_ping(unused_ping):
     credentials, project_id = _default._get_gce_credentials()
@@ -806,7 +806,7 @@ def test__get_gce_credentials_no_ping(unused_ping):
 
 
 @mock.patch(
-    "google.auth.compute_engine._metadata.ping", return_value=True, autospec=True
+    "google.auth.compute_engine._metadata.is_on_gce", return_value=True, autospec=True
 )
 @mock.patch(
     "google.auth.compute_engine._metadata.get_project_id",
@@ -831,7 +831,7 @@ def test__get_gce_credentials_no_compute_engine():
 
 
 @mock.patch(
-    "google.auth.compute_engine._metadata.ping", return_value=False, autospec=True
+    "google.auth.compute_engine._metadata.is_on_gce", return_value=False, autospec=True
 )
 def test__get_gce_credentials_explicit_request(ping):
     _default._get_gce_credentials(mock.sentinel.request)
@@ -916,8 +916,10 @@ def test_default_without_project_id(
     autospec=True,
 )
 def test_default_fail(unused_gce, unused_gae, unused_sdk, unused_explicit):
-    with pytest.raises(exceptions.DefaultCredentialsError):
+    with pytest.raises(exceptions.DefaultCredentialsError) as excinfo:
         assert _default.default()
+
+    assert excinfo.match(_default._CLOUD_SDK_MISSING_CREDENTIALS)
 
 
 @mock.patch(
@@ -1128,7 +1130,7 @@ def test_default_environ_external_credentials_bad_format(monkeypatch, tmpdir):
 def test_default_warning_without_quota_project_id_for_user_creds(get_adc_path):
     get_adc_path.return_value = AUTHORIZED_USER_CLOUD_SDK_FILE
 
-    with pytest.warns(UserWarning, match="Cloud SDK"):
+    with pytest.warns(UserWarning, match=_default._CLOUD_SDK_CREDENTIALS_WARNING):
         credentials, project_id = _default.default(quota_project_id=None)
 
 
@@ -1244,7 +1246,7 @@ def test_quota_project_from_environment(get_adc_path):
 
 
 @mock.patch(
-    "google.auth.compute_engine._metadata.ping", return_value=True, autospec=True
+    "google.auth.compute_engine._metadata.is_on_gce", return_value=True, autospec=True
 )
 @mock.patch(
     "google.auth.compute_engine._metadata.get_project_id",

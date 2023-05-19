@@ -85,7 +85,7 @@ def mypy(session):
     session.run("mypy", "google/", "tests/", "tests_async/")
 
 
-@nox.session(python=["3.6", "3.7", "3.8", "3.9", "3.10"])
+@nox.session(python=["3.6", "3.7", "3.8", "3.9", "3.10", "3.11"])
 def unit(session):
     constraints_path = str(
         CURRENT_DIRECTORY / "testing" / f"constraints-{session.python}.txt"
@@ -140,7 +140,7 @@ def cover(session):
     session.run("coverage", "report", "--show-missing", "--fail-under=100")
 
 
-@nox.session(python="3.8")
+@nox.session(python="3.9")
 def docs(session):
     """Build the docs for this library."""
 

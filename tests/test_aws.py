@@ -1085,16 +1085,6 @@ class TestCredentials(object):
 
             assert credentials.token_info_url == (url + "/introspect")
 
-    def test_token_info_url_bad(self):
-        for url in INVALID_TOKEN_URLS:
-            with pytest.raises(ValueError) as excinfo:
-                self.make_credentials(
-                    credential_source=self.CREDENTIAL_SOURCE.copy(),
-                    token_info_url=(url + "/introspect"),
-                )
-
-            assert excinfo.match(r"The provided token info URL is invalid\.")
-
     def test_token_info_url_negative(self):
         credentials = self.make_credentials(
             credential_source=self.CREDENTIAL_SOURCE.copy(), token_info_url=None
@@ -1111,16 +1101,6 @@ class TestCredentials(object):
 
             assert credentials._token_url == (url + "/token")
 
-    def test_token_url_bad(self):
-        for url in INVALID_TOKEN_URLS:
-            with pytest.raises(ValueError) as excinfo:
-                self.make_credentials(
-                    credential_source=self.CREDENTIAL_SOURCE.copy(),
-                    token_url=(url + "/token"),
-                )
-
-            assert excinfo.match(r"The provided token URL is invalid\.")
-
     def test_service_account_impersonation_url_custom(self):
         for url in VALID_SERVICE_ACCOUNT_IMPERSONATION_URLS:
             credentials = self.make_credentials(
@@ -1132,20 +1112,6 @@ class TestCredentials(object):
 
             assert credentials._service_account_impersonation_url == (
                 url + SERVICE_ACCOUNT_IMPERSONATION_URL_ROUTE
-            )
-
-    def test_service_account_impersonation_url_bad(self):
-        for url in INVALID_SERVICE_ACCOUNT_IMPERSONATION_URLS:
-            with pytest.raises(ValueError) as excinfo:
-                self.make_credentials(
-                    credential_source=self.CREDENTIAL_SOURCE.copy(),
-                    service_account_impersonation_url=(
-                        url + SERVICE_ACCOUNT_IMPERSONATION_URL_ROUTE
-                    ),
-                )
-
-            assert excinfo.match(
-                r"The provided service account impersonation URL is invalid\."
             )
 
     def test_retrieve_subject_token_missing_region_url(self):
@@ -1528,39 +1494,6 @@ class TestCredentials(object):
 
         credentials.retrieve_subject_token(request)
         assert not request.called
-
-    def test_validate_metadata_server_url_if_any(self):
-        aws.Credentials.validate_metadata_server_url_if_any(
-            "http://[fd00:ec2::254]/latest/meta-data/placement/availability-zone", "url"
-        )
-        aws.Credentials.validate_metadata_server_url_if_any(
-            "http://169.254.169.254/latest/meta-data/placement/availability-zone", "url"
-        )
-
-        with pytest.raises(ValueError) as excinfo:
-            aws.Credentials.validate_metadata_server_url_if_any(
-                "http://fd00:ec2::254/latest/meta-data/placement/availability-zone",
-                "url",
-            )
-        assert excinfo.match("Invalid hostname 'fd00' for 'url'")
-
-        with pytest.raises(ValueError) as excinfo:
-            aws.Credentials.validate_metadata_server_url_if_any(
-                "http://abc.com/latest/meta-data/placement/availability-zone", "url"
-            )
-        assert excinfo.match("Invalid hostname 'abc.com' for 'url'")
-
-    def test_retrieve_subject_token_invalid_hosts(self):
-        keys = ["url", "region_url", "imdsv2_session_token_url"]
-        for key in keys:
-            credential_source = self.CREDENTIAL_SOURCE.copy()
-            credential_source[
-                key
-            ] = "http://abc.com/latest/meta-data/iam/security-credentials"
-
-            with pytest.raises(ValueError) as excinfo:
-                self.make_credentials(credential_source=credential_source)
-            assert excinfo.match("Invalid hostname 'abc.com' for '{}'".format(key))
 
     @mock.patch("google.auth._helpers.utcnow")
     def test_retrieve_subject_token_success_ipv6(self, utcnow):

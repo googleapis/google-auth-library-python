@@ -29,6 +29,7 @@ DEPENDENCIES = (
     # install enum34 to support 2.7. enum34 only works up to python version 3.3.
     'enum34>=1.1.10; python_version < "3.4"',
     "six>=1.9.0",
+    "urllib3<2.0",
 )
 
 extras = {
@@ -75,6 +76,7 @@ setup(
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
         "Development Status :: 5 - Production/Stable",
         "Intended Audience :: Developers",
         "License :: OSI Approved :: Apache Software License",

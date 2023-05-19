@@ -16,6 +16,7 @@ import io
 import json
 import os
 import subprocess
+import sys
 
 import mock
 import pytest  # type: ignore
@@ -36,17 +37,10 @@ SERVICE_ACCOUNT_FILE = os.path.join(DATA_DIR, "service_account.json")
 with io.open(SERVICE_ACCOUNT_FILE, "rb") as fh:
     SERVICE_ACCOUNT_FILE_DATA = json.load(fh)
 
-with io.open(os.path.join(DATA_DIR, "cloud_sdk_config.json"), "rb") as fh:
-    CLOUD_SDK_CONFIG_FILE_DATA = fh.read()
-
 
 @pytest.mark.parametrize(
     "data, expected_project_id",
-    [
-        (CLOUD_SDK_CONFIG_FILE_DATA, "example-project"),
-        (b"I am some bad json", None),
-        (b"{}", None),
-    ],
+    [(b"example-project\n", "example-project"), (b"", None)],
 )
 def test_get_project_id(data, expected_project_id):
     check_output_patch = mock.patch(
@@ -73,7 +67,7 @@ def test_get_project_id_call_error(check_output):
 
 def test__run_subprocess_ignore_stderr():
     command = [
-        "python",
+        sys.executable,
         "-c",
         "from __future__ import print_function;"
         + "import sys;"
@@ -93,9 +87,7 @@ def test__run_subprocess_ignore_stderr():
 @mock.patch("os.name", new="nt")
 def test_get_project_id_windows():
     check_output_patch = mock.patch(
-        "subprocess.check_output",
-        autospec=True,
-        return_value=CLOUD_SDK_CONFIG_FILE_DATA,
+        "subprocess.check_output", autospec=True, return_value=b"example-project\n"
     )
 
     with check_output_patch as check_output:

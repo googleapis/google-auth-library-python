@@ -4,6 +4,94 @@
 
 [1]: https://pypi.org/project/google-auth/#history
 
+## [2.18.1](https://github.com/googleapis/google-auth-library-python/compare/v2.18.0...v2.18.1) (2023-05-17)
+
+
+### Bug Fixes
+
+* Self signed jwt token should be string type ([#1294](https://github.com/googleapis/google-auth-library-python/issues/1294)) ([17356fd](https://github.com/googleapis/google-auth-library-python/commit/17356fdd92da2123f989f67a5cebf82c78a3bc12))
+
+## [2.18.0](https://github.com/googleapis/google-auth-library-python/compare/v2.17.3...v2.18.0) (2023-05-10)
+
+
+### Features
+
+* Add smbios check to detect GCE residency ([#1276](https://github.com/googleapis/google-auth-library-python/issues/1276)) ([22d241b](https://github.com/googleapis/google-auth-library-python/commit/22d241b2060cc8fcc8c5005ccc8fbc932a7f66f6))
+* Universe domain support for service account ([#1286](https://github.com/googleapis/google-auth-library-python/issues/1286)) ([821c1b6](https://github.com/googleapis/google-auth-library-python/commit/821c1b65289a23855855f16b9c7a651fdbc1e4a9))
+
+## [2.17.3](https://github.com/googleapis/google-auth-library-python/compare/v2.17.2...v2.17.3) (2023-04-12)
+
+
+### Bug Fixes
+
+* Add useEmailAzp claim for id token iam flow ([#1270](https://github.com/googleapis/google-auth-library-python/issues/1270)) ([7a9c6f2](https://github.com/googleapis/google-auth-library-python/commit/7a9c6f2d90688e57583437c0872eb12dc5b0d833))
+
+## [2.17.2](https://github.com/googleapis/google-auth-library-python/compare/v2.17.1...v2.17.2) (2023-04-05)
+
+
+### Bug Fixes
+
+* Do not create new JWT credentials if they make the same claims as the existing. ([#1267](https://github.com/googleapis/google-auth-library-python/issues/1267)) ([eebb7b6](https://github.com/googleapis/google-auth-library-python/commit/eebb7b6630a7fc1e943a4d5f8fc76e9dd6dbe687))
+
+## [2.17.1](https://github.com/googleapis/google-auth-library-python/compare/v2.17.0...v2.17.1) (2023-03-30)
+
+
+### Bug Fixes
+
+* Print out reauth plugin error and raise if challenge output is None ([#1265](https://github.com/googleapis/google-auth-library-python/issues/1265)) ([08d22fe](https://github.com/googleapis/google-auth-library-python/commit/08d22fe805e0401c3a902ce96f9c3797e7f166b1))
+
+## [2.17.0](https://github.com/googleapis/google-auth-library-python/compare/v2.16.3...v2.17.0) (2023-03-28)
+
+
+### Features
+
+* Experimental service account iam endpoint flow for id token ([#1258](https://github.com/googleapis/google-auth-library-python/issues/1258)) ([8ff0de5](https://github.com/googleapis/google-auth-library-python/commit/8ff0de5f6c26c8778e24e57d6b7f449856357f81))
+
+
+### Bug Fixes
+
+* Python: Remove aws url validation ([#1254](https://github.com/googleapis/google-auth-library-python/issues/1254)) ([20a966b](https://github.com/googleapis/google-auth-library-python/commit/20a966bbbfc66932f471e0bfd191769f40332233))
+
+## [2.16.3](https://github.com/googleapis/google-auth-library-python/compare/v2.16.2...v2.16.3) (2023-03-24)
+
+
+### Bug Fixes
+
+* Read both applicationId and relyingPartyId. ([#1246](https://github.com/googleapis/google-auth-library-python/issues/1246)) ([e125dfe](https://github.com/googleapis/google-auth-library-python/commit/e125dfe1e345bf5f6cef4efee8215de129401c51))
+
+## [2.16.2](https://github.com/googleapis/google-auth-library-python/compare/v2.16.1...v2.16.2) (2023-03-02)
+
+
+### Bug Fixes
+
+* Call gcloud config get project to get project for user cred ([#1243](https://github.com/googleapis/google-auth-library-python/issues/1243)) ([c078a13](https://github.com/googleapis/google-auth-library-python/commit/c078a13f3d7a6bda69efab11f11c1120e20137ef))
+* Do not use hardcoded string 'python', when you mean sys.executable. ([#1233](https://github.com/googleapis/google-auth-library-python/issues/1233)) ([91ac8e6](https://github.com/googleapis/google-auth-library-python/commit/91ac8e66396fd2335f2be6e7b40dc5c4f6e47bc2))
+* Don't retry if error or error_description is not string ([#1241](https://github.com/googleapis/google-auth-library-python/issues/1241)) ([e2d263a](https://github.com/googleapis/google-auth-library-python/commit/e2d263a2e79a35e8cc90aa338780d07c3313dc76))
+* Improve ADC related errors and warnings ([#1237](https://github.com/googleapis/google-auth-library-python/issues/1237)) ([2dfa213](https://github.com/googleapis/google-auth-library-python/commit/2dfa21371185340404d5d739723a8cd434886e02))
+
+## [2.16.1](https://github.com/googleapis/google-auth-library-python/compare/v2.16.0...v2.16.1) (2023-02-17)
+
+
+### Bug Fixes
+
+* Add support for python 3.11 ([#1212](https://github.com/googleapis/google-auth-library-python/issues/1212)) ([1fc95e3](https://github.com/googleapis/google-auth-library-python/commit/1fc95e3c3ecfbceb16c1be28725e8bc9eefe8bb0))
+* Remove 3PI config url validation ([#1220](https://github.com/googleapis/google-auth-library-python/issues/1220)) ([8b95515](https://github.com/googleapis/google-auth-library-python/commit/8b95515718d50b028c43ea9d6a7220489ffb5da0))
+* Update the docs generator interpreter to unblock documentation build ([#1218](https://github.com/googleapis/google-auth-library-python/issues/1218)) ([9d36c2f](https://github.com/googleapis/google-auth-library-python/commit/9d36c2f1f9e1eac8fbff4be504986dff5e7d4da2))
+
+## [2.16.0](https://github.com/googleapis/google-auth-library-python/compare/v2.15.0...v2.16.0) (2023-01-09)
+
+
+### Features
+
+* AwsCredentials should not call metadata server if security creds and region are retrievable through the environment variables ([#1195](https://github.com/googleapis/google-auth-library-python/issues/1195)) ([5e27c8f](https://github.com/googleapis/google-auth-library-python/commit/5e27c8f213b2e19ec504a04e1f95fc1333ea9e1e))
+* Wrap all python built-in exceptions into library excpetions ([#1191](https://github.com/googleapis/google-auth-library-python/issues/1191)) ([a83af39](https://github.com/googleapis/google-auth-library-python/commit/a83af399fe98764ee851997bf3078ec45a9b51c9))
+
+
+### Bug Fixes
+
+* Allow get_project_id to take a request ([#1203](https://github.com/googleapis/google-auth-library-python/issues/1203)) ([9a4d23a](https://github.com/googleapis/google-auth-library-python/commit/9a4d23a28eb4b9aa9e457ad053c087a0450eb298))
+* Make OAUTH2.0 client resistant to string type 'expires_in' responses from non-compliant services ([#1208](https://github.com/googleapis/google-auth-library-python/issues/1208)) ([9fc7b1c](https://github.com/googleapis/google-auth-library-python/commit/9fc7b1c5613366cc1ad7186f894cec26a5f2231e))
+
 ## [2.15.0](https://github.com/googleapis/google-auth-library-python/compare/v2.14.1...v2.15.0) (2022-12-01)
 
 

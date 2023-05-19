@@ -40,6 +40,10 @@ _URLENCODED_CONTENT_TYPE = "application/x-www-form-urlencoded"
 _JSON_CONTENT_TYPE = "application/json"
 _JWT_GRANT_TYPE = "urn:ietf:params:oauth:grant-type:jwt-bearer"
 _REFRESH_GRANT_TYPE = "refresh_token"
+_IAM_IDTOKEN_ENDPOINT = (
+    "https://iamcredentials.googleapis.com/v1/"
+    + "projects/-/serviceAccounts/{}:generateIdToken"
+)
 
 
 def _handle_error_response(response_data, retryable_error):
@@ -90,6 +94,11 @@ def _can_retry(status_code, response_data):
         error_desc = response_data.get("error_description") or ""
         error_code = response_data.get("error") or ""
 
+        if not isinstance(error_code, six.string_types) or not isinstance(
+            error_desc, six.string_types
+        ):
+            return False
+
         # Per Oauth 2.0 RFC https://www.rfc-editor.org/rfc/rfc6749.html#section-4.1.2.1
         # This is needed because a redirect will not return a 500 status code.
         retryable_error_descriptions = {
@@ -120,6 +129,11 @@ def _parse_expiry(response_data):
     expires_in = response_data.get("expires_in", None)
 
     if expires_in is not None:
+        # Some services do not respect the OAUTH2.0 RFC and send expires_in as a
+        # JSON String.
+        if isinstance(expires_in, str):
+            expires_in = int(expires_in)
+
         return _helpers.utcnow() + datetime.timedelta(seconds=expires_in)
     else:
         return None
@@ -301,6 +315,44 @@ def jwt_grant(request, token_uri, assertion, can_retry=True):
     expiry = _parse_expiry(response_data)
 
     return access_token, expiry, response_data
+
+
+def call_iam_generate_id_token_endpoint(request, signer_email, audience, access_token):
+    """Call iam.generateIdToken endpoint to get ID token.
+
+    Args:
+        request (google.auth.transport.Request): A callable used to make
+            HTTP requests.
+        signer_email (str): The signer email used to form the IAM
+            generateIdToken endpoint.
+        audience (str): The audience for the ID token.
+        access_token (str): The access token used to call the IAM endpoint.
+
+    Returns:
+        Tuple[str, datetime]: The ID token and expiration.
+    """
+    body = {"audience": audience, "includeEmail": "true", "useEmailAzp": "true"}
+
+    response_data = _token_endpoint_request(
+        request,
+        _IAM_IDTOKEN_ENDPOINT.format(signer_email),
+        body,
+        access_token=access_token,
+        use_json=True,
+    )
+
+    try:
+        id_token = response_data["token"]
+    except KeyError as caught_exc:
+        new_exc = exceptions.RefreshError(
+            "No ID token in response.", response_data, retryable=False
+        )
+        six.raise_from(new_exc, caught_exc)
+
+    payload = jwt.decode(id_token, verify=False)
+    expiry = datetime.datetime.utcfromtimestamp(payload["exp"])
+
+    return id_token, expiry
 
 
 def id_token_jwt_grant(request, token_uri, assertion, can_retry=True):
