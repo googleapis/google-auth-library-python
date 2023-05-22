@@ -145,6 +145,7 @@ class TestCredentials(object):
         default_scopes=None,
         service_account_impersonation_url=None,
         service_account_impersonation_options={},
+        universe_domain=external_account._DEFAULT_UNIVERSE_DOMAIN,
     ):
         return CredentialsImpl(
             audience=cls.AUDIENCE,
@@ -159,6 +160,7 @@ class TestCredentials(object):
             quota_project_id=quota_project_id,
             scopes=scopes,
             default_scopes=default_scopes,
+            universe_domain=universe_domain,
         )
 
     @classmethod
@@ -379,6 +381,7 @@ class TestCredentials(object):
             quota_project_id=self.QUOTA_PROJECT_ID,
             scopes=["email"],
             default_scopes=["default2"],
+            universe_domain=external_account._DEFAULT_UNIVERSE_DOMAIN,
         )
 
     def test_with_token_uri(self):
@@ -466,6 +469,7 @@ class TestCredentials(object):
             quota_project_id="project-foo",
             scopes=self.SCOPES,
             default_scopes=["default1"],
+            universe_domain=external_account._DEFAULT_UNIVERSE_DOMAIN,
         )
 
     def test_with_invalid_impersonation_target_principal(self):
@@ -479,7 +483,7 @@ class TestCredentials(object):
         )
 
     def test_info(self):
-        credentials = self.make_credentials()
+        credentials = self.make_credentials(universe_domain="dummy_universe.com")
 
         assert credentials.info == {
             "type": "external_account",
@@ -487,6 +491,7 @@ class TestCredentials(object):
             "subject_token_type": self.SUBJECT_TOKEN_TYPE,
             "token_url": self.TOKEN_URL,
             "credential_source": self.CREDENTIAL_SOURCE.copy(),
+            "universe_domain": "dummy_universe.com",
         }
 
     def test_info_workforce_pool(self):
@@ -501,6 +506,7 @@ class TestCredentials(object):
             "token_url": self.TOKEN_URL,
             "credential_source": self.CREDENTIAL_SOURCE.copy(),
             "workforce_pool_user_project": self.WORKFORCE_POOL_USER_PROJECT,
+            "universe_domain": external_account._DEFAULT_UNIVERSE_DOMAIN,
         }
 
     def test_info_with_full_options(self):
@@ -525,6 +531,7 @@ class TestCredentials(object):
             "quota_project_id": self.QUOTA_PROJECT_ID,
             "client_id": CLIENT_ID,
             "client_secret": CLIENT_SECRET,
+            "universe_domain": external_account._DEFAULT_UNIVERSE_DOMAIN,
         }
 
     def test_service_account_email_without_impersonation(self):
