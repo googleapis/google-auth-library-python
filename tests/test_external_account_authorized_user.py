@@ -22,6 +22,7 @@ from six.moves import http_client
 from google.auth import exceptions
 from google.auth import external_account_authorized_user
 from google.auth import transport
+from google.oauth2.utils import TokenIntrospectionClient
 
 TOKEN_URL = "https://sts.googleapis.com/v1/token"
 TOKEN_INFO_URL = "https://sts.googleapis.com/v1/introspect"
@@ -510,3 +511,82 @@ class TestCredentials(object):
         assert creds.scopes == SCOPES
         assert creds._revoke_url == REVOKE_URL
         assert creds._quota_project_id == QUOTA_PROJECT_ID
+
+    def test_token_introspection(self):
+        test_cases = {
+            "happy_case": {
+                "credential": {
+                    "client_id": CLIENT_ID,
+                    "client_secret": CLIENT_SECRET,
+                    "token_info_url": TOKEN_INFO_URL,
+                },
+                "token": "dummy_token",
+                "expect_introspection_value": {
+                    "client_id": "l238j323ds-23ij4",
+                    "username": "jdoe",
+                    "scope": "read write dolphin",
+                    "sub": "Z5O3upPC88QrAjx00dis",
+                    "aud": "https://protected.example.net/resource",
+                    "iss": "https://server.example.com/",
+                    "exp": 1419356238,
+                    "iat": 1419350238,
+                    "extension_field": "twenty-seven",
+                },
+                "expect_introspection_error": None,
+                "expect_error": None,
+            },
+            "missing token_info_url": {
+                "credential": {"client_id": CLIENT_ID, "client_secret": CLIENT_SECRET},
+                "expect_introspection_value": None,
+                "expect_introspection_error": None,
+                "expect_error": exceptions.InvalidResource,
+            },
+            "introspection_error": {
+                "credential": {
+                    "client_id": CLIENT_ID,
+                    "client_secret": CLIENT_SECRET,
+                    "token_info_url": TOKEN_INFO_URL,
+                },
+                "token": "dummy_token",
+                "request": self.make_mock_request(),
+                "expect_introspection_value": None,
+                "expect_introspection_error": exceptions.TransportError(),
+                "expect_error": exceptions.TransportError,
+            },
+            "non active token": {
+                "credential": {
+                    "client_id": CLIENT_ID,
+                    "client_secret": CLIENT_SECRET,
+                    "token_info_url": TOKEN_INFO_URL,
+                },
+                "token": "dummy_token",
+                "expect_introspection_value": None,
+                "expect_introspection_error": exceptions.TransportError(),
+                "expect_error": exceptions.TransportError,
+            },
+        }
+        for case in test_cases.values():
+            credentials = self.make_credentials(
+                token_url=TOKEN_URL,
+                client_id=case["credential"].get("client_id"),
+                client_secret=case["credential"].get("client_secret"),
+                token_info_url=case["credential"].get("token_info_url"),
+            )
+            credentials.token = case.get("token")
+            request = case.get("request")
+
+            with mock.patch.object(
+                TokenIntrospectionClient, "introspect"
+            ) as mock_method:
+                if not case.get("expect_introspection_error"):
+                    mock_method.return_value = case.get("expect_introspection_value")
+                else:
+                    mock_method.side_effect = case.get("expect_introspection_error")
+
+                if not case.get("expect_error"):
+                    actual_result = credentials.introspect_token(request)
+                    assert actual_result == case.get("expect_introspection_value")
+
+                else:
+                    with pytest.raises(case.get("expect_error")):
+                        credentials.introspect_token(request)
