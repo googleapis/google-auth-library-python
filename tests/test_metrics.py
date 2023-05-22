@@ -35,13 +35,16 @@ def test_add_metric_header():
 
 
 def test_versions():
-    assert metrics.auth_lib_version() == "auth/" + version.__version__
-    assert metrics.python_version() == "gl-python/" + platform.python_version()
+    assert metrics.python_and_auth_lib_version() == "gl-python/{} auth/{}".format(
+        platform.python_version(), version.__version__
+    )
 
 
-@mock.patch("google.auth.metrics.auth_lib_version", return_value="auth/1.1")
-@mock.patch("google.auth.metrics.python_version", return_value="gl-python/3.7")
-def test_metric_values(mock_python_version, mock_auth_lib_version):
+@mock.patch(
+    "google.auth.metrics.python_and_auth_lib_version",
+    return_value="gl-python/3.7 auth/1.1",
+)
+def test_metric_values(mock_python_and_auth_lib_version):
     assert (
         metrics.token_request_access_token_mds()
         == "gl-python/3.7 auth/1.1 auth-request-type/at cred-type/mds"
