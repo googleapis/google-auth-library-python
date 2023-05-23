@@ -1807,9 +1807,9 @@ class TestCredentials(object):
                     mock_method.side_effect = case.get("expect_introspection_error")
 
                 if not case.get("expect_error"):
-                    actual_result = credentials.introspect_token(request)
+                    actual_result = credentials._introspect_token(request)
                     assert actual_result == case.get("expect_introspection_value")
 
                 else:
                     with pytest.raises(case.get("expect_error")):
-                        credentials.introspect_token(request)
+                        credentials._introspect_token(request)

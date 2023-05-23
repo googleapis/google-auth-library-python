@@ -391,11 +391,8 @@ class Credentials(
         kwargs.update(token_url=token_uri)
         return self.__class__(**kwargs)
 
-    def introspect_token(self, request):
-        """Introspection of token info.
-
-        If the credential object has a token_info_url provided, we can
-        introspect token info by requesting that endpoint.
+    def _introspect_token(self, request):
+        """Returns meta data details of an active token.
 
         Returns:
             Mapping: The active token meta-information returned by the
@@ -414,9 +411,6 @@ class Credentials(
                 If an error is encountered while calling the token
                 introspection endpoint.
         """
-        # Token info introspection following RFC7662 standard:
-        #    https://datatracker.ietf.org/doc/html/rfc7662
-        #
         if not self._token_info_url:
             raise exceptions.InvalidResource("Missing token_info_url")
 
