@@ -34,10 +34,12 @@ def test_add_metric_header():
     assert headers == {"x-goog-api-client": "bar"}
 
 
-def test_versions():
-    assert metrics.python_and_auth_lib_version() == "gl-python/{} auth/{}".format(
-        platform.python_version(), version.__version__
-    )
+@mock.patch.object(platform, "python_version", return_value="3.7")
+def test_versions(mock_python_version):
+    version_save = version.__version__
+    version.__version__ = "1.1"
+    assert metrics.python_and_auth_lib_version() == "gl-python/3.7 auth/1.1"
+    version.__version__ = version_save
 
 
 @mock.patch(
