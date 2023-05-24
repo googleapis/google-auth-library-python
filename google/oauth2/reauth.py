@@ -324,6 +324,10 @@ def refresh_grant(
     response_status_ok, response_data, retryable_error = _client._token_endpoint_request_no_throw(
         request, token_uri, body
     )
+   
+    if type(response_data) != dict:
+        response_data = {"data": response_data}
+   
     if (
         not response_status_ok
         and response_data.get("error") == _REAUTH_NEEDED_ERROR
