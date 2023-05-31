@@ -34,12 +34,17 @@ from google.auth import _exponential_backoff
 from google.auth import _helpers
 from google.auth import exceptions
 from google.auth import jwt
+from google.auth import metrics
 from google.auth import transport
 
 _URLENCODED_CONTENT_TYPE = "application/x-www-form-urlencoded"
 _JSON_CONTENT_TYPE = "application/json"
 _JWT_GRANT_TYPE = "urn:ietf:params:oauth:grant-type:jwt-bearer"
 _REFRESH_GRANT_TYPE = "refresh_token"
+_IAM_IDTOKEN_ENDPOINT = (
+    "https://iamcredentials.googleapis.com/v1/"
+    + "projects/-/serviceAccounts/{}:generateIdToken"
+)
 
 
 def _handle_error_response(response_data, retryable_error):
@@ -142,6 +147,7 @@ def _token_endpoint_request_no_throw(
     access_token=None,
     use_json=False,
     can_retry=True,
+    headers=None,
     **kwargs
 ):
     """Makes a request to the OAuth 2.0 authorization server's token endpoint.
@@ -157,6 +163,7 @@ def _token_endpoint_request_no_throw(
         use_json (Optional(bool)): Use urlencoded format or json format for the
             content type. The default value is False.
         can_retry (bool): Enable or disable request retry behavior.
+        headers (Optional[Mapping[str, str]]): The headers for the request.
         kwargs: Additional arguments passed on to the request method. The
             kwargs will be passed to `requests.request` method, see:
             https://docs.python-requests.org/en/latest/api/#requests.request.
@@ -172,18 +179,21 @@ def _token_endpoint_request_no_throw(
           is retryable.
     """
     if use_json:
-        headers = {"Content-Type": _JSON_CONTENT_TYPE}
+        headers_to_use = {"Content-Type": _JSON_CONTENT_TYPE}
         body = json.dumps(body).encode("utf-8")
     else:
-        headers = {"Content-Type": _URLENCODED_CONTENT_TYPE}
+        headers_to_use = {"Content-Type": _URLENCODED_CONTENT_TYPE}
         body = urllib.parse.urlencode(body).encode("utf-8")
 
     if access_token:
-        headers["Authorization"] = "Bearer {}".format(access_token)
+        headers_to_use["Authorization"] = "Bearer {}".format(access_token)
+
+    if headers:
+        headers_to_use.update(headers)
 
     def _perform_request():
         response = request(
-            method="POST", url=token_uri, headers=headers, body=body, **kwargs
+            method="POST", url=token_uri, headers=headers_to_use, body=body, **kwargs
         )
         response_body = (
             response.data.decode("utf-8")
@@ -227,6 +237,7 @@ def _token_endpoint_request(
     access_token=None,
     use_json=False,
     can_retry=True,
+    headers=None,
     **kwargs
 ):
     """Makes a request to the OAuth 2.0 authorization server's token endpoint.
@@ -241,6 +252,7 @@ def _token_endpoint_request(
         use_json (Optional(bool)): Use urlencoded format or json format for the
             content type. The default value is False.
         can_retry (bool): Enable or disable request retry behavior.
+        headers (Optional[Mapping[str, str]]): The headers for the request.
         kwargs: Additional arguments passed on to the request method. The
             kwargs will be passed to `requests.request` method, see:
             https://docs.python-requests.org/en/latest/api/#requests.request.
@@ -264,6 +276,7 @@ def _token_endpoint_request(
         access_token=access_token,
         use_json=use_json,
         can_retry=can_retry,
+        headers=headers,
         **kwargs
     )
     if not response_status_ok:
@@ -297,7 +310,13 @@ def jwt_grant(request, token_uri, assertion, can_retry=True):
     body = {"assertion": assertion, "grant_type": _JWT_GRANT_TYPE}
 
     response_data = _token_endpoint_request(
-        request, token_uri, body, can_retry=can_retry
+        request,
+        token_uri,
+        body,
+        can_retry=can_retry,
+        headers={
+            metrics.API_CLIENT_HEADER: metrics.token_request_access_token_sa_assertion()
+        },
     )
 
     try:
@@ -311,6 +330,44 @@ def jwt_grant(request, token_uri, assertion, can_retry=True):
     expiry = _parse_expiry(response_data)
 
     return access_token, expiry, response_data
+
+
+def call_iam_generate_id_token_endpoint(request, signer_email, audience, access_token):
+    """Call iam.generateIdToken endpoint to get ID token.
+
+    Args:
+        request (google.auth.transport.Request): A callable used to make
+            HTTP requests.
+        signer_email (str): The signer email used to form the IAM
+            generateIdToken endpoint.
+        audience (str): The audience for the ID token.
+        access_token (str): The access token used to call the IAM endpoint.
+
+    Returns:
+        Tuple[str, datetime]: The ID token and expiration.
+    """
+    body = {"audience": audience, "includeEmail": "true", "useEmailAzp": "true"}
+
+    response_data = _token_endpoint_request(
+        request,
+        _IAM_IDTOKEN_ENDPOINT.format(signer_email),
+        body,
+        access_token=access_token,
+        use_json=True,
+    )
+
+    try:
+        id_token = response_data["token"]
+    except KeyError as caught_exc:
+        new_exc = exceptions.RefreshError(
+            "No ID token in response.", response_data, retryable=False
+        )
+        six.raise_from(new_exc, caught_exc)
+
+    payload = jwt.decode(id_token, verify=False)
+    expiry = datetime.datetime.utcfromtimestamp(payload["exp"])
+
+    return id_token, expiry
 
 
 def id_token_jwt_grant(request, token_uri, assertion, can_retry=True):
@@ -342,7 +399,13 @@ def id_token_jwt_grant(request, token_uri, assertion, can_retry=True):
     body = {"assertion": assertion, "grant_type": _JWT_GRANT_TYPE}
 
     response_data = _token_endpoint_request(
-        request, token_uri, body, can_retry=can_retry
+        request,
+        token_uri,
+        body,
+        can_retry=can_retry,
+        headers={
+            metrics.API_CLIENT_HEADER: metrics.token_request_id_token_sa_assertion()
+        },
     )
 
     try:

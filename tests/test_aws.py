@@ -28,6 +28,10 @@ from google.auth import exceptions
 from google.auth import transport
 
 
+IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE = (
+    "gl-python/3.7 auth/1.1 auth-request-type/at cred-type/imp"
+)
+
 CLIENT_ID = "username"
 CLIENT_SECRET = "password"
 # Base64 encoding of "username:password".
@@ -69,6 +73,7 @@ REQUEST_PARAMS = '{"KeySchema":[{"KeyType":"HASH","AttributeName":"Id"}],"TableN
 # Each tuple contains the following entries:
 # region, time, credentials, original_request, signed_request
 
+DEFAULT_UNIVERSE_DOMAIN = "googleapis.com"
 VALID_TOKEN_URLS = [
     "https://sts.googleapis.com",
     "https://us-east-1.sts.googleapis.com",
@@ -925,6 +930,7 @@ class TestCredentials(object):
             credential_source=self.CREDENTIAL_SOURCE,
             quota_project_id=QUOTA_PROJECT_ID,
             workforce_pool_user_project=None,
+            universe_domain=DEFAULT_UNIVERSE_DOMAIN,
         )
 
     @mock.patch.object(aws.Credentials, "__init__", return_value=None)
@@ -952,6 +958,7 @@ class TestCredentials(object):
             credential_source=self.CREDENTIAL_SOURCE,
             quota_project_id=None,
             workforce_pool_user_project=None,
+            universe_domain=DEFAULT_UNIVERSE_DOMAIN,
         )
 
     @mock.patch.object(aws.Credentials, "__init__", return_value=None)
@@ -967,6 +974,7 @@ class TestCredentials(object):
             "client_secret": CLIENT_SECRET,
             "quota_project_id": QUOTA_PROJECT_ID,
             "credential_source": self.CREDENTIAL_SOURCE,
+            "universe_domain": DEFAULT_UNIVERSE_DOMAIN,
         }
         config_file = tmpdir.join("config.json")
         config_file.write(json.dumps(info))
@@ -986,6 +994,7 @@ class TestCredentials(object):
             credential_source=self.CREDENTIAL_SOURCE,
             quota_project_id=QUOTA_PROJECT_ID,
             workforce_pool_user_project=None,
+            universe_domain=DEFAULT_UNIVERSE_DOMAIN,
         )
 
     @mock.patch.object(aws.Credentials, "__init__", return_value=None)
@@ -1014,6 +1023,7 @@ class TestCredentials(object):
             credential_source=self.CREDENTIAL_SOURCE,
             quota_project_id=None,
             workforce_pool_user_project=None,
+            universe_domain=DEFAULT_UNIVERSE_DOMAIN,
         )
 
     def test_constructor_invalid_credential_source(self):
@@ -1067,6 +1077,7 @@ class TestCredentials(object):
             "token_url": TOKEN_URL,
             "token_info_url": TOKEN_INFO_URL,
             "credential_source": self.CREDENTIAL_SOURCE,
+            "universe_domain": DEFAULT_UNIVERSE_DOMAIN,
         }
 
     def test_token_info_url(self):
@@ -1495,39 +1506,6 @@ class TestCredentials(object):
         credentials.retrieve_subject_token(request)
         assert not request.called
 
-    def test_validate_metadata_server_url_if_any(self):
-        aws.Credentials.validate_metadata_server_url_if_any(
-            "http://[fd00:ec2::254]/latest/meta-data/placement/availability-zone", "url"
-        )
-        aws.Credentials.validate_metadata_server_url_if_any(
-            "http://169.254.169.254/latest/meta-data/placement/availability-zone", "url"
-        )
-
-        with pytest.raises(ValueError) as excinfo:
-            aws.Credentials.validate_metadata_server_url_if_any(
-                "http://fd00:ec2::254/latest/meta-data/placement/availability-zone",
-                "url",
-            )
-        assert excinfo.match("Invalid hostname 'fd00' for 'url'")
-
-        with pytest.raises(ValueError) as excinfo:
-            aws.Credentials.validate_metadata_server_url_if_any(
-                "http://abc.com/latest/meta-data/placement/availability-zone", "url"
-            )
-        assert excinfo.match("Invalid hostname 'abc.com' for 'url'")
-
-    def test_retrieve_subject_token_invalid_hosts(self):
-        keys = ["url", "region_url", "imdsv2_session_token_url"]
-        for key in keys:
-            credential_source = self.CREDENTIAL_SOURCE.copy()
-            credential_source[
-                key
-            ] = "http://abc.com/latest/meta-data/iam/security-credentials"
-
-            with pytest.raises(ValueError) as excinfo:
-                self.make_credentials(credential_source=credential_source)
-            assert excinfo.match("Invalid hostname 'abc.com' for '{}'".format(key))
-
     @mock.patch("google.auth._helpers.utcnow")
     def test_retrieve_subject_token_success_ipv6(self, utcnow):
         utcnow.return_value = datetime.datetime.strptime(
@@ -1927,8 +1905,14 @@ class TestCredentials(object):
         assert credentials.scopes is None
         assert credentials.default_scopes == SCOPES
 
+    @mock.patch(
+        "google.auth.metrics.token_request_access_token_impersonate",
+        return_value=IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
+    )
     @mock.patch("google.auth._helpers.utcnow")
-    def test_refresh_success_with_impersonation_ignore_default_scopes(self, utcnow):
+    def test_refresh_success_with_impersonation_ignore_default_scopes(
+        self, utcnow, mock_metrics_header_value
+    ):
         utcnow.return_value = datetime.datetime.strptime(
             self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
         )
@@ -1963,6 +1947,7 @@ class TestCredentials(object):
             "Content-Type": "application/json",
             "authorization": "Bearer {}".format(self.SUCCESS_RESPONSE["access_token"]),
             "x-goog-user-project": QUOTA_PROJECT_ID,
+            "x-goog-api-client": IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
         }
         impersonation_request_data = {
             "delegates": None,
@@ -2011,8 +1996,14 @@ class TestCredentials(object):
         assert credentials.scopes == SCOPES
         assert credentials.default_scopes == ["ignored"]
 
+    @mock.patch(
+        "google.auth.metrics.token_request_access_token_impersonate",
+        return_value=IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
+    )
     @mock.patch("google.auth._helpers.utcnow")
-    def test_refresh_success_with_impersonation_use_default_scopes(self, utcnow):
+    def test_refresh_success_with_impersonation_use_default_scopes(
+        self, utcnow, mock_metrics_header_value
+    ):
         utcnow.return_value = datetime.datetime.strptime(
             self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
         )
@@ -2047,6 +2038,7 @@ class TestCredentials(object):
             "Content-Type": "application/json",
             "authorization": "Bearer {}".format(self.SUCCESS_RESPONSE["access_token"]),
             "x-goog-user-project": QUOTA_PROJECT_ID,
+            "x-goog-api-client": IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
         }
         impersonation_request_data = {
             "delegates": None,

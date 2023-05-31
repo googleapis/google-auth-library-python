@@ -43,6 +43,13 @@ SAMPLE_ID_TOKEN = (
     b"bsxbLa6Fp0SYeYwO8ifEnkRvasVpc1WTQqfRB2JCj5pTBDzJpIpFCMmnQ"
 )
 
+ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE = (
+    "gl-python/3.7 auth/1.1 auth-request-type/at cred-type/mds"
+)
+ID_TOKEN_REQUEST_METRICS_HEADER_VALUE = (
+    "gl-python/3.7 auth/1.1 auth-request-type/it cred-type/mds"
+)
+
 
 class TestCredentials(object):
     credentials = None
@@ -97,11 +104,15 @@ class TestCredentials(object):
         assert self.credentials.valid
 
     @mock.patch(
+        "google.auth.metrics.token_request_access_token_mds",
+        return_value=ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
+    )
+    @mock.patch(
         "google.auth._helpers.utcnow",
         return_value=datetime.datetime.min + _helpers.REFRESH_THRESHOLD,
     )
     @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
-    def test_refresh_success_with_scopes(self, get, utcnow):
+    def test_refresh_success_with_scopes(self, get, utcnow, mock_metrics_header_value):
         get.side_effect = [
             {
                 # First request is for sevice account info.
@@ -133,7 +144,10 @@ class TestCredentials(object):
         assert self.credentials.valid
 
         kwargs = get.call_args[1]
-        assert kwargs == {"params": {"scopes": "three,four"}}
+        assert kwargs["params"] == {"scopes": "three,four"}
+        assert kwargs["headers"] == {
+            "x-goog-api-client": ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE
+        }
 
     @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
     def test_refresh_error(self, get):
@@ -184,6 +198,15 @@ class TestCredentials(object):
         self.credentials = self.credentials.with_scopes(scopes)
 
         assert self.credentials._scopes == scopes
+
+    def test_token_usage_metrics(self):
+        self.credentials.token = "token"
+        self.credentials.expiry = None
+
+        headers = {}
+        self.credentials.before_request(mock.Mock(), None, None, headers)
+        assert headers["authorization"] == "Bearer token"
+        assert headers["x-goog-api-client"] == "cred-type/mds"
 
 
 class TestIDTokenCredentials(object):
@@ -724,10 +747,16 @@ class TestIDTokenCredentials(object):
         assert signature == b"signature"
 
     @mock.patch(
+        "google.auth.metrics.token_request_id_token_mds",
+        return_value=ID_TOKEN_REQUEST_METRICS_HEADER_VALUE,
+    )
+    @mock.patch(
         "google.auth.compute_engine._metadata.get_service_account_info", autospec=True
     )
     @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
-    def test_get_id_token_from_metadata(self, get, get_service_account_info):
+    def test_get_id_token_from_metadata(
+        self, get, get_service_account_info, mock_metrics_header_value
+    ):
         get.return_value = SAMPLE_ID_TOKEN
         get_service_account_info.return_value = {"email": "foo@example.com"}
 
@@ -735,6 +764,10 @@ class TestIDTokenCredentials(object):
             mock.Mock(), "audience", use_metadata_identity_endpoint=True
         )
         cred.refresh(request=mock.Mock())
+
+        assert get.call_args.kwargs["headers"] == {
+            "x-goog-api-client": ID_TOKEN_REQUEST_METRICS_HEADER_VALUE
+        }
 
         assert cred.token == SAMPLE_ID_TOKEN
         assert cred.expiry == datetime.datetime.fromtimestamp(SAMPLE_ID_TOKEN_EXP)
