@@ -37,6 +37,7 @@ from google.auth import _helpers
 from google.auth import credentials
 from google.auth import exceptions
 from google.auth import jwt
+from google.auth import metrics
 
 _DEFAULT_TOKEN_LIFETIME_SECS = 3600  # 1 hour in seconds
 
@@ -238,6 +239,9 @@ class Credentials(
         self._quota_project_id = quota_project_id
         self._iam_endpoint_override = iam_endpoint_override
 
+    def _metric_header_for_usage(self):
+        return metrics.CRED_TYPE_SA_IMPERSONATE
+
     @_helpers.copy_docstring(credentials.Credentials)
     def refresh(self, request):
         self._update_token(request)
@@ -261,7 +265,10 @@ class Credentials(
             "lifetime": str(self._lifetime) + "s",
         }
 
-        headers = {"Content-Type": "application/json"}
+        headers = {
+            "Content-Type": "application/json",
+            metrics.API_CLIENT_HEADER: metrics.token_request_access_token_impersonate(),
+        }
 
         # Apply the source credentials authentication info.
         self._source_credentials.apply(headers)
@@ -422,17 +429,28 @@ class IDTokenCredentials(credentials.CredentialsWithQuotaProject):
             "includeEmail": self._include_email,
         }
 
-        headers = {"Content-Type": "application/json"}
+        headers = {
+            "Content-Type": "application/json",
+            metrics.API_CLIENT_HEADER: metrics.token_request_id_token_impersonate(),
+        }
 
         authed_session = AuthorizedSession(
             self._target_credentials._source_credentials, auth_request=request
         )
 
-        response = authed_session.post(
-            url=iam_sign_endpoint,
-            headers=headers,
-            data=json.dumps(body).encode("utf-8"),
-        )
+        try:
+            response = authed_session.post(
+                url=iam_sign_endpoint,
+                headers=headers,
+                data=json.dumps(body).encode("utf-8"),
+            )
+        finally:
+            authed_session.close()
+
+        if response.status_code != http_client.OK:
+            raise exceptions.RefreshError(
+                "Error getting ID token: {}".format(response.json())
+            )
 
         id_token = response.json()["token"]
         self.token = id_token
