@@ -34,7 +34,6 @@ Those steps are:
 
 import sys
 
-import six
 from six.moves import range
 
 from google.auth import exceptions
@@ -336,7 +335,7 @@ def refresh_grant(
         request, token_uri, body, headers=metrics_header
     )
 
-    if not response_status_ok and isinstance(response_data, six.string_types):
+    if not response_status_ok and isinstance(response_data, str):
         raise exceptions.RefreshError(response_data, retryable=False)
 
     if (
