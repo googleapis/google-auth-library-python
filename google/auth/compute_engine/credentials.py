@@ -28,6 +28,7 @@ from google.auth import credentials
 from google.auth import exceptions
 from google.auth import iam
 from google.auth import jwt
+from google.auth import metrics
 from google.auth.compute_engine import _metadata
 from google.oauth2 import _client
 
@@ -93,6 +94,9 @@ class Credentials(credentials.Scoped, credentials.CredentialsWithQuotaProject):
         # Don't override scopes requested by the user.
         if self._scopes is None:
             self._scopes = info["scopes"]
+
+    def _metric_header_for_usage(self):
+        return metrics.CRED_TYPE_SA_MDS
 
     def refresh(self, request):
         """Refresh the access token and scopes.
@@ -374,7 +378,12 @@ class IDTokenCredentials(
         try:
             path = "instance/service-accounts/default/identity"
             params = {"audience": self._target_audience, "format": "full"}
-            id_token = _metadata.get(request, path, params=params)
+            metrics_header = {
+                metrics.API_CLIENT_HEADER: metrics.token_request_id_token_mds()
+            }
+            id_token = _metadata.get(
+                request, path, params=params, headers=metrics_header
+            )
         except exceptions.TransportError as caught_exc:
             new_exc = exceptions.RefreshError(caught_exc)
             six.raise_from(new_exc, caught_exc)
