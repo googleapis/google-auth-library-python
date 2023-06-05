@@ -22,9 +22,9 @@ def test_namespace_package_compat(tmp_path):
     The ``google`` namespace package should not be masked
     by the presence of ``google-auth``.
     """
-    google = tmp_path / 'google'
+    google = tmp_path / "google"
     google.mkdir()
-    google.joinpath('othermod.py').write_text('')
+    google.joinpath("othermod.py").write_text("")
     env = dict(os.environ, PYTHONPATH=str(tmp_path))
-    cmd = [sys.executable, '-m', 'google.othermod']
+    cmd = [sys.executable, "-m", "google.othermod"]
     subprocess.check_call(cmd, env=env)
