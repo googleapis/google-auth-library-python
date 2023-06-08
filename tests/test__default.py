@@ -202,6 +202,14 @@ def test_load_credentials_from_dict_non_dict_object():
     assert excinfo.match(r"dict type was expected")
 
 
+def test_load_credentials_from_dict_authorized_user():
+    credentials, project_id = _default.load_credentials_from_dict(
+        AUTHORIZED_USER_FILE_DATA
+    )
+    assert isinstance(credentials, google.oauth2.credentials.Credentials)
+    assert project_id is None
+
+
 def test_load_credentials_from_file_invalid_json(tmpdir):
     jsonfile = tmpdir.join("invalid.json")
     jsonfile.write("{")
