@@ -40,6 +40,7 @@ from google.auth import _helpers
 from google.auth import credentials
 from google.auth import exceptions
 from google.auth import impersonated_credentials
+from google.auth import metrics
 from google.oauth2 import sts
 from google.oauth2 import utils
 
@@ -85,6 +86,7 @@ class Credentials(
         default_scopes=None,
         workforce_pool_user_project=None,
         universe_domain=_DEFAULT_UNIVERSE_DOMAIN,
+        metrics_options=None
     ):
         """Instantiates an external account credentials object.
 
@@ -110,6 +112,7 @@ class Credentials(
                 billing/quota.
             universe_domain (str): The universe domain. The default universe
                 domain is googleapis.com.
+            metrics_options (Optional (Mapping)): Dictionary of options used for metrics logging.
         Raises:
             google.auth.exceptions.RefreshError: If the generateAccessToken
                 endpoint returned an error.
@@ -139,6 +142,9 @@ class Credentials(
         else:
             self._client_auth = None
         self._sts_client = sts.Client(self._token_url, self._client_auth)
+
+        # Set metrics options or create default if options were not provided.
+        self._metrics_options = metrics_options or self._create_default_metrics_options()
 
         if self._service_account_impersonation_url:
             self._impersonated_credentials = self._initialize_impersonated_credentials()
@@ -172,6 +178,7 @@ class Credentials(
         )
         config_info.pop("scopes", None)
         config_info.pop("default_scopes", None)
+        config_info.pop("metrics_options", None)
         return {key: value for key, value in config_info.items() if value is not None}
 
     def _constructor_args(self):
@@ -193,6 +200,10 @@ class Credentials(
             "scopes": self._scopes,
             "default_scopes": self._default_scopes,
             "universe_domain": self._universe_domain,
+            "metrics_options": copy.deepcopy(
+                self._metrics_options
+            )
+            or None,
         }
         if not self.is_workforce_pool:
             args.pop("workforce_pool_user_project")
@@ -349,7 +360,7 @@ class Credentials(
         return None
 
     @_helpers.copy_docstring(credentials.Credentials)
-    def refresh(self, request):
+    def  refresh(self, request):
         scopes = self._scopes if self._scopes is not None else self._default_scopes
         if self._impersonated_credentials:
             self._impersonated_credentials.refresh(request)
@@ -362,6 +373,7 @@ class Credentials(
             # is used. The client ID is sufficient for determining the user project.
             if self._workforce_pool_user_project and not self._client_id:
                 additional_options = {"userProject": self._workforce_pool_user_project}
+            additional_headers = {metrics.API_CLIENT_HEADER: metrics.byoid_metrics_header(self._metrics_options)}
             response_data = self._sts_client.exchange_token(
                 request=request,
                 grant_type=_STS_GRANT_TYPE,
@@ -371,6 +383,7 @@ class Credentials(
                 scopes=scopes,
                 requested_token_type=_STS_REQUESTED_TOKEN_TYPE,
                 additional_options=additional_options,
+                additional_headers=additional_headers,
             )
             self.token = response_data.get("access_token")
             lifetime = datetime.timedelta(seconds=response_data.get("expires_in"))
@@ -404,7 +417,6 @@ class Credentials(
             google.auth.exceptions.RefreshError: If the generateAccessToken
                 endpoint returned an error.
         """
-        # Return copy of instance with no service account impersonation.
         kwargs = self._constructor_args()
         kwargs.update(
             service_account_impersonation_url=None,
@@ -431,6 +443,20 @@ class Credentials(
                 "token_lifetime_seconds"
             ),
         )
+
+    def _create_default_metrics_options(self):
+        metrics_options = {}
+        if self._service_account_impersonation_url:
+            metrics_options["sa-impersonation"] = "true"
+        else:
+            metrics_options["sa-impersonation"] = "false"
+        if self._service_account_impersonation_options.get(
+                "token_lifetime_seconds"):
+            metrics_options["config-lifetime"] = "true"
+        else:
+            metrics_options["config-lifetime"] = "false"
+
+        return metrics_options
 
     @classmethod
     def from_info(cls, info, **kwargs):

@@ -216,6 +216,16 @@ class Credentials(external_account.Credentials):
             )
         return token
 
+    def _create_default_metrics_options(self):
+        metrics_options = super(Credentials, self)._create_default_metrics_options()
+        try:
+            if self._credential_source.get("file"):
+                metrics_options["source"] = "file"
+            else:
+                metrics_options["source"] = "url"
+        finally:
+            return metrics_options
+
     @classmethod
     def from_info(cls, info, **kwargs):
         """Creates an Identity Pool Credentials instance from parsed external account info.
