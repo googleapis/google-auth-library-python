@@ -32,7 +32,7 @@ IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE = (
     "gl-python/3.7 auth/1.1 auth-request-type/at cred-type/imp"
 )
 
-LANG_LIBRARY_METRICS_HEADER_VALUE = ("gl-python/3.7 auth/1.1")
+LANG_LIBRARY_METRICS_HEADER_VALUE = "gl-python/3.7 auth/1.1"
 
 CLIENT_ID = "username"
 CLIENT_SECRET = "password"
@@ -1796,11 +1796,13 @@ class TestCredentials(object):
         assert excinfo.match(r"Unable to retrieve AWS security credentials")
 
     @mock.patch(
-         "google.auth.metrics.python_and_auth_lib_version",
+        "google.auth.metrics.python_and_auth_lib_version",
         return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
     )
     @mock.patch("google.auth._helpers.utcnow")
-    def test_refresh_success_without_impersonation_ignore_default_scopes(self, utcnow, mock_auth_lib_value):
+    def test_refresh_success_without_impersonation_ignore_default_scopes(
+        self, utcnow, mock_auth_lib_value
+    ):
         utcnow.return_value = datetime.datetime.strptime(
             self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
         )
@@ -1857,11 +1859,13 @@ class TestCredentials(object):
         assert credentials.default_scopes == ["ignored"]
 
     @mock.patch(
-         "google.auth.metrics.python_and_auth_lib_version",
+        "google.auth.metrics.python_and_auth_lib_version",
         return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
     )
     @mock.patch("google.auth._helpers.utcnow")
-    def test_refresh_success_without_impersonation_use_default_scopes(self, utcnow, mock_auth_lib_value):
+    def test_refresh_success_without_impersonation_use_default_scopes(
+        self, utcnow, mock_auth_lib_value
+    ):
         utcnow.return_value = datetime.datetime.strptime(
             self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
         )
@@ -1922,7 +1926,7 @@ class TestCredentials(object):
         return_value=IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
     )
     @mock.patch(
-         "google.auth.metrics.python_and_auth_lib_version",
+        "google.auth.metrics.python_and_auth_lib_version",
         return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
     )
     @mock.patch("google.auth._helpers.utcnow")
@@ -2018,7 +2022,7 @@ class TestCredentials(object):
         return_value=IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
     )
     @mock.patch(
-         "google.auth.metrics.python_and_auth_lib_version",
+        "google.auth.metrics.python_and_auth_lib_version",
         return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
     )
     @mock.patch("google.auth._helpers.utcnow")

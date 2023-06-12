@@ -124,10 +124,11 @@ def reauth_start():
 def reauth_continue():
     return "{} {}".format(python_and_auth_lib_version(), REQUEST_TYPE_REAUTH_CONTINUE)
 
+
 # x-goog-api-client header value for BYOID calls to the sts endpoint.
 # Example: "gl-python/3.7 auth/1.1 google-byoid-sdk source/aws sa-impersonation/True sa-impersonation/True"
 def byoid_metrics_header(metrics_options):
-    header =  "{} {}".format(python_and_auth_lib_version(), BYOID_HEADER_SECTION)
+    header = "{} {}".format(python_and_auth_lib_version(), BYOID_HEADER_SECTION)
     for key, value in metrics_options.items():
         header = "{} {}/{}".format(header, key, value)
     return header

@@ -86,7 +86,7 @@ class Credentials(
         default_scopes=None,
         workforce_pool_user_project=None,
         universe_domain=_DEFAULT_UNIVERSE_DOMAIN,
-        metrics_options=None
+        metrics_options=None,
     ):
         """Instantiates an external account credentials object.
 
@@ -144,7 +144,9 @@ class Credentials(
         self._sts_client = sts.Client(self._token_url, self._client_auth)
 
         # Set metrics options or create default if options were not provided.
-        self._metrics_options = metrics_options or self._create_default_metrics_options()
+        self._metrics_options = (
+            metrics_options or self._create_default_metrics_options()
+        )
 
         if self._service_account_impersonation_url:
             self._impersonated_credentials = self._initialize_impersonated_credentials()
@@ -200,10 +202,7 @@ class Credentials(
             "scopes": self._scopes,
             "default_scopes": self._default_scopes,
             "universe_domain": self._universe_domain,
-            "metrics_options": copy.deepcopy(
-                self._metrics_options
-            )
-            or None,
+            "metrics_options": copy.deepcopy(self._metrics_options) or None,
         }
         if not self.is_workforce_pool:
             args.pop("workforce_pool_user_project")
@@ -360,7 +359,7 @@ class Credentials(
         return None
 
     @_helpers.copy_docstring(credentials.Credentials)
-    def  refresh(self, request):
+    def refresh(self, request):
         scopes = self._scopes if self._scopes is not None else self._default_scopes
         if self._impersonated_credentials:
             self._impersonated_credentials.refresh(request)
@@ -373,7 +372,11 @@ class Credentials(
             # is used. The client ID is sufficient for determining the user project.
             if self._workforce_pool_user_project and not self._client_id:
                 additional_options = {"userProject": self._workforce_pool_user_project}
-            additional_headers = {metrics.API_CLIENT_HEADER: metrics.byoid_metrics_header(self._metrics_options)}
+            additional_headers = {
+                metrics.API_CLIENT_HEADER: metrics.byoid_metrics_header(
+                    self._metrics_options
+                )
+            }
             response_data = self._sts_client.exchange_token(
                 request=request,
                 grant_type=_STS_GRANT_TYPE,
@@ -450,8 +453,7 @@ class Credentials(
             metrics_options["sa-impersonation"] = "true"
         else:
             metrics_options["sa-impersonation"] = "false"
-        if self._service_account_impersonation_options.get(
-                "token_lifetime_seconds"):
+        if self._service_account_impersonation_options.get("token_lifetime_seconds"):
             metrics_options["config-lifetime"] = "true"
         else:
             metrics_options["config-lifetime"] = "false"

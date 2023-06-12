@@ -275,7 +275,8 @@ class TestCredentials(object):
         else:
             metrics_options["sa-impersonation"] = "false"
         if credentials._service_account_impersonation_options.get(
-                "token_lifetime_seconds"):
+            "token_lifetime_seconds"
+        ):
             metrics_options["config-lifetime"] = "true"
         else:
             metrics_options["config-lifetime"] = "false"
@@ -284,7 +285,9 @@ class TestCredentials(object):
         else:
             metrics_options["source"] = "url"
 
-        token_headers["x-goog-api-client"] = metrics.byoid_metrics_header(metrics_options)
+        token_headers["x-goog-api-client"] = metrics.byoid_metrics_header(
+            metrics_options
+        )
 
         if service_account_impersonation_url:
             token_scopes = "https://www.googleapis.com/auth/iam"
