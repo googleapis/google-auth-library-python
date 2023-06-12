@@ -438,12 +438,22 @@ class IDTokenCredentials(credentials.CredentialsWithQuotaProject):
             self._target_credentials._source_credentials, auth_request=request
         )
 
-        response = authed_session.post(
-            url=iam_sign_endpoint,
-            headers=headers,
-            data=json.dumps(body).encode("utf-8"),
-        )
+        try:
+            response = authed_session.post(
+                url=iam_sign_endpoint,
+                headers=headers,
+                data=json.dumps(body).encode("utf-8"),
+            )
+        finally:
+            authed_session.close()
+
+        if response.status_code != http_client.OK:
+            raise exceptions.RefreshError(
+                "Error getting ID token: {}".format(response.json())
+            )
 
         id_token = response.json()["token"]
         self.token = id_token
-        self.expiry = datetime.fromtimestamp(jwt.decode(id_token, verify=False)["exp"])
+        self.expiry = datetime.utcfromtimestamp(
+            jwt.decode(id_token, verify=False)["exp"]
+        )
