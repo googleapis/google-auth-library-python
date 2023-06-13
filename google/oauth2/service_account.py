@@ -164,6 +164,7 @@ class Credentials(
             universe_domain (str): The universe domain. The default
                 universe domain is googleapis.com. For default value self
                 signed jwt is used for token refresh.
+            trust_boundary (str): String representation of trust boundary meta.
 
         .. note:: Typically one of the helper constructors
             :meth:`from_service_account_file` or

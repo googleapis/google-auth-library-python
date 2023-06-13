@@ -85,6 +85,7 @@ class Credentials(
         default_scopes=None,
         workforce_pool_user_project=None,
         universe_domain=_DEFAULT_UNIVERSE_DOMAIN,
+        trust_boundary=None,
     ):
         """Instantiates an external account credentials object.
 
@@ -110,6 +111,7 @@ class Credentials(
                 billing/quota.
             universe_domain (str): The universe domain. The default universe
                 domain is googleapis.com.
+            trust_boundary (str): String representation of trust boundary meta.
         Raises:
             google.auth.exceptions.RefreshError: If the generateAccessToken
                 endpoint returned an error.
