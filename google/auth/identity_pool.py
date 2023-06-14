@@ -218,13 +218,15 @@ class Credentials(external_account.Credentials):
 
     def _create_default_metrics_options(self):
         metrics_options = super(Credentials, self)._create_default_metrics_options()
-        try:
+        # Check that credential source is a dict before checking for file vs url. This check needs to be done
+        # here because the external_account credential constructor needs to pass the metrics options to the
+        # impersonated credential object before the identity_pool credentials are validated.
+        if isinstance(self._credential_source, Mapping):
             if self._credential_source.get("file"):
                 metrics_options["source"] = "file"
             else:
                 metrics_options["source"] = "url"
-        finally:
-            return metrics_options
+        return metrics_options
 
     @classmethod
     def from_info(cls, info, **kwargs):
