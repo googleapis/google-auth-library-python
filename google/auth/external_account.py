@@ -85,8 +85,7 @@ class Credentials(
         scopes=None,
         default_scopes=None,
         workforce_pool_user_project=None,
-        universe_domain=_DEFAULT_UNIVERSE_DOMAIN,
-        metrics_options=None,
+        universe_domain=_DEFAULT_UNIVERSE_DOMAIN
     ):
         """Instantiates an external account credentials object.
 
@@ -112,7 +111,6 @@ class Credentials(
                 billing/quota.
             universe_domain (str): The universe domain. The default universe
                 domain is googleapis.com.
-            metrics_options (Optional (Mapping)): Dictionary of options used for metrics logging.
         Raises:
             google.auth.exceptions.RefreshError: If the generateAccessToken
                 endpoint returned an error.
@@ -143,10 +141,7 @@ class Credentials(
             self._client_auth = None
         self._sts_client = sts.Client(self._token_url, self._client_auth)
 
-        # Set metrics options or create default if options were not provided.
-        self._metrics_options = (
-            metrics_options or self._create_default_metrics_options()
-        )
+        self._metrics_options = self._create_default_metrics_options()
 
         if self._service_account_impersonation_url:
             self._impersonated_credentials = self._initialize_impersonated_credentials()
@@ -180,7 +175,6 @@ class Credentials(
         )
         config_info.pop("scopes", None)
         config_info.pop("default_scopes", None)
-        config_info.pop("metrics_options", None)
         return {key: value for key, value in config_info.items() if value is not None}
 
     def _constructor_args(self):
@@ -202,7 +196,6 @@ class Credentials(
             "scopes": self._scopes,
             "default_scopes": self._default_scopes,
             "universe_domain": self._universe_domain,
-            "metrics_options": copy.deepcopy(self._metrics_options) or None,
         }
         if not self.is_workforce_pool:
             args.pop("workforce_pool_user_project")
@@ -294,7 +287,9 @@ class Credentials(
     def with_scopes(self, scopes, default_scopes=None):
         kwargs = self._constructor_args()
         kwargs.update(scopes=scopes, default_scopes=default_scopes)
-        return self.__class__(**kwargs)
+        scoped = self.__class__(**kwargs)
+        scoped._metrics_options = self._metrics_options
+        return scoped
 
     @abc.abstractmethod
     def retrieve_subject_token(self, request):
@@ -397,13 +392,17 @@ class Credentials(
         # Return copy of instance with the provided quota project ID.
         kwargs = self._constructor_args()
         kwargs.update(quota_project_id=quota_project_id)
-        return self.__class__(**kwargs)
+        new_cred = self.__class__(**kwargs)
+        new_cred._metrics_options = self._metrics_options
+        return new_cred
 
     @_helpers.copy_docstring(credentials.CredentialsWithTokenUri)
     def with_token_uri(self, token_uri):
         kwargs = self._constructor_args()
         kwargs.update(token_url=token_uri)
-        return self.__class__(**kwargs)
+        new_cred = self.__class__(**kwargs)
+        new_cred._metrics_options = self._metrics_options
+        return new_cred
 
     def _initialize_impersonated_credentials(self):
         """Generates an impersonated credentials.
@@ -420,12 +419,14 @@ class Credentials(
             google.auth.exceptions.RefreshError: If the generateAccessToken
                 endpoint returned an error.
         """
+        # Return copy of instance with no service account impersonation.
         kwargs = self._constructor_args()
         kwargs.update(
             service_account_impersonation_url=None,
             service_account_impersonation_options={},
         )
         source_credentials = self.__class__(**kwargs)
+        source_credentials._metrics_options = self._metrics_options
 
         # Determine target_principal.
         target_principal = self.service_account_email

@@ -385,8 +385,7 @@ class TestCredentials(object):
             quota_project_id=self.QUOTA_PROJECT_ID,
             scopes=["email"],
             default_scopes=["default2"],
-            universe_domain=external_account._DEFAULT_UNIVERSE_DOMAIN,
-            metrics_options={"sa-impersonation": "true", "config-lifetime": "true"},
+            universe_domain=external_account._DEFAULT_UNIVERSE_DOMAIN
         )
 
     def test_with_token_uri(self):
@@ -474,8 +473,7 @@ class TestCredentials(object):
             quota_project_id="project-foo",
             scopes=self.SCOPES,
             default_scopes=["default1"],
-            universe_domain=external_account._DEFAULT_UNIVERSE_DOMAIN,
-            metrics_options={"sa-impersonation": "true", "config-lifetime": "true"},
+            universe_domain=external_account._DEFAULT_UNIVERSE_DOMAIN
         )
 
     def test_with_invalid_impersonation_target_principal(self):
