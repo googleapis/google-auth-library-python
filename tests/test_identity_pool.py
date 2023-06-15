@@ -274,12 +274,7 @@ class TestCredentials(object):
             metrics_options["sa-impersonation"] = "true"
         else:
             metrics_options["sa-impersonation"] = "false"
-        if credentials._service_account_impersonation_options.get(
-            "token_lifetime_seconds"
-        ):
-            metrics_options["config-lifetime"] = "true"
-        else:
-            metrics_options["config-lifetime"] = "false"
+        metrics_options["config-lifetime"] = "false"
         if credentials._credential_source_file:
             metrics_options["source"] = "file"
         else:

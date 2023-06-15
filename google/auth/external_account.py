@@ -85,7 +85,7 @@ class Credentials(
         scopes=None,
         default_scopes=None,
         workforce_pool_user_project=None,
-        universe_domain=_DEFAULT_UNIVERSE_DOMAIN
+        universe_domain=_DEFAULT_UNIVERSE_DOMAIN,
     ):
         """Instantiates an external account credentials object.
 
