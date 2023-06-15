@@ -40,6 +40,7 @@ CRED_TYPE_SA_JWT = "cred-type/jwt"
 CRED_TYPE_SA_MDS = "cred-type/mds"
 CRED_TYPE_SA_IMPERSONATE = "cred-type/imp"
 
+
 # Versions
 def python_and_auth_lib_version():
     return "gl-python/{} auth/{}".format(platform.python_version(), version.__version__)
@@ -125,8 +126,8 @@ def reauth_continue():
     return "{} {}".format(python_and_auth_lib_version(), REQUEST_TYPE_REAUTH_CONTINUE)
 
 
-# x-goog-api-client header value for BYOID calls to the sts endpoint.
-# Example: "gl-python/3.7 auth/1.1 google-byoid-sdk source/aws sa-impersonation/True sa-impersonation/True"
+# x-goog-api-client header value for BYOID calls to the Security Token Service exchange token endpoint.
+# Example: "gl-python/3.7 auth/1.1 google-byoid-sdk source/aws sa-impersonation/true sa-impersonation/true"
 def byoid_metrics_header(metrics_options):
     header = "{} {}".format(python_and_auth_lib_version(), BYOID_HEADER_SECTION)
     for key, value in metrics_options.items():
