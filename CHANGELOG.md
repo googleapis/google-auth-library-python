@@ -4,6 +4,13 @@
 
 [1]: https://pypi.org/project/google-auth/#history
 
+## [2.22.0](https://github.com/googleapis/google-auth-library-python/compare/v2.21.0...v2.22.0) (2023-06-26)
+
+
+### Features
+
+* Introduce compatibility with native namespace packages ([#1205](https://github.com/googleapis/google-auth-library-python/issues/1205)) ([2f75922](https://github.com/googleapis/google-auth-library-python/commit/2f7592259ebcbcfe496dd3d1803d5a4e16aa0d20))
+
 ## [2.21.0](https://github.com/googleapis/google-auth-library-python/compare/v2.20.0...v2.21.0) (2023-06-26)
 
 
