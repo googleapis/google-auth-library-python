@@ -196,7 +196,7 @@ class Credentials(
             self._additional_claims = additional_claims
         else:
             self._additional_claims = {}
-        self._trust_boundary = ""
+        self._trust_boundary = "0"
 
     @classmethod
     def _from_signer_and_info(cls, signer, info, **kwargs):

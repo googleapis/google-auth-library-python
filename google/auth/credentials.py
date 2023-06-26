@@ -131,7 +131,7 @@ class Credentials(object):
             _helpers.from_bytes(token or self.token)
         )
         if self._trust_boundary is not None:
-            headers["X-Identity-Trust-Boundary"] = self._trust_boundary
+            headers["x-identity-trust-boundary"] = self._trust_boundary
         if self.quota_project_id:
             headers["x-goog-user-project"] = self.quota_project_id
 

@@ -80,7 +80,7 @@ def test_before_request():
     assert credentials.valid
     assert credentials.token == "token"
     assert headers["authorization"] == "Bearer token"
-    assert "X-Identity-Trust-Boundary" not in headers
+    assert "x-identity-trust-boundary" not in headers
 
     request = "token2"
     headers = {}
@@ -90,7 +90,7 @@ def test_before_request():
     assert credentials.valid
     assert credentials.token == "token"
     assert headers["authorization"] == "Bearer token"
-    assert "X-Identity-Trust-Boundary" not in headers
+    assert "x-identity-trust-boundary" not in headers
 
 
 def test_before_request_with_trust_boundary():
@@ -105,7 +105,7 @@ def test_before_request_with_trust_boundary():
     assert credentials.valid
     assert credentials.token == "token"
     assert headers["authorization"] == "Bearer token"
-    assert headers["X-Identity-Trust-Boundary"] == DUMMY_BOUNDARY
+    assert headers["x-identity-trust-boundary"] == DUMMY_BOUNDARY
 
     request = "token2"
     headers = {}
@@ -115,7 +115,7 @@ def test_before_request_with_trust_boundary():
     assert credentials.valid
     assert credentials.token == "token"
     assert headers["authorization"] == "Bearer token"
-    assert headers["X-Identity-Trust-Boundary"] == DUMMY_BOUNDARY
+    assert headers["x-identity-trust-boundary"] == DUMMY_BOUNDARY
 
 
 def test_before_request_metrics():
