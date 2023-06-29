@@ -82,7 +82,7 @@ def mypy(session):
         "types-six",
         "types-mock",
     )
-    session.run("mypy", "google/", "tests/", "tests_async/")
+    session.run("mypy", "-p", "google", "-p", "tests", "-p", "tests_async")
 
 
 @nox.session(python=["3.6", "3.7", "3.8", "3.9", "3.10", "3.11"])
@@ -145,7 +145,7 @@ def docs(session):
 
 @nox.session(python="pypy")
 def pypy(session):
-    session.install("-r", "test/requirements.txt")
+    session.install("-r", "testing/requirements.txt")
     session.install("-e", ".")
     session.run(
         "pytest",
