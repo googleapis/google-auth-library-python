@@ -534,5 +534,6 @@ class UserAccessTokenCredentials(credentials.CredentialsWithQuotaProject):
 
     @_helpers.copy_docstring(credentials.Credentials)
     def before_request(self, request, method, url, headers):
-        self.refresh(request)
+        if not self.valid:
+            self.refresh(request)
         self.apply(headers)

@@ -979,6 +979,7 @@ class TestUserAccessTokenCredentials(object):
     )
     def test_before_request(self, refresh, apply):
         cred = credentials.UserAccessTokenCredentials()
-        cred.before_request(mock.Mock(), "GET", "https://example.com", {})
+        with mock.patch("google.auth.credentials.Credentials.valid", False):
+            cred.before_request(mock.Mock(), "GET", "https://example.com", {})
         refresh.assert_called()
         apply.assert_called()
