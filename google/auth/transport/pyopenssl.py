@@ -1,79 +1,22 @@
 """
-Module for using pyOpenSSL as a TLS backend. This module was relevant before
-the standard library ``ssl`` module supported SNI, but now that we've dropped
-support for Python 2.7 all relevant Python versions support SNI so
-**this module is no longer recommended**.
-
-This needs the following packages installed:
-
-* `pyOpenSSL`_ (tested with 16.0.0)
-* `cryptography`_ (minimum 1.3.4, from pyopenssl)
-* `idna`_ (minimum 2.0, from cryptography)
-
-However, pyOpenSSL depends on cryptography, which depends on idna, so while we
-use all three directly here we end up having relatively few packages required.
-
-You can install them with the following command:
-
-.. code-block:: bash
-
-    $ python -m pip install pyopenssl cryptography idna
-
-To activate certificate checking, call
-:func:`~urllib3.contrib.pyopenssl.inject_into_urllib3` from your Python code
-before you begin making HTTP requests. This can be done in a ``sitecustomize``
-module, or at any other time before your application begins using ``urllib3``,
-like this:
-
-.. code-block:: python
-
-    try:
-        import urllib3.contrib.pyopenssl
-        urllib3.contrib.pyopenssl.inject_into_urllib3()
-    except ImportError:
-        pass
-
-.. _pyopenssl: https://www.pyopenssl.org
-.. _cryptography: https://cryptography.io
-.. _idna: https://github.com/kjd/idna
+Module for using PyOpenssl in urllib3.
 """
 
 from __future__ import annotations
 
-import OpenSSL.SSL  # type: ignore[import]
-from cryptography import x509
-
-try:
-    from cryptography.x509 import UnsupportedExtension  # type: ignore[attr-defined]
-except ImportError:
-    # UnsupportedExtension is gone in cryptography >= 2.1.0
-    class UnsupportedExtension(Exception):  # type: ignore[no-redef]
-        pass
-
-
-import logging
-import ssl
-import typing
-import warnings
 from io import BytesIO
+import logging
 from socket import socket as socket_cls
 from socket import timeout
+import ssl
+import typing
 
+from cryptography import x509
+from OpenSSL.crypto import X509  # type: ignore[import]
+import OpenSSL.SSL  # type: ignore[import]
 from urllib3 import util
 
-warnings.warn(
-    "'urllib3.contrib.pyopenssl' module is deprecated and will be removed "
-    "in urllib3 v2.1.0. Read more in this issue: "
-    "https://github.com/urllib3/urllib3/issues/2680",
-    category=DeprecationWarning,
-    stacklevel=2,
-)
-
-if typing.TYPE_CHECKING:
-    from OpenSSL.crypto import X509  # type: ignore[import]
-
-
-__all__ = ["inject_into_urllib3", "extract_from_urllib3"]
+__all__ = ["inject_into_urllib3"]
 
 
 def to_bytes(
@@ -86,6 +29,7 @@ def to_bytes(
     if encoding or errors:
         return x.encode(encoding or "utf-8", errors=errors or "strict")
     return x.encode()
+
 
 # Map from urllib3 to PyOpenSSL compatible parameter-values.
 _openssl_versions = {
@@ -151,56 +95,16 @@ _openssl_to_ssl_maximum_version: dict[int, int] = {
 # OpenSSL will only write 16K at a time
 SSL_WRITE_BLOCKSIZE = 16384
 
-orig_util_SSLContext = util.ssl_.SSLContext
-
-
 log = logging.getLogger(__name__)
 
 
 def inject_into_urllib3() -> None:
     "Monkey-patch urllib3 with PyOpenSSL-backed SSL-support."
 
-    _validate_dependencies_met()
-
     util.SSLContext = PyOpenSSLContext  # type: ignore[assignment]
     util.ssl_.SSLContext = PyOpenSSLContext  # type: ignore[assignment]
-    util.IS_PYOPENSSL = True
-    util.ssl_.IS_PYOPENSSL = True
-
-
-def extract_from_urllib3() -> None:
-    "Undo monkey-patching by :func:`inject_into_urllib3`."
-
-    util.SSLContext = orig_util_SSLContext
-    util.ssl_.SSLContext = orig_util_SSLContext
-    util.IS_PYOPENSSL = False
-    util.ssl_.IS_PYOPENSSL = False
-
-
-def _validate_dependencies_met() -> None:
-    """
-    Verifies that PyOpenSSL's package-level dependencies have been met.
-    Throws `ImportError` if they are not met.
-    """
-    # Method added in `cryptography==1.1`; not available in older versions
-    from cryptography.x509.extensions import Extensions
-
-    if getattr(Extensions, "get_extension_for_class", None) is None:
-        raise ImportError(
-            "'cryptography' module missing required functionality.  "
-            "Try upgrading to v1.3.4 or newer."
-        )
-
-    # pyOpenSSL 0.14 and above use cryptography for OpenSSL bindings. The _x509
-    # attribute is only present on those versions.
-    from OpenSSL.crypto import X509
-
-    x509 = X509()
-    if getattr(x509, "_x509", None) is None:
-        raise ImportError(
-            "'pyOpenSSL' module missing required functionality. "
-            "Try upgrading to v0.14 or newer."
-        )
+    util.IS_PYOPENSSL = True  # type: ignore
+    util.ssl_.IS_PYOPENSSL = True  # type: ignore
 
 
 def _dnsname_to_stdlib(name: str) -> str | None:
@@ -223,7 +127,7 @@ def _dnsname_to_stdlib(name: str) -> str | None:
         that we can't just safely call `idna.encode`: it can explode for
         wildcard names. This avoids that problem.
         """
-        import idna
+        import idna  # type: ignore
 
         try:
             for prefix in ["*.", "."]:
@@ -259,7 +163,6 @@ def get_subj_alt_name(peer_cert: X509) -> list[tuple[str, str]]:
         return []
     except (
         x509.DuplicateExtension,
-        UnsupportedExtension,
         x509.UnsupportedGeneralNameType,
         UnicodeError,
     ) as e:
@@ -331,7 +234,7 @@ class WrappedSocket:
             else:
                 raise
         except OpenSSL.SSL.WantReadError as e:
-            if not util.wait_for_read(self.socket, self.socket.gettimeout()):
+            if not util.wait_for_read(self.socket, self.socket.gettimeout()):  # type: ignore
                 raise timeout("The read operation timed out") from e
             else:
                 return self.recv(*args, **kwargs)
@@ -344,7 +247,9 @@ class WrappedSocket:
 
     def recv_into(self, *args: typing.Any, **kwargs: typing.Any) -> int:
         try:
-            return self.connection.recv_into(*args, **kwargs)  # type: ignore[no-any-return]
+            return self.connection.recv_into(
+                *args, **kwargs
+            )  # type: ignore[no-any-return]
         except OpenSSL.SSL.SysCallError as e:
             if self.suppress_ragged_eofs and e.args == (-1, "Unexpected EOF"):
                 return 0
@@ -356,7 +261,7 @@ class WrappedSocket:
             else:
                 raise
         except OpenSSL.SSL.WantReadError as e:
-            if not util.wait_for_read(self.socket, self.socket.gettimeout()):
+            if not util.wait_for_read(self.socket, self.socket.gettimeout()):  # type: ignore
                 raise timeout("The read operation timed out") from e
             else:
                 return self.recv_into(*args, **kwargs)
@@ -373,7 +278,7 @@ class WrappedSocket:
             try:
                 return self.connection.send(data)  # type: ignore[no-any-return]
             except OpenSSL.SSL.WantWriteError as e:
-                if not util.wait_for_write(self.socket, self.socket.gettimeout()):
+                if not util.wait_for_write(self.socket, self.socket.gettimeout()):  # type: ignore
                     raise timeout() from e
                 continue
             except OpenSSL.SSL.SysCallError as e:
@@ -408,18 +313,24 @@ class WrappedSocket:
         x509 = self.connection.get_peer_certificate()
 
         if not x509:
-            return x509  # type: ignore[no-any-return]
+            return None  # type: ignore[no-any-return]
 
         if binary_form:
-            return OpenSSL.crypto.dump_certificate(OpenSSL.crypto.FILETYPE_ASN1, x509)  # type: ignore[no-any-return]
+            return OpenSSL.crypto.dump_certificate(
+                OpenSSL.crypto.FILETYPE_ASN1, x509
+            )  # type: ignore[no-any-return]
 
         return {
-            "subject": ((("commonName", x509.get_subject().CN),),),  # type: ignore[dict-item]
+            "subject": (
+                (("commonName", x509.get_subject().CN),),
+            ),  # type: ignore[dict-item]
             "subjectAltName": get_subj_alt_name(x509),
         }
 
     def version(self) -> str:
-        return self.connection.get_protocol_version_name()  # type: ignore[no-any-return]
+        return (
+            self.connection.get_protocol_version_name()
+        )  # type: ignore[no-any-return]
 
 
 WrappedSocket.makefile = socket_cls.makefile  # type: ignore[attr-defined]
@@ -483,10 +394,7 @@ class PyOpenSSLContext:
             raise ssl.SSLError(f"unable to load trusted certificates: {e!r}") from e
 
     def load_cert_chain(
-        self,
-        certfile: str,
-        keyfile: str | None = None,
-        password: str | None = None,
+        self, certfile: str, keyfile: str | None = None, password: str | None = None
     ) -> None:
         try:
             self._ctx.use_certificate_chain_file(certfile)
@@ -500,7 +408,7 @@ class PyOpenSSLContext:
 
     def set_alpn_protocols(self, protocols: list[bytes | str]) -> None:
         protocols = [to_bytes(p, "ascii") for p in protocols]
-        return self._ctx.set_alpn_protos(protocols)  # type: ignore[no-any-return]
+        self._ctx.set_alpn_protos(protocols)
 
     def wrap_socket(
         self,
@@ -513,7 +421,7 @@ class PyOpenSSLContext:
         cnx = OpenSSL.SSL.Connection(self._ctx, sock)
 
         # If server_hostname is an IP, don't use it for SNI, per RFC6066 Section 3
-        if server_hostname and not util.ssl_.is_ipaddress(server_hostname):
+        if server_hostname and not util.ssl_.is_ipaddress(server_hostname):  # type: ignore
             if isinstance(server_hostname, str):
                 server_hostname = server_hostname.encode("utf-8")
             cnx.set_tlsext_host_name(server_hostname)
@@ -524,7 +432,7 @@ class PyOpenSSLContext:
             try:
                 cnx.do_handshake()
             except OpenSSL.SSL.WantReadError as e:
-                if not util.wait_for_read(sock, sock.gettimeout()):
+                if not util.wait_for_read(sock, sock.gettimeout()):  # type: ignore
                     raise timeout("select timed out") from e
                 continue
             except OpenSSL.SSL.Error as e:
