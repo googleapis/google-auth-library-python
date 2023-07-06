@@ -168,9 +168,9 @@ def _make_mutual_tls_http(cert, key):
     """
     import certifi
     from OpenSSL import crypto
-    import urllib3.contrib.pyopenssl  # type: ignore
+    import google.auth.transport.pyopenssl
 
-    urllib3.contrib.pyopenssl.inject_into_urllib3()
+    google.auth.transport.pyopenssl.inject_into_urllib3()
     ctx = urllib3.util.ssl_.create_urllib3_context()
     ctx.load_verify_locations(cafile=certifi.where())
 

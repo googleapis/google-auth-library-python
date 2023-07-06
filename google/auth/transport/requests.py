@@ -215,9 +215,9 @@ class _MutualTlsAdapter(requests.adapters.HTTPAdapter):
     def __init__(self, cert, key):
         import certifi
         from OpenSSL import crypto
-        import urllib3.contrib.pyopenssl  # type: ignore
+        import google.auth.transport.pyopenssl
 
-        urllib3.contrib.pyopenssl.inject_into_urllib3()
+        google.auth.transport.pyopenssl.inject_into_urllib3()
 
         pkey = crypto.load_privatekey(crypto.FILETYPE_PEM, key)
         x509 = crypto.load_certificate(crypto.FILETYPE_PEM, cert)
@@ -269,7 +269,7 @@ class _MutualTlsOffloadAdapter(requests.adapters.HTTPAdapter):
 
     def __init__(self, enterprise_cert_file_path):
         import certifi
-        import urllib3.contrib.pyopenssl
+        import google.auth.transport.pyopenssl
 
         from google.auth.transport import _custom_tls_signer
 
@@ -277,7 +277,7 @@ class _MutualTlsOffloadAdapter(requests.adapters.HTTPAdapter):
         # following links for more info:
         # (1) doc: https://github.com/urllib3/urllib3/blob/cb9ebf8aac5d75f64c8551820d760b72b619beff/src/urllib3/contrib/pyopenssl.py#L31-L32
         # (2) mTLS example: https://github.com/urllib3/urllib3/issues/474#issuecomment-253168415
-        urllib3.contrib.pyopenssl.inject_into_urllib3()
+        google.auth.transport.pyopenssl.inject_into_urllib3()
 
         self.signer = _custom_tls_signer.CustomTlsSigner(enterprise_cert_file_path)
         self.signer.load_libraries()
