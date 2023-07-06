@@ -983,3 +983,16 @@ class TestUserAccessTokenCredentials(object):
             cred.before_request(mock.Mock(), "GET", "https://example.com", {})
         refresh.assert_called()
         apply.assert_called()
+
+    @mock.patch(
+        "google.oauth2.credentials.UserAccessTokenCredentials.apply", autospec=True
+    )
+    @mock.patch(
+        "google.oauth2.credentials.UserAccessTokenCredentials.refresh", autospec=True
+    )
+    def test_before_request_no_refresh(self, refresh, apply):
+        cred = credentials.UserAccessTokenCredentials()
+        with mock.patch("google.auth.credentials.Credentials.valid", True):
+            cred.before_request(mock.Mock(), "GET", "https://example.com", {})
+        refresh.assert_not_called()
+        apply.assert_called()
