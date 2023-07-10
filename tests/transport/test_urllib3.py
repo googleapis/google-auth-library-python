@@ -105,7 +105,7 @@ class TestMakeMutualTlsHttp(object):
                 b"invalid cert", b"invalid key"
             )
 
-    @mock.patch.dict("sys.modules", {"OpenSSL.crypto": None})
+    @mock.patch.dict("sys.modules", {"OpenSSL": None})
     def test_import_error(self):
         with pytest.raises(ImportError):
             google.auth.transport.urllib3._make_mutual_tls_http(

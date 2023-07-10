@@ -193,7 +193,7 @@ class TestMutualTlsAdapter(object):
                 b"invalid cert", b"invalid key"
             )
 
-    @mock.patch.dict("sys.modules", {"OpenSSL.crypto": None})
+    @mock.patch.dict("sys.modules", {"OpenSSL": None})
     def test_import_error(self):
         with pytest.raises(ImportError):
             google.auth.transport.requests._MutualTlsAdapter(

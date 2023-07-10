@@ -6,6 +6,7 @@ omit =
     */samples/*
     */conftest.py
     */google-cloud-sdk/lib/*
+    google/auth/transport/pyopenssl.py
 exclude_lines =
     # Re-enable the standard pragma
     pragma: NO COVER

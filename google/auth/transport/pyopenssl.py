@@ -259,7 +259,9 @@ class WrappedSocket:
 
     def recv_into(self, *args: typing.Any, **kwargs: typing.Any) -> int:
         try:
-            return self.connection.recv_into(*args, **kwargs)  # type: ignore[no-any-return]
+            return self.connection.recv_into(
+                *args, **kwargs
+            )  # type: ignore[no-any-return]
         except OpenSSL.SSL.SysCallError as e:
             if self.suppress_ragged_eofs and e.args == (-1, "Unexpected EOF"):
                 return 0
@@ -326,15 +328,21 @@ class WrappedSocket:
             return x509  # type: ignore[no-any-return]
 
         if binary_form:
-            return OpenSSL.crypto.dump_certificate(OpenSSL.crypto.FILETYPE_ASN1, x509)  # type: ignore[no-any-return]
+            return OpenSSL.crypto.dump_certificate(
+                OpenSSL.crypto.FILETYPE_ASN1, x509
+            )  # type: ignore[no-any-return]
 
         return {
-            "subject": ((("commonName", x509.get_subject().CN),),),  # type: ignore[dict-item]
+            "subject": (
+                (("commonName", x509.get_subject().CN),),
+            ),  # type: ignore[dict-item]
             "subjectAltName": get_subj_alt_name(x509),
         }
 
     def version(self) -> str:
-        return self.connection.get_protocol_version_name()  # type: ignore[no-any-return]
+        return (
+            self.connection.get_protocol_version_name()
+        )  # type: ignore[no-any-return]
 
 
 WrappedSocket.makefile = socket_cls.makefile  # type: ignore[attr-defined]
@@ -398,10 +406,7 @@ class PyOpenSSLContext:
             raise ssl.SSLError(f"unable to load trusted certificates: {e!r}") from e
 
     def load_cert_chain(
-        self,
-        certfile: str,
-        keyfile: str | None = None,
-        password: str | None = None,
+        self, certfile: str, keyfile: str | None = None, password: str | None = None
     ) -> None:
         try:
             self._ctx.use_certificate_chain_file(certfile)
