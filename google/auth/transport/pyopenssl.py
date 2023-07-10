@@ -1,5 +1,17 @@
 """
-Module for using PyOpenssl in urllib3.
+Module for using PyOpenssl in urllib3. Since urllib3 is planning to remove this
+module in v2.1.0 (https://github.com/urllib3/urllib3/issues/2680), and our mTLS
+and enterprise cert support require this module, we copy the file from urllib3
+(https://github.com/urllib3/urllib3/blob/main/src/urllib3/contrib/pyopenssl.py)
+here, with the following modifications:
+(1) This module requires cryptography >= 2.1.0 and pyopenssl >= 0.14. Since
+google-auth requires pyopenssl>=20.0.0, cryptography>=38.0.3, we removed the
+version check logic in the module import code, and removed
+_validate_dependencies_met method.
+(2) copied to_bytes method here from
+https://github.com/urllib3/urllib3/blob/main/src/urllib3/util/util.py
+(3) removed unused extract_from_urllib3 method
+(4) reordered the module imports
 """
 
 from __future__ import annotations
@@ -103,8 +115,8 @@ def inject_into_urllib3() -> None:
 
     util.SSLContext = PyOpenSSLContext  # type: ignore[assignment]
     util.ssl_.SSLContext = PyOpenSSLContext  # type: ignore[assignment]
-    util.IS_PYOPENSSL = True  # type: ignore
-    util.ssl_.IS_PYOPENSSL = True  # type: ignore
+    util.IS_PYOPENSSL = True
+    util.ssl_.IS_PYOPENSSL = True
 
 
 def _dnsname_to_stdlib(name: str) -> str | None:
@@ -127,7 +139,7 @@ def _dnsname_to_stdlib(name: str) -> str | None:
         that we can't just safely call `idna.encode`: it can explode for
         wildcard names. This avoids that problem.
         """
-        import idna  # type: ignore
+        import idna
 
         try:
             for prefix in ["*.", "."]:
@@ -234,7 +246,7 @@ class WrappedSocket:
             else:
                 raise
         except OpenSSL.SSL.WantReadError as e:
-            if not util.wait_for_read(self.socket, self.socket.gettimeout()):  # type: ignore
+            if not util.wait_for_read(self.socket, self.socket.gettimeout()):
                 raise timeout("The read operation timed out") from e
             else:
                 return self.recv(*args, **kwargs)
@@ -247,9 +259,7 @@ class WrappedSocket:
 
     def recv_into(self, *args: typing.Any, **kwargs: typing.Any) -> int:
         try:
-            return self.connection.recv_into(
-                *args, **kwargs
-            )  # type: ignore[no-any-return]
+            return self.connection.recv_into(*args, **kwargs)  # type: ignore[no-any-return]
         except OpenSSL.SSL.SysCallError as e:
             if self.suppress_ragged_eofs and e.args == (-1, "Unexpected EOF"):
                 return 0
@@ -261,7 +271,7 @@ class WrappedSocket:
             else:
                 raise
         except OpenSSL.SSL.WantReadError as e:
-            if not util.wait_for_read(self.socket, self.socket.gettimeout()):  # type: ignore
+            if not util.wait_for_read(self.socket, self.socket.gettimeout()):
                 raise timeout("The read operation timed out") from e
             else:
                 return self.recv_into(*args, **kwargs)
@@ -278,7 +288,7 @@ class WrappedSocket:
             try:
                 return self.connection.send(data)  # type: ignore[no-any-return]
             except OpenSSL.SSL.WantWriteError as e:
-                if not util.wait_for_write(self.socket, self.socket.gettimeout()):  # type: ignore
+                if not util.wait_for_write(self.socket, self.socket.gettimeout()):
                     raise timeout() from e
                 continue
             except OpenSSL.SSL.SysCallError as e:
@@ -313,24 +323,18 @@ class WrappedSocket:
         x509 = self.connection.get_peer_certificate()
 
         if not x509:
-            return None  # type: ignore[no-any-return]
+            return x509  # type: ignore[no-any-return]
 
         if binary_form:
-            return OpenSSL.crypto.dump_certificate(
-                OpenSSL.crypto.FILETYPE_ASN1, x509
-            )  # type: ignore[no-any-return]
+            return OpenSSL.crypto.dump_certificate(OpenSSL.crypto.FILETYPE_ASN1, x509)  # type: ignore[no-any-return]
 
         return {
-            "subject": (
-                (("commonName", x509.get_subject().CN),),
-            ),  # type: ignore[dict-item]
+            "subject": ((("commonName", x509.get_subject().CN),),),  # type: ignore[dict-item]
             "subjectAltName": get_subj_alt_name(x509),
         }
 
     def version(self) -> str:
-        return (
-            self.connection.get_protocol_version_name()
-        )  # type: ignore[no-any-return]
+        return self.connection.get_protocol_version_name()  # type: ignore[no-any-return]
 
 
 WrappedSocket.makefile = socket_cls.makefile  # type: ignore[attr-defined]
@@ -394,7 +398,10 @@ class PyOpenSSLContext:
             raise ssl.SSLError(f"unable to load trusted certificates: {e!r}") from e
 
     def load_cert_chain(
-        self, certfile: str, keyfile: str | None = None, password: str | None = None
+        self,
+        certfile: str,
+        keyfile: str | None = None,
+        password: str | None = None,
     ) -> None:
         try:
             self._ctx.use_certificate_chain_file(certfile)
@@ -408,7 +415,7 @@ class PyOpenSSLContext:
 
     def set_alpn_protocols(self, protocols: list[bytes | str]) -> None:
         protocols = [to_bytes(p, "ascii") for p in protocols]
-        self._ctx.set_alpn_protos(protocols)
+        return self._ctx.set_alpn_protos(protocols)  # type: ignore[no-any-return]
 
     def wrap_socket(
         self,
@@ -421,7 +428,7 @@ class PyOpenSSLContext:
         cnx = OpenSSL.SSL.Connection(self._ctx, sock)
 
         # If server_hostname is an IP, don't use it for SNI, per RFC6066 Section 3
-        if server_hostname and not util.ssl_.is_ipaddress(server_hostname):  # type: ignore
+        if server_hostname and not util.ssl_.is_ipaddress(server_hostname):
             if isinstance(server_hostname, str):
                 server_hostname = server_hostname.encode("utf-8")
             cnx.set_tlsext_host_name(server_hostname)
@@ -432,7 +439,7 @@ class PyOpenSSLContext:
             try:
                 cnx.do_handshake()
             except OpenSSL.SSL.WantReadError as e:
-                if not util.wait_for_read(sock, sock.gettimeout()):  # type: ignore
+                if not util.wait_for_read(sock, sock.gettimeout()):
                     raise timeout("select timed out") from e
                 continue
             except OpenSSL.SSL.Error as e:
