@@ -46,7 +46,7 @@ import re
 
 import http.client as http_client
 from urllib.parse import urljoin
-import urllib 
+import urllib
 
 from google.auth import _helpers
 from google.auth import environment_vars
