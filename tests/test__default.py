@@ -300,6 +300,28 @@ def test_load_credentials_from_file_service_account():
     assert project_id == SERVICE_ACCOUNT_FILE_DATA["project_id"]
 
 
+@mock.patch.dict(os.environ)
+def test_load_credentials_from_file_service_account_project_from_env():
+    credentials, project_id = _default.load_credentials_from_file(
+        SERVICE_ACCOUNT_FILE, use_project_from_env=True
+    )
+    assert isinstance(credentials, service_account.Credentials)
+    assert project_id == SERVICE_ACCOUNT_FILE_DATA["project_id"]
+
+    project_from_env = "project_from_env"
+    os.environ[environment_vars.PROJECT] = project_from_env
+
+    credentials, project_id = _default.load_credentials_from_file(SERVICE_ACCOUNT_FILE)
+    assert isinstance(credentials, service_account.Credentials)
+    assert project_id == SERVICE_ACCOUNT_FILE_DATA["project_id"]
+
+    credentials, project_id = _default.load_credentials_from_file(
+        SERVICE_ACCOUNT_FILE, use_project_from_env=True
+    )
+    assert isinstance(credentials, service_account.Credentials)
+    assert project_id == project_from_env
+
+
 def test_load_credentials_from_file_service_account_with_scopes():
     credentials, project_id = _default.load_credentials_from_file(
         SERVICE_ACCOUNT_FILE, scopes=["https://www.google.com/calendar/feeds"]
@@ -601,7 +623,9 @@ def test__get_explicit_environ_credentials(load, quota_project_id, monkeypatch):
 
     assert credentials is MOCK_CREDENTIALS
     assert project_id is mock.sentinel.project_id
-    load.assert_called_with("filename", quota_project_id=quota_project_id)
+    load.assert_called_with(
+        "filename", quota_project_id=quota_project_id, use_project_from_env=False
+    )
 
 
 @LOAD_FILE_PATCH
@@ -1229,6 +1253,28 @@ def test_load_credentials_from_external_account_pluggable(get_project_id, tmpdir
     # Since no scopes are specified, the project ID cannot be determined.
     assert project_id is None
     assert get_project_id.called
+
+
+@mock.patch.dict(os.environ)
+@EXTERNAL_ACCOUNT_GET_PROJECT_ID_PATCH
+def test_load_credentials_from_external_account_pluggable_project_from_env(
+    get_project_id, tmpdir
+):
+    config_file = tmpdir.join("config.json")
+    config_file.write(json.dumps(PLUGGABLE_DATA))
+
+    project_from_env = "project_from_env"
+    os.environ[environment_vars.PROJECT] = project_from_env
+
+    credentials, project_id = _default.load_credentials_from_file(
+        str(config_file), use_project_from_env=True
+    )
+
+    assert isinstance(credentials, pluggable.Credentials)
+    assert project_id == project_from_env
+
+    # The credential should not have been used to get the project id.
+    assert not get_project_id.called
 
 
 @mock.patch(

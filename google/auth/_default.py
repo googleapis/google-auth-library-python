@@ -79,7 +79,12 @@ def _warn_about_problematic_credentials(credentials):
 
 
 def load_credentials_from_file(
-    filename, scopes=None, default_scopes=None, quota_project_id=None, request=None
+    filename,
+    scopes=None,
+    default_scopes=None,
+    quota_project_id=None,
+    request=None,
+    use_project_from_env=False,
 ):
     """Loads Google credentials from a file.
 
@@ -126,7 +131,13 @@ def load_credentials_from_file(
             )
             six.raise_from(new_exc, caught_exc)
     return _load_credentials_from_info(
-        filename, info, scopes, default_scopes, quota_project_id, request
+        filename,
+        info,
+        scopes,
+        default_scopes,
+        quota_project_id,
+        request,
+        use_project_from_env=use_project_from_env,
     )
 
 
@@ -175,7 +186,13 @@ def load_credentials_from_dict(
 
 
 def _load_credentials_from_info(
-    filename, info, scopes, default_scopes, quota_project_id, request
+    filename,
+    info,
+    scopes,
+    default_scopes,
+    quota_project_id,
+    request,
+    use_project_from_env=False,
 ):
     from google.auth.credentials import CredentialsWithQuotaProject
 
@@ -198,6 +215,7 @@ def _load_credentials_from_info(
             scopes=scopes,
             default_scopes=default_scopes,
             request=request,
+            use_project_from_env=use_project_from_env,
         )
 
     elif credential_type == _EXTERNAL_ACCOUNT_AUTHORIZED_USER_TYPE:
@@ -220,6 +238,10 @@ def _load_credentials_from_info(
         )
     if isinstance(credentials, CredentialsWithQuotaProject):
         credentials = _apply_quota_project_id(credentials, quota_project_id)
+
+    if use_project_from_env:
+        project_id = _get_project_id_from_env() or project_id
+
     return credentials, project_id
 
 
@@ -246,7 +268,9 @@ def _get_gcloud_sdk_credentials(quota_project_id=None):
     return credentials, project_id
 
 
-def _get_explicit_environ_credentials(quota_project_id=None):
+def _get_explicit_environ_credentials(
+    quota_project_id=None, use_project_from_env=False
+):
     """Gets credentials from the GOOGLE_APPLICATION_CREDENTIALS environment
     variable."""
     from google.auth import _cloud_sdk
@@ -270,7 +294,9 @@ def _get_explicit_environ_credentials(quota_project_id=None):
 
     if explicit_file is not None:
         credentials, project_id = load_credentials_from_file(
-            os.environ[environment_vars.CREDENTIALS], quota_project_id=quota_project_id
+            os.environ[environment_vars.CREDENTIALS],
+            quota_project_id=quota_project_id,
+            use_project_from_env=use_project_from_env,
         )
 
         return credentials, project_id
@@ -344,7 +370,12 @@ def _get_gce_credentials(request=None, quota_project_id=None):
 
 
 def _get_external_account_credentials(
-    info, filename, scopes=None, default_scopes=None, request=None
+    info,
+    filename,
+    scopes=None,
+    default_scopes=None,
+    request=None,
+    use_project_from_env=False,
 ):
     """Loads external account Credentials from the parsed external account info.
 
@@ -364,6 +395,9 @@ def _get_external_account_credentials(
             for a workload identity pool resource (external account credentials).
             If not specified, then it will use a
             google.auth.transport.requests.Request client to make requests.
+        use_project_from_env (bool): If True, check for project ID in the
+            environment variables GOOGLE_CLOUD_PROJECT and GCLOUD_PROJECT before
+            checking the credential.
 
     Returns:
         Tuple[google.auth.credentials.Credentials, Optional[str]]: Loaded
@@ -410,7 +444,14 @@ def _get_external_account_credentials(
 
         request = google.auth.transport.requests.Request()
 
-    return credentials, credentials.get_project_id(request=request)
+    project_id = None
+    if use_project_from_env:
+        project_id = _get_project_id_from_env()
+
+    if project_id is None:
+        project_id = credentials.get_project_id(request=request)
+
+    return credentials, project_id
 
 
 def _get_external_account_authorized_user_credentials(
@@ -540,6 +581,12 @@ def _apply_quota_project_id(credentials, quota_project_id):
     return credentials
 
 
+def _get_project_id_from_env():
+    return os.environ.get(
+        environment_vars.PROJECT, os.environ.get(environment_vars.LEGACY_PROJECT)
+    )
+
+
 def default(scopes=None, request=None, quota_project_id=None, default_scopes=None):
     """Gets the default credentials for the current environment.
 
@@ -640,16 +687,16 @@ def default(scopes=None, request=None, quota_project_id=None, default_scopes=Non
     from google.auth.credentials import with_scopes_if_required
     from google.auth.credentials import CredentialsWithQuotaProject
 
-    explicit_project_id = os.environ.get(
-        environment_vars.PROJECT, os.environ.get(environment_vars.LEGACY_PROJECT)
-    )
+    explicit_project_id = _get_project_id_from_env()
 
     checkers = (
         # Avoid passing scopes here to prevent passing scopes to user credentials.
         # with_scopes_if_required() below will ensure scopes/default scopes are
         # safely set on the returned credentials since requires_scopes will
         # guard against setting scopes on user credentials.
-        lambda: _get_explicit_environ_credentials(quota_project_id=quota_project_id),
+        lambda: _get_explicit_environ_credentials(
+            quota_project_id=quota_project_id, use_project_from_env=True
+        ),
         lambda: _get_gcloud_sdk_credentials(quota_project_id=quota_project_id),
         _get_gae_credentials,
         lambda: _get_gce_credentials(request, quota_project_id=quota_project_id),
