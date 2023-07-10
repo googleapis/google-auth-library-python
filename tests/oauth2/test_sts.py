@@ -12,12 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import http.client as http_client
 import json
+import urllib
 
 import mock
 import pytest  # type: ignore
-import http.client as http_client
-import urllib
 
 from google.auth import exceptions
 from google.auth import transport

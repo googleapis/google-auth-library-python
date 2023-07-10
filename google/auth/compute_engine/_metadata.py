@@ -18,11 +18,10 @@ See https://cloud.google.com/compute/docs/metadata for more details.
 """
 
 import datetime
+import http.client as http_client
 import json
 import logging
 import os
-
-import http.client as http_client
 from urllib.parse import urljoin
 
 from google.auth import _helpers

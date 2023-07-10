@@ -25,7 +25,6 @@ for the return value of :class:`Request`.
 """
 
 import abc
-
 import http.client as http_client
 
 DEFAULT_RETRYABLE_STATUS_CODES = (

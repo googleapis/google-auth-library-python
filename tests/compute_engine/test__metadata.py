@@ -13,14 +13,13 @@
 # limitations under the License.
 
 import datetime
+import http.client as http_client
 import importlib
 import json
-
 import os
 
 import mock
 import pytest  # type: ignore
-import http.client as http_client
 
 from google.auth import _helpers
 from google.auth import environment_vars

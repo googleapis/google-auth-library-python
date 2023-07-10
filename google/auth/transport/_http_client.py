@@ -14,10 +14,9 @@
 
 """Transport adapter for http.client, for internal use only."""
 
+import http.client as http_client
 import logging
 import socket
-
-import http.client as http_client
 import urllib
 
 from google.auth import exceptions

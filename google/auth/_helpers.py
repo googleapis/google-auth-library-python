@@ -18,7 +18,6 @@ import base64
 import calendar
 import datetime
 import sys
-
 import urllib
 
 from google.auth import exceptions

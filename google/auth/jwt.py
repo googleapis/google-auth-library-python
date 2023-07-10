@@ -48,9 +48,9 @@ except ImportError:  # pragma: NO COVER
 import copy
 import datetime
 import json
+import urllib
 
 import cachetools
-import urllib
 
 from google.auth import _helpers
 from google.auth import _service_account_info

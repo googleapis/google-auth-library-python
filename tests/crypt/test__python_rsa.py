@@ -12,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import io
 import json
 import os
-import io
 
 import mock
 from pyasn1_modules import pem  # type: ignore

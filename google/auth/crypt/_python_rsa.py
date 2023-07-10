@@ -21,12 +21,13 @@ certificates. There is no support for p12 files.
 
 from __future__ import absolute_import
 
+import io
+
 from pyasn1.codec.der import decoder  # type: ignore
 from pyasn1_modules import pem  # type: ignore
 from pyasn1_modules.rfc2459 import Certificate  # type: ignore
 from pyasn1_modules.rfc5208 import PrivateKeyInfo  # type: ignore
 import rsa  # type: ignore
-import io
 
 from google.auth import _helpers
 from google.auth import exceptions

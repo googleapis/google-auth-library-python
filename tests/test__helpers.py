@@ -13,9 +13,9 @@
 # limitations under the License.
 
 import datetime
+import urllib
 
 import pytest  # type: ignore
-import urllib
 
 from google.auth import _helpers
 

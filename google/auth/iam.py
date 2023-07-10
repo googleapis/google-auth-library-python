@@ -20,9 +20,8 @@ API`_'s auth-related functionality.
 """
 
 import base64
-import json
-
 import http.client as http_client
+import json
 
 from google.auth import _helpers
 from google.auth import crypt

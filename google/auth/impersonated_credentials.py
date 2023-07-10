@@ -28,9 +28,8 @@ service account.
 import base64
 import copy
 from datetime import datetime
-import json
-
 import http.client as http_client
+import json
 
 from google.auth import _helpers
 from google.auth import credentials

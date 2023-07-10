@@ -15,7 +15,6 @@
 import json
 import os
 import subprocess
-import urllib
 
 import mock
 import pytest  # type: ignore

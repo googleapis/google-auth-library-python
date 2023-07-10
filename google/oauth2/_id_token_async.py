@@ -58,10 +58,9 @@ library like `CacheControl`_ to create a cache-aware
 .. _CacheControl: https://cachecontrol.readthedocs.io
 """
 
+import http.client as http_client
 import json
 import os
-
-import http.client as http_client
 
 from google.auth import environment_vars
 from google.auth import exceptions
