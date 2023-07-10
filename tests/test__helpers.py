@@ -15,7 +15,7 @@
 import datetime
 
 import pytest  # type: ignore
-from six.moves import urllib
+import urllib
 
 from google.auth import _helpers
 

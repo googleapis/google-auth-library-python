@@ -26,9 +26,8 @@ For more information about the token endpoint, see
 import datetime
 import json
 
-import six
-from six.moves import http_client
-from six.moves import urllib
+import http.client as http_client
+import urllib
 
 from google.auth import _exponential_backoff
 from google.auth import exceptions
@@ -183,7 +182,7 @@ async def jwt_grant(request, token_uri, assertion, can_retry=True):
         new_exc = exceptions.RefreshError(
             "No access token in response.", response_data, retryable=False
         )
-        six.raise_from(new_exc, caught_exc)
+        raise new_exc from caught_exc
 
     expiry = client._parse_expiry(response_data)
 
@@ -228,7 +227,7 @@ async def id_token_jwt_grant(request, token_uri, assertion, can_retry=True):
         new_exc = exceptions.RefreshError(
             "No ID token in response.", response_data, retryable=False
         )
-        six.raise_from(new_exc, caught_exc)
+        raise new_exc from caught_exc
 
     payload = jwt.decode(id_token, verify=False)
     expiry = datetime.datetime.utcfromtimestamp(payload["exp"])

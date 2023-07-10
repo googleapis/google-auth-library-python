@@ -30,8 +30,7 @@ import copy
 from datetime import datetime
 import json
 
-import six
-from six.moves import http_client
+import http.client as http_client
 
 from google.auth import _helpers
 from google.auth import credentials
@@ -117,7 +116,7 @@ def _make_iam_token_request(
             ),
             response_body,
         )
-        six.raise_from(new_exc, caught_exc)
+        raise new_exc from caught_exc
 
 
 class Credentials(

@@ -23,7 +23,7 @@ import OpenSSL
 import pytest  # type: ignore
 import requests
 import requests.adapters
-from six.moves import http_client
+import http.client as http_client
 
 from google.auth import environment_vars
 from google.auth import exceptions

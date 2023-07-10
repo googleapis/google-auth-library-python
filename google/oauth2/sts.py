@@ -33,8 +33,8 @@ spec JSON response.
 
 import json
 
-from six.moves import http_client
-from six.moves import urllib
+import http.client as http_client
+import urllib
 
 from google.oauth2 import utils
 

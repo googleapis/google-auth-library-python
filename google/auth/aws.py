@@ -44,9 +44,9 @@ import os
 import posixpath
 import re
 
-from six.moves import http_client
-from six.moves import urllib
-from six.moves.urllib.parse import urljoin
+import http.client as http_client
+from urllib.parse import urljoin
+import urllib 
 
 from google.auth import _helpers
 from google.auth import environment_vars
