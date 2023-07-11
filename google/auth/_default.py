@@ -106,6 +106,8 @@ def load_credentials_from_file(
             for a workload identity pool resource (external account credentials).
             If not specified, then it will use a
             google.auth.transport.requests.Request client to make requests.
+        use_project_from_env (bool): If True, use the project ID from the
+            environment variables.    
 
     Returns:
         Tuple[google.auth.credentials.Credentials, Optional[str]]: Loaded
