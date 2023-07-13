@@ -12,6 +12,9 @@ _validate_dependencies_met method.
 https://github.com/urllib3/urllib3/blob/main/src/urllib3/util/util.py
 (3) removed unused extract_from_urllib3 method
 (4) reordered the module imports
+(5) replaced util.ssl_.PROTOCOL_TLS with ssl.PROTOCOL_TLS_CLIENT (same for
+PROTOCOL_TLS_CLIENT as well) since google-auth requires python >= 3.6 and
+python's ssl module has these constants defined.
 """
 
 from __future__ import annotations
@@ -45,8 +48,8 @@ def to_bytes(
 
 # Map from urllib3 to PyOpenSSL compatible parameter-values.
 _openssl_versions = {
-    util.ssl_.PROTOCOL_TLS: OpenSSL.SSL.SSLv23_METHOD,  # type: ignore[attr-defined]
-    util.ssl_.PROTOCOL_TLS_CLIENT: OpenSSL.SSL.SSLv23_METHOD,  # type: ignore[attr-defined]
+    ssl.PROTOCOL_TLS: OpenSSL.SSL.SSLv23_METHOD,  # type: ignore[attr-defined]
+    ssl.PROTOCOL_TLS_CLIENT: OpenSSL.SSL.SSLv23_METHOD,  # type: ignore[attr-defined]
     ssl.PROTOCOL_TLSv1: OpenSSL.SSL.TLSv1_METHOD,
 }
 
