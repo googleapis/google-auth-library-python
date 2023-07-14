@@ -1,6 +1,6 @@
 """
 This file is copied from
-https://github.com/urllib3/urllib3/blob/main/test/contrib/test_pyopenssl.py
+https://github.com/urllib3/urllib3/blob/2.0.3/test/contrib/test_pyopenssl.py
 with slight modifications. Only TestPyOpenSSLHelpers are kept.
 """
 

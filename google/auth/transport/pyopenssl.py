@@ -2,14 +2,14 @@
 Module for using PyOpenssl in urllib3. Since urllib3 is planning to remove this
 module in v2.1.0 (https://github.com/urllib3/urllib3/issues/2680), and our mTLS
 and enterprise cert support require this module, we copy the file from urllib3
-(https://github.com/urllib3/urllib3/blob/main/src/urllib3/contrib/pyopenssl.py)
+(https://github.com/urllib3/urllib3/blob/2.0.3/src/urllib3/contrib/pyopenssl.py)
 here, with the following modifications:
 (1) This module requires cryptography >= 2.1.0 and pyopenssl >= 0.14. Since
 google-auth requires pyopenssl>=20.0.0, cryptography>=38.0.3, we removed the
 version check logic in the module import code, and removed
 _validate_dependencies_met method.
 (2) copied to_bytes method here from
-https://github.com/urllib3/urllib3/blob/main/src/urllib3/util/util.py
+https://github.com/urllib3/urllib3/blob/2.0.3/src/urllib3/util/util.py
 (3) removed unused extract_from_urllib3 method
 (4) reordered the module imports
 (5) replaced util.ssl_.PROTOCOL_TLS with ssl.PROTOCOL_TLS_CLIENT (same for
