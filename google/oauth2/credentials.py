@@ -35,8 +35,7 @@ from datetime import datetime
 import io
 import json
 import logging
-
-import six
+import warnings
 
 from google.auth import _cloud_sdk
 from google.auth import _helpers
@@ -306,7 +305,7 @@ class Credentials(credentials.ReadOnlyScoped, credentials.CredentialsWithQuotaPr
         if self._refresh_token is None and self.refresh_handler:
             token, expiry = self.refresh_handler(request, scopes=scopes)
             # Validate returned data.
-            if not isinstance(token, six.string_types):
+            if not isinstance(token, str):
                 raise exceptions.RefreshError(
                     "The refresh_handler returned token is not a string."
                 )
@@ -393,7 +392,7 @@ class Credentials(credentials.ReadOnlyScoped, credentials.CredentialsWithQuotaPr
             ValueError: If the info is not in the expected format.
         """
         keys_needed = set(("refresh_token", "client_id", "client_secret"))
-        missing = keys_needed.difference(six.iterkeys(info))
+        missing = keys_needed.difference(info.keys())
 
         if missing:
             raise ValueError(
@@ -413,7 +412,7 @@ class Credentials(credentials.ReadOnlyScoped, credentials.CredentialsWithQuotaPr
         # process scopes, which needs to be a seq
         if scopes is None and "scopes" in info:
             scopes = info.get("scopes")
-            if isinstance(scopes, six.string_types):
+            if isinstance(scopes, str):
                 scopes = scopes.split(" ")
 
         return cls(
@@ -498,6 +497,13 @@ class UserAccessTokenCredentials(credentials.CredentialsWithQuotaProject):
     """
 
     def __init__(self, account=None, quota_project_id=None):
+        warnings.warn(
+            "UserAccessTokenCredentials is deprecated, please use "
+            "google.oauth2.credentials.Credentials instead. To use "
+            "that credential type, simply run "
+            "`gcloud auth application-default login` and let the "
+            "client libraries pick up the application default credentials."
+        )
         super(UserAccessTokenCredentials, self).__init__()
         self._account = account
         self._quota_project_id = quota_project_id

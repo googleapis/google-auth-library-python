@@ -45,8 +45,6 @@ import base64
 import enum
 import json
 
-import six
-
 from google.auth import exceptions
 
 _ACCESS_TOKEN_TYPE = "urn:ietf:params:oauth:token-type:access_token"
@@ -80,8 +78,7 @@ class ClientAuthentication(object):
         self.client_secret = client_secret
 
 
-@six.add_metaclass(abc.ABCMeta)
-class OAuthClientAuthHandler(object):
+class OAuthClientAuthHandler(metaclass=abc.ABCMeta):
     """Abstract class for handling client authentication in OAuth-based
     operations.
     """
