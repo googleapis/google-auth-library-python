@@ -148,6 +148,42 @@ def test_get_config_path_no_appdata(monkeypatch):
     assert os.path.split(config_path) == ("G:/\\", _cloud_sdk._CONFIG_DIRECTORY)
 
 
+def test_get_bq_config_path_env_var(monkeypatch):
+    config_path_sentinel = "config_path"
+    monkeypatch.setenv(environment_vars.CLOUD_SDK_CONFIG_DIR, config_path_sentinel)
+    config_path = _cloud_sdk.get_bq_config_path()
+    assert config_path == config_path_sentinel
+
+
+@mock.patch("os.path.expanduser")
+def test_get_bq_config_path_unix(expanduser):
+    expanduser.side_effect = lambda path: path
+
+    config_path = _cloud_sdk.get_bq_config_path()
+
+    assert os.path.split(config_path) == ("~/.config", _cloud_sdk._CONFIG_DIRECTORY_BQ)
+
+
+@mock.patch("os.name", new="nt")
+def test_get_bq_config_path_windows(monkeypatch):
+    appdata = "appdata"
+    monkeypatch.setenv(_cloud_sdk._WINDOWS_CONFIG_ROOT_ENV_VAR, appdata)
+
+    config_path = _cloud_sdk.get_bq_config_path()
+
+    assert os.path.split(config_path) == (appdata, _cloud_sdk._CONFIG_DIRECTORY_BQ)
+
+
+@mock.patch("os.name", new="nt")
+def test_get_bq_config_path_no_appdata(monkeypatch):
+    monkeypatch.delenv(_cloud_sdk._WINDOWS_CONFIG_ROOT_ENV_VAR, raising=False)
+    monkeypatch.setenv("SystemDrive", "G:")
+
+    config_path = _cloud_sdk.get_bq_config_path()
+
+    assert os.path.split(config_path) == ("G:/\\", _cloud_sdk._CONFIG_DIRECTORY_BQ)
+
+
 @mock.patch("os.name", new="nt")
 @mock.patch("subprocess.check_output", autospec=True)
 def test_get_auth_access_token_windows(check_output):
