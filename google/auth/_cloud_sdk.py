@@ -44,7 +44,7 @@ CLOUD_SDK_CLIENT_ID = (
 )
 
 
-def get_config_path(config_directory):
+def get_config_path(config_directory=_CONFIG_DIRECTORY_GCLOUD):
     """Returns the absolute path of the given configuration directory.
 
     Args:
