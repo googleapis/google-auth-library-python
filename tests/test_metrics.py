@@ -13,8 +13,8 @@
 # limitations under the License.
 
 import platform
+from unittest import mock
 
-import mock
 
 from google.auth import metrics
 from google.auth import version
