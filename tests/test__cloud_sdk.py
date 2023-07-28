@@ -125,7 +125,10 @@ def test_get_gcloud_config_path_unix(expanduser):
 
     config_path = _cloud_sdk.get_gcloud_config_path()
 
-    assert os.path.split(config_path) == ("~/.config", _cloud_sdk._CONFIG_DIRECTORY_GCLOUD)
+    assert os.path.split(config_path) == (
+        "~/.config",
+        _cloud_sdk._CONFIG_DIRECTORY_GCLOUD,
+    )
 
 
 @mock.patch("os.name", new="nt")
