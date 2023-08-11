@@ -16,11 +16,13 @@
 """Interfaces for credentials."""
 
 import abc
+from enum import Enum
 import os
 
 from google.auth import _helpers, environment_vars
 from google.auth import exceptions
 from google.auth import metrics
+from google.auth._refresh_worker import RefreshWorker
 
 
 class Credentials(metaclass=abc.ABCMeta):
@@ -59,6 +61,9 @@ class Credentials(metaclass=abc.ABCMeta):
         """Optional[str]: The universe domain value, default is googleapis.com
         """
 
+        self._use_non_blocking_refresh = False
+        self._refresh_worker = RefreshWorker()
+
     @property
     def expired(self):
         """Checks if the credentials are expired.
@@ -70,10 +75,7 @@ class Credentials(metaclass=abc.ABCMeta):
         if not self.expiry:
             return False
 
-        # Remove some threshold from expiry to err on the side of reporting
-        # expiration early so that we avoid the 401-refresh-retry loop.
-        skewed_expiry = self.expiry - _helpers.REFRESH_THRESHOLD
-        return _helpers.utcnow() >= skewed_expiry
+        return _helpers.utcnow() >= self.expiry
 
     @property
     def valid(self):
@@ -83,6 +85,21 @@ class Credentials(metaclass=abc.ABCMeta):
         is not :attr:`expired`.
         """
         return self.token is not None and not self.expired
+
+    @property
+    def token_state(self):
+        if not self.valid or self.expired:
+            return TokenState.INVALID
+
+        # Credentials that can't expire are always treated as fresh.
+        if not self.expiry:
+            return TokenState.FRESH
+
+        refresh_window = _helpers.utcnow() >= (self.expiry - _helpers.REFRESH_THRESHOLD)
+        if refresh_window:
+            return TokenState.STALE
+
+        return TokenState.FRESH
 
     @property
     def quota_project_id(self):
@@ -171,10 +188,21 @@ class Credentials(metaclass=abc.ABCMeta):
         # pylint: disable=unused-argument
         # (Subclasses may use these arguments to ascertain information about
         # the http request.)
-        if not self.valid:
+
+        if self.token_state == TokenState.STALE:
+            if self._use_non_blocking_refresh:
+                self._refresh_worker.start_refresh(self, request)
+            else:
+                self.refresh(request)
+
+        if self.token_state == TokenState.INVALID:
             self.refresh(request)
+
         metrics.add_metric_header(headers, self._metric_header_for_usage())
         self.apply(headers)
+
+    def with_non_blocking_refresh(self):
+        self._use_non_blocking_refresh = True
 
 
 class CredentialsWithQuotaProject(Credentials):
@@ -422,3 +450,9 @@ class Signing(metaclass=abc.ABCMeta):
         # pylint: disable=missing-raises-doc
         # (pylint doesn't recognize that this is abstract)
         raise NotImplementedError("Signer must be implemented.")
+
+
+class TokenState(Enum):
+    FRESH = 1
+    STALE = 2
+    INVALID = 3

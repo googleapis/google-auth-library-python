@@ -24,6 +24,7 @@ from google.auth import _helpers
 from google.auth import exceptions
 from google.auth import external_account
 from google.auth import transport
+from google.auth.credentials import TokenState
 
 
 IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE = (
@@ -1489,6 +1490,7 @@ class TestCredentials(object):
 
         assert credentials.valid
         assert not credentials.expired
+        assert credentials.token_state == TokenState.FRESH
 
         credentials.before_request(request, "POST", "https://example.com/api", headers)
 
@@ -1501,10 +1503,12 @@ class TestCredentials(object):
         # Next call should simulate 1 second passed.
         utcnow.return_value = datetime.datetime.min + datetime.timedelta(seconds=1)
 
-        assert not credentials.valid
-        assert credentials.expired
+        assert credentials.valid
+        assert not credentials.expired
+        assert credentials.token_state == TokenState.STALE
 
         credentials.before_request(request, "POST", "https://example.com/api", headers)
+        assert credentials.token_state == TokenState.FRESH
 
         # New token should be retrieved.
         assert headers == {
@@ -1546,8 +1550,10 @@ class TestCredentials(object):
 
         assert credentials.valid
         assert not credentials.expired
+        assert credentials.token_state == TokenState.FRESH
 
         credentials.before_request(request, "POST", "https://example.com/api", headers)
+        assert credentials.token_state == TokenState.FRESH
 
         # Cached token should be used.
         assert headers == {
@@ -1559,8 +1565,12 @@ class TestCredentials(object):
         # threshold.
         utcnow.return_value = datetime.datetime.min + datetime.timedelta(seconds=1)
 
-        assert not credentials.valid
-        assert credentials.expired
+        assert credentials.valid
+        assert not credentials.expired
+        assert credentials.token_state == TokenState.STALE
+
+        credentials.before_request(request, "POST", "https://example.com/api", headers)
+        assert credentials.token_state == TokenState.FRESH
 
         credentials.before_request(request, "POST", "https://example.com/api", headers)
 

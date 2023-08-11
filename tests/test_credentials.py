@@ -23,6 +23,11 @@ from google.auth import credentials
 class CredentialsImpl(credentials.Credentials):
     def refresh(self, request):
         self.token = request
+        self.expiry = (
+            datetime.datetime.utcnow()
+            + _helpers.REFRESH_THRESHOLD
+            + datetime.timedelta(seconds=1)
+        )
 
     def with_quota_project(self, quota_project_id):
         raise NotImplementedError()
@@ -36,6 +41,10 @@ class CredentialsImplWithMetrics(credentials.Credentials):
         return "foo"
 
 
+def refresh_lock(cred):
+    cred._refresh_worker._refresh_queue.join()
+
+
 def test_credentials_constructor():
     credentials = CredentialsImpl()
     assert not credentials.token
@@ -43,6 +52,13 @@ def test_credentials_constructor():
     assert not credentials.expired
     assert not credentials.valid
     assert credentials.universe_domain == "googleapis.com"
+    assert not credentials._use_non_blocking_refresh
+
+
+def test_with_non_blocking_refresh():
+    c = CredentialsImpl()
+    c.with_non_blocking_refresh()
+    assert c._use_non_blocking_refresh
 
 
 def test_expired_and_valid():
@@ -222,3 +238,52 @@ def test_create_scoped_if_required_not_scopes():
     )
 
     assert scoped_credentials is unscoped_credentials
+
+
+def test_nonblocking_refresh_invalid_credentials():
+    c = CredentialsImpl()
+    c.with_non_blocking_refresh()
+
+    request = "token"
+    headers = {}
+
+    assert c.token_state == credentials.TokenState.INVALID
+
+    c.before_request(request, "http://example.com", "GET", headers)
+    assert c.token_state == credentials.TokenState.FRESH
+    assert c.valid
+    assert c.token == "token"
+    assert headers["authorization"] == "Bearer token"
+    assert "x-identity-trust-boundary" not in headers
+
+
+def test_nonblocking_refresh_stale_credentials():
+    c = CredentialsImpl()
+    c.with_non_blocking_refresh()
+
+    request = "token"
+    headers = {}
+
+    # Invalid credentials MUST require a blocking refresh.
+    c.before_request(request, "http://example.com", "GET", headers)
+    assert c.token_state == credentials.TokenState.FRESH
+    assert not c._refresh_worker._worker
+
+    c.expiry = (
+        datetime.datetime.utcnow()
+        + _helpers.REFRESH_THRESHOLD
+        - datetime.timedelta(seconds=1)
+    )
+
+    # STALE credentials SHOULD spawn a non-blocking worker
+    assert c.token_state == credentials.TokenState.STALE
+    c.before_request(request, "http://example.com", "GET", headers)
+    assert c._refresh_worker._worker is not None
+
+    # Lock on the work queue to ensure this test is deterministic
+    refresh_lock(c)
+    assert c.token_state == credentials.TokenState.FRESH
+    assert c.valid
+    assert c.token == "token"
+    assert headers["authorization"] == "Bearer token"
+    assert "x-identity-trust-boundary" not in headers
