@@ -24,6 +24,8 @@ from google.auth import exceptions
 
 # The ~/.config subdirectory containing gcloud credentials.
 _CONFIG_DIRECTORY = "gcloud"
+# The subdirectory containing shared configs for other first-party applications.
+_CONFIG_DIRECTORY_CLI = "cli"
 # Windows systems store config at %APPDATA%\gcloud
 _WINDOWS_CONFIG_ROOT_ENV_VAR = "APPDATA"
 # The name of the file in the Cloud SDK config that contains default
@@ -54,10 +56,10 @@ def get_config_path():
     except KeyError:
         pass
 
-    # Non-windows systems store this at ~/.config/gcloud
+    # Non-windows systems store this at ~/.config/gcloud.
     if os.name != "nt":
         return os.path.join(os.path.expanduser("~"), ".config", _CONFIG_DIRECTORY)
-    # Windows systems store config at %APPDATA%\gcloud
+    # Windows systems store config at %APPDATA%\gcloud.
     else:
         try:
             return os.path.join(
@@ -68,6 +70,15 @@ def get_config_path():
             # messing with things, but we'll cover the case anyway.
             drive = os.environ.get("SystemDrive", "C:")
             return os.path.join(drive, "\\", _CONFIG_DIRECTORY)
+
+
+def get_cli_config_path():
+    """Returns the absolute path of the Cloud CLI shared config files.
+
+    Returns:
+        str: The full path to shared config.
+    """
+    return os.path.join(get_config_path(), _CONFIG_DIRECTORY_CLI)
 
 
 def get_application_default_credentials_path():
