@@ -390,7 +390,7 @@ class Credentials(
             # JSON String.
             if isinstance(expires_in, str):
                 expires_in = int(expires_in)
-                
+
             lifetime = datetime.timedelta(seconds=expires_in)
 
             self.expiry = now + lifetime
