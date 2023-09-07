@@ -42,8 +42,8 @@ class Python37DeprecationWarning(DeprecationWarning):  # pragma: NO COVER
     pass
 
 
+# Checks if the current runtime is Python 3.7.
 if sys.version_info.major == 3 and sys.version_info.minor == 7:  # pragma: NO COVER
-    # Checks if the current runtime is Python 3.7.
     message = (
         "After January 1, 2024, new releases of this library will drop support "
         "for Python 3.7. More details about Python 3.7 support "
