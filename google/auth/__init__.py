@@ -41,6 +41,8 @@ class Python37DeprecationWarning(DeprecationWarning):  # pragma: NO COVER
 
     pass
 
+
+if sys.version_info.major == 3 and sys.version_info.minor == 7:  # pragma: NO COVER
     # Checks if the current runtime is Python 3.7.
     message = (
         "After January 1, 2024, new releases of this library will drop support "
@@ -48,8 +50,6 @@ class Python37DeprecationWarning(DeprecationWarning):  # pragma: NO COVER
         "can be found at https://cloud.google.com/python/docs/python37-sunset/"
     )
 
-
-if sys.version_info.major == 3 and sys.version_info.minor == 7:  # pragma: NO COVER
     # Configure the Python37DeprecationWarning warning so that it is only emitted once.
     warnings.simplefilter("once", Python37DeprecationWarning)
     warnings.warn(message, Python37DeprecationWarning)
