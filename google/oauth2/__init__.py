@@ -18,7 +18,7 @@ import sys
 import warnings
 
 
-class Python37DeprecationWarning(DeprecationWarning):
+class Python37DeprecationWarning(DeprecationWarning):  # pragma: NO COVER
     """
     Deprecation warning raised when Python 3.7 runtime is detected.
     Python 3.7 support will be dropped after January 1, 2024. See
@@ -29,10 +29,10 @@ class Python37DeprecationWarning(DeprecationWarning):
 
 
 # Checks if the current runtime is Python 3.7.
-if sys.version_info.major == 3 and sys.version_info.minor == 7:
+if sys.version_info.major == 3 and sys.version_info.minor == 7:  # pragma: NO COVER
     message = (
         "After January 1, 2024, new releases of this library will drop support "
-        "for Python 3.7. More details about Python 3.7 support for Client Libraries "
+        "for Python 3.7. More details about Python 3.7 support "
         "can be found at https://cloud.google.com/python/docs/python37-sunset/"
     )
     # Configure the Python37DeprecationWarning warning so that it is only emitted once.
