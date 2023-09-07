@@ -70,7 +70,6 @@ class TestCredentials(object):
         credentials = service_account.Credentials(
             SIGNER, self.SERVICE_ACCOUNT_EMAIL, self.TOKEN_URI, universe_domain=None
         )
-        assert credentials._universe_domain == service_account._DEFAULT_UNIVERSE_DOMAIN
         assert credentials.universe_domain == service_account._DEFAULT_UNIVERSE_DOMAIN
 
     def test_from_service_account_info(self):
@@ -89,7 +88,6 @@ class TestCredentials(object):
             SERVICE_ACCOUNT_INFO_NON_GDU
         )
 
-        assert credentials._universe_domain == FAKE_UNIVERSE_DOMAIN
         assert credentials.universe_domain == FAKE_UNIVERSE_DOMAIN
         assert credentials._always_use_jwt_access
 
