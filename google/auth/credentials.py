@@ -135,8 +135,21 @@ class Credentials(metaclass=abc.ABCMeta):
         headers["authorization"] = "Bearer {}".format(
             _helpers.from_bytes(token or self.token)
         )
+        """Trust boundary value will be a cached value from global lookup.
+
+        The response of trust boundary will be a list of regions and a hex
+        encoded representation.
+
+        An example of global lookup response:
+        {
+          "locations": [
+            "us-central1", "us-east1", "europe-west1", "asia-east1"
+          ]
+          "encoded_locations": "0xA30"
+        }
+        """
         if self._trust_boundary is not None:
-            headers["x-identity-trust-boundary"] = self._trust_boundary
+            headers["x-allowed-locations"] = self._trust_boundary["encoded_locations"]
         if self.quota_project_id:
             headers["x-goog-user-project"] = self.quota_project_id
 
