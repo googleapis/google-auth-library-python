@@ -52,8 +52,9 @@ class Credentials(metaclass=abc.ABCMeta):
         self._quota_project_id = None
         """Optional[str]: Project to use for quota and billing purposes."""
         self._trust_boundary = None
-        """Optional[str]: Encoded string representation of credentials trust
-        boundary."""
+        """Optional[dict]: Cache of a trust boundary response which has a list
+        of allowed regions and an encoded string representation of credentials
+        trust boundary."""
         self._universe_domain = "googleapis.com"
         """Optional[str]: The universe domain value, default is googleapis.com
         """
