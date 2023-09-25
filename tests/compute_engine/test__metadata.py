@@ -180,7 +180,9 @@ def test_get_success_json_content_type_charset():
     key, value = "foo", "bar"
 
     data = json.dumps({key: value})
-    request = make_request(data, headers={"content-type": "application/json; charset=UTF-8"})
+    request = make_request(
+        data, headers={"content-type": "application/json; charset=UTF-8"}
+    )
 
     result = _metadata.get(request, PATH)
 

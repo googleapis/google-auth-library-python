@@ -17,9 +17,9 @@
 import base64
 import calendar
 import datetime
+from email.message import Message
 import sys
 import urllib
-from email.message import Message
 
 from google.auth import exceptions
 
@@ -81,7 +81,9 @@ def parse_content_type(header_value):
     """
     m = Message()
     m["content-type"] = header_value
-    return m.get_content_type() # Despite the name, actually returns just the media-type
+    return (
+        m.get_content_type()
+    )  # Despite the name, actually returns just the media-type
 
 
 def utcnow():
