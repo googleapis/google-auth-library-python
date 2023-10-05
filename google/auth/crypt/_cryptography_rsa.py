@@ -138,14 +138,14 @@ class RSASigner(base.Signer, base.FromServiceAccountMixin):
     def __getstate__(self):
         """Pickle helper that serializes the _key attribute."""
         state = self.__dict__.copy()
-        state['_key'] = self._key.private_bytes(
+        state["_key"] = self._key.private_bytes(
             encoding=serialization.Encoding.PEM,
             format=serialization.PrivateFormat.PKCS8,
-            encryption_algorithm=serialization.NoEncryption()
+            encryption_algorithm=serialization.NoEncryption(),
         )
         return state
 
     def __setstate__(self, state):
         """Pickle helper that deserializes the _key attribute."""
-        state['_key'] = serialization.load_pem_private_key(state['_key'], None)
+        state["_key"] = serialization.load_pem_private_key(state["_key"], None)
         self.__dict__.update(state)
