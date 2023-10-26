@@ -499,6 +499,13 @@ class TestCredentials(object):
             "universe_domain": "dummy_universe.com",
         }
 
+    def test_universe_domain(self):
+        credentials = self.make_credentials(universe_domain="dummy_universe.com")
+        assert credentials.universe_domain == "dummy_universe.com"
+
+        credentials = self.make_credentials()
+        assert credentials.universe_domain == external_account._DEFAULT_UNIVERSE_DOMAIN
+
     def test_info_workforce_pool(self):
         credentials = self.make_workforce_pool_credentials(
             workforce_pool_user_project=self.WORKFORCE_POOL_USER_PROJECT
@@ -626,19 +633,20 @@ class TestCredentials(object):
         # Even though impersonation is used, is_workforce_pool should still return True.
         assert credentials.is_workforce_pool is True
 
+    @pytest.mark.parametrize("mock_expires_in", [2800, "2800"])
     @mock.patch(
         "google.auth.metrics.python_and_auth_lib_version",
         return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
     )
     @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
     def test_refresh_without_client_auth_success(
-        self, unused_utcnow, mock_auth_lib_value
+        self, unused_utcnow, mock_auth_lib_value, mock_expires_in
     ):
         response = self.SUCCESS_RESPONSE.copy()
         # Test custom expiration to confirm expiry is set correctly.
-        response["expires_in"] = 2800
+        response["expires_in"] = mock_expires_in
         expected_expiry = datetime.datetime.min + datetime.timedelta(
-            seconds=response["expires_in"]
+            seconds=int(mock_expires_in)
         )
         headers = {
             "Content-Type": "application/x-www-form-urlencoded",
@@ -826,7 +834,7 @@ class TestCredentials(object):
             "Content-Type": "application/json",
             "authorization": "Bearer {}".format(token_response["access_token"]),
             "x-goog-api-client": IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
-            "x-identity-trust-boundary": "0",
+            "x-allowed-locations": "0x0",
         }
         impersonation_request_data = {
             "delegates": None,
@@ -908,7 +916,7 @@ class TestCredentials(object):
             "Content-Type": "application/json",
             "authorization": "Bearer {}".format(token_response["access_token"]),
             "x-goog-api-client": IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
-            "x-identity-trust-boundary": "0",
+            "x-allowed-locations": "0x0",
         }
         impersonation_request_data = {
             "delegates": None,
@@ -1127,7 +1135,7 @@ class TestCredentials(object):
             "Content-Type": "application/json",
             "authorization": "Bearer {}".format(token_response["access_token"]),
             "x-goog-api-client": IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
-            "x-identity-trust-boundary": "0",
+            "x-allowed-locations": "0x0",
         }
         impersonation_request_data = {
             "delegates": None,
@@ -1211,7 +1219,7 @@ class TestCredentials(object):
             "Content-Type": "application/json",
             "authorization": "Bearer {}".format(token_response["access_token"]),
             "x-goog-api-client": IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
-            "x-identity-trust-boundary": "0",
+            "x-allowed-locations": "0x0",
         }
         impersonation_request_data = {
             "delegates": None,
@@ -1267,7 +1275,7 @@ class TestCredentials(object):
 
         assert headers == {
             "authorization": "Bearer {}".format(self.SUCCESS_RESPONSE["access_token"]),
-            "x-identity-trust-boundary": "0",
+            "x-allowed-locations": "0x0",
         }
 
     def test_apply_workforce_without_quota_project_id(self):
@@ -1284,7 +1292,7 @@ class TestCredentials(object):
 
         assert headers == {
             "authorization": "Bearer {}".format(self.SUCCESS_RESPONSE["access_token"]),
-            "x-identity-trust-boundary": "0",
+            "x-allowed-locations": "0x0",
         }
 
     def test_apply_impersonation_without_quota_project_id(self):
@@ -1316,7 +1324,7 @@ class TestCredentials(object):
 
         assert headers == {
             "authorization": "Bearer {}".format(impersonation_response["accessToken"]),
-            "x-identity-trust-boundary": "0",
+            "x-allowed-locations": "0x0",
         }
 
     def test_apply_with_quota_project_id(self):
@@ -1333,7 +1341,7 @@ class TestCredentials(object):
             "other": "header-value",
             "authorization": "Bearer {}".format(self.SUCCESS_RESPONSE["access_token"]),
             "x-goog-user-project": self.QUOTA_PROJECT_ID,
-            "x-identity-trust-boundary": "0",
+            "x-allowed-locations": "0x0",
         }
 
     def test_apply_impersonation_with_quota_project_id(self):
@@ -1368,7 +1376,7 @@ class TestCredentials(object):
             "other": "header-value",
             "authorization": "Bearer {}".format(impersonation_response["accessToken"]),
             "x-goog-user-project": self.QUOTA_PROJECT_ID,
-            "x-identity-trust-boundary": "0",
+            "x-allowed-locations": "0x0",
         }
 
     def test_before_request(self):
@@ -1384,7 +1392,7 @@ class TestCredentials(object):
         assert headers == {
             "other": "header-value",
             "authorization": "Bearer {}".format(self.SUCCESS_RESPONSE["access_token"]),
-            "x-identity-trust-boundary": "0",
+            "x-allowed-locations": "0x0",
         }
 
         # Second call shouldn't call refresh.
@@ -1393,7 +1401,7 @@ class TestCredentials(object):
         assert headers == {
             "other": "header-value",
             "authorization": "Bearer {}".format(self.SUCCESS_RESPONSE["access_token"]),
-            "x-identity-trust-boundary": "0",
+            "x-allowed-locations": "0x0",
         }
 
     def test_before_request_workforce(self):
@@ -1411,7 +1419,7 @@ class TestCredentials(object):
         assert headers == {
             "other": "header-value",
             "authorization": "Bearer {}".format(self.SUCCESS_RESPONSE["access_token"]),
-            "x-identity-trust-boundary": "0",
+            "x-allowed-locations": "0x0",
         }
 
         # Second call shouldn't call refresh.
@@ -1420,7 +1428,7 @@ class TestCredentials(object):
         assert headers == {
             "other": "header-value",
             "authorization": "Bearer {}".format(self.SUCCESS_RESPONSE["access_token"]),
-            "x-identity-trust-boundary": "0",
+            "x-allowed-locations": "0x0",
         }
 
     def test_before_request_impersonation(self):
@@ -1451,7 +1459,7 @@ class TestCredentials(object):
         assert headers == {
             "other": "header-value",
             "authorization": "Bearer {}".format(impersonation_response["accessToken"]),
-            "x-identity-trust-boundary": "0",
+            "x-allowed-locations": "0x0",
         }
 
         # Second call shouldn't call refresh.
@@ -1460,7 +1468,7 @@ class TestCredentials(object):
         assert headers == {
             "other": "header-value",
             "authorization": "Bearer {}".format(impersonation_response["accessToken"]),
-            "x-identity-trust-boundary": "0",
+            "x-allowed-locations": "0x0",
         }
 
     @mock.patch("google.auth._helpers.utcnow")
@@ -1488,7 +1496,7 @@ class TestCredentials(object):
         # Cached token should be used.
         assert headers == {
             "authorization": "Bearer token",
-            "x-identity-trust-boundary": "0",
+            "x-allowed-locations": "0x0",
         }
 
         # Next call should simulate 1 second passed.
@@ -1502,7 +1510,7 @@ class TestCredentials(object):
         # New token should be retrieved.
         assert headers == {
             "authorization": "Bearer {}".format(self.SUCCESS_RESPONSE["access_token"]),
-            "x-identity-trust-boundary": "0",
+            "x-allowed-locations": "0x0",
         }
 
     @mock.patch("google.auth._helpers.utcnow")
@@ -1545,7 +1553,7 @@ class TestCredentials(object):
         # Cached token should be used.
         assert headers == {
             "authorization": "Bearer token",
-            "x-identity-trust-boundary": "0",
+            "x-allowed-locations": "0x0",
         }
 
         # Next call should simulate 1 second passed. This will trigger the expiration
@@ -1560,7 +1568,7 @@ class TestCredentials(object):
         # New token should be retrieved.
         assert headers == {
             "authorization": "Bearer {}".format(impersonation_response["accessToken"]),
-            "x-identity-trust-boundary": "0",
+            "x-allowed-locations": "0x0",
         }
 
     @pytest.mark.parametrize(
@@ -1659,7 +1667,7 @@ class TestCredentials(object):
             "x-goog-user-project": self.QUOTA_PROJECT_ID,
             "authorization": "Bearer {}".format(token_response["access_token"]),
             "x-goog-api-client": IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
-            "x-identity-trust-boundary": "0",
+            "x-allowed-locations": "0x0",
         }
         impersonation_request_data = {
             "delegates": None,
@@ -1713,7 +1721,7 @@ class TestCredentials(object):
                 "authorization": "Bearer {}".format(
                     impersonation_response["accessToken"]
                 ),
-                "x-identity-trust-boundary": "0",
+                "x-allowed-locations": "0x0",
             },
         )
 
@@ -1785,7 +1793,7 @@ class TestCredentials(object):
                 "authorization": "Bearer {}".format(
                     self.SUCCESS_RESPONSE["access_token"]
                 ),
-                "x-identity-trust-boundary": "0",
+                "x-allowed-locations": "0x0",
             },
         )
 
@@ -1835,7 +1843,7 @@ class TestCredentials(object):
             "Content-Type": "application/json",
             "authorization": "Bearer {}".format(token_response["access_token"]),
             "x-goog-api-client": IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
-            "x-identity-trust-boundary": "0",
+            "x-allowed-locations": "0x0",
         }
         impersonation_request_data = {
             "delegates": None,
