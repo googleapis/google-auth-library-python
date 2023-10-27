@@ -518,6 +518,36 @@ class TestCredentials(object):
         assert credentials.token == token
         assert credentials.expiry == expiry
 
+    @mock.patch("google.auth.jwt.Credentials._make_jwt")
+    def test_refresh_with_valid_jwt_credentials(self, make_jwt):
+        credentials = self.make_credentials()
+        credentials._create_self_signed_jwt("https://pubsub.googleapis.com")
+
+        request = mock.create_autospec(transport.Request, instance=True)
+
+        token = "token"
+        expiry = _helpers.utcnow() + datetime.timedelta(seconds=3000)
+        make_jwt.return_value = (b"token", expiry)
+
+        # Credentials should start as invalid
+        assert not credentials.valid
+
+        # before_request should cause a refresh
+        credentials.before_request(request, "GET", "http://example.com?a=1#3", {})
+
+        # Credentials should now be valid.
+        assert credentials.valid
+
+        # Call the refresh on a valid credential to trigger the flow of reset
+        # trust boundary cache
+        credentials.refresh(request)
+
+        # Assert make_jwt was called
+        assert make_jwt.call_count == 2
+
+        assert credentials.token == token
+        assert credentials.expiry == expiry
+
     def test_refresh_with_jwt_credentials_token_type_check(self):
         credentials = self.make_credentials()
         credentials._create_self_signed_jwt("https://pubsub.googleapis.com")

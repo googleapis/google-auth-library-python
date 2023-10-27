@@ -85,7 +85,7 @@ _DEFAULT_TOKEN_LIFETIME_SECS = 3600  # 1 hour in seconds
 _DEFAULT_UNIVERSE_DOMAIN = "googleapis.com"
 _GOOGLE_OAUTH2_TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token"
 
-
+_DEFAULT_TRUST_BOUNDARY = {"locations": [], "encoded_locations": "0x0"}
 class Credentials(
     credentials.Signing,
     credentials.Scoped,
@@ -196,7 +196,7 @@ class Credentials(
             self._additional_claims = additional_claims
         else:
             self._additional_claims = {}
-        self._trust_boundary = {"locations": [], "encoded_locations": "0x0"}
+        self._trust_boundary = trust_boundary
 
     @classmethod
     def _from_signer_and_info(cls, signer, info, **kwargs):
@@ -429,6 +429,12 @@ class Credentials(
                 "domain wide delegation is not supported for non-default universe domain"
             )
 
+        # If a refresh is triggered under the case of credential not expired
+        # that means some abnormal cases proactively trigger this refresh, we
+        # need to update the trust boundary cache.
+        if self.valid:
+            self._trust_boundary = None
+
         if self._use_self_signed_jwt():
             self._jwt_credentials.refresh(request)
             self.token = self._jwt_credentials.token.decode()
@@ -440,6 +446,11 @@ class Credentials(
             )
             self.token = access_token
             self.expiry = expiry
+
+        # Either the trust boundary has not yet fetch or been removed.
+        # raise Exception(self._trust_boundary is None)
+        if self._trust_boundary is None:
+            self._trust_boundary = _DEFAULT_TRUST_BOUNDARY
 
     def _create_self_signed_jwt(self, audience):
         """Create a self-signed JWT from the credentials if requirements are met.
