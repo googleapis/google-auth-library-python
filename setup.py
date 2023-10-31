@@ -25,8 +25,6 @@ DEPENDENCIES = (
     # rsa==4.5 is the last version to support 2.7
     # https://github.com/sybrenstuvel/python-rsa/issues/152#issuecomment-643470233
     "rsa>=3.1.4,<5",
-    # install enum34 to support 2.7. enum34 only works up to python version 3.3.
-    "urllib3<2.0",
 )
 
 extras = {
@@ -62,12 +60,11 @@ setup(
     ),
     install_requires=DEPENDENCIES,
     extras_require=extras,
-    python_requires=">=3.6",
+    python_requires=">=3.7",
     license="Apache 2.0",
     keywords="google auth oauth client",
     classifiers=[
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",

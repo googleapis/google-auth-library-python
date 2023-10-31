@@ -132,7 +132,10 @@ class Credentials(
         self._default_scopes = default_scopes
         self._workforce_pool_user_project = workforce_pool_user_project
         self._universe_domain = universe_domain or _DEFAULT_UNIVERSE_DOMAIN
-        self._trust_boundary = "0"  # expose a placeholder trust boundary value.
+        self._trust_boundary = {
+            "locations": [],
+            "encoded_locations": "0x0",
+        }  # expose a placeholder trust boundary value.
 
         if self._client_id:
             self._client_auth = utils.ClientAuthentication(
@@ -385,7 +388,14 @@ class Credentials(
                 additional_headers=additional_headers,
             )
             self.token = response_data.get("access_token")
-            lifetime = datetime.timedelta(seconds=response_data.get("expires_in"))
+            expires_in = response_data.get("expires_in")
+            # Some services do not respect the OAUTH2.0 RFC and send expires_in as a
+            # JSON String.
+            if isinstance(expires_in, str):
+                expires_in = int(expires_in)
+
+            lifetime = datetime.timedelta(seconds=expires_in)
+
             self.expiry = now + lifetime
 
     @_helpers.copy_docstring(credentials.CredentialsWithQuotaProject)
