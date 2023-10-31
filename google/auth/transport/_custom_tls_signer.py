@@ -29,6 +29,12 @@ from google.auth import exceptions
 
 _LOGGER = logging.getLogger(__name__)
 
+
+# Cast SSL_CTX* to void*
+def _cast_ssl_ctx_to_void_p(ssl_ctx):
+    return ctypes.cast(int(cffi.FFI().cast("intptr_t", ssl_ctx)), ctypes.c_void_p)
+
+
 # Load offload library and set up the function types.
 def load_provider_lib(provider_lib_path):
     _LOGGER.debug("loading provider library from %s", provider_lib_path)
@@ -44,10 +50,6 @@ def load_provider_lib(provider_lib_path):
     lib.ECP_attach_to_ctx.restype = ctypes.c_int
 
     return lib
-
-# Cast SSL_CTX* to void*
-def _cast_ssl_ctx_to_void_p(ssl_ctx):
-    return ctypes.cast(int(cffi.FFI().cast("intptr_t", ssl_ctx)), ctypes.c_void_p)
 
 
 class CustomTlsSigner(object):
@@ -70,7 +72,6 @@ class CustomTlsSigner(object):
                     }
         """
         self._enterprise_cert_file_path = enterprise_cert_file_path
-        self._cert = None
 
     def load_libraries(self):
         try:
@@ -88,6 +89,6 @@ class CustomTlsSigner(object):
     def attach_to_ssl_context(self, ctx):
         if not self._provider_lib.ECP_attach_to_ctx(
             _cast_ssl_ctx_to_void_p(ctx._ctx._context),
-            self._enterprise_cert_file_path.encode('ascii')
+            self._enterprise_cert_file_path.encode("ascii"),
         ):
             raise exceptions.MutualTLSChannelError("failed to configure SSL context")

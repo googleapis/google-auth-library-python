@@ -280,6 +280,11 @@ class _MutualTlsOffloadAdapter(requests.adapters.HTTPAdapter):
         self.signer.attach_to_ssl_context(poolmanager)
         self._ctx_poolmanager = poolmanager
 
+        proxymanager = create_urllib3_context()
+        proxymanager.load_verify_locations(cafile=certifi.where())
+        self.signer.attach_to_ssl_context(proxymanager)
+        self._ctx_proxymanager = proxymanager
+
         super(_MutualTlsOffloadAdapter, self).__init__()
 
     def init_poolmanager(self, *args, **kwargs):
