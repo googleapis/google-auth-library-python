@@ -54,8 +54,15 @@ def test_custom_tls_signer():
 
 
 def test_custom_tls_signer_failed_to_load_libraries():
-    # Test load_libraries method
     with pytest.raises(exceptions.MutualTLSChannelError) as excinfo:
         signer_object = _custom_tls_signer.CustomTlsSigner(INVALID_ENTERPRISE_CERT_FILE)
         signer_object.load_libraries()
     assert excinfo.match("enterprise cert file is invalid")
+
+def test_custom_tls_signer_failed_to_attach():
+    with pytest.raises(exceptions.MutualTLSChannelError) as excinfo:
+        signer_object = _custom_tls_signer.CustomTlsSigner(ENTERPRISE_CERT_FILE)
+        signer_object._provider_lib = mock.MagicMock()
+        signer_object._provider_lib.ECP_attach_to_ctx.return_value = False
+        signer_object.attach_to_ssl_context(mock.MagicMock())
+    assert excinfo.match("failed to configure SSL context")

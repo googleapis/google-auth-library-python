@@ -72,6 +72,7 @@ class CustomTlsSigner(object):
                     }
         """
         self._enterprise_cert_file_path = enterprise_cert_file_path
+        self._provider_lib = None
 
     def load_libraries(self):
         try:
