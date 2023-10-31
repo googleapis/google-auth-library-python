@@ -95,8 +95,8 @@ class Credentials(metaclass=abc.ABCMeta):
         if not self.expiry:
             return TokenState.FRESH
 
-        refresh_window = _helpers.utcnow() >= (self.expiry - _helpers.REFRESH_THRESHOLD)
-        if refresh_window:
+        is_stale = _helpers.utcnow() >= (self.expiry - _helpers.REFRESH_THRESHOLD)
+        if is_stale:
             return TokenState.STALE
 
         return TokenState.FRESH
