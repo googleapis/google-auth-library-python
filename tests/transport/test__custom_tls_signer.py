@@ -59,6 +59,7 @@ def test_custom_tls_signer_failed_to_load_libraries():
         signer_object.load_libraries()
     assert excinfo.match("enterprise cert file is invalid")
 
+
 def test_custom_tls_signer_failed_to_attach():
     with pytest.raises(exceptions.MutualTLSChannelError) as excinfo:
         signer_object = _custom_tls_signer.CustomTlsSigner(ENTERPRISE_CERT_FILE)
