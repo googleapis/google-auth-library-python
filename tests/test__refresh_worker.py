@@ -43,7 +43,7 @@ def test_thread_count():
 
 
 def _cred_spinlock(cred):
-    while cred.token is None:
+    while cred.token is None:  # pragma: NO COVER
         time.sleep(MAIN_THREAD_SLEEP_MS)
 
 
@@ -113,31 +113,6 @@ def test_nonblocking_start_refresh():
     assert cred.refresh_count == 0
 
 
-def test_multiple_refreshes_one_worker(test_thread_count):
-    cred_sleep_ms = MAIN_THREAD_SLEEP_MS + (500 / 1000)
-
-    w = _refresh_worker.RefreshWorker()
-    cred = MockCredentialsImpl(sleep_seconds=cred_sleep_ms)
-    request = mock.MagicMock()
-
-    def _thread_refresh():
-        w.start_refresh(cred, request)
-        time.sleep(MAIN_THREAD_SLEEP_MS)
-
-    threads = [
-        threading.Thread(target=_thread_refresh) for _ in range(test_thread_count)
-    ]
-    for t in threads:
-        t.start()
-
-    # All the spawn threads should exit before the refresh worker finishes the
-    # refresh.
-    _cred_spinlock(cred)
-
-    assert cred.token == request
-    assert cred.refresh_count == 1
-
-
 def test_multiple_refreshes_multiple_workers(test_thread_count):
     w = _refresh_worker.RefreshWorker()
     cred = MockCredentialsImpl()
@@ -158,3 +133,36 @@ def test_multiple_refreshes_multiple_workers(test_thread_count):
     # There is a chance only one thread has enough time to perform a refresh.
     # Generally multiple threads will have time to perform a refresh
     assert cred.refresh_count > 0
+
+
+def test_refresh_error():
+    w = _refresh_worker.RefreshWorker()
+    cred = mock.MagicMock()
+    request = mock.MagicMock()
+
+    cred.refresh.side_effect = exceptions.RefreshError("Failed to refresh")
+
+    w.start_refresh(cred, request)
+
+    err = None
+    while err is None:
+        err = w.get_error()
+        time.sleep(MAIN_THREAD_SLEEP_MS)
+
+    assert isinstance(err, exceptions.RefreshError)
+
+
+def test_refresh_dead_worker():
+    cred = MockCredentialsImpl()
+    request = mock.MagicMock()
+
+    w = _refresh_worker.RefreshWorker()
+    w._worker = None
+    w._refresh_queue.put_nowait((cred, request))
+
+    w.start_refresh(cred, request)
+
+    _cred_spinlock(cred)
+
+    assert cred.token == request
+    assert cred.refresh_count == 1

@@ -204,6 +204,16 @@ class Credentials(metaclass=abc.ABCMeta):
     def with_non_blocking_refresh(self):
         self._use_non_blocking_refresh = True
 
+    def get_background_refresh_error(self):
+        """
+        Returns the first error in the background error queue. It is recommended to flush the full error queue to root cause refresh failures.
+
+        This error queue is populated by the token refreshes performed in a background thread.
+        Returns:
+          Optional[exceptions.Exception]
+        """
+        return self._refresh_worker.get_error()
+
 
 class CredentialsWithQuotaProject(Credentials):
     """Abstract base for credentials supporting ``with_quota_project`` factory"""

@@ -240,6 +240,21 @@ def test_create_scoped_if_required_not_scopes():
     assert scoped_credentials is unscoped_credentials
 
 
+def test_get_background_refresh_error_no_error():
+    credentials = CredentialsImpl()
+    error = credentials.get_background_refresh_error()
+
+    assert error is None
+
+
+def test_get_background_refresh_error():
+    credentials = CredentialsImpl()
+    credentials._refresh_worker._error_queue.put_nowait("sentinel")
+    error = credentials.get_background_refresh_error()
+
+    assert error == "sentinel"
+
+
 def test_nonblocking_refresh_invalid_credentials():
     c = CredentialsImpl()
     c.with_non_blocking_refresh()

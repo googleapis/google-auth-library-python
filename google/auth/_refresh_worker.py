@@ -29,18 +29,23 @@ class RefreshWorker:
     """
 
     MAX_REFRESH_QUEUE_SIZE = 1
+    MAX_ERROR_QUEUE_SIZE = 10
 
     def __init__(self):
         """Initializes the worker."""
 
         self._refresh_queue = queue.Queue(self.MAX_REFRESH_QUEUE_SIZE)
+        # Bound the error queue to avoid infinitely growing the heap.
+        self._error_queue = queue.Queue(self.MAX_ERROR_QUEUE_SIZE)
         self._worker = None
 
     def _need_worker(self):
         return not self._worker or not self._worker.is_alive()
 
     def _spawn_worker(self):
-        self._worker = RefreshThread(work_queue=self._refresh_queue)
+        self._worker = RefreshThread(
+            work_queue=self._refresh_queue, error_queue=self._error_queue
+        )
         self._worker.start()
 
     def start_refresh(self, cred, request):
@@ -70,22 +75,35 @@ class RefreshWorker:
         if self._need_worker():
             self._spawn_worker()
 
+    def get_error(self):
+        """
+        Returns the first error in the error queue. It is recommended to flush the full error queue to root cause refresh failures.
+        Returns:
+          Optional[exceptions.Exception]
+        """
+        try:
+            return self._error_queue.get_nowait()
+        except queue.Empty:
+            return None
+
 
 class RefreshThread(threading.Thread):
     """
     Thread that refreshes credentials.
     """
 
-    def __init__(self, work_queue, **kwargs):
+    def __init__(self, work_queue, error_queue, **kwargs):
         """Initializes the thread.
 
         Args:
             work_queue: A queue of credentials and request tuples.
+            error_queue: A queue containing errors that prevented a credential refresh.
             **kwargs: Additional keyword arguments.
         """
 
         super().__init__(**kwargs)
         self._work_queue = work_queue
+        self._error_queue = error_queue
 
     def run(self):
         """
@@ -103,5 +121,10 @@ class RefreshThread(threading.Thread):
                 f"Timed out waiting for refresh work after {WORKER_TIMEOUT_SECONDS} seconds. This could mean there is a race condition, work starvation, or other logic error in the refresh code."
             )
             return
-        cred.refresh(request)
+        try:
+            cred.refresh(request)
+        except Exception as err:
+            _LOGGER.error(f"Refresh failed due to: {err}")
+            self._error_queue.put_nowait(err)
+
         self._work_queue.task_done()
