@@ -546,6 +546,9 @@ def lookup_trust_boundary(request, universe, service_account, access_token):
             }
 
     Raises:
+        exceptions.TransportError: If the request to lookup endpoint fails.
+        exceptions.RefreshError: If the query response not 200 or 404.
+        exceptions.MalformedError: If the response not in valid format.
     """
     url = _TRUST_BOUNDARY_LOOKUP_ENDPOINT.format(universe, service_account)
     basic_auth = "Basic " + access_token
