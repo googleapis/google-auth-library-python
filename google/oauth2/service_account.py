@@ -85,7 +85,7 @@ _DEFAULT_TOKEN_LIFETIME_SECS = 3600  # 1 hour in seconds
 _DEFAULT_UNIVERSE_DOMAIN = "googleapis.com"
 _GOOGLE_OAUTH2_TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token"
 
-_DEFAULT_TRUST_BOUNDARY = {"locations": [], "encoded_locations": "0x0"}
+
 class Credentials(
     credentials.Signing,
     credentials.Scoped,
@@ -448,9 +448,10 @@ class Credentials(
             self.expiry = expiry
 
         # Either the trust boundary has not yet fetch or been removed.
-        # raise Exception(self._trust_boundary is None)
         if self._trust_boundary is None:
-            self._trust_boundary = _DEFAULT_TRUST_BOUNDARY
+            self._trust_boundary = _client.lookup_trust_boundary(
+                request, self.universe_domain, self.service_account_email, self.token
+            )
 
     def _create_self_signed_jwt(self, audience):
         """Create a self-signed JWT from the credentials if requirements are met.

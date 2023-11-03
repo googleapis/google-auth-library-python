@@ -58,6 +58,7 @@ ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE = (
 ID_TOKEN_REQUEST_METRICS_HEADER_VALUE = (
     "gl-python/3.7 auth/1.1 auth-request-type/it cred-type/imp"
 )
+DEFAULT_TRUST_BOUNDARY = {"locations": [], "encoded_locations": "0x0"}
 
 
 @pytest.fixture
@@ -204,6 +205,9 @@ class TestImpersonatedCredentials(object):
         with mock.patch(
             "google.auth.metrics.token_request_access_token_impersonate",
             return_value=ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
+        ), mock.patch(
+            "google.oauth2._client.lookup_trust_boundary",
+            return_value=DEFAULT_TRUST_BOUNDARY,
         ):
             credentials.refresh(request)
 
@@ -234,7 +238,11 @@ class TestImpersonatedCredentials(object):
             use_data_bytes=use_data_bytes,
         )
 
-        credentials.refresh(request)
+        with mock.patch(
+            "google.oauth2._client.lookup_trust_boundary",
+            return_value=DEFAULT_TRUST_BOUNDARY,
+        ):
+            credentials.refresh(request)
 
         assert credentials.valid
         assert not credentials.expired
@@ -293,7 +301,10 @@ class TestImpersonatedCredentials(object):
             data=json.dumps(response_body), status=http_client.OK
         )
 
-        with pytest.raises(exceptions.RefreshError) as excinfo:
+        with mock.patch(
+            "google.oauth2._client.lookup_trust_boundary",
+            return_value=DEFAULT_TRUST_BOUNDARY,
+        ), pytest.raises(exceptions.RefreshError) as excinfo:
             credentials.refresh(request)
 
         assert excinfo.match(impersonated_credentials._REFRESH_ERROR)
@@ -316,7 +327,10 @@ class TestImpersonatedCredentials(object):
             data=json.dumps(response_body), status=http_client.UNAUTHORIZED
         )
 
-        with pytest.raises(exceptions.RefreshError) as excinfo:
+        with mock.patch(
+            "google.oauth2._client.lookup_trust_boundary",
+            return_value=DEFAULT_TRUST_BOUNDARY,
+        ), pytest.raises(exceptions.RefreshError) as excinfo:
             credentials.refresh(request)
 
         assert excinfo.match(impersonated_credentials._REFRESH_ERROR)
@@ -339,9 +353,8 @@ class TestImpersonatedCredentials(object):
         with mock.patch(
             "google.auth.transport.requests.AuthorizedSession.post",
             return_value=response,
-        ):
-            with pytest.raises(exceptions.RefreshError) as excinfo:
-                id_creds.refresh(None)
+        ), pytest.raises(exceptions.RefreshError) as excinfo:
+            id_creds.refresh(None)
 
         assert excinfo.match("Error getting ID token")
 
@@ -354,7 +367,10 @@ class TestImpersonatedCredentials(object):
             data=json.dumps(response_body), status=http_client.HTTPException
         )
 
-        with pytest.raises(exceptions.RefreshError) as excinfo:
+        with mock.patch(
+            "google.oauth2._client.lookup_trust_boundary",
+            return_value=DEFAULT_TRUST_BOUNDARY,
+        ), pytest.raises(exceptions.RefreshError) as excinfo:
             credentials.refresh(request)
 
         assert excinfo.match(impersonated_credentials._REFRESH_ERROR)
@@ -394,7 +410,11 @@ class TestImpersonatedCredentials(object):
         request = mock.create_autospec(transport.Request, instance=False)
         request.return_value = response
 
-        credentials.refresh(request)
+        with mock.patch(
+            "google.oauth2._client.lookup_trust_boundary",
+            return_value=DEFAULT_TRUST_BOUNDARY,
+        ):
+            credentials.refresh(request)
 
         assert credentials.valid
         assert not credentials.expired
@@ -443,7 +463,11 @@ class TestImpersonatedCredentials(object):
             use_data_bytes=use_data_bytes,
         )
 
-        quota_project_creds.refresh(request)
+        with mock.patch(
+            "google.oauth2._client.lookup_trust_boundary",
+            return_value=DEFAULT_TRUST_BOUNDARY,
+        ):
+            quota_project_creds.refresh(request)
 
         assert quota_project_creds.valid
         assert not quota_project_creds.expired
@@ -483,7 +507,11 @@ class TestImpersonatedCredentials(object):
             data=json.dumps(response_body), status=http_client.OK
         )
 
-        credentials.refresh(request)
+        with mock.patch(
+            "google.oauth2._client.lookup_trust_boundary",
+            return_value=DEFAULT_TRUST_BOUNDARY,
+        ):
+            credentials.refresh(request)
 
         assert credentials.valid
         assert not credentials.expired
@@ -542,7 +570,11 @@ class TestImpersonatedCredentials(object):
             data=json.dumps(response_body), status=http_client.OK
         )
 
-        credentials.refresh(request)
+        with mock.patch(
+            "google.oauth2._client.lookup_trust_boundary",
+            return_value=DEFAULT_TRUST_BOUNDARY,
+        ):
+            credentials.refresh(request)
 
         assert credentials.valid
         assert not credentials.expired
@@ -575,7 +607,11 @@ class TestImpersonatedCredentials(object):
             data=json.dumps(response_body), status=http_client.OK
         )
 
-        credentials.refresh(request)
+        with mock.patch(
+            "google.oauth2._client.lookup_trust_boundary",
+            return_value=DEFAULT_TRUST_BOUNDARY,
+        ):
+            credentials.refresh(request)
 
         assert credentials.valid
         assert not credentials.expired
@@ -616,7 +652,11 @@ class TestImpersonatedCredentials(object):
             data=json.dumps(response_body), status=http_client.OK
         )
 
-        credentials.refresh(request)
+        with mock.patch(
+            "google.oauth2._client.lookup_trust_boundary",
+            return_value=DEFAULT_TRUST_BOUNDARY,
+        ):
+            credentials.refresh(request)
 
         assert credentials.valid
         assert not credentials.expired
@@ -645,7 +685,11 @@ class TestImpersonatedCredentials(object):
             data=json.dumps(response_body), status=http_client.OK
         )
 
-        credentials.refresh(request)
+        with mock.patch(
+            "google.oauth2._client.lookup_trust_boundary",
+            return_value=DEFAULT_TRUST_BOUNDARY,
+        ):
+            credentials.refresh(request)
 
         assert credentials.valid
         assert not credentials.expired

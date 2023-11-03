@@ -43,6 +43,10 @@ _IAM_IDTOKEN_ENDPOINT = (
     "https://iamcredentials.googleapis.com/v1/"
     + "projects/-/serviceAccounts/{}:generateIdToken"
 )
+_TRUST_BOUNDARY_LOOKUP_ENDPOINT = (
+    "iamcredentials.{}/v1/projects/-/serviceAccounts/{}/trustBoundary"
+)
+_DEFAULT_TRUST_BOUNDARY = {"locations": [], "encoded_locations": "0x0"}
 
 
 def _handle_error_response(response_data, retryable_error):
@@ -505,3 +509,78 @@ def refresh_grant(
         request, token_uri, body, can_retry=can_retry
     )
     return _handle_refresh_grant_response(response_data, refresh_token)
+
+
+def lookup_trust_boundary(request, universe, service_account, access_token):
+    """ Implements the global lookup of service account trust boundary
+
+    Args:
+        request (google.auth.transport.Request): A callable used to make
+            HTTP requests.
+
+        universe (str): Universe domain. (GDU/TPC universe)
+
+        service_account (str): The service account to lookup.
+
+        access_token (str): A valid access_token used as a basic auth.
+
+    Returns:
+        Mapping[str,list|str, str]: A response would be a dictionary contains
+            the "locations" as a list of allowed locations in string and
+            "encoded_locations" as a hex string.
+
+            e.g:
+            {
+                "locations": [
+                    "us-central1", "us-east1", "europe-west1", "asia-east1"
+                ],
+                "encoded_locations": "0xA30"
+            }
+
+            In case of a universe global lookup not launched yet, a default
+            trust boundary of "all" will be returned.
+
+            {
+                "locations": [],
+                "": "0x0"
+            }
+
+    Raises:
+    """
+    url = _TRUST_BOUNDARY_LOOKUP_ENDPOINT.format(universe, service_account)
+    basic_auth = "Basic " + access_token
+    headers = {"Authorization": basic_auth}
+    try:
+        response = request(method="GET", url=url, headers=headers)
+    except Exception as e:
+        raise exceptions.TransportError(
+            "Failed to make request to trust boundary global lookup endpoint {}".format(
+                e
+            )
+        )
+
+    if response.status == http_client.NOT_FOUND:
+        return _DEFAULT_TRUST_BOUNDARY
+
+    response_body = (
+        response.data.decode("utf-8")
+        if hasattr(response.data, "decode")
+        else response.data
+    )
+    if response.status != http_client.OK:
+        raise exceptions.RefreshError(
+            "Failed look up trust boundary, {}, {}".format(
+                response.status, response_body
+            )
+        )
+
+    response_data = {}
+    try:
+        response_data = json.loads(response_body)
+    except Exception:
+        raise exceptions.MalformedError("Failed to load trust boundary info")
+
+    if "locations" not in response_data or "encoded_locations" not in response_data:
+        raise exceptions.MalformedError("Failed to load trust boundary info")
+
+    return response_data

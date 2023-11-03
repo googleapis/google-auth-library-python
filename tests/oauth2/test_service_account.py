@@ -43,6 +43,7 @@ SERVICE_ACCOUNT_NON_GDU_JSON_FILE = os.path.join(
     DATA_DIR, "service_account_non_gdu.json"
 )
 FAKE_UNIVERSE_DOMAIN = "universe.foo"
+DEFAULT_TRUST_BOUNDARY = {"locations": [], "encoded_locations": "0x0"}
 
 with open(SERVICE_ACCOUNT_JSON_FILE, "rb") as fh:
     SERVICE_ACCOUNT_INFO = json.load(fh)
@@ -450,7 +451,11 @@ class TestCredentials(object):
         request = mock.create_autospec(transport.Request, instance=True)
 
         # Refresh credentials
-        credentials.refresh(request)
+        with mock.patch(
+            "google.oauth2._client.lookup_trust_boundary",
+            return_value=DEFAULT_TRUST_BOUNDARY,
+        ):
+            credentials.refresh(request)
 
         # Check jwt grant call.
         assert jwt_grant.called
@@ -484,7 +489,11 @@ class TestCredentials(object):
         assert not credentials.valid
 
         # before_request should cause a refresh
-        credentials.before_request(request, "GET", "http://example.com?a=1#3", {})
+        with mock.patch(
+            "google.oauth2._client.lookup_trust_boundary",
+            return_value=DEFAULT_TRUST_BOUNDARY,
+        ):
+            credentials.before_request(request, "GET", "http://example.com?a=1#3", {})
 
         # The refresh endpoint should've been called.
         assert jwt_grant.called
@@ -507,7 +516,11 @@ class TestCredentials(object):
         assert not credentials.valid
 
         # before_request should cause a refresh
-        credentials.before_request(request, "GET", "http://example.com?a=1#3", {})
+        with mock.patch(
+            "google.oauth2._client.lookup_trust_boundary",
+            return_value=DEFAULT_TRUST_BOUNDARY,
+        ):
+            credentials.before_request(request, "GET", "http://example.com?a=1#3", {})
 
         # Credentials should now be valid.
         assert credentials.valid
@@ -522,6 +535,7 @@ class TestCredentials(object):
     def test_refresh_with_valid_jwt_credentials(self, make_jwt):
         credentials = self.make_credentials()
         credentials._create_self_signed_jwt("https://pubsub.googleapis.com")
+        credentials._trust_boundary = DEFAULT_TRUST_BOUNDARY
 
         request = mock.create_autospec(transport.Request, instance=True)
 
@@ -533,14 +547,22 @@ class TestCredentials(object):
         assert not credentials.valid
 
         # before_request should cause a refresh
-        credentials.before_request(request, "GET", "http://example.com?a=1#3", {})
+        with mock.patch(
+            "google.oauth2._client.lookup_trust_boundary",
+            return_value=DEFAULT_TRUST_BOUNDARY,
+        ):
+            credentials.before_request(request, "GET", "http://example.com?a=1#3", {})
 
         # Credentials should now be valid.
         assert credentials.valid
 
         # Call the refresh on a valid credential to trigger the flow of reset
         # trust boundary cache
-        credentials.refresh(request)
+        with mock.patch(
+            "google.oauth2._client.lookup_trust_boundary",
+            return_value=DEFAULT_TRUST_BOUNDARY,
+        ):
+            credentials.refresh(request)
 
         # Assert make_jwt was called
         assert make_jwt.call_count == 2
@@ -551,7 +573,11 @@ class TestCredentials(object):
     def test_refresh_with_jwt_credentials_token_type_check(self):
         credentials = self.make_credentials()
         credentials._create_self_signed_jwt("https://pubsub.googleapis.com")
-        credentials.refresh(mock.Mock())
+        with mock.patch(
+            "google.oauth2._client.lookup_trust_boundary",
+            return_value=DEFAULT_TRUST_BOUNDARY,
+        ):
+            credentials.refresh(mock.Mock())
 
         # Credentials token should be a JWT string.
         assert isinstance(credentials.token, str)
@@ -580,7 +606,11 @@ class TestCredentials(object):
         request = mock.create_autospec(transport.Request, instance=True)
 
         # Refresh credentials
-        credentials.refresh(request)
+        with mock.patch(
+            "google.oauth2._client.lookup_trust_boundary",
+            return_value=DEFAULT_TRUST_BOUNDARY,
+        ):
+            credentials.refresh(request)
 
         # Make sure we are using jwt_grant and not self signed JWT refresh
         # method to obtain the token.

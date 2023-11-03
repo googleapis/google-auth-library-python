@@ -619,3 +619,89 @@ def test__token_endpoint_request_no_throw_with_retry(can_retry):
         assert mock_request.call_count == 4
     else:
         assert mock_request.call_count == 1
+
+
+def test_lookup_trust_boundary_request_error():
+    mock_request = mock.create_autospec(transport.Request)
+    mock_request.side_effect = Exception("Mock Request Error")
+
+    with pytest.raises(exceptions.TransportError):
+        _client.lookup_trust_boundary(
+            mock_request, "googleapis.com", "mock_service_account", "access_token"
+        )
+
+
+def test_lookup_trust_boundary():
+    test_data = [
+        {
+            "name": "normal happy case",
+            "response_status": http_client.OK,
+            "response_data": json.dumps(
+                {
+                    "locations": [
+                        "us-central1",
+                        "us-east1",
+                        "europe-west1",
+                        "asia-east1",
+                    ],
+                    "encoded_locations": "0xA30",
+                }
+            ),
+            "expect_trust_boundary": {
+                "locations": ["us-central1", "us-east1", "europe-west1", "asia-east1"],
+                "encoded_locations": "0xA30",
+            },
+        },
+        {
+            "name": "trust boundary not launched",
+            "response_status": http_client.NOT_FOUND,
+            "response_data": "Not Found",
+            "expect_trust_boundary": _client._DEFAULT_TRUST_BOUNDARY,
+        },
+        {
+            "name": "response status error",
+            "response_status": http_client.BAD_REQUEST,
+            "response_data": "Bad request",
+            "expect_error": exceptions.RefreshError,
+            "expect_error_messages": "Failed look up trust boundary",
+        },
+        {
+            "name": "response parsing error",
+            "response_status": http_client.OK,
+            "response_data": "some random malform message",
+            "expect_error": exceptions.MalformedError,
+            "expect_error_messages": "Failed to load trust boundary info",
+        },
+        {
+            "name": "response malform error",
+            "response_status": http_client.OK,
+            "response_data": "{}",
+            "expect_error": exceptions.MalformedError,
+            "expect_error_messages": "Failed to load trust boundary info",
+        },
+    ]
+
+    for data in test_data:
+        expect_error, msg = data.get("expect_error"), data.get("expect_error_message")
+        mock_response = mock.create_autospec(transport.Response, instance=True)
+        mock_response.status = data.get("response_status")
+        mock_response.data = data.get("response_data")
+
+        mock_request = mock.create_autospec(transport.Request)
+        mock_request.return_value = mock_response
+
+        if not expect_error:
+            trust_boundary = _client.lookup_trust_boundary(
+                mock_request, "googleapis.com", "mock_service_account", "access_token"
+            )
+            assert trust_boundary == data.get("expect_trust_boundary")
+            # assert trust_boundary['locations'] == data.get('expect_trust_boundary')['locations']
+            # assert trust_boundary['encoded_locations'] == data.get('expect_trust_boundary')['encoded_locations']
+        else:
+            with pytest.raises(expect_error, match=msg):
+                _client.lookup_trust_boundary(
+                    mock_request,
+                    "googleapis.com",
+                    "mock_service_account",
+                    "access_token",
+                )
