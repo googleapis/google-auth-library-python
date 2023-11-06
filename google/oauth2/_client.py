@@ -525,7 +525,7 @@ def lookup_trust_boundary(request, universe, service_account, access_token):
         access_token (str): A valid access_token used as a basic auth.
 
     Returns:
-        Mapping[str,list|str, str]: A response would be a dictionary contains
+        Mapping[str,list|str, str]: A response would be a dictionary containing
             the "locations" as a list of allowed locations in string and
             "encoded_locations" as a hex string.
 
