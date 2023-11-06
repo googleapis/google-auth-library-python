@@ -447,7 +447,7 @@ class Credentials(
             self.token = access_token
             self.expiry = expiry
 
-        # Either the trust boundary has not yet fetch or been removed.
+        # Either the trust boundary has been removed or not yet been fetched.
         if self._trust_boundary is None:
             self._trust_boundary = _client.lookup_trust_boundary(
                 request, self.universe_domain, self.service_account_email, self.token
