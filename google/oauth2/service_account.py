@@ -328,6 +328,22 @@ class Credentials(
         cred._always_use_jwt_access = always_use_jwt_access
         return cred
 
+    def with_universe_domain(self, universe_domain):
+        """Create a copy of these credentials with the given universe domain.
+
+        Args:
+            universe_domain (str): The universe domain value.
+
+        Returns:
+            google.auth.service_account.Credentials: A new credentials
+                instance.
+        """
+        cred = self._make_copy()
+        cred._universe_domain = universe_domain
+        if universe_domain != _DEFAULT_UNIVERSE_DOMAIN:
+            cred._always_use_jwt_access = True
+        return cred
+
     def with_subject(self, subject):
         """Create a copy of these credentials with the specified subject.
 
