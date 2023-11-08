@@ -625,10 +625,10 @@ def test_lookup_trust_boundary_request_error():
     mock_request = mock.create_autospec(transport.Request)
     mock_request.side_effect = Exception("Mock Request Error")
 
-    with pytest.raises(exceptions.TransportError):
-        _client.lookup_trust_boundary(
-            mock_request, "googleapis.com", "mock_service_account", "access_token"
-        )
+    trust_boundary = _client.lookup_trust_boundary(
+        mock_request, "googleapis.com", "mock_service_account", "access_token"
+    )
+    assert trust_boundary == _client._DEFAULT_TRUST_BOUNDARY
 
 
 def test_lookup_trust_boundary():
@@ -662,8 +662,7 @@ def test_lookup_trust_boundary():
             "name": "response status error",
             "response_status": http_client.BAD_REQUEST,
             "response_data": "Bad request",
-            "expect_error": exceptions.RefreshError,
-            "expect_error_messages": "Failed look up trust boundary",
+            "expect_trust_boundary": _client._DEFAULT_TRUST_BOUNDARY,
         },
         {
             "name": "response parsing error",

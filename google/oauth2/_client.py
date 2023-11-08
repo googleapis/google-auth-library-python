@@ -48,7 +48,6 @@ _TRUST_BOUNDARY_LOOKUP_ENDPOINT = (
 )
 _DEFAULT_TRUST_BOUNDARY = {"locations": [], "encoded_locations": "0x0"}
 
-
 def _handle_error_response(response_data, retryable_error):
     """Translates an error response into an exception.
 
@@ -546,8 +545,6 @@ def lookup_trust_boundary(request, universe, service_account, access_token):
             }
 
     Raises:
-        exceptions.TransportError: If the request to the lookup endpoint fails.
-        exceptions.RefreshError: If the query response status code is not 200 or 404.
         exceptions.MalformedError: If the response is not in a valid format.
     """
     url = _TRUST_BOUNDARY_LOOKUP_ENDPOINT.format(universe, service_account)
@@ -555,35 +552,20 @@ def lookup_trust_boundary(request, universe, service_account, access_token):
     headers = {"Authorization": basic_auth}
     try:
         response = request(method="GET", url=url, headers=headers)
-    except Exception as e:
-        raise exceptions.TransportError(
-            "Failed to make request to trust boundary global lookup endpoint {}".format(
-                e
-            )
+        response_body = (
+            response.data.decode("utf-8")
+            if hasattr(response.data, "decode")
+            else response.data
         )
-
-    if response.status == http_client.NOT_FOUND:
+        if response.status != http_client.OK:
+            return _DEFAULT_TRUST_BOUNDARY
+    except Exception:
         return _DEFAULT_TRUST_BOUNDARY
 
-    response_body = (
-        response.data.decode("utf-8")
-        if hasattr(response.data, "decode")
-        else response.data
-    )
-    if response.status != http_client.OK:
-        raise exceptions.RefreshError(
-            "Failed look up trust boundary, {}, {}".format(
-                response.status, response_body
-            )
-        )
-
-    response_data = {}
     try:
         response_data = json.loads(response_body)
+        if "locations" not in response_data or "encoded_locations" not in response_data:
+            raise exceptions.MalformedError("Failed to load trust boundary info")
+        return response_data
     except Exception:
         raise exceptions.MalformedError("Failed to load trust boundary info")
-
-    if "locations" not in response_data or "encoded_locations" not in response_data:
-        raise exceptions.MalformedError("Failed to load trust boundary info")
-
-    return response_data
