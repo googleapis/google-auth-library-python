@@ -151,6 +151,19 @@ def test_refresh_error():
 
     assert isinstance(err, exceptions.RefreshError)
 
+    for _ in range(0, w.MAX_ERROR_QUEUE_SIZE + 1):
+      w.start_refresh(cred, request)
+    while w._error_queue.empty():
+      time.sleep(MAIN_THREAD_SLEEP_MS)
+    assert w._error_queue.empty() == False
+
+    w.flush_error_queue()
+    assert w._error_queue.empty() == True
+
+    # Make sure that an empty queue doesn't result in exceptions.
+    w.flush_error_queue()
+    assert w._error_queue.empty() == True
+
 
 def test_refresh_dead_worker():
     cred = MockCredentialsImpl()

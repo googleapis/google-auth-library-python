@@ -189,8 +189,14 @@ class Credentials(metaclass=abc.ABCMeta):
         # (Subclasses may use these arguments to ascertain information about
         # the http request.)
 
+        if self.token_state == TokenState.FRESH:
+            self._refresh_worker.flush_error_queue()
+
         if self.token_state == TokenState.STALE:
-            if self._use_non_blocking_refresh:
+            if (
+                self._use_non_blocking_refresh
+                and not self._refresh_worker.error_queue_full()
+            ):
                 self._refresh_worker.start_refresh(self, request)
             else:
                 self.refresh(request)

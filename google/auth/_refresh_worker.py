@@ -29,7 +29,7 @@ class RefreshWorker:
     """
 
     MAX_REFRESH_QUEUE_SIZE = 1
-    MAX_ERROR_QUEUE_SIZE = 10
+    MAX_ERROR_QUEUE_SIZE = 2
 
     def __init__(self):
         """Initializes the worker."""
@@ -40,7 +40,7 @@ class RefreshWorker:
         self._worker = None
 
     def _need_worker(self):
-        return not self._worker or not self._worker.is_alive()
+        return self._worker is None or not self._worker.is_alive()
 
     def _spawn_worker(self):
         self._worker = RefreshThread(
@@ -62,7 +62,7 @@ class RefreshWorker:
                 "Unable to start refresh. cred and request must be valid and instantiated objects."
             )
 
-        if self._refresh_queue.qsize() >= self.MAX_REFRESH_QUEUE_SIZE:
+        if not self._refresh_queue.empty():
             if self._need_worker():
                 self._spawn_worker()
             return
@@ -74,6 +74,27 @@ class RefreshWorker:
 
         if self._need_worker():
             self._spawn_worker()
+
+    def error_queue_full(self):
+        """
+      True if the refresh worker error queue is full. False if it is not yet full.
+
+      Returns:
+        bool
+      """
+        return self._error_queue.full()
+
+    def flush_error_queue(self):
+        """
+      Drop all errors in the error queue.
+      """
+        try:
+            while not self._error_queue.empty():
+                _ = self._error_queue.get_nowait()
+        # This condition is unlikely but there is a possibility that an
+        # error gets queued between the empty and get calls
+        except queue.Empty: # pragma: NO COVER
+            pass
 
     def get_error(self):
         """
@@ -124,7 +145,8 @@ class RefreshThread(threading.Thread):
         try:
             cred.refresh(request)
         except Exception as err:
-            _LOGGER.error(f"Refresh failed due to: {err}")
-            self._error_queue.put_nowait(err)
+            _LOGGER.error(f"Background refresh failed due to: {err}")
+            if not self._error_queue.full():
+                self._error_queue.put_nowait(err)
 
         self._work_queue.task_done()
