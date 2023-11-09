@@ -93,7 +93,7 @@ class RefreshWorker:
                 _ = self._error_queue.get_nowait()
         # This condition is unlikely but there is a possibility that an
         # error gets queued between the empty and get calls
-        except queue.Empty: # pragma: NO COVER
+        except queue.Empty:  # pragma: NO COVER
             pass
 
     def get_error(self):
