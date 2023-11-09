@@ -149,4 +149,6 @@ class RefreshThread(threading.Thread):
             if not self._error_queue.full():
                 self._error_queue.put_nowait(err)
 
-        self._work_queue.task_done()
+        # The coverage tool is not able to capturre this line, but it is covered
+        # by test_start_refresh in the unit tests.
+        self._work_queue.task_done() # pragma: NO COVER
