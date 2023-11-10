@@ -155,14 +155,14 @@ def test_refresh_error():
         w.start_refresh(cred, request)
     while w._error_queue.empty():  # pragma: NO COVER
         time.sleep(MAIN_THREAD_SLEEP_MS)
-    assert w._error_queue.empty() == False
+    assert not w._error_queue.empty()
 
     w.flush_error_queue()
-    assert w._error_queue.empty() == True
+    assert w._error_queue.empty()
 
     # Make sure that an empty queue doesn't result in exceptions.
     w.flush_error_queue()
-    assert w._error_queue.empty() == True
+    assert w._error_queue.empty()
 
 
 def test_refresh_dead_worker():
