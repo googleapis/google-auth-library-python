@@ -151,4 +151,4 @@ class RefreshThread(threading.Thread):
 
         # The coverage tool is not able to capturre this line, but it is covered
         # by test_start_refresh in the unit tests.
-        self._work_queue.task_done() # pragma: NO COVER
+        self._work_queue.task_done()

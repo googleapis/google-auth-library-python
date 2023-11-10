@@ -153,7 +153,7 @@ def test_refresh_error():
 
     for _ in range(0, w.MAX_ERROR_QUEUE_SIZE + 1):
         w.start_refresh(cred, request)
-    while w._error_queue.empty():
+    while w._error_queue.empty(): # pragma: NO COVER
         time.sleep(MAIN_THREAD_SLEEP_MS)
     assert w._error_queue.empty() == False
 
