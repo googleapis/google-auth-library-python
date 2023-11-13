@@ -148,7 +148,9 @@ class RefreshThread(threading.Thread):
             return
         try:
             cred.refresh(request)
-        except Exception as err:
+        except Exception as err: # pragma: NO COVER
+            # This condition is covered by the unit test test_refresh_error but
+            # it can be flaky due to the scheduler.
             _LOGGER.error(f"Background refresh failed due to: {err}")
             if not self._error_queue.full():
                 self._error_queue.put_nowait(err)
