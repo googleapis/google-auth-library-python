@@ -66,7 +66,7 @@ class RefreshWorker:
         # check can flake due to the schdule.
         #
         # Specifially this test is covered by test_refresh_dead_worker
-        if not self._refresh_queue.empty(): # pragma: NO COVER
+        if not self._refresh_queue.empty():  # pragma: NO COVER
             if self._need_worker():
                 self._spawn_worker()
             return
@@ -76,7 +76,9 @@ class RefreshWorker:
         except queue.Full:
             return
 
-        if self._need_worker():
+        # This test case is covered by the unit tests but sometimes the cover
+        # check can flake due to the schdule.
+        if self._need_worker():  # pragma: NO COVER
             self._spawn_worker()
 
     def error_queue_full(self):
@@ -148,7 +150,7 @@ class RefreshThread(threading.Thread):
             return
         try:
             cred.refresh(request)
-        except Exception as err: # pragma: NO COVER
+        except Exception as err:  # pragma: NO COVER
             # This condition is covered by the unit test test_refresh_error but
             # it can be flaky due to the scheduler.
             _LOGGER.error(f"Background refresh failed due to: {err}")
