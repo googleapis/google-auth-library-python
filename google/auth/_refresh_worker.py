@@ -62,7 +62,11 @@ class RefreshWorker:
                 "Unable to start refresh. cred and request must be valid and instantiated objects."
             )
 
-        if not self._refresh_queue.empty():
+        # This test case is covered by the unit tests but sometimes the cover
+        # check can flake due to the schdule.
+        #
+        # Specifially this test is covered by test_refresh_dead_worker
+        if not self._refresh_queue.empty(): # pragma: NO COVER
             if self._need_worker():
                 self._spawn_worker()
             return

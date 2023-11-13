@@ -171,7 +171,7 @@ def test_refresh_dead_worker():
 
     w = _refresh_worker.RefreshWorker()
     w._worker = None
-    w._refresh_queue.put_nowait((cred, request))
+    w._refresh_queue.put((cred, request))
 
     w.start_refresh(cred, request)
 
