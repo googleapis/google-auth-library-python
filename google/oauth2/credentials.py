@@ -177,7 +177,6 @@ class Credentials(credentials.ReadOnlyScoped, credentials.CredentialsWithQuotaPr
         self._enable_reauth_refresh = d.get("_enable_reauth_refresh")
         self._trust_boundary = d.get("_trust_boundary")
         self._universe_domain = d.get("_universe_domain")
-        self._token_state = d.get("_token_state")
         # The refresh_handler setter should be used to repopulate this.
         self._refresh_handler = None
         self._refresh_worker = None
