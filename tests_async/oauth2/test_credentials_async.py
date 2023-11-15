@@ -463,6 +463,16 @@ class TestCredentials:
             credentials = pickle.load(f)
             assert credentials.quota_project_id is None
 
+    @mock.patch("google.oauth2._credentials_async.Credentials.apply", autospec=True)
+    @mock.patch("google.oauth2._credentials_async.Credentials.refresh", autospec=True)
+    @pytest.mark.asyncio
+    async def test_before_request(self, refresh, apply):
+        cred = self.make_credentials()
+        assert not cred.valid
+        await cred.before_request(mock.Mock(), "GET", "https://example.com", {})
+        refresh.assert_called()
+        apply.assert_called()
+
 
 class TestUserAccessTokenCredentials(object):
     def test_instance(self):
