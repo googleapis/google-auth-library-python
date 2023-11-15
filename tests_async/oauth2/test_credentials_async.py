@@ -473,6 +473,19 @@ class TestCredentials:
         refresh.assert_called()
         apply.assert_called()
 
+    @mock.patch("google.oauth2._credentials_async.Credentials.apply", autospec=True)
+    @mock.patch("google.oauth2._credentials_async.Credentials.refresh", autospec=True)
+    @pytest.mark.asyncio
+    async def test_before_request_no_refresh(self, refresh, apply):
+        cred = self.make_credentials()
+        cred.token = refresh
+        cred.expiry = None
+
+        assert cred.valid
+        await cred.before_request(mock.Mock(), "GET", "https://example.com", {})
+        refresh.assert_not_called()
+        apply.assert_called()
+
 
 class TestUserAccessTokenCredentials(object):
     def test_instance(self):
