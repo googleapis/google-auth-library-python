@@ -208,6 +208,7 @@ class Credentials(
         return args
 
     def lookup_trust_boundary(self, reqeust):
+        """Current implementation of inject dummy headers"""
         return _client._DEFAULT_TRUST_BOUNDARY
 
     @property
