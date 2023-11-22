@@ -136,21 +136,7 @@ class Credentials(metaclass=abc.ABCMeta):
         headers["authorization"] = "Bearer {}".format(
             _helpers.from_bytes(token or self.token)
         )
-        """Trust boundary value will be a cached value from global lookup.
 
-        The response of trust boundary will be a list of regions and a hex
-        encoded representation.
-
-        An example of global lookup response:
-        {
-          "locations": [
-            "us-central1", "us-east1", "europe-west1", "asia-east1"
-          ]
-          "encoded_locations": "0xA30"
-        }
-        """
-        if self._trust_boundary is not None:
-            headers["x-allowed-locations"] = self._trust_boundary["encoded_locations"]
         if self.quota_project_id:
             headers["x-goog-user-project"] = self.quota_project_id
 
@@ -176,6 +162,63 @@ class Credentials(metaclass=abc.ABCMeta):
         metrics.add_metric_header(headers, self._metric_header_for_usage())
         self.apply(headers)
 
+class CredentialsWithTrustBoundary(Credentials):
+    """Abstract base for credentials supporting trust boundary factory"""
+
+    def apply(self, headers, token=None):
+        super().apply(headers, token)
+        """Trust boundary value will be a cached value from global lookup.
+
+        The response of trust boundary will be a list of regions and a hex
+        encoded representation.
+
+        An example of global lookup response:
+        {
+          "locations": [
+            "us-central1", "us-east1", "europe-west1", "asia-east1"
+          ]
+          "encoded_locations": "0xA30"
+        }
+        """
+        if self._trust_boundary is not None:
+            headers["x-allowed-locations"] = self._trust_boundary["encoded_locations"]
+
+    def lookup_trust_boundary(self, request):
+        """
+        Args:
+            request (google.auth.transport.Request): A callable used to make
+                HTTP requests.
+        Returns:
+            Mapping[str,list|str, str]: A response would be a dictionary containing
+                the "locations" as a list of allowed locations in string and
+                "encoded_locations" as a hex string.
+
+                e.g:
+                {
+                    "locations": [
+                        "us-central1", "us-east1", "europe-west1", "asia-east1"
+                    ],
+                    "encoded_locations": "0xA30"
+                }
+
+                In the universe global lookup is not launched yet, a default
+                trust boundary of "all" will be returned.
+
+                {
+                    "locations": [],
+                    "": "0x0"
+                }
+
+        Raises:
+            exceptions.TransportError: If the request to lookup endpoint fails.
+            exceptions.RefreshError: If the query response not 200.
+            exceptions.MalformedError: If the response not in valid format.
+        """
+        raise NotImplementedError("Missing definition of trust boundary lookup")
+
+    def _enable_trust_boundary(self):
+        """A private function to enable trust boundary"""
+        self._trust_boundary_enabled = True
 
 class CredentialsWithQuotaProject(Credentials):
     """Abstract base for credentials supporting ``with_quota_project`` factory"""

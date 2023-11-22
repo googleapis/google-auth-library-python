@@ -1898,3 +1898,10 @@ class TestCredentials(object):
         assert project_id is None
         # Only 2 requests to STS and cloud resource manager should be sent.
         assert len(request.call_args_list) == 2
+
+    def test_lookup_trust_boundary(self):
+        credentials = self.make_credentials()
+        trust_boundary = credentials.lookup_trust_boundary(None)
+        assert trust_boundary["locations"] == []
+        assert trust_boundary["encoded_locations"] == "0x0"
+

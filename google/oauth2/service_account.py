@@ -84,11 +84,14 @@ from google.oauth2 import _client
 _DEFAULT_TOKEN_LIFETIME_SECS = 3600  # 1 hour in seconds
 _DEFAULT_UNIVERSE_DOMAIN = "googleapis.com"
 _GOOGLE_OAUTH2_TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token"
-
+_TRUST_BOUNDARY_LOOKUP_ENDPOINT = (
+    "iamcredentials.{}/v1/projects/-/serviceAccounts/{}/trustBoundary"
+)
 
 class Credentials(
     credentials.Signing,
     credentials.Scoped,
+    credentials.CredentialsWithTrustBoundary,
     credentials.CredentialsWithQuotaProject,
     credentials.CredentialsWithTokenUri,
 ):
@@ -197,6 +200,7 @@ class Credentials(
         else:
             self._additional_claims = {}
         self._trust_boundary = trust_boundary
+        self._trust_boundary_enabled = False
 
     @classmethod
     def _from_signer_and_info(cls, signer, info, **kwargs):
@@ -303,6 +307,11 @@ class Credentials(
         cred._scopes = scopes
         cred._default_scopes = default_scopes
         return cred
+
+    def lookup_trust_boundary(self, request):
+        url = _TRUST_BOUNDARY_LOOKUP_ENDPOINT.format(self.universe_domain, self.service_account_email)
+        headers = {"Authorization": "Basic " + self.token}
+        return _client.lookup_trust_boundary(request, url, headers)
 
     def with_always_use_jwt_access(self, always_use_jwt_access):
         """Create a copy of these credentials with the specified always_use_jwt_access value.
@@ -446,10 +455,12 @@ class Credentials(
             self.expiry = expiry
 
         # Either the trust boundary has been removed or not yet been fetched.
-        if self._trust_boundary is None:
-            self._trust_boundary = _client.lookup_trust_boundary(
-                request, self.universe_domain, self.service_account_email, self.token
-            )
+        if (
+            self._trust_boundary is None
+            and self.universe_domain in _client.TRUST_BOUNDARY_ENABLED_UNIVERSES
+            and self._trust_boundary_enabled
+        ):
+            self._trust_boundary = self.lookup_trust_boundary(request)
 
     def _create_self_signed_jwt(self, audience):
         """Create a self-signed JWT from the credentials if requirements are met.

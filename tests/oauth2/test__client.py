@@ -625,10 +625,8 @@ def test_lookup_trust_boundary_request_error():
     mock_request = mock.create_autospec(transport.Request)
     mock_request.side_effect = Exception("Mock Request Error")
 
-    trust_boundary = _client.lookup_trust_boundary(
-        mock_request, "googleapis.com", "mock_service_account", "access_token"
-    )
-    assert trust_boundary == _client._DEFAULT_TRUST_BOUNDARY
+    with pytest.raises(exceptions.TransportError):
+        trust_boundary = _client.lookup_trust_boundary(mock_request, "mock_url", {})
 
 
 def test_lookup_trust_boundary():
@@ -656,13 +654,15 @@ def test_lookup_trust_boundary():
             "name": "trust boundary not launched",
             "response_status": http_client.NOT_FOUND,
             "response_data": "Not Found",
-            "expect_trust_boundary": _client._DEFAULT_TRUST_BOUNDARY,
+            "expect_error": exceptions.RefreshError,
+            "expect_error_messages": "Failed look up trust boundary",
         },
         {
             "name": "response status error",
             "response_status": http_client.BAD_REQUEST,
             "response_data": "Bad request",
-            "expect_trust_boundary": _client._DEFAULT_TRUST_BOUNDARY,
+            "expect_error": exceptions.RefreshError,
+            "expect_error_messages": "Failed look up trust boundary",
         },
         {
             "name": "response parsing error",
@@ -691,16 +691,11 @@ def test_lookup_trust_boundary():
 
         if not expect_error:
             trust_boundary = _client.lookup_trust_boundary(
-                mock_request, "googleapis.com", "mock_service_account", "access_token"
+                mock_request, "mock_url", {}
             )
             assert trust_boundary == data.get("expect_trust_boundary")
             # assert trust_boundary['locations'] == data.get('expect_trust_boundary')['locations']
             # assert trust_boundary['encoded_locations'] == data.get('expect_trust_boundary')['encoded_locations']
         else:
             with pytest.raises(expect_error, match=msg):
-                _client.lookup_trust_boundary(
-                    mock_request,
-                    "googleapis.com",
-                    "mock_service_account",
-                    "access_token",
-                )
+                _client.lookup_trust_boundary(mock_request, "mock_url", {})

@@ -39,6 +39,7 @@ from google.auth import credentials
 from google.auth import exceptions
 from google.auth import impersonated_credentials
 from google.auth import metrics
+from google.oauth2 import _client
 from google.oauth2 import sts
 from google.oauth2 import utils
 
@@ -53,9 +54,9 @@ _CLOUD_RESOURCE_MANAGER = "https://cloudresourcemanager.googleapis.com/v1/projec
 
 _DEFAULT_UNIVERSE_DOMAIN = "googleapis.com"
 
-
 class Credentials(
     credentials.Scoped,
+    credentials.CredentialsWithTrustBoundary,
     credentials.CredentialsWithQuotaProject,
     credentials.CredentialsWithTokenUri,
     metaclass=abc.ABCMeta,
@@ -204,6 +205,9 @@ class Credentials(
         if not self.is_workforce_pool:
             args.pop("workforce_pool_user_project")
         return args
+
+    def lookup_trust_boundary(self, reqeust):
+        return _client._DEFAULT_TRUST_BOUNDARY
 
     @property
     def service_account_email(self):

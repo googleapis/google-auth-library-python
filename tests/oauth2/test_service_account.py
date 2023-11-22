@@ -475,6 +475,42 @@ class TestCredentials(object):
         assert credentials.valid
 
     @mock.patch("google.oauth2._client.jwt_grant", autospec=True)
+    def test_refresh_success_with_trust_boundary(self, jwt_grant):
+        credentials = self.make_credentials()
+        credentials._enable_trust_boundary()
+        token = "token"
+        jwt_grant.return_value = (
+            token,
+            _helpers.utcnow() + datetime.timedelta(seconds=500),
+            {},
+        )
+        request = mock.create_autospec(transport.Request, instance=True)
+
+        # Refresh credentials
+        with mock.patch(
+            "google.oauth2._client.lookup_trust_boundary",
+            return_value=DEFAULT_TRUST_BOUNDARY,
+        ):
+            credentials.refresh(request)
+
+        # Check jwt grant call.
+        assert jwt_grant.called
+
+        called_request, token_uri, assertion = jwt_grant.call_args[0]
+        assert called_request == request
+        assert token_uri == credentials._token_uri
+        assert jwt.decode(assertion, PUBLIC_CERT_BYTES)
+        # No further assertion done on the token, as there are separate tests
+        # for checking the authorization grant assertion.
+
+        # Check that the credentials have the token.
+        assert credentials.token == token
+
+        # Check that the credentials are valid (have a token and are not
+        # expired)
+        assert credentials.valid
+
+    @mock.patch("google.oauth2._client.jwt_grant", autospec=True)
     def test_before_request_refreshes(self, jwt_grant):
         credentials = self.make_credentials()
         token = "token"

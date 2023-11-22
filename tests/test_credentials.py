@@ -28,6 +28,14 @@ class CredentialsImpl(credentials.Credentials):
         raise NotImplementedError()
 
 
+class CredentialsImplWithTrustBoundary(credentials.CredentialsWithTrustBoundary):
+    def refresh(self, request):
+        self.token = request
+        self._trust_boundary = self.lookup_trust_boundary(request)
+
+    def lookup_trust_boundary(self, request):
+        return {"locations": [], "encoded_locations": "0x0"}
+
 class CredentialsImplWithMetrics(credentials.Credentials):
     def refresh(self, request):
         self.token = request
@@ -93,9 +101,9 @@ def test_before_request():
 
 
 def test_before_request_with_trust_boundary():
-    DUMMY_BOUNDARY = "0xA30"
-    credentials = CredentialsImpl()
-    credentials._trust_boundary = {"locations": [], "encoded_locations": DUMMY_BOUNDARY}
+    credentials = CredentialsImplWithTrustBoundary()
+    credentials._enable_trust_boundary()
+    credentials._trust_boundary = credentials.lookup_trust_boundary(request="token")
     request = "token"
     headers = {}
 
@@ -104,7 +112,7 @@ def test_before_request_with_trust_boundary():
     assert credentials.valid
     assert credentials.token == "token"
     assert headers["authorization"] == "Bearer token"
-    assert headers["x-allowed-locations"] == DUMMY_BOUNDARY
+    assert headers["x-allowed-locations"] == credentials._trust_boundary["encoded_locations"]
 
     request = "token2"
     headers = {}
@@ -114,7 +122,7 @@ def test_before_request_with_trust_boundary():
     assert credentials.valid
     assert credentials.token == "token"
     assert headers["authorization"] == "Bearer token"
-    assert headers["x-allowed-locations"] == DUMMY_BOUNDARY
+    assert headers["x-allowed-locations"] == credentials._trust_boundary["encoded_locations"]
 
 
 def test_before_request_metrics():
