@@ -175,46 +175,17 @@ class CredentialsWithTrustBoundary(Credentials):
 
         An example of global lookup response:
         {
-          "locations": [
-            "us-central1", "us-east1", "europe-west1", "asia-east1"
-          ]
-          "encoded_locations": "0xA30"
+            "locations": [
+                "us-central1", "us-east1", "europe-west1", "asia-east1"
+            ]
+            "encoded_locations": "0xA30"
         }
         """
         if self._trust_boundary is not None:
             headers["x-allowed-locations"] = self._trust_boundary["encoded_locations"]
 
     def lookup_trust_boundary(self, request):
-        """
-        Args:
-            request (google.auth.transport.Request): A callable used to make
-                HTTP requests.
-        Returns:
-            Mapping[str,list|str, str]: A response would be a dictionary containing
-                the "locations" as a list of allowed locations in string and
-                "encoded_locations" as a hex string.
-
-                e.g:
-                {
-                    "locations": [
-                        "us-central1", "us-east1", "europe-west1", "asia-east1"
-                    ],
-                    "encoded_locations": "0xA30"
-                }
-
-                In the universe global lookup is not launched yet, a default
-                trust boundary of "all" will be returned.
-
-                {
-                    "locations": [],
-                    "": "0x0"
-                }
-
-        Raises:
-            exceptions.TransportError: If the request to lookup endpoint fails.
-            exceptions.RefreshError: If the query response not 200.
-            exceptions.MalformedError: If the response not in valid format.
-        """
+        """Lookup trust boundary shall be implemented by subclasses"""
         raise NotImplementedError("Missing definition of trust boundary lookup")
 
     def _enable_trust_boundary(self):
