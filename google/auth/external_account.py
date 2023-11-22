@@ -54,6 +54,7 @@ _CLOUD_RESOURCE_MANAGER = "https://cloudresourcemanager.googleapis.com/v1/projec
 
 _DEFAULT_UNIVERSE_DOMAIN = "googleapis.com"
 
+
 class Credentials(
     credentials.Scoped,
     credentials.CredentialsWithTrustBoundary,

@@ -36,6 +36,7 @@ class CredentialsImplWithTrustBoundary(credentials.CredentialsWithTrustBoundary)
     def lookup_trust_boundary(self, request):
         return {"locations": [], "encoded_locations": "0x0"}
 
+
 class CredentialsImplWithMetrics(credentials.Credentials):
     def refresh(self, request):
         self.token = request
@@ -112,7 +113,10 @@ def test_before_request_with_trust_boundary():
     assert credentials.valid
     assert credentials.token == "token"
     assert headers["authorization"] == "Bearer token"
-    assert headers["x-allowed-locations"] == credentials._trust_boundary["encoded_locations"]
+    assert (
+        headers["x-allowed-locations"]
+        == credentials._trust_boundary["encoded_locations"]
+    )
 
     request = "token2"
     headers = {}
@@ -122,7 +126,10 @@ def test_before_request_with_trust_boundary():
     assert credentials.valid
     assert credentials.token == "token"
     assert headers["authorization"] == "Bearer token"
-    assert headers["x-allowed-locations"] == credentials._trust_boundary["encoded_locations"]
+    assert (
+        headers["x-allowed-locations"]
+        == credentials._trust_boundary["encoded_locations"]
+    )
 
 
 def test_before_request_metrics():

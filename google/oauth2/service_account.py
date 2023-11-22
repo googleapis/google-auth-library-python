@@ -88,6 +88,7 @@ _TRUST_BOUNDARY_LOOKUP_ENDPOINT = (
     "iamcredentials.{}/v1/projects/-/serviceAccounts/{}/trustBoundary"
 )
 
+
 class Credentials(
     credentials.Signing,
     credentials.Scoped,
@@ -309,7 +310,9 @@ class Credentials(
         return cred
 
     def lookup_trust_boundary(self, request):
-        url = _TRUST_BOUNDARY_LOOKUP_ENDPOINT.format(self.universe_domain, self.service_account_email)
+        url = _TRUST_BOUNDARY_LOOKUP_ENDPOINT.format(
+            self.universe_domain, self.service_account_email
+        )
         headers = {"Authorization": "Basic " + self.token}
         return _client.lookup_trust_boundary(request, url, headers)
 

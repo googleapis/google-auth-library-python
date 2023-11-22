@@ -162,6 +162,7 @@ class Credentials(metaclass=abc.ABCMeta):
         metrics.add_metric_header(headers, self._metric_header_for_usage())
         self.apply(headers)
 
+
 class CredentialsWithTrustBoundary(Credentials):
     """Abstract base for credentials supporting trust boundary factory"""
 
@@ -219,6 +220,7 @@ class CredentialsWithTrustBoundary(Credentials):
     def _enable_trust_boundary(self):
         """A private function to enable trust boundary"""
         self._trust_boundary_enabled = True
+
 
 class CredentialsWithQuotaProject(Credentials):
     """Abstract base for credentials supporting ``with_quota_project`` factory"""

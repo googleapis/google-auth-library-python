@@ -1904,4 +1904,3 @@ class TestCredentials(object):
         trust_boundary = credentials.lookup_trust_boundary(None)
         assert trust_boundary["locations"] == []
         assert trust_boundary["encoded_locations"] == "0x0"
-
