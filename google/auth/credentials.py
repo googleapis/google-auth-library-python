@@ -188,6 +188,10 @@ class CredentialsWithTrustBoundary(Credentials):
         """Lookup trust boundary shall be implemented by subclasses"""
         raise NotImplementedError("Missing definition of trust boundary lookup")
 
+    def with_trust_boundary(self, trust_boundary):
+        """Apply trust boudnary value to the credential"""
+        self._trust_boundary = trust_boundary
+
     def _enable_trust_boundary(self):
         """A private function to enable trust boundary"""
         self._trust_boundary_enabled = True

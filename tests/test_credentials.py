@@ -104,7 +104,7 @@ def test_before_request():
 def test_before_request_with_trust_boundary():
     credentials = CredentialsImplWithTrustBoundary()
     credentials._enable_trust_boundary()
-    credentials._trust_boundary = credentials.lookup_trust_boundary(request="token")
+    credentials.with_trust_boundary(credentials.lookup_trust_boundary(request="token"))
     request = "token"
     headers = {}
 
