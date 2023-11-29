@@ -231,7 +231,30 @@ def test_custom_tls_signer_failed_to_load_libraries():
 def test_custom_tls_signer_failed_to_attach():
     with pytest.raises(exceptions.MutualTLSChannelError) as excinfo:
         signer_object = _custom_tls_signer.CustomTlsSigner(ENTERPRISE_CERT_FILE)
+        signer_object._offload_lib = mock.MagicMock()
+        signer_object._signer_lib = mock.MagicMock()
+        signer_object._sign_callback = mock.MagicMock()
+        signer_object._cert = b"mock cert"
+        signer_object._offload_lib.ConfigureSslContext.return_value = False
+        signer_object.attach_to_ssl_context(mock.MagicMock())
+    assert excinfo.match("failed to configure SSL context")
+
+
+def test_custom_tls_signer_failed_to_attach_provider():
+    with pytest.raises(exceptions.MutualTLSChannelError) as excinfo:
+        signer_object = _custom_tls_signer.CustomTlsSigner(
+            ENTERPRISE_CERT_FILE_PROVIDER
+        )
         signer_object._provider_lib = mock.MagicMock()
         signer_object._provider_lib.ECP_attach_to_ctx.return_value = False
         signer_object.attach_to_ssl_context(mock.MagicMock())
     assert excinfo.match("failed to configure SSL context")
+
+
+def test_custom_tls_signer_failed_to_attach_no_libs():
+    with pytest.raises(exceptions.MutualTLSChannelError) as excinfo:
+        signer_object = _custom_tls_signer.CustomTlsSigner(ENTERPRISE_CERT_FILE)
+        signer_object._offload_lib = None
+        signer_object._signer_lib = None
+        signer_object.attach_to_ssl_context(mock.MagicMock())
+    assert excinfo.match("Invalid ECP configuration.")
