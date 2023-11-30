@@ -213,6 +213,8 @@ class CustomTlsSigner(object):
                     }
         """
         self._enterprise_cert_file_path = enterprise_cert_file_path
+        self._cert = None
+        self._sign_callback = None
         self._provider_lib = None
 
     def load_libraries(self):
@@ -254,7 +256,7 @@ class CustomTlsSigner(object):
                 self._enterprise_cert_file_path.encode("ascii"),
             ):
                 raise exceptions.MutualTLSChannelError(
-                    "failed to configure SSL context"
+                    "failed to configure ECP Provider SSL context"
                 )
         elif self._offload_lib and self._signer_lib:
             if not self._offload_lib.ConfigureSslContext(
@@ -263,7 +265,7 @@ class CustomTlsSigner(object):
                 _cast_ssl_ctx_to_void_p(ctx._ctx._context),
             ):
                 raise exceptions.MutualTLSChannelError(
-                    "failed to configure SSL context"
+                    "failed to configure ECP Offload SSL context"
                 )
         else:
             raise exceptions.MutualTLSChannelError("Invalid ECP configuration.")
