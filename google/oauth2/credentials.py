@@ -148,7 +148,7 @@ class Credentials(credentials.ReadOnlyScoped, credentials.CredentialsWithQuotaPr
         self.refresh_handler = refresh_handler
         self._enable_reauth_refresh = enable_reauth_refresh
         self._trust_boundary = trust_boundary
-        self._universe_domain = universe_domain
+        self._universe_domain = universe_domain or _DEFAULT_UNIVERSE_DOMAIN
 
     def __getstate__(self):
         """A __getstate__ method must exist for the __setstate__ to be called

@@ -182,10 +182,7 @@ class Credentials(
         self._quota_project_id = quota_project_id
         self._token_uri = token_uri
         self._always_use_jwt_access = always_use_jwt_access
-        if not universe_domain:
-            self._universe_domain = _DEFAULT_UNIVERSE_DOMAIN
-        else:
-            self._universe_domain = universe_domain
+        self._universe_domain = universe_domain or _DEFAULT_UNIVERSE_DOMAIN
 
         if universe_domain != _DEFAULT_UNIVERSE_DOMAIN:
             self._always_use_jwt_access = True
