@@ -237,7 +237,7 @@ def test_custom_tls_signer_failed_to_attach():
         signer_object._cert = b"mock cert"
         signer_object._offload_lib.ConfigureSslContext.return_value = False
         signer_object.attach_to_ssl_context(mock.MagicMock())
-    assert excinfo.match("failed to configure SSL context")
+    assert excinfo.match("failed to configure ECP Offload SSL context")
 
 
 def test_custom_tls_signer_failed_to_attach_provider():
@@ -248,7 +248,7 @@ def test_custom_tls_signer_failed_to_attach_provider():
         signer_object._provider_lib = mock.MagicMock()
         signer_object._provider_lib.ECP_attach_to_ctx.return_value = False
         signer_object.attach_to_ssl_context(mock.MagicMock())
-    assert excinfo.match("failed to configure SSL context")
+    assert excinfo.match("failed to configure ECP Provider SSL context")
 
 
 def test_custom_tls_signer_failed_to_attach_no_libs():
