@@ -489,7 +489,9 @@ class TestCredentials:
 
 class TestUserAccessTokenCredentials(object):
     def test_instance(self):
-        with pytest.warns(UserWarning, match="UserAccessTokenCredentials is deprecated"):
+        with pytest.warns(
+            UserWarning, match="UserAccessTokenCredentials is deprecated"
+        ):
             cred = _credentials_async.UserAccessTokenCredentials()
             assert cred._account is None
 
@@ -498,14 +500,18 @@ class TestUserAccessTokenCredentials(object):
 
     @mock.patch("google.auth._cloud_sdk.get_auth_access_token", autospec=True)
     def test_refresh(self, get_auth_access_token):
-        with pytest.warns(UserWarning, match="UserAccessTokenCredentials is deprecated"):
+        with pytest.warns(
+            UserWarning, match="UserAccessTokenCredentials is deprecated"
+        ):
             get_auth_access_token.return_value = "access_token"
             cred = _credentials_async.UserAccessTokenCredentials()
             cred.refresh(None)
             assert cred.token == "access_token"
 
     def test_with_quota_project(self):
-        with pytest.warns(UserWarning, match="UserAccessTokenCredentials is deprecated"):
+        with pytest.warns(
+            UserWarning, match="UserAccessTokenCredentials is deprecated"
+        ):
             cred = _credentials_async.UserAccessTokenCredentials()
             quota_project_cred = cred.with_quota_project("project-foo")
 
@@ -521,7 +527,9 @@ class TestUserAccessTokenCredentials(object):
         autospec=True,
     )
     def test_before_request(self, refresh, apply):
-        with pytest.warns(UserWarning, match="UserAccessTokenCredentials is deprecated"):
+        with pytest.warns(
+            UserWarning, match="UserAccessTokenCredentials is deprecated"
+        ):
             cred = _credentials_async.UserAccessTokenCredentials()
             cred.before_request(mock.Mock(), "GET", "https://example.com", {})
             refresh.assert_called()
