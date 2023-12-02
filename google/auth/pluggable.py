@@ -229,9 +229,8 @@ class Credentials(external_account.Credentials):
         # Handle executable output.
         response = json.loads(result.stdout.decode("utf-8")) if result.stdout else None
         if not response and self._credential_source_executable_output_file is not None:
-            response = json.load(
-                open(self._credential_source_executable_output_file, encoding="utf-8")
-            )
+            with open(self._credential_source_executable_output_file, encoding="utf-8") as file:
+                response = json.load(file)
 
         subject_token = self._parse_subject_token(response)
         return subject_token
