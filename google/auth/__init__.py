@@ -47,9 +47,6 @@ if sys.version_info.major == 3 and sys.version_info.minor == 7:  # pragma: NO CO
         "After January 1, 2024, new releases of this library will drop support "
         "for Python 3.7."
     )
-
-    # Configure the Python37DeprecationWarning warning so that it is only emitted once.
-    warnings.simplefilter("once", Python37DeprecationWarning)
     warnings.warn(message, Python37DeprecationWarning)
 
 # Set default logging handler to avoid "No handler found" warnings.
