@@ -303,16 +303,8 @@ class Credentials(
         kwargs.update(token_url=token_uri)
         return self.__class__(**kwargs)
 
+    @_helpers.copy_docstring(credentials.CredentialsWithUniverseDomain)
     def with_universe_domain(self, universe_domain):
-        """Create a copy of these credentials with the given universe domain.
-
-        Args:
-            universe_domain (str): The universe domain value.
-
-        Returns:
-            google.auth.external_account_authorized_user.Credentials: A new
-                credentials instance.
-        """
         kwargs = self.constructor_args()
         kwargs.update(universe_domain=universe_domain)
         return self.__class__(**kwargs)
