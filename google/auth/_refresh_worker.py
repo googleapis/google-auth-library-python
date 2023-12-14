@@ -47,9 +47,13 @@ class RefreshThreadManager:
 
         with self._lock:
             if self._worker is not None and self._worker._error_info is not None:
+                # Reset error field to prevent deadlock for clients that try to
+                # rety this error.
+                err, self._worker._error_info = self._worker._error_info, None
+
                 raise e.RefreshError(
                     f"Could not start a background refresh. The background refresh previously failed with {self._worker._error_info}."
-                ) from self._worker._error_info
+                ) from err
 
             if self._worker is None or not self._worker.is_alive():  # pragma: NO COVER
                 self._worker = RefreshThread(cred=cred, request=request)
