@@ -191,7 +191,10 @@ class Credentials(metaclass=abc.ABCMeta):
             self.refresh(request)
 
     def _non_blocking_refresh(self, request):
-        if self.token_state == TokenState.STALE:
+        if (
+            self.token_state == TokenState.STALE
+            and not self._refresh_worker.has_error()
+        ):
             self._refresh_worker.start_refresh(self, request)
 
         if self.token_state == TokenState.INVALID:

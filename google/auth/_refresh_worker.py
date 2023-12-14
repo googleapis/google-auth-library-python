@@ -59,6 +59,17 @@ class RefreshThreadManager:
                 self._worker = RefreshThread(cred=cred, request=request)
                 self._worker.start()
 
+    def has_error(self):
+        """
+        Returns True if a refresh thread has had an exception, and the exception has not been cleared.
+
+        Returns:
+          Optional[Boolean]
+        """
+        if not self._worker:
+            return False
+        return self._worker._error_info is None
+
     def get_error(self):
         """
         Returns the error that occurred in the refresh thread. Clears the error once called.
