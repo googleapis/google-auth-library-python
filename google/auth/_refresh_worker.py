@@ -68,7 +68,7 @@ class RefreshThreadManager:
         """
         if not self._worker:
             return False
-        return self._worker._error_info is None
+        return self._worker._error_info is not None
 
     def get_error(self):
         """

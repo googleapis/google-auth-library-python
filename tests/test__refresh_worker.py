@@ -151,3 +151,26 @@ def test_refresh_dead_worker():
 
     assert cred.token == request
     assert cred.refresh_count == 1
+
+
+def test_worker_has_error():
+    w = _refresh_worker.RefreshThreadManager()
+    w._worker = mock.MagicMock()
+    w._worker._error_info = "Something"
+
+    assert w.has_error()
+
+
+def test_no_worker_has_error():
+    w = _refresh_worker.RefreshThreadManager()
+    w._worker = None
+
+    assert not w.has_error()
+
+
+def test_worker_has_error_no_error():
+    w = _refresh_worker.RefreshThreadManager()
+    w._worker = mock.MagicMock()
+    w._worker._error_info = None
+
+    assert not w.has_error()
