@@ -13,7 +13,6 @@
 # limitations under the License.
 
 import logging
-import queue
 import threading
 
 import google.auth.exceptions as e
@@ -31,19 +30,16 @@ class RefreshThreadManager:
     MAX_ERROR_QUEUE_SIZE = 2
 
     def __init__(self):
-        """Initializes the worker."""
+        """Initializes the manager."""
 
         self._worker = None
         self._lock = threading.Lock()
-        self._error_queue = queue.Queue(self.MAX_ERROR_QUEUE_SIZE)
 
     def _need_worker(self):
         return self._worker is None or not self._worker.is_alive()
 
     def _spawn_worker(self, cred, request):
-        self._worker = RefreshThread(
-            cred=cred, request=request, error_queue=self._error_queue
-        )
+        self._worker = RefreshThread(cred=cred, request=request)
         self._worker.start()
 
     def start_refresh(self, cred, request):
@@ -60,44 +56,27 @@ class RefreshThreadManager:
                 "Unable to start refresh. cred and request must be valid and instantiated objects."
             )
 
-        if self._error_queue.full():
-            raise e.RefreshError(
-                "Could not start a background refresh. The error queue is full. After addressing the errors in the error queue, drain the queue with `credential.flush_error_queue()`."
-            )
+        with self._lock:
+            if self._worker is not None and self._worker._error_info is not None:
+                raise e.RefreshError(
+                    f"Could not start a background refresh. The background refresh previously failed with {self._worker._error_info}."
+                ) from self._worker._error_info
 
         with self._lock:
             if self._need_worker():  # pragma: NO COVER
                 self._spawn_worker(cred, request)
 
-    def error_queue_full(self):
-        """
-      True if the refresh worker error queue is full. False if it is not yet full.
-
-      Returns:
-        bool
-      """
-        return self._error_queue.full()
-
-    def flush_error_queue(self):
-        """
-      Drop all errors in the error queue.
-      """
-        try:
-            while not self._error_queue.empty():
-                _ = self._error_queue.get_nowait()
-        except queue.Empty:  # pragma: NO COVER
-            pass
-
     def get_error(self):
         """
-        Returns the first error in the error queue. It is recommended to flush the full error queue to root cause refresh failures.
+        Returns the error that occurred in the refresh thread. Clears the error once called.
+
         Returns:
           Optional[exceptions.Exception]
         """
-        try:
-            return self._error_queue.get_nowait()
-        except queue.Empty:
+        if not self._worker:
             return None
+        err, self._worker._error_info = self._worker._error_info, None
+        return err
 
 
 class RefreshThread(threading.Thread):
@@ -105,27 +84,26 @@ class RefreshThread(threading.Thread):
     Thread that refreshes credentials.
     """
 
-    def __init__(self, cred, request, error_queue, **kwargs):
+    def __init__(self, cred, request, **kwargs):
         """Initializes the thread.
 
         Args:
             cred: A Credential object to refresh.
             request: A Request object used to perform a credential refresh.
-            error_queue: A queue containing errors that prevented a credential refresh.
             **kwargs: Additional keyword arguments.
         """
 
         super().__init__(**kwargs)
         self._cred = cred
         self._request = request
-        self._error_queue = error_queue
+        self._error_info = None
 
     def run(self):
         """
+        Perform the credential refresh.
         """
         try:
             self._cred.refresh(self._request)
         except Exception as err:  # pragma: NO COVER
             _LOGGER.error(f"Background refresh failed due to: {err}")
-            if not self._error_queue.full():
-                self._error_queue.put_nowait(err)
+            self._error_info = err

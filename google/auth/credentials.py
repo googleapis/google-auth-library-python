@@ -191,9 +191,6 @@ class Credentials(metaclass=abc.ABCMeta):
             self.refresh(request)
 
     def _non_blocking_refresh(self, request):
-        if self.token_state == TokenState.FRESH:
-            self._refresh_worker.flush_error_queue()
-
         if self.token_state == TokenState.STALE:
             self._refresh_worker.start_refresh(self, request)
 
@@ -230,19 +227,12 @@ class Credentials(metaclass=abc.ABCMeta):
 
     def get_background_refresh_error(self):
         """
-        Returns the first error in the background error queue. It is recommended to flush the full error queue to root cause refresh failures.
+        Returns the error in from a failed background refresh. Once called, the error will be flushed.
 
-        This error queue is populated by the token refreshes performed in a background thread.
         Returns:
           Optional[exceptions.Exception]
         """
         return self._refresh_worker.get_error()
-
-    def flush_background_refresh_error(self):
-        """
-        Drains the background refresh error queue.
-        """
-        self._refresh_worker.flush_error_queue()
 
 
 class CredentialsWithQuotaProject(Credentials):

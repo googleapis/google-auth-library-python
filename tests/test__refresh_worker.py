@@ -53,15 +53,6 @@ def test_invalid_start_refresh():
         w.start_refresh(None, None)
 
 
-def test_queue_size():
-    w = _refresh_worker.RefreshThreadManager()
-
-    assert (
-        w._error_queue.maxsize
-        == _refresh_worker.RefreshThreadManager.MAX_ERROR_QUEUE_SIZE
-    )
-
-
 def test_start_refresh():
     w = _refresh_worker.RefreshThreadManager()
     cred = MockCredentialsImpl()
@@ -124,22 +115,27 @@ def test_refresh_error():
         err = w.get_error()
         time.sleep(MAIN_THREAD_SLEEP_MS)
 
+    assert w._worker is not None
     assert isinstance(err, exceptions.RefreshError)
+    assert w._worker._error_info is None
+    assert w.get_error() is None
 
-    with pytest.raises(exceptions.RefreshError):
-        for _ in range(0, w.MAX_ERROR_QUEUE_SIZE + 1):
-            w.start_refresh(cred, request)
 
-    while w._error_queue.empty():  # pragma: NO COVER
+def test_refresh_error_call_refresh_again():
+    w = _refresh_worker.RefreshThreadManager()
+    cred = mock.MagicMock()
+    request = mock.MagicMock()
+
+    cred.refresh.side_effect = exceptions.RefreshError("Failed to refresh")
+
+    w.start_refresh(cred, request)
+
+    while w._worker._error_info is None: # pragma: NO COVER
         time.sleep(MAIN_THREAD_SLEEP_MS)
-    assert not w._error_queue.empty()
 
-    w.flush_error_queue()
-    assert w._error_queue.empty()
-
-    # Make sure that an empty queue doesn't result in exceptions.
-    w.flush_error_queue()
-    assert w._error_queue.empty()
+    with pytest.raises(exceptions.RefreshError) as excinfo:
+        w.start_refresh(cred, request)
+    excinfo.match("Could not start a background refresh.*")
 
 
 def test_refresh_dead_worker():
@@ -155,15 +151,3 @@ def test_refresh_dead_worker():
 
     assert cred.token == request
     assert cred.refresh_count == 1
-
-
-def test_empty_error_queue():
-    w = _refresh_worker.RefreshThreadManager()
-    assert not w.error_queue_full()
-
-
-def test_full_error_queue():
-    w = _refresh_worker.RefreshThreadManager()
-    w._error_queue = mock.MagicMock()
-    w._error_queue.returns = True
-    assert w.error_queue_full()

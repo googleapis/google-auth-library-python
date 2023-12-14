@@ -19,6 +19,7 @@ import pytest  # type: ignore
 
 from google.auth import _helpers
 from google.auth import credentials
+from google.auth import exceptions
 
 
 class CredentialsImpl(credentials.Credentials):
@@ -244,10 +245,13 @@ def test_get_background_refresh_error_no_error():
 
 def test_get_background_refresh_error():
     credentials = CredentialsImpl()
-    credentials._refresh_worker._error_queue.put_nowait("sentinel")
+    credentials._refresh_worker._worker = mock.MagicMock
+    credentials._refresh_worker._worker._error_info = exceptions.RefreshError(
+        "sentinel"
+    )
     error = credentials.get_background_refresh_error()
 
-    assert error == "sentinel"
+    assert isinstance(error, exceptions.RefreshError)
 
 
 def test_nonblocking_refresh_fresh_credentials():
@@ -262,7 +266,6 @@ def test_nonblocking_refresh_fresh_credentials():
 
     c.with_non_blocking_refresh()
     c.before_request(request, "http://example.com", "GET", {})
-    c._refresh_worker.flush_error_queue.assert_called_once()
 
 
 def test_nonblocking_refresh_invalid_credentials():
@@ -322,11 +325,3 @@ def test_token_state_no_expiry():
     assert c.token_state == credentials.TokenState.FRESH
 
     c.before_request(request, "http://example.com", "GET", {})
-
-
-def test_flush_error_queue():
-    c = CredentialsImpl()
-    c._refresh_worker = mock.MagicMock()
-
-    c.flush_background_refresh_error()
-    c._refresh_worker.flush_error_queue.assert_called_once()
