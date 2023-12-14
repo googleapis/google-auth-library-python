@@ -23,28 +23,26 @@ WORKER_TIMEOUT_SECONDS = 5
 _LOGGER = logging.getLogger(__name__)
 
 
-class RefreshWorker:
+class RefreshThreadManager:
     """
-    A worker that will perform a non-blocking refresh of credentials.
+    Organizes exactly one background job that refresh a token.
     """
 
-    MAX_REFRESH_QUEUE_SIZE = 1
     MAX_ERROR_QUEUE_SIZE = 2
 
     def __init__(self):
         """Initializes the worker."""
 
-        self._refresh_queue = queue.Queue(self.MAX_REFRESH_QUEUE_SIZE)
-        # Bound the error queue to avoid infinitely growing the heap.
-        self._error_queue = queue.Queue(self.MAX_ERROR_QUEUE_SIZE)
         self._worker = None
+        self._lock = threading.Lock()
+        self._error_queue = queue.Queue(self.MAX_ERROR_QUEUE_SIZE)
 
     def _need_worker(self):
         return self._worker is None or not self._worker.is_alive()
 
-    def _spawn_worker(self):
+    def _spawn_worker(self, cred, request):
         self._worker = RefreshThread(
-            work_queue=self._refresh_queue, error_queue=self._error_queue
+            cred=cred, request=request, error_queue=self._error_queue
         )
         self._worker.start()
 
@@ -62,24 +60,14 @@ class RefreshWorker:
                 "Unable to start refresh. cred and request must be valid and instantiated objects."
             )
 
-        # This test case is covered by the unit tests but sometimes the cover
-        # check can flake due to the schdule.
-        #
-        # Specifially this test is covered by test_refresh_dead_worker
-        if not self._refresh_queue.empty():  # pragma: NO COVER
-            if self._need_worker():
-                self._spawn_worker()
-            return
+        if self._error_queue.full():
+            raise e.RefreshError(
+                "Could not start a background refresh. The error queue is full. After addressing the errors in the error queue, drain the queue with `credential.flush_error_queue()`."
+            )
 
-        try:
-            self._refresh_queue.put_nowait((cred, request))
-        except queue.Full:
-            return
-
-        # This test case is covered by the unit tests but sometimes the cover
-        # check can flake due to the schdule.
-        if self._need_worker():  # pragma: NO COVER
-            self._spawn_worker()
+        with self._lock:
+            if self._need_worker():  # pragma: NO COVER
+                self._spawn_worker(cred, request)
 
     def error_queue_full(self):
         """
@@ -97,8 +85,6 @@ class RefreshWorker:
         try:
             while not self._error_queue.empty():
                 _ = self._error_queue.get_nowait()
-        # This condition is unlikely but there is a possibility that an
-        # error gets queued between the empty and get calls
         except queue.Empty:  # pragma: NO COVER
             pass
 
@@ -119,44 +105,27 @@ class RefreshThread(threading.Thread):
     Thread that refreshes credentials.
     """
 
-    def __init__(self, work_queue, error_queue, **kwargs):
+    def __init__(self, cred, request, error_queue, **kwargs):
         """Initializes the thread.
 
         Args:
-            work_queue: A queue of credentials and request tuples.
+            cred: A Credential object to refresh.
+            request: A Request object used to perform a credential refresh.
             error_queue: A queue containing errors that prevented a credential refresh.
             **kwargs: Additional keyword arguments.
         """
 
         super().__init__(**kwargs)
-        self._work_queue = work_queue
+        self._cred = cred
+        self._request = request
         self._error_queue = error_queue
 
     def run(self):
         """
-        Gets credentials and request objects from a queue.
-
-        The thread will block until a work item appears from the queue.
-
-        Once the refresh has completed, the thread will mark the queue task
-        as complete, and exit.
         """
         try:
-            cred, request = self._work_queue.get(timeout=WORKER_TIMEOUT_SECONDS)
-        except queue.Empty:
-            _LOGGER.error(
-                f"Timed out waiting for refresh work after {WORKER_TIMEOUT_SECONDS} seconds. This could mean there is a race condition, work starvation, or other logic error in the refresh code."
-            )
-            return
-        try:
-            cred.refresh(request)
+            self._cred.refresh(self._request)
         except Exception as err:  # pragma: NO COVER
-            # This condition is covered by the unit test test_refresh_error but
-            # it can be flaky due to the scheduler.
             _LOGGER.error(f"Background refresh failed due to: {err}")
             if not self._error_queue.full():
                 self._error_queue.put_nowait(err)
-
-        # The coverage tool is not able to capturre this line, but it is covered
-        # by test_start_refresh in the unit tests.
-        self._work_queue.task_done()

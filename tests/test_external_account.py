@@ -1503,8 +1503,8 @@ class TestCredentials(object):
         # Next call should simulate 1 second passed.
         utcnow.return_value = datetime.datetime.min + datetime.timedelta(seconds=1)
 
-        assert credentials.valid
-        assert not credentials.expired
+        assert not credentials.valid
+        assert credentials.expired
         assert credentials.token_state == TokenState.STALE
 
         credentials.before_request(request, "POST", "https://example.com/api", headers)
@@ -1565,8 +1565,8 @@ class TestCredentials(object):
         # threshold.
         utcnow.return_value = datetime.datetime.min + datetime.timedelta(seconds=1)
 
-        assert credentials.valid
-        assert not credentials.expired
+        assert not credentials.valid
+        assert credentials.expired
         assert credentials.token_state == TokenState.STALE
 
         credentials.before_request(request, "POST", "https://example.com/api", headers)

@@ -22,7 +22,7 @@ import os
 from google.auth import _helpers, environment_vars
 from google.auth import exceptions
 from google.auth import metrics
-from google.auth._refresh_worker import RefreshWorker
+from google.auth._refresh_worker import RefreshThreadManager
 
 
 class Credentials(metaclass=abc.ABCMeta):
@@ -62,7 +62,7 @@ class Credentials(metaclass=abc.ABCMeta):
         """
 
         self._use_non_blocking_refresh = False
-        self._refresh_worker = RefreshWorker()
+        self._refresh_worker = RefreshThreadManager()
 
     @property
     def expired(self):
@@ -71,11 +71,16 @@ class Credentials(metaclass=abc.ABCMeta):
         Note that credentials can be invalid but not expired because
         Credentials with :attr:`expiry` set to None is considered to never
         expire.
+
+        .. deprecated:: v2.24.0
+          Prefer checking :attr:`token_state` instead.
         """
         if not self.expiry:
             return False
-
-        return _helpers.utcnow() >= self.expiry
+        # Remove some threshold from expiry to err on the side of reporting
+        # expiration early so that we avoid the 401-refresh-retry loop.
+        skewed_expiry = self.expiry - _helpers.REFRESH_THRESHOLD
+        return _helpers.utcnow() >= skewed_expiry
 
     @property
     def valid(self):
@@ -83,17 +88,27 @@ class Credentials(metaclass=abc.ABCMeta):
 
         This is True if the credentials have a :attr:`token` and the token
         is not :attr:`expired`.
+
+        .. deprecated:: v2.24.0
+          Prefer checking :attr:`token_state` instead.
         """
         return self.token is not None and not self.expired
 
     @property
     def token_state(self):
-        if not self.valid or self.expired:
+        """
+        See `:obj:`TokenState`
+        """
+        if self.token is None:
             return TokenState.INVALID
 
         # Credentials that can't expire are always treated as fresh.
-        if not self.expiry:
+        if self.expiry is None:
             return TokenState.FRESH
+
+        expired = _helpers.utcnow() >= self.expiry
+        if expired:
+            return TokenState.INVALID
 
         is_stale = _helpers.utcnow() >= (self.expiry - _helpers.REFRESH_THRESHOLD)
         if is_stale:
@@ -171,6 +186,20 @@ class Credentials(metaclass=abc.ABCMeta):
         if self.quota_project_id:
             headers["x-goog-user-project"] = self.quota_project_id
 
+    def _blocking_refresh(self, request):
+        if not self.valid:
+            self.refresh(request)
+
+    def _non_blocking_refresh(self, request):
+        if self.token_state == TokenState.FRESH:
+            self._refresh_worker.flush_error_queue()
+
+        if self.token_state == TokenState.STALE:
+            self._refresh_worker.start_refresh(self, request)
+
+        if self.token_state == TokenState.INVALID:
+            self.refresh(request)
+
     def before_request(self, request, method, url, headers):
         """Performs credential-specific before request logic.
 
@@ -188,21 +217,10 @@ class Credentials(metaclass=abc.ABCMeta):
         # pylint: disable=unused-argument
         # (Subclasses may use these arguments to ascertain information about
         # the http request.)
-
-        if self.token_state == TokenState.FRESH:
-            self._refresh_worker.flush_error_queue()
-
-        if self.token_state == TokenState.STALE:
-            if (
-                self._use_non_blocking_refresh
-                and not self._refresh_worker.error_queue_full()
-            ):
-                self._refresh_worker.start_refresh(self, request)
-            else:
-                self.refresh(request)
-
-        if self.token_state == TokenState.INVALID:
-            self.refresh(request)
+        if self._use_non_blocking_refresh:
+            self._non_blocking_refresh(request)
+        else:
+            self._blocking_refresh(request)
 
         metrics.add_metric_header(headers, self._metric_header_for_usage())
         self.apply(headers)
@@ -219,6 +237,12 @@ class Credentials(metaclass=abc.ABCMeta):
           Optional[exceptions.Exception]
         """
         return self._refresh_worker.get_error()
+
+    def flush_background_refresh_error(self):
+        """
+        Drains the background refresh error queue.
+        """
+        self._refresh_worker.flush_error_queue()
 
 
 class CredentialsWithQuotaProject(Credentials):
@@ -469,6 +493,13 @@ class Signing(metaclass=abc.ABCMeta):
 
 
 class TokenState(Enum):
+    """
+    Tracks the state of a token.
+    FRESH: The token is not expired and can be used normally.
+    STALE: The token is close to expired, and should be refreshed. The token can be used normally.
+    INVALID: The token is expired or invalid. The token cannot be used for a normal operation.
+    """
+
     FRESH = 1
     STALE = 2
     INVALID = 3

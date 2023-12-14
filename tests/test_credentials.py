@@ -15,6 +15,7 @@
 import datetime
 
 import pytest  # type: ignore
+import mock
 
 from google.auth import _helpers
 from google.auth import credentials
@@ -26,7 +27,7 @@ class CredentialsImpl(credentials.Credentials):
         self.expiry = (
             datetime.datetime.utcnow()
             + _helpers.REFRESH_THRESHOLD
-            + datetime.timedelta(seconds=1)
+            + datetime.timedelta(seconds=5)
         )
 
     def with_quota_project(self, quota_project_id):
@@ -39,10 +40,6 @@ class CredentialsImplWithMetrics(credentials.Credentials):
 
     def _metric_header_for_usage(self):
         return "foo"
-
-
-def refresh_lock(cred):
-    cred._refresh_worker._refresh_queue.join()
 
 
 def test_credentials_constructor():
@@ -253,6 +250,21 @@ def test_get_background_refresh_error():
     assert error == "sentinel"
 
 
+def test_nonblocking_refresh_fresh_credentials():
+    c = CredentialsImpl()
+
+    c._refresh_worker = mock.MagicMock()
+
+    request = "token"
+
+    c.refresh(request)
+    assert c.token_state == credentials.TokenState.FRESH
+
+    c.with_non_blocking_refresh()
+    c.before_request(request, "http://example.com", "GET", {})
+    c._refresh_worker.flush_error_queue.assert_called_once()
+
+
 def test_nonblocking_refresh_invalid_credentials():
     c = CredentialsImpl()
     c.with_non_blocking_refresh()
@@ -293,10 +305,28 @@ def test_nonblocking_refresh_stale_credentials():
     c.before_request(request, "http://example.com", "GET", headers)
     assert c._refresh_worker._worker is not None
 
-    # Lock on the work queue to ensure this test is deterministic
-    refresh_lock(c)
     assert c.token_state == credentials.TokenState.FRESH
     assert c.valid
     assert c.token == "token"
     assert headers["authorization"] == "Bearer token"
     assert "x-identity-trust-boundary" not in headers
+
+
+def test_token_state_no_expiry():
+    c = CredentialsImpl()
+
+    request = "token"
+    c.refresh(request)
+
+    c.expiry = None
+    assert c.token_state == credentials.TokenState.FRESH
+
+    c.before_request(request, "http://example.com", "GET", {})
+
+
+def test_flush_error_queue():
+    c = CredentialsImpl()
+    c._refresh_worker = mock.MagicMock()
+
+    c.flush_background_refresh_error()
+    c._refresh_worker.flush_error_queue.assert_called_once()

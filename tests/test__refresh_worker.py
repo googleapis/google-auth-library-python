@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import queue
+import random
 import threading
 import time
 
@@ -48,21 +48,22 @@ def _cred_spinlock(cred):
 
 
 def test_invalid_start_refresh():
-    w = _refresh_worker.RefreshWorker()
+    w = _refresh_worker.RefreshThreadManager()
     with pytest.raises(exceptions.InvalidValue):
         w.start_refresh(None, None)
 
 
 def test_queue_size():
-    w = _refresh_worker.RefreshWorker()
+    w = _refresh_worker.RefreshThreadManager()
 
     assert (
-        w._refresh_queue.maxsize == _refresh_worker.RefreshWorker.MAX_REFRESH_QUEUE_SIZE
+        w._error_queue.maxsize
+        == _refresh_worker.RefreshThreadManager.MAX_ERROR_QUEUE_SIZE
     )
 
 
 def test_start_refresh():
-    w = _refresh_worker.RefreshWorker()
+    w = _refresh_worker.RefreshThreadManager()
     cred = MockCredentialsImpl()
     request = mock.MagicMock()
     w.start_refresh(cred, request)
@@ -75,35 +76,8 @@ def test_start_refresh():
     assert cred.refresh_count == 1
 
 
-def test_start_refresh_full_queue():
-    w = _refresh_worker.RefreshWorker()
-    cred = MockCredentialsImpl()
-    request = mock.MagicMock()
-    with mock.patch(
-        "queue.Queue.put_nowait",
-        side_effect=queue.Full("Queue was full when put was called"),
-    ):
-        w.start_refresh(cred, request)
-    assert not cred.token
-
-
-def test_start_refresh_starve_queue():
-    w = _refresh_worker.RefreshWorker()
-
-    with mock.patch(
-        "queue.Queue.get",
-        side_effect=queue.Empty("Queue was empty when get was called"),
-    ):
-        w._spawn_worker()
-        # wait for worker to timeout waiting for work.
-        while w._worker.is_alive():
-            time.sleep(5 / 1000)  # pragma: NO COVER
-
-    assert not w._worker.is_alive()
-
-
 def test_nonblocking_start_refresh():
-    w = _refresh_worker.RefreshWorker()
+    w = _refresh_worker.RefreshThreadManager()
     cred = MockCredentialsImpl(sleep_seconds=1)
     request = mock.MagicMock()
     w.start_refresh(cred, request)
@@ -114,11 +88,12 @@ def test_nonblocking_start_refresh():
 
 
 def test_multiple_refreshes_multiple_workers(test_thread_count):
-    w = _refresh_worker.RefreshWorker()
+    w = _refresh_worker.RefreshThreadManager()
     cred = MockCredentialsImpl()
     request = mock.MagicMock()
 
     def _thread_refresh():
+        time.sleep(random.randrange(0, 5))
         w.start_refresh(cred, request)
 
     threads = [
@@ -136,7 +111,7 @@ def test_multiple_refreshes_multiple_workers(test_thread_count):
 
 
 def test_refresh_error():
-    w = _refresh_worker.RefreshWorker()
+    w = _refresh_worker.RefreshThreadManager()
     cred = mock.MagicMock()
     request = mock.MagicMock()
 
@@ -151,8 +126,10 @@ def test_refresh_error():
 
     assert isinstance(err, exceptions.RefreshError)
 
-    for _ in range(0, w.MAX_ERROR_QUEUE_SIZE + 1):
-        w.start_refresh(cred, request)
+    with pytest.raises(exceptions.RefreshError):
+        for _ in range(0, w.MAX_ERROR_QUEUE_SIZE + 1):
+            w.start_refresh(cred, request)
+
     while w._error_queue.empty():  # pragma: NO COVER
         time.sleep(MAIN_THREAD_SLEEP_MS)
     assert not w._error_queue.empty()
@@ -169,9 +146,8 @@ def test_refresh_dead_worker():
     cred = MockCredentialsImpl()
     request = mock.MagicMock()
 
-    w = _refresh_worker.RefreshWorker()
+    w = _refresh_worker.RefreshThreadManager()
     w._worker = None
-    w._refresh_queue.put((cred, request))
 
     w.start_refresh(cred, request)
 
@@ -179,3 +155,15 @@ def test_refresh_dead_worker():
 
     assert cred.token == request
     assert cred.refresh_count == 1
+
+
+def test_empty_error_queue():
+    w = _refresh_worker.RefreshThreadManager()
+    assert not w.error_queue_full()
+
+
+def test_full_error_queue():
+    w = _refresh_worker.RefreshThreadManager()
+    w._error_queue = mock.MagicMock()
+    w._error_queue.returns = True
+    assert w.error_queue_full()
