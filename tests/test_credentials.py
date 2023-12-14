@@ -14,8 +14,8 @@
 
 import datetime
 
-import pytest  # type: ignore
 import mock
+import pytest  # type: ignore
 
 from google.auth import _helpers
 from google.auth import credentials
