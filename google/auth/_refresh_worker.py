@@ -17,8 +17,6 @@ import threading
 
 import google.auth.exceptions as e
 
-WORKER_TIMEOUT_SECONDS = 5
-
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -26,8 +24,6 @@ class RefreshThreadManager:
     """
     Organizes exactly one background job that refresh a token.
     """
-
-    MAX_ERROR_QUEUE_SIZE = 2
 
     def __init__(self):
         """Initializes the manager."""
@@ -62,7 +58,6 @@ class RefreshThreadManager:
                     f"Could not start a background refresh. The background refresh previously failed with {self._worker._error_info}."
                 ) from self._worker._error_info
 
-        with self._lock:
             if self._need_worker():  # pragma: NO COVER
                 self._spawn_worker(cred, request)
 

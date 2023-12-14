@@ -130,7 +130,7 @@ def test_refresh_error_call_refresh_again():
 
     w.start_refresh(cred, request)
 
-    while w._worker._error_info is None: # pragma: NO COVER
+    while w._worker._error_info is None:  # pragma: NO COVER
         time.sleep(MAIN_THREAD_SLEEP_MS)
 
     with pytest.raises(exceptions.RefreshError) as excinfo:
