@@ -29,14 +29,7 @@ class RefreshThreadManager:
         """Initializes the manager."""
 
         self._worker = None
-        self._lock = threading.Lock()
-
-    def _need_worker(self):
-        return self._worker is None or not self._worker.is_alive()
-
-    def _spawn_worker(self, cred, request):
-        self._worker = RefreshThread(cred=cred, request=request)
-        self._worker.start()
+        self._lock = threading.Lock()  # protects access to worker threads.
 
     def start_refresh(self, cred, request):
         """Starts a refresh thread for the given credentials.
@@ -58,8 +51,9 @@ class RefreshThreadManager:
                     f"Could not start a background refresh. The background refresh previously failed with {self._worker._error_info}."
                 ) from self._worker._error_info
 
-            if self._need_worker():  # pragma: NO COVER
-                self._spawn_worker(cred, request)
+            if self._worker is None or not self._worker.is_alive():  # pragma: NO COVER
+                self._worker = RefreshThread(cred=cred, request=request)
+                self._worker.start()
 
     def get_error(self):
         """

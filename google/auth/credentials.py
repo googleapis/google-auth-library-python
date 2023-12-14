@@ -485,7 +485,7 @@ class Signing(metaclass=abc.ABCMeta):
 class TokenState(Enum):
     """
     Tracks the state of a token.
-    FRESH: The token is not expired and can be used normally.
+    FRESH: The token is valid. It is not expired or close to expired, or the token has no expiry. To make it mutually exclusive to STALE.
     STALE: The token is close to expired, and should be refreshed. The token can be used normally.
     INVALID: The token is expired or invalid. The token cannot be used for a normal operation.
     """
