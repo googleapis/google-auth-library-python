@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import copy
 import logging
 import threading
 
@@ -54,7 +55,7 @@ class RefreshThreadManager:
                 return False
 
             if self._worker is None or not self._worker.is_alive():  # pragma: NO COVER
-                self._worker = RefreshThread(cred=cred, request=request)
+                self._worker = RefreshThread(cred=cred, request=copy.deepcopy(request))
                 self._worker.start()
         return True
 
