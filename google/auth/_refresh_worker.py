@@ -36,9 +36,13 @@ class RefreshThreadManager:
         The credentials are refreshed using the request parameter.
         request and cred MUST not be None
 
+        Returns True if a background refresh was kicked off. False otherwise.
+
         Args:
             cred: A credentials object.
             request: A request object.
+        Returns:
+          bool
         """
         if cred is None or request is None:
             raise e.InvalidValue(
@@ -47,40 +51,19 @@ class RefreshThreadManager:
 
         with self._lock:
             if self._worker is not None and self._worker._error_info is not None:
-                # Reset error field to prevent deadlock for clients that try to
-                # rety this error.
-                err, self._worker._error_info = self._worker._error_info, None
-
-                raise e.RefreshError(
-                    f"Could not start a background refresh. The background refresh previously failed with {self._worker._error_info}."
-                ) from err
+                return False
 
             if self._worker is None or not self._worker.is_alive():  # pragma: NO COVER
                 self._worker = RefreshThread(cred=cred, request=request)
                 self._worker.start()
+        return True
 
-    def has_error(self):
+    def clear_error(self):
         """
-        Returns True if a refresh thread has had an exception, and the exception has not been cleared.
-
-        Returns:
-          Optional[Boolean]
-        """
-        if not self._worker:
-            return False
-        return self._worker._error_info is not None
-
-    def get_error(self):
-        """
-        Returns the error that occurred in the refresh thread. Clears the error once called.
-
-        Returns:
-          Optional[exceptions.Exception]
-        """
-        if not self._worker:
-            return None
-        err, self._worker._error_info = self._worker._error_info, None
-        return err
+      Removes any errors that were stored from previous background refreshes.
+      """
+        if self._worker:
+            self._worker._error_info = None
 
 
 class RefreshThread(threading.Thread):

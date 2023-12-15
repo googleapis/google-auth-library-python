@@ -191,14 +191,16 @@ class Credentials(metaclass=abc.ABCMeta):
             self.refresh(request)
 
     def _non_blocking_refresh(self, request):
-        if (
-            self.token_state == TokenState.STALE
-            and not self._refresh_worker.has_error()
-        ):
-            self._refresh_worker.start_refresh(self, request)
+        use_blocking_refresh_fallback = False
 
-        if self.token_state == TokenState.INVALID:
+        if self.token_state == TokenState.STALE:
+            use_blocking_refresh_fallback = not self._refresh_worker.start_refresh(
+                self, request
+            )
+
+        if self.token_state == TokenState.INVALID or use_blocking_refresh_fallback:
             self.refresh(request)
+            self._refresh_worker.clear_error()
 
     def before_request(self, request, method, url, headers):
         """Performs credential-specific before request logic.
@@ -227,15 +229,6 @@ class Credentials(metaclass=abc.ABCMeta):
 
     def with_non_blocking_refresh(self):
         self._use_non_blocking_refresh = True
-
-    def get_background_refresh_error(self):
-        """
-        Returns the error in from a failed background refresh. Once called, the error will be flushed.
-
-        Returns:
-          Optional[exceptions.Exception]
-        """
-        return self._refresh_worker.get_error()
 
 
 class CredentialsWithQuotaProject(Credentials):
@@ -488,7 +481,7 @@ class Signing(metaclass=abc.ABCMeta):
 class TokenState(Enum):
     """
     Tracks the state of a token.
-    FRESH: The token is valid. It is not expired or close to expired, or the token has no expiry. To make it mutually exclusive to STALE.
+    FRESH: The token is valid. It is not expired or close to expired, or the token has no expiry.
     STALE: The token is close to expired, and should be refreshed. The token can be used normally.
     INVALID: The token is expired or invalid. The token cannot be used for a normal operation.
     """

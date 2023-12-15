@@ -57,7 +57,7 @@ def test_start_refresh():
     w = _refresh_worker.RefreshThreadManager()
     cred = MockCredentialsImpl()
     request = mock.MagicMock()
-    w.start_refresh(cred, request)
+    assert w.start_refresh(cred, request)
 
     assert w._worker is not None
 
@@ -71,7 +71,7 @@ def test_nonblocking_start_refresh():
     w = _refresh_worker.RefreshThreadManager()
     cred = MockCredentialsImpl(sleep_seconds=1)
     request = mock.MagicMock()
-    w.start_refresh(cred, request)
+    assert w.start_refresh(cred, request)
 
     assert w._worker is not None
     assert not cred.token
@@ -85,7 +85,7 @@ def test_multiple_refreshes_multiple_workers(test_thread_count):
 
     def _thread_refresh():
         time.sleep(random.randrange(0, 5))
-        w.start_refresh(cred, request)
+        assert w.start_refresh(cred, request)
 
     threads = [
         threading.Thread(target=_thread_refresh) for _ in range(test_thread_count)
@@ -108,17 +108,13 @@ def test_refresh_error():
 
     cred.refresh.side_effect = exceptions.RefreshError("Failed to refresh")
 
-    w.start_refresh(cred, request)
+    assert w.start_refresh(cred, request)
 
-    err = None
-    while err is None:
-        err = w.get_error()
+    while w._worker._error_info is None:  # pragma: NO COVER
         time.sleep(MAIN_THREAD_SLEEP_MS)
 
     assert w._worker is not None
-    assert isinstance(err, exceptions.RefreshError)
-    assert w._worker._error_info is None
-    assert w.get_error() is None
+    assert isinstance(w._worker._error_info, exceptions.RefreshError)
 
 
 def test_refresh_error_call_refresh_again():
@@ -128,14 +124,12 @@ def test_refresh_error_call_refresh_again():
 
     cred.refresh.side_effect = exceptions.RefreshError("Failed to refresh")
 
-    w.start_refresh(cred, request)
+    assert w.start_refresh(cred, request)
 
     while w._worker._error_info is None:  # pragma: NO COVER
         time.sleep(MAIN_THREAD_SLEEP_MS)
 
-    with pytest.raises(exceptions.RefreshError) as excinfo:
-        w.start_refresh(cred, request)
-    excinfo.match("Could not start a background refresh.*")
+    assert not w.start_refresh(cred, request)
 
 
 def test_refresh_dead_worker():
@@ -151,26 +145,3 @@ def test_refresh_dead_worker():
 
     assert cred.token == request
     assert cred.refresh_count == 1
-
-
-def test_worker_has_error():
-    w = _refresh_worker.RefreshThreadManager()
-    w._worker = mock.MagicMock()
-    w._worker._error_info = "Something"
-
-    assert w.has_error()
-
-
-def test_no_worker_has_error():
-    w = _refresh_worker.RefreshThreadManager()
-    w._worker = None
-
-    assert not w.has_error()
-
-
-def test_worker_has_error_no_error():
-    w = _refresh_worker.RefreshThreadManager()
-    w._worker = mock.MagicMock()
-    w._worker._error_info = None
-
-    assert not w.has_error()

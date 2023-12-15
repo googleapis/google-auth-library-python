@@ -19,7 +19,6 @@ import pytest  # type: ignore
 
 from google.auth import _helpers
 from google.auth import credentials
-from google.auth import exceptions
 
 
 class CredentialsImpl(credentials.Credentials):
@@ -236,24 +235,6 @@ def test_create_scoped_if_required_not_scopes():
     assert scoped_credentials is unscoped_credentials
 
 
-def test_get_background_refresh_error_no_error():
-    credentials = CredentialsImpl()
-    error = credentials.get_background_refresh_error()
-
-    assert error is None
-
-
-def test_get_background_refresh_error():
-    credentials = CredentialsImpl()
-    credentials._refresh_worker._worker = mock.MagicMock
-    credentials._refresh_worker._worker._error_info = exceptions.RefreshError(
-        "sentinel"
-    )
-    error = credentials.get_background_refresh_error()
-
-    assert isinstance(error, exceptions.RefreshError)
-
-
 def test_nonblocking_refresh_fresh_credentials():
     c = CredentialsImpl()
 
@@ -305,6 +286,38 @@ def test_nonblocking_refresh_stale_credentials():
 
     # STALE credentials SHOULD spawn a non-blocking worker
     assert c.token_state == credentials.TokenState.STALE
+    c.before_request(request, "http://example.com", "GET", headers)
+    assert c._refresh_worker._worker is not None
+
+    assert c.token_state == credentials.TokenState.FRESH
+    assert c.valid
+    assert c.token == "token"
+    assert headers["authorization"] == "Bearer token"
+    assert "x-identity-trust-boundary" not in headers
+
+
+def test_nonblocking_refresh_failed_credentials():
+    c = CredentialsImpl()
+    c.with_non_blocking_refresh()
+
+    request = "token"
+    headers = {}
+
+    # Invalid credentials MUST require a blocking refresh.
+    c.before_request(request, "http://example.com", "GET", headers)
+    assert c.token_state == credentials.TokenState.FRESH
+    assert not c._refresh_worker._worker
+
+    c.expiry = (
+        datetime.datetime.utcnow()
+        + _helpers.REFRESH_THRESHOLD
+        - datetime.timedelta(seconds=1)
+    )
+
+    # STALE credentials SHOULD spawn a non-blocking worker
+    assert c.token_state == credentials.TokenState.STALE
+    c._refresh_worker._worker = mock.MagicMock()
+    c._refresh_worker._worker._error_info = "Some Error"
     c.before_request(request, "http://example.com", "GET", headers)
     assert c._refresh_worker._worker is not None
 
