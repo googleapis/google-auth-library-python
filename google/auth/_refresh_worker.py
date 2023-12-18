@@ -63,8 +63,9 @@ class RefreshThreadManager:
         """
       Removes any errors that were stored from previous background refreshes.
       """
-        if self._worker:
-            self._worker._error_info = None
+        with self._lock:
+            if self._worker:
+                self._worker._error_info = None
 
 
 class RefreshThread(threading.Thread):

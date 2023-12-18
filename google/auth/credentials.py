@@ -200,6 +200,9 @@ class Credentials(metaclass=abc.ABCMeta):
 
         if self.token_state == TokenState.INVALID or use_blocking_refresh_fallback:
             self.refresh(request)
+            # If the blocking refresh succeeds then we can clear the error info
+            # on the background refresh worker, and perform refreshes in a
+            # background thread.
             self._refresh_worker.clear_error()
 
     def before_request(self, request, method, url, headers):
