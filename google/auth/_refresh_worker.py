@@ -68,6 +68,18 @@ class RefreshThreadManager:
                 self._worker._error_info = None
 
 
+
+    def __getstate__(self):
+        """Pickle helper that serializes the _lock attribute."""
+        state = self.__dict__.copy()
+        state["_lock"] = None
+        return state
+
+    def __setstate__(self, state):
+        """Pickle helper that deserializes the _lock attribute."""
+        state["_key"] = threading.Lock()
+        self.__dict__.update(state)
+
 class RefreshThread(threading.Thread):
     """
     Thread that refreshes credentials.
