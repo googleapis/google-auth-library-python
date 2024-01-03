@@ -147,6 +147,7 @@ def test_refresh_dead_worker():
     assert cred.token == request
     assert cred.refresh_count == 1
 
+
 def test_pickle():
     w = _refresh_worker.RefreshThreadManager()
 
