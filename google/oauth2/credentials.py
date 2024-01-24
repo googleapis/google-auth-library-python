@@ -295,6 +295,7 @@ class Credentials(credentials.ReadOnlyScoped, credentials.CredentialsWithQuotaPr
             enable_reauth_refresh=self._enable_reauth_refresh,
             trust_boundary=self._trust_boundary,
             universe_domain=self._universe_domain,
+            account=self._account,
         )
 
     @_helpers.copy_docstring(credentials.CredentialsWithTokenUri)
@@ -315,6 +316,7 @@ class Credentials(credentials.ReadOnlyScoped, credentials.CredentialsWithQuotaPr
             enable_reauth_refresh=self._enable_reauth_refresh,
             trust_boundary=self._trust_boundary,
             universe_domain=self._universe_domain,
+            account=self._account,
         )
 
     def with_account(self, account):
@@ -363,6 +365,7 @@ class Credentials(credentials.ReadOnlyScoped, credentials.CredentialsWithQuotaPr
             enable_reauth_refresh=self._enable_reauth_refresh,
             trust_boundary=self._trust_boundary,
             universe_domain=universe_domain,
+            account=self._account,
         )
 
     def _metric_header_for_usage(self):
