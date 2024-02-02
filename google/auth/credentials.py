@@ -24,6 +24,8 @@ from google.auth import exceptions
 from google.auth import metrics
 from google.auth._refresh_worker import RefreshThreadManager
 
+DEFAULT_TRUST_BOUNDARY = {"locations": [], "encoded_locations": "0x0"}
+
 
 class Credentials(metaclass=abc.ABCMeta):
     """Base class for all credentials.
@@ -245,8 +247,8 @@ class CredentialsWithTrustBoundary(Credentials):
         """Lookup trust boundary shall be implemented by subclasses"""
         raise NotImplementedError("Missing definition of trust boundary lookup")
 
-    def with_trust_boundary(self, trust_boundary):
-        """Apply trust boudnary value to the credential"""
+    def set_trust_boundary(self, trust_boundary):
+        """Set trust boudnary value to the credential"""
         self._trust_boundary = trust_boundary
 
     def _enable_trust_boundary(self):

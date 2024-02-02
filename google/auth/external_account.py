@@ -39,7 +39,6 @@ from google.auth import credentials
 from google.auth import exceptions
 from google.auth import impersonated_credentials
 from google.auth import metrics
-from google.oauth2 import _client
 from google.oauth2 import sts
 from google.oauth2 import utils
 
@@ -133,10 +132,7 @@ class Credentials(
         self._default_scopes = default_scopes
         self._workforce_pool_user_project = workforce_pool_user_project
         self._universe_domain = universe_domain or _DEFAULT_UNIVERSE_DOMAIN
-        self._trust_boundary = {
-            "locations": [],
-            "encoded_locations": "0x0",
-        }  # expose a placeholder trust boundary value.
+        self._trust_boundary = credentials.DEFAULT_TRUST_BOUNDARY
 
         if self._client_id:
             self._client_auth = utils.ClientAuthentication(
@@ -208,7 +204,7 @@ class Credentials(
 
     def lookup_trust_boundary(self, reqeust):
         """Current implementation of inject dummy headers"""
-        return _client._DEFAULT_TRUST_BOUNDARY
+        return credentials.DEFAULT_TRUST_BOUNDARY
 
     @property
     def service_account_email(self):

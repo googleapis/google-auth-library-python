@@ -72,6 +72,8 @@ specific subject using :meth:`~Credentials.with_subject`.
 
 import copy
 import datetime
+import logging
+import os
 
 from google.auth import _helpers
 from google.auth import _service_account_info
@@ -81,12 +83,15 @@ from google.auth import jwt
 from google.auth import metrics
 from google.oauth2 import _client
 
+_LOGGER = logging.getLogger(__name__)
+
 _DEFAULT_TOKEN_LIFETIME_SECS = 3600  # 1 hour in seconds
 _DEFAULT_UNIVERSE_DOMAIN = "googleapis.com"
 _GOOGLE_OAUTH2_TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token"
 _TRUST_BOUNDARY_LOOKUP_ENDPOINT = (
     "iamcredentials.{}/v1/projects/-/serviceAccounts/{}/trustBoundary"
 )
+TRUST_BOUNDARY_ENABLED_ENV = "TRUST_BOUNDARY_ENABLED"
 
 
 class Credentials(
@@ -144,7 +149,6 @@ class Credentials(
         additional_claims=None,
         always_use_jwt_access=False,
         universe_domain=_DEFAULT_UNIVERSE_DOMAIN,
-        trust_boundary=None,
     ):
         """
         Args:
@@ -197,8 +201,10 @@ class Credentials(
             self._additional_claims = additional_claims
         else:
             self._additional_claims = {}
-        self._trust_boundary = trust_boundary
-        self._trust_boundary_enabled = False
+        self._trust_boundary_enabled = os.environ.get(TRUST_BOUNDARY_ENABLED_ENV) == "1"
+        self._trust_boundary = (
+            None if self._trust_boundary_enabled else credentials.DEFAULT_TRUST_BOUNDARY
+        )
 
     @classmethod
     def _from_signer_and_info(cls, signer, info, **kwargs):
@@ -222,8 +228,7 @@ class Credentials(
             token_uri=info["token_uri"],
             project_id=info.get("project_id"),
             universe_domain=info.get("universe_domain", _DEFAULT_UNIVERSE_DOMAIN),
-            trust_boundary=info.get("trust_boundary"),
-            **kwargs
+            **kwargs,
         )
 
     @classmethod
@@ -446,9 +451,23 @@ class Credentials(
 
         # If a refresh is triggered under the case of credential not expired
         # that means some abnormal cases proactively trigger this refresh, we
-        # need to update the trust boundary cache.
-        if self.valid:
-            self._trust_boundary = None
+        # will attemp to fetch trust boundary but tolerant on errors if we
+        # already have cached trust boundaries.
+        if (
+            self.valid
+            and self.universe_domain in _client.TRUST_BOUNDARY_ENABLED_UNIVERSES
+            and self._trust_boundary_enabled
+        ):
+            try:
+                self._trust_boundary = self.lookup_trust_boundary(request)
+            except Exception as err:
+                if not self._trust_boundary:
+                    raise err
+                # if we already have trust boundary values, we log the error
+                # and keep the cached trust boundary value to let it fail
+                # afterwards.
+                else:
+                    _LOGGER.error(f"trust boundary refresh failed due to {err}")
 
         if self._use_self_signed_jwt():
             self._jwt_credentials.refresh(request)
@@ -462,7 +481,7 @@ class Credentials(
             self.token = access_token
             self.expiry = expiry
 
-        # Either the trust boundary has been removed or not yet been fetched.
+        # In case of trust boundary never been fetched.
         if (
             self._trust_boundary is None
             and self.universe_domain in _client.TRUST_BOUNDARY_ENABLED_UNIVERSES

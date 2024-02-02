@@ -46,7 +46,6 @@ _IAM_IDTOKEN_ENDPOINT = (
 _TRUST_BOUNDARY_LOOKUP_ENDPOINT = (
     "iamcredentials.{}/v1/projects/-/serviceAccounts/{}/trustBoundary"
 )
-_DEFAULT_TRUST_BOUNDARY = {"locations": [], "encoded_locations": "0x0"}
 TRUST_BOUNDARY_ENABLED_UNIVERSES = ["googleapis.com"]
 
 
