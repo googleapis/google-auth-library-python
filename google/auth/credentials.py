@@ -24,6 +24,8 @@ from google.auth import exceptions
 from google.auth import metrics
 from google.auth._refresh_worker import RefreshThreadManager
 
+DEFAULT_UNIVERSE_DOMAIN = "googleapis.com"
+
 
 class Credentials(metaclass=abc.ABCMeta):
     """Base class for all credentials.

@@ -26,6 +26,7 @@ from google.auth import downscoped
 from google.auth import exceptions
 from google.auth import transport
 from google.auth.credentials import TokenState
+from google.auth.credentials import DEFAULT_UNIVERSE_DOMAIN
 
 
 EXPRESSION = (
@@ -447,7 +448,11 @@ class TestCredentialAccessBoundary(object):
 
 class TestCredentials(object):
     @staticmethod
-    def make_credentials(source_credentials=SourceCredentials(), quota_project_id=None):
+    def make_credentials(
+        source_credentials=SourceCredentials(),
+        quota_project_id=None,
+        universe_domain=None,
+    ):
         availability_condition = make_availability_condition(
             EXPRESSION, TITLE, DESCRIPTION
         )
@@ -458,7 +463,10 @@ class TestCredentials(object):
         credential_access_boundary = make_credential_access_boundary(rules)
 
         return downscoped.Credentials(
-            source_credentials, credential_access_boundary, quota_project_id
+            source_credentials,
+            credential_access_boundary,
+            quota_project_id,
+            universe_domain,
         )
 
     @staticmethod
@@ -496,6 +504,20 @@ class TestCredentials(object):
         assert not credentials.expired
         # No quota project ID set.
         assert not credentials.quota_project_id
+        assert credentials.universe_domain == DEFAULT_UNIVERSE_DOMAIN
+
+    def test_create_with_customized_universe_domain(self):
+        test_universe_domain = "foo.com"
+        credentials = self.make_credentials(universe_domain=test_universe_domain)
+        # No token acquired yet.
+        assert not credentials.token
+        assert not credentials.valid
+        # Expiration hasn't been set yet.
+        assert not credentials.expiry
+        assert not credentials.expired
+        # No quota project ID set.
+        assert not credentials.quota_project_id
+        assert credentials.universe_domain == test_universe_domain
 
     def test_with_quota_project(self):
         credentials = self.make_credentials()
