@@ -126,6 +126,28 @@ def _get_gcloud_sdk_credentials(quota_project_id=None):
     return credentials, project_id
 
 
+def _get_temporary_access_token_environ():
+    """Gets credentials from the GOOGLE_TEMPORARY_ACCESS_TOKEN environment
+    variable."""
+
+    from google.oauth2 import credentials
+
+    token = os.environ.get(environment_vars.TEMPORARY_ACCESS_TOKEN)
+
+    if token is not None:
+        try:
+            credentials = credentials.Credentials.from_temporary_access_token(token)
+        except ValueError as caught_exc:
+            msg = "Failed to load valid temporary access token"
+            new_exc = exceptions.DefaultCredentialsError(msg, caught_exc)
+            raise new_exc from caught_exc        
+
+        return credentials, None
+
+    else:
+        return None, None
+
+
 def _get_explicit_environ_credentials(quota_project_id=None):
     """Gets credentials from the GOOGLE_APPLICATION_CREDENTIALS environment
     variable."""
@@ -255,6 +277,7 @@ def default_async(scopes=None, request=None, quota_project_id=None):
     )
 
     checkers = (
+        lambda: _get_temporary_access_token_environ(),
         lambda: _get_explicit_environ_credentials(quota_project_id=quota_project_id),
         lambda: _get_gcloud_sdk_credentials(quota_project_id=quota_project_id),
         _get_gae_credentials,
