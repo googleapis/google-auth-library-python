@@ -25,8 +25,8 @@ from google.auth import credentials
 from google.auth import downscoped
 from google.auth import exceptions
 from google.auth import transport
-from google.auth.credentials import TokenState
 from google.auth.credentials import DEFAULT_UNIVERSE_DOMAIN
+from google.auth.credentials import TokenState
 
 
 EXPRESSION = (
