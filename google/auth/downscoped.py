@@ -460,6 +460,7 @@ class Credentials(credentials.CredentialsWithQuotaProject):
                 the upper bound of the permissions that are available on that resource and an
                 optional condition to further restrict permissions.
             quota_project_id (Optional[str]): The optional quota project ID.
+            universe_domain (Optional[str]): The universe domain value, default is googleapis.com
         Raises:
             google.auth.exceptions.RefreshError: If the source credentials
                 return an error on token refresh.
