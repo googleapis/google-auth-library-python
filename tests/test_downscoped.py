@@ -544,7 +544,7 @@ class TestCredentials(object):
         assert quota_project_creds.quota_project_id == "project-foo"
 
     @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
-    def test_refresh_on_tpc_universe(self, unused_utcnow):
+    def test_refresh_on_custom_universe(self, unused_utcnow):
         test_universe_domain = "foo.com"
         response = SUCCESS_RESPONSE.copy()
         # Test custom expiration to confirm expiry is set correctly.
