@@ -25,6 +25,7 @@ from google.auth import metrics
 from google.auth._refresh_worker import RefreshThreadManager
 
 DEFAULT_TRUST_BOUNDARY = {"locations": [], "encoded_locations": "0x0"}
+DEFAULT_UNIVERSE_DOMAIN = "googleapis.com"
 
 
 class Credentials(metaclass=abc.ABCMeta):
@@ -59,7 +60,7 @@ class Credentials(metaclass=abc.ABCMeta):
         """Optional[dict]: Cache of a trust boundary response which has a list
         of allowed regions and an encoded string representation of credentials
         trust boundary."""
-        self._universe_domain = "googleapis.com"
+        self._universe_domain = DEFAULT_UNIVERSE_DOMAIN
         """Optional[str]: The universe domain value, default is googleapis.com
         """
 
