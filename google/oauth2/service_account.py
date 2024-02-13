@@ -86,7 +86,6 @@ from google.oauth2 import _client
 _LOGGER = logging.getLogger(__name__)
 
 _DEFAULT_TOKEN_LIFETIME_SECS = 3600  # 1 hour in seconds
-_DEFAULT_UNIVERSE_DOMAIN = "googleapis.com"
 _GOOGLE_OAUTH2_TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token"
 _TRUST_BOUNDARY_LOOKUP_ENDPOINT = (
     "iamcredentials.{}/v1/projects/-/serviceAccounts/{}/trustBoundary"
@@ -148,7 +147,8 @@ class Credentials(
         quota_project_id=None,
         additional_claims=None,
         always_use_jwt_access=False,
-        universe_domain=_DEFAULT_UNIVERSE_DOMAIN,
+        universe_domain=credentials.DEFAULT_UNIVERSE_DOMAIN,
+        trust_boundary=None,
     ):
         """
         Args:
@@ -190,9 +190,9 @@ class Credentials(
         self._quota_project_id = quota_project_id
         self._token_uri = token_uri
         self._always_use_jwt_access = always_use_jwt_access
-        self._universe_domain = universe_domain or _DEFAULT_UNIVERSE_DOMAIN
+        self._universe_domain = universe_domain or credentials.DEFAULT_UNIVERSE_DOMAIN
 
-        if universe_domain != _DEFAULT_UNIVERSE_DOMAIN:
+        if universe_domain != credentials.DEFAULT_UNIVERSE_DOMAIN:
             self._always_use_jwt_access = True
 
         self._jwt_credentials = None
@@ -227,8 +227,11 @@ class Credentials(
             service_account_email=info["client_email"],
             token_uri=info["token_uri"],
             project_id=info.get("project_id"),
-            universe_domain=info.get("universe_domain", _DEFAULT_UNIVERSE_DOMAIN),
-            **kwargs,
+            universe_domain=info.get(
+                "universe_domain", credentials.DEFAULT_UNIVERSE_DOMAIN
+            ),
+            trust_boundary=info.get("trust_boundary"),
+            **kwargs
         )
 
     @classmethod
@@ -333,7 +336,7 @@ class Credentials(
         """
         cred = self._make_copy()
         if (
-            cred._universe_domain != _DEFAULT_UNIVERSE_DOMAIN
+            cred._universe_domain != credentials.DEFAULT_UNIVERSE_DOMAIN
             and not always_use_jwt_access
         ):
             raise exceptions.InvalidValue(
@@ -346,7 +349,7 @@ class Credentials(
     def with_universe_domain(self, universe_domain):
         cred = self._make_copy()
         cred._universe_domain = universe_domain
-        if universe_domain != _DEFAULT_UNIVERSE_DOMAIN:
+        if universe_domain != credentials.DEFAULT_UNIVERSE_DOMAIN:
             cred._always_use_jwt_access = True
         return cred
 
@@ -444,7 +447,10 @@ class Credentials(
             # created, try to create one with scopes
             self._create_self_signed_jwt(None)
 
-        if self._universe_domain != _DEFAULT_UNIVERSE_DOMAIN and self._subject:
+        if (
+            self._universe_domain != credentials.DEFAULT_UNIVERSE_DOMAIN
+            and self._subject
+        ):
             raise exceptions.RefreshError(
                 "domain wide delegation is not supported for non-default universe domain"
             )
@@ -601,7 +607,7 @@ class IDTokenCredentials(
         target_audience,
         additional_claims=None,
         quota_project_id=None,
-        universe_domain=_DEFAULT_UNIVERSE_DOMAIN,
+        universe_domain=credentials.DEFAULT_UNIVERSE_DOMAIN,
     ):
         """
         Args:
@@ -633,11 +639,11 @@ class IDTokenCredentials(
         self._use_iam_endpoint = False
 
         if not universe_domain:
-            self._universe_domain = _DEFAULT_UNIVERSE_DOMAIN
+            self._universe_domain = credentials.DEFAULT_UNIVERSE_DOMAIN
         else:
             self._universe_domain = universe_domain
 
-        if universe_domain != _DEFAULT_UNIVERSE_DOMAIN:
+        if universe_domain != credentials.DEFAULT_UNIVERSE_DOMAIN:
             self._use_iam_endpoint = True
 
         if additional_claims is not None:
@@ -753,7 +759,10 @@ class IDTokenCredentials(
                 default and use_iam_endpoint is False.
         """
         cred = self._make_copy()
-        if cred._universe_domain != _DEFAULT_UNIVERSE_DOMAIN and not use_iam_endpoint:
+        if (
+            cred._universe_domain != credentials.DEFAULT_UNIVERSE_DOMAIN
+            and not use_iam_endpoint
+        ):
             raise exceptions.InvalidValue(
                 "use_iam_endpoint should be True for non-default universe domain"
             )
