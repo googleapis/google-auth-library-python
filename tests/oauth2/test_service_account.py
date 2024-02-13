@@ -24,6 +24,7 @@ from google.auth import crypt
 from google.auth import exceptions
 from google.auth import jwt
 from google.auth import transport
+from google.auth.credentials import DEFAULT_TRUST_BOUNDARY
 from google.auth.credentials import DEFAULT_UNIVERSE_DOMAIN
 from google.oauth2 import service_account
 
@@ -44,7 +45,6 @@ SERVICE_ACCOUNT_NON_GDU_JSON_FILE = os.path.join(
     DATA_DIR, "service_account_non_gdu.json"
 )
 FAKE_UNIVERSE_DOMAIN = "universe.foo"
-DEFAULT_TRUST_BOUNDARY = {"locations": [], "encoded_locations": "0x0"}
 
 with open(SERVICE_ACCOUNT_JSON_FILE, "rb") as fh:
     SERVICE_ACCOUNT_INFO = json.load(fh)

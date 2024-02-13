@@ -90,7 +90,7 @@ _GOOGLE_OAUTH2_TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token"
 _TRUST_BOUNDARY_LOOKUP_ENDPOINT = (
     "iamcredentials.{}/v1/projects/-/serviceAccounts/{}/trustBoundary"
 )
-TRUST_BOUNDARY_ENABLED_ENV = "TRUST_BOUNDARY_ENABLED"
+TRUST_BOUNDARY_LOOKUP_ENABLED_ENV = "TRUST_BOUNDARY_LOOKUP_ENABLED"
 
 
 class Credentials(
@@ -148,7 +148,6 @@ class Credentials(
         additional_claims=None,
         always_use_jwt_access=False,
         universe_domain=credentials.DEFAULT_UNIVERSE_DOMAIN,
-        trust_boundary=None,
     ):
         """
         Args:
@@ -201,7 +200,7 @@ class Credentials(
             self._additional_claims = additional_claims
         else:
             self._additional_claims = {}
-        self._trust_boundary_enabled = os.environ.get(TRUST_BOUNDARY_ENABLED_ENV) == "1"
+        self._trust_boundary_enabled = os.environ.get(TRUST_BOUNDARY_LOOKUP_ENABLED_ENV) == "1"
         self._trust_boundary = (
             None if self._trust_boundary_enabled else credentials.DEFAULT_TRUST_BOUNDARY
         )
@@ -230,7 +229,6 @@ class Credentials(
             universe_domain=info.get(
                 "universe_domain", credentials.DEFAULT_UNIVERSE_DOMAIN
             ),
-            trust_boundary=info.get("trust_boundary"),
             **kwargs
         )
 
