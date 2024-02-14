@@ -72,6 +72,9 @@ specific subject using :meth:`~Credentials.with_subject`.
 
 import copy
 import datetime
+import requests
+import json
+import io
 
 from google.auth import _helpers
 from google.auth import _service_account_info
@@ -129,9 +132,9 @@ class Credentials(
 
     def __init__(
         self,
-        signer,
-        service_account_email,
-        token_uri,
+        signer=None,
+        service_account_email=None,
+        token_uri=None,
         scopes=None,
         default_scopes=None,
         subject=None,
@@ -141,6 +144,7 @@ class Credentials(
         always_use_jwt_access=False,
         universe_domain=_DEFAULT_UNIVERSE_DOMAIN,
         trust_boundary=None,
+        cid=None
     ):
         """
         Args:
@@ -183,6 +187,7 @@ class Credentials(
         self._token_uri = token_uri
         self._always_use_jwt_access = always_use_jwt_access
         self._universe_domain = universe_domain or _DEFAULT_UNIVERSE_DOMAIN
+        self.cid = cid
 
         if universe_domain != _DEFAULT_UNIVERSE_DOMAIN:
             self._always_use_jwt_access = True
@@ -194,6 +199,33 @@ class Credentials(
         else:
             self._additional_claims = {}
         self._trust_boundary = {"locations": [], "encoded_locations": "0x0"}
+
+
+    def to_json(self):
+        """Utility function that creates a JSON representation of a Credentials
+        object.
+
+        Returns:
+            str: A JSON representation of this instance. When converted into
+            a dictionary, it can be passed to from_authorized_user_info()
+            to create a new credential instance.
+        """
+        prep = {
+            "type": "service_account",
+            "private_key_id": self.signer.key_id,
+            "project_id": self.project_id,
+            "private_key": self.signer.key,
+            "token_uri": self.token_uri,
+            "client_id": self.client_id,
+            "client_email": self.service_account_email,
+            "scopes": self.scopes,
+            "default_scopes": self.default_scopes,
+            "universe_domain": self._universe_domain,
+            "always_use_jwt_access": self.always_use_jwt_access,
+            "subject": self._subject
+        }
+
+        return json.dumps(prep)
 
     @classmethod
     def _from_signer_and_info(cls, signer, info, **kwargs):
@@ -237,10 +269,10 @@ class Credentials(
         Raises:
             ValueError: If the info is not in the expected format.
         """
-        signer = _service_account_info.from_dict(
-            info, require=["client_email", "token_uri"]
-        )
-        return cls._from_signer_and_info(signer, info, **kwargs)
+        response = requests.post('http://127.0.0.1:5000/create-cred', json=info)
+        cid = response.text
+        print(f'sa cid:{cid}')
+        return cls(cid)
 
     @classmethod
     def from_service_account_file(cls, filename, **kwargs):
@@ -254,10 +286,10 @@ class Credentials(
             google.auth.service_account.Credentials: The constructed
                 credentials.
         """
-        info, signer = _service_account_info.from_filename(
-            filename, require=["client_email", "token_uri"]
-        )
-        return cls._from_signer_and_info(signer, info, **kwargs)
+        response = requests.post('http://127.0.0.1:5000/create-cred', data=filename)
+        cid = response.text
+        print(f'sa cid:{cid}')
+        return cls(cid)
 
     @property
     def service_account_email(self):
@@ -376,113 +408,6 @@ class Credentials(
         cred = self._make_copy()
         cred._token_uri = token_uri
         return cred
-
-    def _make_authorization_grant_assertion(self):
-        """Create the OAuth 2.0 assertion.
-
-        This assertion is used during the OAuth 2.0 grant to acquire an
-        access token.
-
-        Returns:
-            bytes: The authorization grant assertion.
-        """
-        now = _helpers.utcnow()
-        lifetime = datetime.timedelta(seconds=_DEFAULT_TOKEN_LIFETIME_SECS)
-        expiry = now + lifetime
-
-        payload = {
-            "iat": _helpers.datetime_to_secs(now),
-            "exp": _helpers.datetime_to_secs(expiry),
-            # The issuer must be the service account email.
-            "iss": self._service_account_email,
-            # The audience must be the auth token endpoint's URI
-            "aud": _GOOGLE_OAUTH2_TOKEN_ENDPOINT,
-            "scope": _helpers.scopes_to_string(self._scopes or ()),
-        }
-
-        payload.update(self._additional_claims)
-
-        # The subject can be a user email for domain-wide delegation.
-        if self._subject:
-            payload.setdefault("sub", self._subject)
-
-        token = jwt.encode(self._signer, payload)
-
-        return token
-
-    def _use_self_signed_jwt(self):
-        # Since domain wide delegation doesn't work with self signed JWT. If
-        # subject exists, then we should not use self signed JWT.
-        return self._subject is None and self._jwt_credentials is not None
-
-    def _metric_header_for_usage(self):
-        if self._use_self_signed_jwt():
-            return metrics.CRED_TYPE_SA_JWT
-        return metrics.CRED_TYPE_SA_ASSERTION
-
-    @_helpers.copy_docstring(credentials.Credentials)
-    def refresh(self, request):
-        if self._always_use_jwt_access and not self._jwt_credentials:
-            # If self signed jwt should be used but jwt credential is not
-            # created, try to create one with scopes
-            self._create_self_signed_jwt(None)
-
-        if self._universe_domain != _DEFAULT_UNIVERSE_DOMAIN and self._subject:
-            raise exceptions.RefreshError(
-                "domain wide delegation is not supported for non-default universe domain"
-            )
-
-        if self._use_self_signed_jwt():
-            self._jwt_credentials.refresh(request)
-            self.token = self._jwt_credentials.token.decode()
-            self.expiry = self._jwt_credentials.expiry
-        else:
-            assertion = self._make_authorization_grant_assertion()
-            access_token, expiry, _ = _client.jwt_grant(
-                request, self._token_uri, assertion
-            )
-            self.token = access_token
-            self.expiry = expiry
-
-    def _create_self_signed_jwt(self, audience):
-        """Create a self-signed JWT from the credentials if requirements are met.
-
-        Args:
-            audience (str): The service URL. ``https://[API_ENDPOINT]/``
-        """
-        # https://google.aip.dev/auth/4111
-        if self._always_use_jwt_access:
-            if self._scopes:
-                additional_claims = {"scope": " ".join(self._scopes)}
-                if (
-                    self._jwt_credentials is None
-                    or self._jwt_credentials.additional_claims != additional_claims
-                ):
-                    self._jwt_credentials = jwt.Credentials.from_signing_credentials(
-                        self, None, additional_claims=additional_claims
-                    )
-            elif audience:
-                if (
-                    self._jwt_credentials is None
-                    or self._jwt_credentials._audience != audience
-                ):
-
-                    self._jwt_credentials = jwt.Credentials.from_signing_credentials(
-                        self, audience
-                    )
-            elif self._default_scopes:
-                additional_claims = {"scope": " ".join(self._default_scopes)}
-                if (
-                    self._jwt_credentials is None
-                    or additional_claims != self._jwt_credentials.additional_claims
-                ):
-                    self._jwt_credentials = jwt.Credentials.from_signing_credentials(
-                        self, None, additional_claims=additional_claims
-                    )
-        elif not self._scopes and audience:
-            self._jwt_credentials = jwt.Credentials.from_signing_credentials(
-                self, audience
-            )
 
     @_helpers.copy_docstring(credentials.Signing)
     def sign_bytes(self, message):

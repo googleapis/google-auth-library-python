@@ -131,6 +131,9 @@ class RSASigner(base.Signer, base.FromServiceAccountMixin):
     @_helpers.copy_docstring(base.Signer)
     def key_id(self):
         return self._key_id
+    
+    def key(self):
+        return self._key
 
     @_helpers.copy_docstring(base.Signer)
     def sign(self, message):

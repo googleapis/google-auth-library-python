@@ -18,6 +18,8 @@
 import abc
 from enum import Enum
 import os
+import requests
+import json
 
 from google.auth import _helpers, environment_vars
 from google.auth import exceptions
@@ -44,7 +46,9 @@ class Credentials(metaclass=abc.ABCMeta):
     with modifications such as :meth:`ScopedCredentials.with_scopes`.
     """
 
-    def __init__(self):
+    def __init__(self, cid = None):
+        self.cid = cid
+        """str: The id of the credential representation in the core auth lib"""
         self.token = None
         """str: The bearer token that can be used in HTTP headers to make
         authenticated requests."""
@@ -119,6 +123,13 @@ class Credentials(metaclass=abc.ABCMeta):
     @property
     def quota_project_id(self):
         """Project to use for quota and billing purposes."""
+        if self._quota_project_id == None:
+            url = f'http://127.0.0.1:5000/quota-project?cid={self.cid}'
+            response = requests.get(url)
+            print(f'request:{url}, response:{response.text}')
+            response_json = json.loads(response.text)
+            self._quota_project_id = response_json['quota_project']
+
         return self._quota_project_id
 
     @property
@@ -126,8 +137,7 @@ class Credentials(metaclass=abc.ABCMeta):
         """The universe domain value."""
         return self._universe_domain
 
-    @abc.abstractmethod
-    def refresh(self, request):
+    def refresh(self, request = None):
         """Refreshes the access token.
 
         Args:
@@ -138,9 +148,12 @@ class Credentials(metaclass=abc.ABCMeta):
             google.auth.exceptions.RefreshError: If the credentials could
                 not be refreshed.
         """
-        # pylint: disable=missing-raises-doc
-        # (pylint doesn't recognize that this is abstract)
-        raise NotImplementedError("Refresh must be implemented")
+        url = f'http://127.0.0.1:5000/token?cid={self.cid}'
+        response = requests.get(url)
+        print(f'request:{url}, response:{response.text}')
+        response_json = json.loads(response.text)
+        self.token = response_json['access_token']
+                
 
     def _metric_header_for_usage(self):
         """The x-goog-api-client header for token usage metric.
@@ -186,25 +199,6 @@ class Credentials(metaclass=abc.ABCMeta):
         if self.quota_project_id:
             headers["x-goog-user-project"] = self.quota_project_id
 
-    def _blocking_refresh(self, request):
-        if not self.valid:
-            self.refresh(request)
-
-    def _non_blocking_refresh(self, request):
-        use_blocking_refresh_fallback = False
-
-        if self.token_state == TokenState.STALE:
-            use_blocking_refresh_fallback = not self._refresh_worker.start_refresh(
-                self, request
-            )
-
-        if self.token_state == TokenState.INVALID or use_blocking_refresh_fallback:
-            self.refresh(request)
-            # If the blocking refresh succeeds then we can clear the error info
-            # on the background refresh worker, and perform refreshes in a
-            # background thread.
-            self._refresh_worker.clear_error()
-
     def before_request(self, request, method, url, headers):
         """Performs credential-specific before request logic.
 
@@ -222,10 +216,7 @@ class Credentials(metaclass=abc.ABCMeta):
         # pylint: disable=unused-argument
         # (Subclasses may use these arguments to ascertain information about
         # the http request.)
-        if self._use_non_blocking_refresh:
-            self._non_blocking_refresh(request)
-        else:
-            self._blocking_refresh(request)
+        self.refresh()
 
         metrics.add_metric_header(headers, self._metric_header_for_usage())
         self.apply(headers)
