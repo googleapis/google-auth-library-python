@@ -148,8 +148,9 @@ class Credentials(
     def universe_domain(self):
         if self._universe_domain_cached:
             return self._universe_domain
-        
+
         from google.auth.transport import requests as google_auth_requests
+
         self._universe_domain = _metadata.get_universe_domain(
             google_auth_requests.Request()
         )
