@@ -83,7 +83,6 @@ class Credentials(
         self._scopes = scopes
         self._default_scopes = default_scopes
         self._universe_domain_cached = False
-        self._universe_domain_request = None
         if universe_domain:
             self._universe_domain = universe_domain
             self._universe_domain_cached = True
@@ -149,11 +148,10 @@ class Credentials(
     def universe_domain(self):
         if self._universe_domain_cached:
             return self._universe_domain
-        if self._universe_domain_request is None:
-            from google.auth.transport import requests as google_auth_requests
-            self._universe_domain_request = google_auth_requests.Request()
+        
+        from google.auth.transport import requests as google_auth_requests
         self._universe_domain = _metadata.get_universe_domain(
-            self._universe_domain_request
+            google_auth_requests.Request()
         )
         self._universe_domain_cached = True
         return self._universe_domain
