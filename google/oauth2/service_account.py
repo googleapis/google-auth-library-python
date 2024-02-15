@@ -200,7 +200,9 @@ class Credentials(
             self._additional_claims = additional_claims
         else:
             self._additional_claims = {}
-        self._trust_boundary_enabled = os.environ.get(TRUST_BOUNDARY_LOOKUP_ENABLED_ENV) == "1"
+        self._trust_boundary_enabled = (
+            os.environ.get(TRUST_BOUNDARY_LOOKUP_ENABLED_ENV) == "1"
+        )
         self._trust_boundary = (
             None if self._trust_boundary_enabled else credentials.DEFAULT_TRUST_BOUNDARY
         )
@@ -229,7 +231,7 @@ class Credentials(
             universe_domain=info.get(
                 "universe_domain", credentials.DEFAULT_UNIVERSE_DOMAIN
             ),
-            **kwargs
+            **kwargs,
         )
 
     @classmethod
