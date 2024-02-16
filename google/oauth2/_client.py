@@ -523,8 +523,8 @@ def lookup_trust_boundary(request, url, headers):
         headers (mapping): Basic auth headers for the request.
 
     Returns:
-        Mapping[str,list|str, str]: A response would be a dictionary containing
-            the "locations" as a list of allowed locations in string and
+        Mapping[str,list|str]: A response would be a dictionary containing the
+            "locations" as a list of allowed locations in string and
             "encoded_locations" as a hex string.
 
             e.g:
@@ -573,9 +573,13 @@ def lookup_trust_boundary(request, url, headers):
     try:
         response_data = json.loads(response_body)
     except Exception:
-        raise exceptions.MalformedError("Failed to load trust boundary info")
+        raise exceptions.MalformedError(
+            "Failed to parse trust boundary info: {}".format(response_body)
+        )
 
     if "locations" not in response_data or "encoded_locations" not in response_data:
-        raise exceptions.MalformedError("Failed to load trust boundary info")
+        raise exceptions.MalformedError(
+            "Invalid trust boundary info: {}".format(response_body)
+        )
 
     return response_data
