@@ -97,7 +97,7 @@ def detect_gce_residency_linux():
     return content.startswith(_GOOGLE)
 
 
-def ping(request, timeout=_METADATA_DEFAULT_TIMEOUT, retry_count=3):
+def ping(request, timeout=None, retry_count=3):
     """Checks to see if the metadata server is available.
 
     Args:
@@ -116,10 +116,8 @@ def ping(request, timeout=_METADATA_DEFAULT_TIMEOUT, retry_count=3):
     #       could lead to false negatives in the event that we are on GCE, but
     #       the metadata resolution was particularly slow. The latter case is
     #       "unlikely".
-    try:
-        timeout = float(os.getenv("GCE_METADATA_TIMEOUT", timeout))
-    except ValueError:  # pragma: NO COVER
-        pass
+    if timeout is None:
+        timeout = float(os.getenv("GCE_METADATA_TIMEOUT", _METADATA_DEFAULT_TIMEOUT))
 
     retries = 0
     headers = _METADATA_HEADERS.copy()
