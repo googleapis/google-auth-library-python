@@ -4,6 +4,26 @@
 
 [1]: https://pypi.org/project/google-auth/#history
 
+## [2.28.1](https://github.com/googleapis/google-auth-library-python/compare/v2.28.0...v2.28.1) (2024-02-21)
+
+
+### Bug Fixes
+
+* Typo when setting the state for the pickle deserializer. ([#1479](https://github.com/googleapis/google-auth-library-python/issues/1479)) ([08b5cc3](https://github.com/googleapis/google-auth-library-python/commit/08b5cc38d09d388a5a7c11942b7992870ee012b7))
+
+## [2.28.0](https://github.com/googleapis/google-auth-library-python/compare/v2.27.0...v2.28.0) (2024-02-15)
+
+
+### Features
+
+* Adding universe domain support for downscroped credentials ([#1463](https://github.com/googleapis/google-auth-library-python/issues/1463)) ([fa8b7b2](https://github.com/googleapis/google-auth-library-python/commit/fa8b7b24ec32712aafff98c2d6c6a6cc5fd20ada))
+
+
+### Bug Fixes
+
+* Change log level to debug for return_none_for_not_found_error ([#1473](https://github.com/googleapis/google-auth-library-python/issues/1473)) ([a036b47](https://github.com/googleapis/google-auth-library-python/commit/a036b4797471227f9ce87d71868404c9ebcde7c7))
+* Make requests import conditional for gce universe domain ([#1476](https://github.com/googleapis/google-auth-library-python/issues/1476)) ([9bb64c8](https://github.com/googleapis/google-auth-library-python/commit/9bb64c81d2745541efcc3dfeec31808ec682557e))
+
 ## [2.27.0](https://github.com/googleapis/google-auth-library-python/compare/v2.26.2...v2.27.0) (2024-01-24)
 
 
