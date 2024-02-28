@@ -53,6 +53,41 @@ _CLOUD_RESOURCE_MANAGER = "https://cloudresourcemanager.googleapis.com/v1/projec
 
 _DEFAULT_UNIVERSE_DOMAIN = "googleapis.com"
 
+class SupplierContext(object):
+    """A context object that contains information about the requested third party credential that is passed
+    to AWS security credential and subject token suppliers."""
+
+    def __init__(self, subject_token_type, audience):
+        """Instantiates a Supplier context with the provided subject token type and target audience.
+
+        Args:
+            subject_token_type (str): A condition expression that specifies the Cloud Storage
+                objects where permissions are available. For example, this expression
+                makes permissions available for objects whose name starts with "customer-a":
+                "resource.name.startsWith('projects/_/buckets/example-bucket/objects/customer-a')"
+            audience (str): An optional short string that identifies the purpose of
+                the condition.
+        """
+        self._subject_token_type = subject_token_type
+        self._audience = audience
+
+    @property
+    def subject_token_type(self):
+        """Returns the requested subject token type.
+
+        Returns:
+           str: The requested subject token type.
+        """
+        return self._subject_token_type
+
+    @property
+    def audience(self):
+        """Returns the expected audience.
+
+        Returns:
+           str: The expected audience.
+        """
+        return self._audience
 
 class Credentials(
     credentials.Scoped,
@@ -152,6 +187,7 @@ class Credentials(
         else:
             self._impersonated_credentials = None
         self._project_id = None
+        self._supplier_context = SupplierContext(self._subject_token_type, self._audience)
 
         if not self.is_workforce_pool and self._workforce_pool_user_project:
             # Workload identity pools do not support workforce pool user projects.

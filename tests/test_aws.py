@@ -617,8 +617,12 @@ class TestRequestSigner(object):
     ):
         utcnow.return_value = datetime.datetime.strptime(time, "%Y-%m-%dT%H:%M:%SZ")
         request_signer = aws.RequestSigner(region)
+        credentials_object = aws.AwsSecurityCredentials(
+            credentials.get("access_key_id"),
+            credentials.get("secret_access_key"),
+            credentials.get("security_token"))
         actual_signed_request = request_signer.get_request_options(
-            credentials,
+            credentials_object,
             original_request.get("url"),
             original_request.get("method"),
             original_request.get("data"),
@@ -632,10 +636,7 @@ class TestRequestSigner(object):
 
         with pytest.raises(ValueError) as excinfo:
             request_signer.get_request_options(
-                {
-                    "access_key_id": ACCESS_KEY_ID,
-                    "secret_access_key": SECRET_ACCESS_KEY,
-                },
+                aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY),
                 "invalid",
                 "POST",
             )
@@ -647,10 +648,7 @@ class TestRequestSigner(object):
 
         with pytest.raises(ValueError) as excinfo:
             request_signer.get_request_options(
-                {
-                    "access_key_id": ACCESS_KEY_ID,
-                    "secret_access_key": SECRET_ACCESS_KEY,
-                },
+                aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY),
                 "http://invalid",
                 "POST",
             )
@@ -662,10 +660,7 @@ class TestRequestSigner(object):
 
         with pytest.raises(ValueError) as excinfo:
             request_signer.get_request_options(
-                {
-                    "access_key_id": ACCESS_KEY_ID,
-                    "secret_access_key": SECRET_ACCESS_KEY,
-                },
+                aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY),
                 "https://",
                 "POST",
             )
@@ -735,7 +730,7 @@ class TestCredentials(object):
             ],
         }
         # Include security token if available.
-        if "security_token" in aws_security_credentials:
+        if aws_security_credentials.sessionToken is not None:
             reformatted_signed_request.get("headers").append(
                 {
                     "key": "x-amz-security-token",
@@ -774,6 +769,24 @@ class TestCredentials(object):
         in an AWS environment.
         """
         responses = []
+
+        if region_status:
+            if imdsv2_session_token_status:
+                # AWS session token request
+                imdsv2_session_response = mock.create_autospec(
+                    transport.Response, instance=True
+                )
+                imdsv2_session_response.status = imdsv2_session_token_status
+                imdsv2_session_response.data = imdsv2_session_token_data
+                responses.append(imdsv2_session_response)
+
+            # AWS region request.
+            region_response = mock.create_autospec(transport.Response, instance=True)
+            region_response.status = region_status
+            if region_name:
+                region_response.data = "{}b".format(region_name).encode("utf-8")
+            responses.append(region_response)
+
         if imdsv2_session_token_status:
             # AWS session token request
             imdsv2_session_response = mock.create_autospec(
@@ -782,14 +795,6 @@ class TestCredentials(object):
             imdsv2_session_response.status = imdsv2_session_token_status
             imdsv2_session_response.data = imdsv2_session_token_data
             responses.append(imdsv2_session_response)
-
-        if region_status:
-            # AWS region request.
-            region_response = mock.create_autospec(transport.Response, instance=True)
-            region_response.status = region_status
-            if region_name:
-                region_response.data = "{}b".format(region_name).encode("utf-8")
-            responses.append(region_response)
 
         if role_status:
             # AWS role name request.
@@ -1159,11 +1164,7 @@ class TestCredentials(object):
         subject_token = credentials.retrieve_subject_token(request)
 
         assert subject_token == self.make_serialized_aws_signed_request(
-            {
-                "access_key_id": ACCESS_KEY_ID,
-                "secret_access_key": SECRET_ACCESS_KEY,
-                "security_token": TOKEN,
-            }
+            aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
         )
         # Assert region request.
         self.assert_aws_metadata_request_kwargs(
@@ -1232,11 +1233,7 @@ class TestCredentials(object):
         subject_token = credentials.retrieve_subject_token(request)
 
         assert subject_token == self.make_serialized_aws_signed_request(
-            {
-                "access_key_id": ACCESS_KEY_ID,
-                "secret_access_key": SECRET_ACCESS_KEY,
-                "security_token": TOKEN,
-            }
+            aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
         )
         # Assert session token request
         self.assert_aws_metadata_request_kwargs(
@@ -1251,15 +1248,22 @@ class TestCredentials(object):
             REGION_URL,
             {"X-aws-ec2-metadata-token": self.AWS_IMDSV2_SESSION_TOKEN},
         )
-        # Assert role request.
+        # Assert session token request
         self.assert_aws_metadata_request_kwargs(
             request.call_args_list[2][1],
+            IMDSV2_SESSION_TOKEN_URL,
+            {"X-aws-ec2-metadata-token-ttl-seconds": "300"},
+            "PUT",
+        )
+        # Assert role request.
+        self.assert_aws_metadata_request_kwargs(
+            request.call_args_list[3][1],
             SECURITY_CREDS_URL,
             {"X-aws-ec2-metadata-token": self.AWS_IMDSV2_SESSION_TOKEN},
         )
         # Assert security credentials request.
         self.assert_aws_metadata_request_kwargs(
-            request.call_args_list[3][1],
+            request.call_args_list[4][1],
             "{}/{}".format(SECURITY_CREDS_URL, self.AWS_ROLE),
             {
                 "Content-Type": "application/json",
@@ -1336,11 +1340,7 @@ class TestCredentials(object):
 
         subject_token = credentials.retrieve_subject_token(request)
         assert subject_token == self.make_serialized_aws_signed_request(
-            {
-                "access_key_id": ACCESS_KEY_ID,
-                "secret_access_key": SECRET_ACCESS_KEY,
-                "security_token": TOKEN,
-            }
+            aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
         )
         # Assert session token request.
         self.assert_aws_metadata_request_kwargs(
@@ -1397,11 +1397,7 @@ class TestCredentials(object):
 
         subject_token = credentials.retrieve_subject_token(request)
         assert subject_token == self.make_serialized_aws_signed_request(
-            {
-                "access_key_id": ACCESS_KEY_ID,
-                "secret_access_key": SECRET_ACCESS_KEY,
-                "security_token": TOKEN,
-            }
+            aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
         )
         # Assert session token request.
         self.assert_aws_metadata_request_kwargs(
@@ -1452,11 +1448,7 @@ class TestCredentials(object):
 
         subject_token = credentials.retrieve_subject_token(request)
         assert subject_token == self.make_serialized_aws_signed_request(
-            {
-                "access_key_id": ACCESS_KEY_ID,
-                "secret_access_key": SECRET_ACCESS_KEY,
-                "security_token": TOKEN,
-            }
+            aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
         )
         # Assert session token request.
         self.assert_aws_metadata_request_kwargs(
@@ -1531,11 +1523,7 @@ class TestCredentials(object):
         subject_token = credentials.retrieve_subject_token(request)
 
         assert subject_token == self.make_serialized_aws_signed_request(
-            {
-                "access_key_id": ACCESS_KEY_ID,
-                "secret_access_key": SECRET_ACCESS_KEY,
-                "security_token": TOKEN,
-            }
+            aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
         )
         # Assert session token request.
         self.assert_aws_metadata_request_kwargs(
@@ -1550,15 +1538,22 @@ class TestCredentials(object):
             REGION_URL_IPV6,
             {"X-aws-ec2-metadata-token": self.AWS_IMDSV2_SESSION_TOKEN},
         )
-        # Assert role request.
+        # Assert session token request.
         self.assert_aws_metadata_request_kwargs(
             request.call_args_list[2][1],
+            IMDSV2_SESSION_TOKEN_URL_IPV6,
+            {"X-aws-ec2-metadata-token-ttl-seconds": "300"},
+            "PUT",
+        )
+        # Assert role request.
+        self.assert_aws_metadata_request_kwargs(
+            request.call_args_list[3][1],
             SECURITY_CREDS_URL_IPV6,
             {"X-aws-ec2-metadata-token": self.AWS_IMDSV2_SESSION_TOKEN},
         )
         # Assert security credentials request.
         self.assert_aws_metadata_request_kwargs(
-            request.call_args_list[3][1],
+            request.call_args_list[4][1],
             "{}/{}".format(SECURITY_CREDS_URL_IPV6, self.AWS_ROLE),
             {
                 "Content-Type": "application/json",
@@ -1620,7 +1615,7 @@ class TestCredentials(object):
         subject_token = credentials.retrieve_subject_token(request)
 
         assert subject_token == self.make_serialized_aws_signed_request(
-            {"access_key_id": ACCESS_KEY_ID, "secret_access_key": SECRET_ACCESS_KEY}
+            aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY)
         )
 
     @mock.patch("google.auth._helpers.utcnow")
@@ -1637,11 +1632,7 @@ class TestCredentials(object):
         subject_token = credentials.retrieve_subject_token(None)
 
         assert subject_token == self.make_serialized_aws_signed_request(
-            {
-                "access_key_id": ACCESS_KEY_ID,
-                "secret_access_key": SECRET_ACCESS_KEY,
-                "security_token": TOKEN,
-            }
+            aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
         )
 
     @mock.patch("google.auth._helpers.utcnow")
@@ -1660,11 +1651,7 @@ class TestCredentials(object):
         subject_token = credentials.retrieve_subject_token(None)
 
         assert subject_token == self.make_serialized_aws_signed_request(
-            {
-                "access_key_id": ACCESS_KEY_ID,
-                "secret_access_key": SECRET_ACCESS_KEY,
-                "security_token": TOKEN,
-            }
+            aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
         )
 
     @mock.patch("google.auth._helpers.utcnow")
@@ -1687,11 +1674,7 @@ class TestCredentials(object):
         subject_token = credentials.retrieve_subject_token(None)
 
         assert subject_token == self.make_serialized_aws_signed_request(
-            {
-                "access_key_id": ACCESS_KEY_ID,
-                "secret_access_key": SECRET_ACCESS_KEY,
-                "security_token": TOKEN,
-            }
+            aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
         )
 
     @mock.patch("google.auth._helpers.utcnow")
@@ -1709,7 +1692,7 @@ class TestCredentials(object):
         subject_token = credentials.retrieve_subject_token(None)
 
         assert subject_token == self.make_serialized_aws_signed_request(
-            {"access_key_id": ACCESS_KEY_ID, "secret_access_key": SECRET_ACCESS_KEY}
+            aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY)
         )
 
     @mock.patch("google.auth._helpers.utcnow")
@@ -1731,11 +1714,7 @@ class TestCredentials(object):
         subject_token = credentials.retrieve_subject_token(request)
 
         assert subject_token == self.make_serialized_aws_signed_request(
-            {
-                "access_key_id": ACCESS_KEY_ID,
-                "secret_access_key": SECRET_ACCESS_KEY,
-                "security_token": TOKEN,
-            }
+            aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
         )
 
     def test_retrieve_subject_token_error_determining_aws_region(self):
@@ -1807,11 +1786,7 @@ class TestCredentials(object):
             self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
         )
         expected_subject_token = self.make_serialized_aws_signed_request(
-            {
-                "access_key_id": ACCESS_KEY_ID,
-                "secret_access_key": SECRET_ACCESS_KEY,
-                "security_token": TOKEN,
-            }
+            aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
         )
         token_headers = {
             "Content-Type": "application/x-www-form-urlencoded",
@@ -1870,11 +1845,7 @@ class TestCredentials(object):
             self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
         )
         expected_subject_token = self.make_serialized_aws_signed_request(
-            {
-                "access_key_id": ACCESS_KEY_ID,
-                "secret_access_key": SECRET_ACCESS_KEY,
-                "security_token": TOKEN,
-            }
+            aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
         )
         token_headers = {
             "Content-Type": "application/x-www-form-urlencoded",
@@ -1940,11 +1911,7 @@ class TestCredentials(object):
             _helpers.utcnow().replace(microsecond=0) + datetime.timedelta(seconds=3600)
         ).isoformat("T") + "Z"
         expected_subject_token = self.make_serialized_aws_signed_request(
-            {
-                "access_key_id": ACCESS_KEY_ID,
-                "secret_access_key": SECRET_ACCESS_KEY,
-                "security_token": TOKEN,
-            }
+            aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
         )
         token_headers = {
             "Content-Type": "application/x-www-form-urlencoded",
@@ -2037,11 +2004,7 @@ class TestCredentials(object):
             _helpers.utcnow().replace(microsecond=0) + datetime.timedelta(seconds=3600)
         ).isoformat("T") + "Z"
         expected_subject_token = self.make_serialized_aws_signed_request(
-            {
-                "access_key_id": ACCESS_KEY_ID,
-                "secret_access_key": SECRET_ACCESS_KEY,
-                "security_token": TOKEN,
-            }
+            aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
         )
         token_headers = {
             "Content-Type": "application/x-www-form-urlencoded",
