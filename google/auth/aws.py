@@ -337,6 +337,7 @@ def _generate_authentication_header_map(
         authentication_header["amz_date"] = amz_date
     return authentication_header
 
+
 class AwsSecurityCredentials(object):
     """An object that models AWS security credentials with an optional session token."""
 
@@ -379,6 +380,7 @@ class AwsSecurityCredentials(object):
            str: The session token.
         """
         return self._sessionToken
+
 
 class AwsSecurityCredentialsSupplier(metaclass=abc.ABCMeta):
     """Base class for AWS security credential suppliers. This can be implemented with custom logic to retrieve
@@ -425,15 +427,13 @@ class AwsSecurityCredentialsSupplier(metaclass=abc.ABCMeta):
         """
         raise NotImplementedError("")
 
+
 class _InternalAwsSecurityCredentialsSupplier(AwsSecurityCredentialsSupplier):
     """Internal implementation of AWS security credentials supplier. Supports retrieving
     credentials and region via EC2 metadata endpoints and environment variables.
     """
 
-    def __init__(
-        self,
-        credential_source,
-    ):
+    def __init__(self, credential_source):
         self._region_url = credential_source.get("region_url")
         self._security_credentials_url = credential_source.get("url")
         self._imdsv2_session_token_url = credential_source.get(
@@ -452,7 +452,9 @@ class _InternalAwsSecurityCredentialsSupplier(AwsSecurityCredentialsSupplier):
         # This is normally not available for permanent credentials.
         env_aws_session_token = os.environ.get(environment_vars.AWS_SESSION_TOKEN)
         if env_aws_access_key_id and env_aws_secret_access_key:
-            return AwsSecurityCredentials(env_aws_access_key_id, env_aws_secret_access_key, env_aws_session_token)
+            return AwsSecurityCredentials(
+                env_aws_access_key_id, env_aws_secret_access_key, env_aws_session_token
+            )
 
         imdsv2_session_token = self._get_imdsv2_session_token(request)
         # Get role name.
@@ -466,7 +468,8 @@ class _InternalAwsSecurityCredentialsSupplier(AwsSecurityCredentialsSupplier):
         return AwsSecurityCredentials(
             credentials.get("AccessKeyId"),
             credentials.get("SecretAccessKey"),
-            credentials.get("Token"))
+            credentials.get("Token"),
+        )
 
     @_helpers.copy_docstring(AwsSecurityCredentialsSupplier)
     def get_aws_region(self, context, request):
@@ -508,10 +511,7 @@ class _InternalAwsSecurityCredentialsSupplier(AwsSecurityCredentialsSupplier):
         return response_body[:-1]
 
     def _get_imdsv2_session_token(self, request):
-        if (
-            request is not None
-            and self._imdsv2_session_token_url is not None
-        ):
+        if request is not None and self._imdsv2_session_token_url is not None:
             headers = {"X-aws-ec2-metadata-token-ttl-seconds": "300"}
 
             imdsv2_session_token_response = request(
@@ -671,7 +671,9 @@ class Credentials(external_account.Credentials):
         credential_source = credential_source or {}
         self._target_resource = audience
         environment_id = credential_source.get("environment_id") or ""
-        self._aws_security_credentials_supplier = _InternalAwsSecurityCredentialsSupplier(credential_source)
+        self._aws_security_credentials_supplier = _InternalAwsSecurityCredentialsSupplier(
+            credential_source
+        )
         self._cred_verification_url = credential_source.get(
             "regional_cred_verification_url"
         )
@@ -731,12 +733,16 @@ class Credentials(external_account.Credentials):
         # Initialize the request signer if not yet initialized after determining
         # the current AWS region.
         if self._request_signer is None:
-            self._region = self._aws_security_credentials_supplier.get_aws_region(self._supplier_context, request)
+            self._region = self._aws_security_credentials_supplier.get_aws_region(
+                self._supplier_context, request
+            )
             self._request_signer = RequestSigner(self._region)
 
         # Retrieve the AWS security credentials needed to generate the signed
         # request.
-        aws_security_credentials = self._aws_security_credentials_supplier.get_aws_security_credentials(self._supplier_context, request)
+        aws_security_credentials = self._aws_security_credentials_supplier.get_aws_security_credentials(
+            self._supplier_context, request
+        )
         # Generate the signed request to AWS STS GetCallerIdentity API.
         # Use the required regional endpoint. Otherwise, the request will fail.
         request_options = self._request_signer.get_request_options(

@@ -47,6 +47,7 @@ from google.auth import _helpers
 from google.auth import exceptions
 from google.auth import external_account
 
+
 class SubjectTokenSupplier(metaclass=abc.ABCMeta):
     """Base class for subject token suppliers. This can be implemented with custom logic to retrieve
     a subject token to exchange for a Google Cloud access token. The identity pool credential does
@@ -73,15 +74,11 @@ class SubjectTokenSupplier(metaclass=abc.ABCMeta):
         """
         raise NotImplementedError("")
 
+
 class _FileSupplier(SubjectTokenSupplier):
     """ Internal implementation of subject token supplier which supports reading a subject token from a file."""
 
-    def __init__(
-        self,
-        path,
-        format_type,
-        subject_token_field_name
-    ):
+    def __init__(self, path, format_type, subject_token_field_name):
         self._path = path
         self._format_type = format_type
         self._subject_token_field_name = subject_token_field_name
@@ -94,18 +91,15 @@ class _FileSupplier(SubjectTokenSupplier):
         with io.open(self._path, "r", encoding="utf-8") as file_obj:
             token_content = file_obj.read(), self._path
 
-        return _parse_token_data(token_content, self._format_type, self._subject_token_field_name)
+        return _parse_token_data(
+            token_content, self._format_type, self._subject_token_field_name
+        )
+
 
 class _UrlSupplier(SubjectTokenSupplier):
     """ Internal implementation of subject token supplier which supports retrieving a subject token by calling a URL endpoint."""
 
-    def __init__(
-        self,
-        url,
-        format_type,
-        subject_token_field_name,
-        headers
-    ):
+    def __init__(self, url, format_type, subject_token_field_name, headers):
         self._url = url
         self._format_type = format_type
         self._subject_token_field_name = subject_token_field_name
@@ -127,32 +121,32 @@ class _UrlSupplier(SubjectTokenSupplier):
                 "Unable to retrieve Identity Pool subject token", response_body
             )
         token_content = response_body, self._url
-        return _parse_token_data(token_content, self._format_type, self._subject_token_field_name)
+        return _parse_token_data(
+            token_content, self._format_type, self._subject_token_field_name
+        )
 
 
-def _parse_token_data(
-        token_content, format_type="text", subject_token_field_name=None
-    ):
-        content, filename = token_content
-        if format_type == "text":
-            token = content
-        else:
-            try:
-                # Parse file content as JSON.
-                response_data = json.loads(content)
-                # Get the subject_token.
-                token = response_data[subject_token_field_name]
-            except (KeyError, ValueError):
-                raise exceptions.RefreshError(
-                    "Unable to parse subject_token from JSON file '{}' using key '{}'".format(
-                        filename, subject_token_field_name
-                    )
-                )
-        if not token:
+def _parse_token_data(token_content, format_type="text", subject_token_field_name=None):
+    content, filename = token_content
+    if format_type == "text":
+        token = content
+    else:
+        try:
+            # Parse file content as JSON.
+            response_data = json.loads(content)
+            # Get the subject_token.
+            token = response_data[subject_token_field_name]
+        except (KeyError, ValueError):
             raise exceptions.RefreshError(
-                "Missing subject_token in the credential_source file"
+                "Unable to parse subject_token from JSON file '{}' using key '{}'".format(
+                    filename, subject_token_field_name
+                )
             )
-        return token
+    if not token:
+        raise exceptions.RefreshError(
+            "Missing subject_token in the credential_source file"
+        )
+    return token
 
 
 class Credentials(external_account.Credentials):
@@ -260,14 +254,25 @@ class Credentials(external_account.Credentials):
                 "Missing credential_source. A 'file' or 'url' must be provided."
             )
 
-        if (self._credential_source_file):
-            self._subject_token_supplier = _FileSupplier(self._credential_source_file, self._credential_source_format_type, self._credential_source_field_name)
+        if self._credential_source_file:
+            self._subject_token_supplier = _FileSupplier(
+                self._credential_source_file,
+                self._credential_source_format_type,
+                self._credential_source_field_name,
+            )
         else:
-            self._subject_token_supplier = _UrlSupplier(self._credential_source_url, self._credential_source_format_type, self._credential_source_field_name, self._credential_source_headers)
+            self._subject_token_supplier = _UrlSupplier(
+                self._credential_source_url,
+                self._credential_source_format_type,
+                self._credential_source_field_name,
+                self._credential_source_headers,
+            )
 
     @_helpers.copy_docstring(external_account.Credentials)
     def retrieve_subject_token(self, request):
-        return self._subject_token_supplier.get_subject_token(self._supplier_context, request)
+        return self._subject_token_supplier.get_subject_token(
+            self._supplier_context, request
+        )
 
     def _create_default_metrics_options(self):
         metrics_options = super(Credentials, self)._create_default_metrics_options()

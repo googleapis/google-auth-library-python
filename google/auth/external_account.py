@@ -51,6 +51,7 @@ _STS_REQUESTED_TOKEN_TYPE = "urn:ietf:params:oauth:token-type:access_token"
 # Cloud resource manager URL used to retrieve project information.
 _CLOUD_RESOURCE_MANAGER = "https://cloudresourcemanager.googleapis.com/v1/projects/"
 
+
 class SupplierContext(object):
     """A context object that contains information about the requested third party credential that is passed
     to AWS security credential and subject token suppliers."""
@@ -86,6 +87,7 @@ class SupplierContext(object):
            str: The expected audience.
         """
         return self._audience
+
 
 class Credentials(
     credentials.Scoped,
@@ -185,7 +187,9 @@ class Credentials(
         else:
             self._impersonated_credentials = None
         self._project_id = None
-        self._supplier_context = SupplierContext(self._subject_token_type, self._audience)
+        self._supplier_context = SupplierContext(
+            self._subject_token_type, self._audience
+        )
 
         if not self.is_workforce_pool and self._workforce_pool_user_project:
             # Workload identity pools do not support workforce pool user projects.

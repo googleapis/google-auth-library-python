@@ -619,7 +619,8 @@ class TestRequestSigner(object):
         credentials_object = aws.AwsSecurityCredentials(
             credentials.get("access_key_id"),
             credentials.get("secret_access_key"),
-            credentials.get("security_token"))
+            credentials.get("security_token"),
+        )
         actual_signed_request = request_signer.get_request_options(
             credentials_object,
             original_request.get("url"),
