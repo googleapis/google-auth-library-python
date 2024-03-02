@@ -58,6 +58,15 @@ try:
 except ValueError:  # pragma: NO COVER
     _METADATA_DEFAULT_TIMEOUT = 3
 
+# The number of tries to perform when waiting for the GCE metadata server
+# when detecting the GCE environment.
+try:
+    _METADATA_DETECT_RETRIES = int(
+        os.getenv(environment_vars.GCE_METADATA_DETECT_RETRIES, 3)
+    )
+except ValueError:  # pragma: NO COVER
+    _METADATA_DETECT_RETRIES = 3
+
 # Detect GCE Residency
 _GOOGLE = "Google"
 _GCE_PRODUCT_NAME_FILE = "/sys/class/dmi/id/product_name"
@@ -100,7 +109,9 @@ def detect_gce_residency_linux():
     return content.startswith(_GOOGLE)
 
 
-def ping(request, timeout=_METADATA_DEFAULT_TIMEOUT, retry_count=3):
+def ping(
+    request, timeout=_METADATA_DEFAULT_TIMEOUT, retry_count=_METADATA_DETECT_RETRIES
+):
     """Checks to see if the metadata server is available.
 
     Args:
