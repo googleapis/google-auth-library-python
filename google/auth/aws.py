@@ -38,6 +38,7 @@ via the GCP STS endpoint.
 """
 
 import abc
+from dataclasses import dataclass
 import hashlib
 import hmac
 import http.client as http_client
@@ -105,10 +106,6 @@ class RequestSigner(object):
         Returns:
             Mapping[str, str]: The AWS signed request dictionary object.
         """
-        # Get AWS credentials.
-        access_key = aws_security_credentials.accessKeyId
-        secret_key = aws_security_credentials.secretAccessKey
-        security_token = aws_security_credentials.sessionToken
 
         additional_headers = additional_headers or {}
 
@@ -129,9 +126,7 @@ class RequestSigner(object):
             canonical_querystring=_get_canonical_querystring(uri.query),
             method=method,
             region=self._region_name,
-            access_key=access_key,
-            secret_key=secret_key,
-            security_token=security_token,
+            aws_security_credentials=aws_security_credentials,
             request_payload=request_payload,
             additional_headers=additional_headers,
         )
@@ -147,8 +142,8 @@ class RequestSigner(object):
             headers[key] = additional_headers[key]
 
         # Add session token if available.
-        if security_token is not None:
-            headers[_AWS_SECURITY_TOKEN_HEADER] = security_token
+        if aws_security_credentials.sessionToken is not None:
+            headers[_AWS_SECURITY_TOKEN_HEADER] = aws_security_credentials.sessionToken
 
         signed_request = {"url": url, "method": method, "headers": headers}
         if request_payload:
@@ -233,9 +228,7 @@ def _generate_authentication_header_map(
     canonical_querystring,
     method,
     region,
-    access_key,
-    secret_key,
-    security_token,
+    aws_security_credentials,
     request_payload="",
     additional_headers={},
 ):
@@ -248,10 +241,7 @@ def _generate_authentication_header_map(
         canonical_querystring (str): The AWS service URL query string.
         method (str): The HTTP method used to call this API.
         region (str): The AWS region.
-        access_key (str): The AWS access key ID.
-        secret_key (str): The AWS secret access key.
-        security_token (Optional[str]): The AWS security session token. This is
-            available for temporary sessions.
+        aws_security_credentials (AWSSecurityCredentials): The AWS security credentials.
         request_payload (Optional[str]): The optional request payload if
             available.
         additional_headers (Optional[Mapping[str, str]]): The optional
@@ -274,8 +264,8 @@ def _generate_authentication_header_map(
     for key in additional_headers:
         full_headers[key.lower()] = additional_headers[key]
     # Add AWS session token if available.
-    if security_token is not None:
-        full_headers[_AWS_SECURITY_TOKEN_HEADER] = security_token
+    if aws_security_credentials.sessionToken is not None:
+        full_headers[_AWS_SECURITY_TOKEN_HEADER] = aws_security_credentials.sessionToken
 
     # Required headers
     full_headers["host"] = host
@@ -321,14 +311,20 @@ def _generate_authentication_header_map(
     )
 
     # https://docs.aws.amazon.com/general/latest/gr/sigv4-calculate-signature.html
-    signing_key = _get_signing_key(secret_key, date_stamp, region, service_name)
+    signing_key = _get_signing_key(
+        aws_security_credentials.secretAccesskey, date_stamp, region, service_name
+    )
     signature = hmac.new(
         signing_key, string_to_sign.encode("utf-8"), hashlib.sha256
     ).hexdigest()
 
     # https://docs.aws.amazon.com/general/latest/gr/sigv4-add-signature-to-request.html
     authorization_header = "{} Credential={}/{}, SignedHeaders={}, Signature={}".format(
-        _AWS_ALGORITHM, access_key, credential_scope, signed_headers, signature
+        _AWS_ALGORITHM,
+        aws_security_credentials.accessKeyId,
+        credential_scope,
+        signed_headers,
+        signature,
     )
 
     authentication_header = {"authorization_header": authorization_header}
@@ -338,48 +334,19 @@ def _generate_authentication_header_map(
     return authentication_header
 
 
-class AwsSecurityCredentials(object):
-    """An object that models AWS security credentials with an optional session token."""
+@dataclass
+class AwsSecurityCredentials:
+    """An class that models AWS security credentials with an optional session token.
 
-    def __init__(self, accessKeyId, secretAccessKey, sessionToken=None):
-        """Instantiates an AWS security credential using the provided access key ID, secret access key, and
-        optional session token.
+        Attributes:
+            accessKeyId (str): The AWS security credentials access key id.
+            secretAccesskey (str): The AWS security credentials secret access key.
+            sessionToken (str): The optional AWS security credentials session token. This should be set when using temporary credentials.
+    """
 
-        Args:
-            accessKeyId (str): The AWS security credential access key ID.
-            secretAccessKey (str): The AWS security credential secret access key.
-            sessionToken (Optional[str]): The optional AWS session token. Used for temporary security credentials.
-        """
-        self._accessKeyId = accessKeyId
-        self._secretAccessKey = secretAccessKey
-        self._sessionToken = sessionToken
-
-    @property
-    def accessKeyId(self):
-        """Returns the access key ID.
-
-        Returns:
-           str: The access key ID.
-        """
-        return self._accessKeyId
-
-    @property
-    def secretAccessKey(self):
-        """Returns the secret access key.
-
-        Returns:
-           str: secret access key.
-        """
-        return self._secretAccessKey
-
-    @property
-    def sessionToken(self):
-        """Returns the session token.
-
-        Returns:
-           str: The session token.
-        """
-        return self._sessionToken
+    accessKeyId: str
+    secretAccesskey: str
+    sessionToken: str = None
 
 
 class AwsSecurityCredentialsSupplier(metaclass=abc.ABCMeta):
@@ -428,8 +395,8 @@ class AwsSecurityCredentialsSupplier(metaclass=abc.ABCMeta):
         raise NotImplementedError("")
 
 
-class _InternalAwsSecurityCredentialsSupplier(AwsSecurityCredentialsSupplier):
-    """Internal implementation of AWS security credentials supplier. Supports retrieving
+class _DefaultAwsSecurityCredentialsSupplier(AwsSecurityCredentialsSupplier):
+    """Default implementation of AWS security credentials supplier. Supports retrieving
     credentials and region via EC2 metadata endpoints and environment variables.
     """
 
@@ -457,7 +424,6 @@ class _InternalAwsSecurityCredentialsSupplier(AwsSecurityCredentialsSupplier):
             )
 
         imdsv2_session_token = self._get_imdsv2_session_token(request)
-        # Get role name.
         role_name = self._get_metadata_role_name(request, imdsv2_session_token)
 
         # Get security credentials.
@@ -671,7 +637,7 @@ class Credentials(external_account.Credentials):
         credential_source = credential_source or {}
         self._target_resource = audience
         environment_id = credential_source.get("environment_id") or ""
-        self._aws_security_credentials_supplier = _InternalAwsSecurityCredentialsSupplier(
+        self._aws_security_credentials_supplier = _DefaultAwsSecurityCredentialsSupplier(
             credential_source
         )
         self._cred_verification_url = credential_source.get(

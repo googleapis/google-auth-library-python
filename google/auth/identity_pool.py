@@ -39,9 +39,11 @@ try:
 except ImportError:  # pragma: NO COVER
     from collections import Mapping
 import abc
+from collections import namedtuple
 import io
 import json
 import os
+from typing import NamedTuple
 
 from google.auth import _helpers
 from google.auth import exceptions
@@ -75,6 +77,11 @@ class SubjectTokenSupplier(metaclass=abc.ABCMeta):
         raise NotImplementedError("")
 
 
+class _TokenContent(NamedTuple):
+    content: str
+    location: str
+
+
 class _FileSupplier(SubjectTokenSupplier):
     """ Internal implementation of subject token supplier which supports reading a subject token from a file."""
 
@@ -89,7 +96,7 @@ class _FileSupplier(SubjectTokenSupplier):
             raise exceptions.RefreshError("File '{}' was not found.".format(self._path))
 
         with io.open(self._path, "r", encoding="utf-8") as file_obj:
-            token_content = file_obj.read(), self._path
+            token_content = _TokenContent(file_obj.read(), self._path)
 
         return _parse_token_data(
             token_content, self._format_type, self._subject_token_field_name
@@ -120,26 +127,25 @@ class _UrlSupplier(SubjectTokenSupplier):
             raise exceptions.RefreshError(
                 "Unable to retrieve Identity Pool subject token", response_body
             )
-        token_content = response_body, self._url
+        token_content = _TokenContent(response_body, self._url)
         return _parse_token_data(
             token_content, self._format_type, self._subject_token_field_name
         )
 
 
 def _parse_token_data(token_content, format_type="text", subject_token_field_name=None):
-    content, filename = token_content
     if format_type == "text":
-        token = content
+        token = token_content.content
     else:
         try:
             # Parse file content as JSON.
-            response_data = json.loads(content)
+            response_data = json.loads(token_content.content)
             # Get the subject_token.
             token = response_data[subject_token_field_name]
         except (KeyError, ValueError):
             raise exceptions.RefreshError(
                 "Unable to parse subject_token from JSON file '{}' using key '{}'".format(
-                    filename, subject_token_field_name
+                    token_content.location, subject_token_field_name
                 )
             )
     if not token:

@@ -29,6 +29,7 @@ token exchange endpoint following the `OAuth 2.0 Token Exchange`_ spec.
 
 import abc
 import copy
+from dataclasses import dataclass
 import datetime
 import io
 import json
@@ -52,41 +53,23 @@ _STS_REQUESTED_TOKEN_TYPE = "urn:ietf:params:oauth:token-type:access_token"
 _CLOUD_RESOURCE_MANAGER = "https://cloudresourcemanager.googleapis.com/v1/projects/"
 
 
-class SupplierContext(object):
-    """A context object that contains information about the requested third party credential that is passed
-    to AWS security credential and subject token suppliers."""
+@dataclass
+class SupplierContext:
+    """A context class that contains information about the requested third party credential that is passed
+        to AWS security credential and subject token suppliers.
 
-    def __init__(self, subject_token_type, audience):
-        """Instantiates a Supplier context with the provided subject token type and target audience.
+        Attributes:
+            subject_token_type (str): The requested subject token type based on the Oauth2.0 token exchange spec.
+            Expected values include:
+                “urn:ietf:params:oauth:token-type:jwt”
+	            “urn:ietf:params:oauth:token-type:id-token”
+	            “urn:ietf:params:oauth:token-type:saml2”
+	            “urn:ietf:params:aws:token-type:aws4_request”
+            audience (str): The requested audience for the subject token.
+    """
 
-        Args:
-            subject_token_type (str): A condition expression that specifies the Cloud Storage
-                objects where permissions are available. For example, this expression
-                makes permissions available for objects whose name starts with "customer-a":
-                "resource.name.startsWith('projects/_/buckets/example-bucket/objects/customer-a')"
-            audience (str): An optional short string that identifies the purpose of
-                the condition.
-        """
-        self._subject_token_type = subject_token_type
-        self._audience = audience
-
-    @property
-    def subject_token_type(self):
-        """Returns the requested subject token type.
-
-        Returns:
-           str: The requested subject token type.
-        """
-        return self._subject_token_type
-
-    @property
-    def audience(self):
-        """Returns the expected audience.
-
-        Returns:
-           str: The expected audience.
-        """
-        return self._audience
+    subject_token_type: str
+    audience: str
 
 
 class Credentials(
