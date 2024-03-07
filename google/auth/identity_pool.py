@@ -39,7 +39,6 @@ try:
 except ImportError:  # pragma: NO COVER
     from collections import Mapping
 import abc
-from collections import namedtuple
 import io
 import json
 import os
