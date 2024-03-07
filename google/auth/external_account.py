@@ -62,9 +62,9 @@ class SupplierContext:
             subject_token_type (str): The requested subject token type based on the Oauth2.0 token exchange spec.
             Expected values include:
                 “urn:ietf:params:oauth:token-type:jwt”
-	            “urn:ietf:params:oauth:token-type:id-token”
-	            “urn:ietf:params:oauth:token-type:saml2”
-	            “urn:ietf:params:aws:token-type:aws4_request”
+                “urn:ietf:params:oauth:token-type:id-token”
+                “urn:ietf:params:oauth:token-type:saml2”
+                “urn:ietf:params:aws:token-type:aws4_request”
             audience (str): The requested audience for the subject token.
     """
 
