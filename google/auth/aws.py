@@ -46,6 +46,7 @@ import json
 import os
 import posixpath
 import re
+from typing import Optional
 import urllib
 from urllib.parse import urljoin
 
@@ -341,12 +342,12 @@ class AwsSecurityCredentials:
         Attributes:
             accessKeyId (str): The AWS security credentials access key id.
             secretAccesskey (str): The AWS security credentials secret access key.
-            sessionToken (str): The optional AWS security credentials session token. This should be set when using temporary credentials.
+            sessionToken (Optional[str]): The optional AWS security credentials session token. This should be set when using temporary credentials.
     """
 
     accessKeyId: str
     secretAccesskey: str
-    sessionToken: str = None
+    sessionToken: Optional[str] = None
 
 
 class AwsSecurityCredentialsSupplier(metaclass=abc.ABCMeta):
