@@ -1913,3 +1913,10 @@ class TestCredentials(object):
         assert project_id is None
         # Only 2 requests to STS and cloud resource manager should be sent.
         assert len(request.call_args_list) == 2
+
+
+def test_supplier_context():
+    context = external_account.SupplierContext("TestTokenType", "TestAudience")
+
+    assert context.subject_token_type == "TestTokenType"
+    assert context.audience == "TestAudience"

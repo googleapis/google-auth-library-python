@@ -29,6 +29,7 @@ token exchange endpoint following the `OAuth 2.0 Token Exchange`_ spec.
 
 import abc
 import copy
+from dataclasses import dataclass
 import datetime
 import io
 import json
@@ -50,6 +51,25 @@ _STS_GRANT_TYPE = "urn:ietf:params:oauth:grant-type:token-exchange"
 _STS_REQUESTED_TOKEN_TYPE = "urn:ietf:params:oauth:token-type:access_token"
 # Cloud resource manager URL used to retrieve project information.
 _CLOUD_RESOURCE_MANAGER = "https://cloudresourcemanager.googleapis.com/v1/projects/"
+
+
+@dataclass
+class SupplierContext:
+    """A context class that contains information about the requested third party credential that is passed
+        to AWS security credential and subject token suppliers.
+
+        Attributes:
+            subject_token_type (str): The requested subject token type based on the Oauth2.0 token exchange spec.
+            Expected values include:
+                “urn:ietf:params:oauth:token-type:jwt”
+                “urn:ietf:params:oauth:token-type:id-token”
+                “urn:ietf:params:oauth:token-type:saml2”
+                “urn:ietf:params:aws:token-type:aws4_request”
+            audience (str): The requested audience for the subject token.
+    """
+
+    subject_token_type: str
+    audience: str
 
 
 class Credentials(
@@ -150,6 +170,9 @@ class Credentials(
         else:
             self._impersonated_credentials = None
         self._project_id = None
+        self._supplier_context = SupplierContext(
+            self._subject_token_type, self._audience
+        )
 
         if not self.is_workforce_pool and self._workforce_pool_user_project:
             # Workload identity pools do not support workforce pool user projects.
