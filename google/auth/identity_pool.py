@@ -41,12 +41,15 @@ except ImportError:  # pragma: NO COVER
 import abc
 import io
 import json
+import logging
 import os
 from typing import NamedTuple
 
 from google.auth import _helpers
 from google.auth import exceptions
 from google.auth import external_account
+
+_LOGGER = logging.getLogger(__name__)
 
 
 class SubjectTokenSupplier(metaclass=abc.ABCMeta):
@@ -167,8 +170,9 @@ class Credentials(external_account.Credentials):
         self,
         audience,
         subject_token_type,
-        token_url,
-        credential_source,
+        token_url=external_account._DEFAULT_TOKEN_URL,
+        credential_source=None,
+        subject_token_supplier=None,
         *args,
         **kwargs
     ):
@@ -176,11 +180,16 @@ class Credentials(external_account.Credentials):
 
         Args:
             audience (str): The STS audience field.
-            subject_token_type (str): The subject token type.
-            token_url (str): The STS endpoint URL.
+            subject_token_type (str): The subject token type based on the Oauth2.0 token exchange spec.
+                Expected values include:
+                    “urn:ietf:params:oauth:token-type:jwt”
+                    “urn:ietf:params:oauth:token-type:id-token”
+                    “urn:ietf:params:oauth:token-type:saml2”
+            token_url (str): The STS endpoint URL. If not provided, will default to "https://sts.googleapis.com/v1/token".
             credential_source (Mapping): The credential source dictionary used to
                 provide instructions on how to retrieve external credential to be
-                exchanged for Google access tokens.
+                exchanged for Google access tokens. Either a credential source or
+                a subject token supplier must be provided.
 
                 Example credential_source for url-sourced credential::
 
@@ -198,6 +207,10 @@ class Credentials(external_account.Credentials):
                     {
                         "file": "/path/to/token/file.txt"
                     }
+            subject_token_supplier (SubjectTokenSupplier): Optional subject token supplier.
+                This will be called to supply a valid subject token which will then
+                be exchanged for Google access tokens. Either a subject token  supplier
+                or a credential source must be provided.
             args (List): Optional positional arguments passed into the underlying :meth:`~external_account.Credentials.__init__` method.
             kwargs (Mapping): Optional keyword arguments passed into the underlying :meth:`~external_account.Credentials.__init__` method.
 
@@ -219,10 +232,26 @@ class Credentials(external_account.Credentials):
             *args,
             **kwargs
         )
-        if not isinstance(credential_source, Mapping):
-            self._credential_source_file = None
-            self._credential_source_url = None
+        if credential_source is None and subject_token_supplier is None:
+            raise exceptions.InvalidValue(
+                "A valid credential source or a subject token supplier must be provided."
+            )
+        if credential_source is not None and subject_token_supplier is not None:
+            raise exceptions.InvalidValue(
+                "Identity pool credential cannot have both a credential source and a subject token supplier."
+            )
+
+        if subject_token_supplier is not None:
+            self._subject_token_supplier = subject_token_supplier
+            _LOGGER.info(
+                "Subject token supplier is being used. Note that the external account credential does not cache the subject token so caching should be implemented in the supplier."
+            )
         else:
+            if not isinstance(credential_source, Mapping):
+                self._credential_source_executable = None
+                raise exceptions.MalformedError(
+                    "Invalid credential_source. The credential_source is not a dict."
+                )
             self._credential_source_file = credential_source.get("file")
             self._credential_source_url = credential_source.get("url")
             self._credential_source_headers = credential_source.get("headers")
@@ -256,28 +285,28 @@ class Credentials(external_account.Credentials):
             else:
                 self._credential_source_field_name = None
 
-        if self._credential_source_file and self._credential_source_url:
-            raise exceptions.MalformedError(
-                "Ambiguous credential_source. 'file' is mutually exclusive with 'url'."
-            )
-        if not self._credential_source_file and not self._credential_source_url:
-            raise exceptions.MalformedError(
-                "Missing credential_source. A 'file' or 'url' must be provided."
-            )
+            if self._credential_source_file and self._credential_source_url:
+                raise exceptions.MalformedError(
+                    "Ambiguous credential_source. 'file' is mutually exclusive with 'url'."
+                )
+            if not self._credential_source_file and not self._credential_source_url:
+                raise exceptions.MalformedError(
+                    "Missing credential_source. A 'file' or 'url' must be provided."
+                )
 
-        if self._credential_source_file:
-            self._subject_token_supplier = _FileSupplier(
-                self._credential_source_file,
-                self._credential_source_format_type,
-                self._credential_source_field_name,
-            )
-        else:
-            self._subject_token_supplier = _UrlSupplier(
-                self._credential_source_url,
-                self._credential_source_format_type,
-                self._credential_source_field_name,
-                self._credential_source_headers,
-            )
+            if self._credential_source_file:
+                self._subject_token_supplier = _FileSupplier(
+                    self._credential_source_file,
+                    self._credential_source_format_type,
+                    self._credential_source_field_name,
+                )
+            else:
+                self._subject_token_supplier = _UrlSupplier(
+                    self._credential_source_url,
+                    self._credential_source_format_type,
+                    self._credential_source_field_name,
+                    self._credential_source_headers,
+                )
 
     @_helpers.copy_docstring(external_account.Credentials)
     def retrieve_subject_token(self, request):
@@ -295,7 +324,16 @@ class Credentials(external_account.Credentials):
                 metrics_options["source"] = "file"
             else:
                 metrics_options["source"] = "url"
+        else:
+            metrics_options["source"] = "programmatic"
         return metrics_options
+
+    def _constructor_args(self):
+        args = super(Credentials, self)._constructor_args()
+        # If a custom supplier was used, append it to the args dict.
+        if self._credential_source is None:
+            args.update({"subject_token_supplier": self._subject_token_supplier})
+        return args
 
     @classmethod
     def from_info(cls, info, **kwargs):
@@ -313,6 +351,8 @@ class Credentials(external_account.Credentials):
         Raises:
             ValueError: For invalid parameters.
         """
+        subject_token_supplier = info.get("subject_token_supplier")
+        kwargs.update({"subject_token_supplier": subject_token_supplier})
         return super(Credentials, cls).from_info(info, **kwargs)
 
     @classmethod

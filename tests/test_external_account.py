@@ -477,16 +477,6 @@ class TestCredentials(object):
             universe_domain=DEFAULT_UNIVERSE_DOMAIN,
         )
 
-    def test_with_invalid_impersonation_target_principal(self):
-        invalid_url = "https://iamcredentials.googleapis.com/v1/invalid"
-
-        with pytest.raises(exceptions.RefreshError) as excinfo:
-            self.make_credentials(service_account_impersonation_url=invalid_url)
-
-        assert excinfo.match(
-            r"Unable to determine target principal from service account impersonation URL."
-        )
-
     def test_info(self):
         credentials = self.make_credentials(universe_domain="dummy_universe.com")
 

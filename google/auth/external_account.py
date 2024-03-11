@@ -51,6 +51,8 @@ _STS_GRANT_TYPE = "urn:ietf:params:oauth:grant-type:token-exchange"
 _STS_REQUESTED_TOKEN_TYPE = "urn:ietf:params:oauth:token-type:access_token"
 # Cloud resource manager URL used to retrieve project information.
 _CLOUD_RESOURCE_MANAGER = "https://cloudresourcemanager.googleapis.com/v1/projects/"
+# Default Google sts token url.
+_DEFAULT_TOKEN_URL = "https://sts.googleapis.com/v1/token"
 
 
 @dataclass
@@ -60,11 +62,11 @@ class SupplierContext:
 
         Attributes:
             subject_token_type (str): The requested subject token type based on the Oauth2.0 token exchange spec.
-            Expected values include:
-                “urn:ietf:params:oauth:token-type:jwt”
-                “urn:ietf:params:oauth:token-type:id-token”
-                “urn:ietf:params:oauth:token-type:saml2”
-                “urn:ietf:params:aws:token-type:aws4_request”
+                Expected values include:
+                    “urn:ietf:params:oauth:token-type:jwt”
+                    “urn:ietf:params:oauth:token-type:id-token”
+                    “urn:ietf:params:oauth:token-type:saml2”
+                    “urn:ietf:params:aws:token-type:aws4_request”
             audience (str): The requested audience for the subject token.
     """
 
@@ -108,7 +110,12 @@ class Credentials(
 
         Args:
             audience (str): The STS audience field.
-            subject_token_type (str): The subject token type.
+            subject_token_type (str): The subject token type based on the Oauth2.0 token exchange spec.
+                Expected values include:
+                    “urn:ietf:params:oauth:token-type:jwt”
+                    “urn:ietf:params:oauth:token-type:id-token”
+                    “urn:ietf:params:oauth:token-type:saml2”
+                    “urn:ietf:params:aws:token-type:aws4_request”
             token_url (str): The STS endpoint URL.
             credential_source (Mapping): The credential source dictionary.
             service_account_impersonation_url (Optional[str]): The optional service account
@@ -165,10 +172,7 @@ class Credentials(
 
         self._metrics_options = self._create_default_metrics_options()
 
-        if self._service_account_impersonation_url:
-            self._impersonated_credentials = self._initialize_impersonated_credentials()
-        else:
-            self._impersonated_credentials = None
+        self._impersonated_credentials = None
         self._project_id = None
         self._supplier_context = SupplierContext(
             self._subject_token_type, self._audience
@@ -381,6 +385,10 @@ class Credentials(
     @_helpers.copy_docstring(credentials.Credentials)
     def refresh(self, request):
         scopes = self._scopes if self._scopes is not None else self._default_scopes
+
+        if self._should_initialize_impersonated_credentials():
+            self._impersonated_credentials = self._initialize_impersonated_credentials()
+
         if self._impersonated_credentials:
             self._impersonated_credentials.refresh(request)
             self.token = self._impersonated_credentials.token
@@ -443,6 +451,14 @@ class Credentials(
         new_cred = self.__class__(**kwargs)
         new_cred._metrics_options = self._metrics_options
         return new_cred
+
+    def _should_initialize_impersonated_credentials(self):
+        if (
+            self._service_account_impersonation_url
+            and not self._impersonated_credentials
+        ):
+            return True
+        return False
 
     def _initialize_impersonated_credentials(self):
         """Generates an impersonated credentials.
