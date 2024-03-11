@@ -163,6 +163,117 @@ def _parse_token_data(token_content, format_type="text", subject_token_field_nam
     return token
 
 
+class SubjectTokenSupplier(metaclass=abc.ABCMeta):
+    """Base class for subject token suppliers. This can be implemented with custom logic to retrieve
+    a subject token to exchange for a Google Cloud access token. The identity pool credential does
+    not cache the subject token, so caching logic should be added in the implementation.
+    """
+
+    @abc.abstractmethod
+    def get_subject_token(self, context, request):
+        """Returns the requested subject token. The subject token must be valid. This is not cached by the calling
+        Google credential, so caching logic should be implemented in the supplier.
+
+        Args:
+            context (google.auth.externalaccount.SupplierContext): The context object
+                containing information about the requested audience and subject token type.
+            request (google.auth.transport.Request): The object used to make
+                HTTP requests.
+
+        Raises:
+            google.auth.exceptions.RefreshError: If an error is encountered during
+                subject token retrieval logic.
+
+        Returns:
+            str: The requested subject token string.
+        """
+        raise NotImplementedError("")
+
+
+class _TokenContent(NamedTuple):
+    """Models the token content response from file and url internal suppliers.
+        Attributes:
+            content (str): The string content of the file or URL response.
+            location (str): The location the content was retrieved from. This will either be a file location or a URL.
+    """
+
+    content: str
+    location: str
+
+
+class _FileSupplier(SubjectTokenSupplier):
+    """ Internal implementation of subject token supplier which supports reading a subject token from a file."""
+
+    def __init__(self, path, format_type, subject_token_field_name):
+        self._path = path
+        self._format_type = format_type
+        self._subject_token_field_name = subject_token_field_name
+
+    @_helpers.copy_docstring(SubjectTokenSupplier)
+    def get_subject_token(self, context, request):
+        if not os.path.exists(self._path):
+            raise exceptions.RefreshError("File '{}' was not found.".format(self._path))
+
+        with io.open(self._path, "r", encoding="utf-8") as file_obj:
+            token_content = _TokenContent(file_obj.read(), self._path)
+
+        return _parse_token_data(
+            token_content, self._format_type, self._subject_token_field_name
+        )
+
+
+class _UrlSupplier(SubjectTokenSupplier):
+    """ Internal implementation of subject token supplier which supports retrieving a subject token by calling a URL endpoint."""
+
+    def __init__(self, url, format_type, subject_token_field_name, headers):
+        self._url = url
+        self._format_type = format_type
+        self._subject_token_field_name = subject_token_field_name
+        self._headers = headers
+
+    @_helpers.copy_docstring(SubjectTokenSupplier)
+    def get_subject_token(self, context, request):
+        response = request(url=self._url, method="GET", headers=self._headers)
+
+        # support both string and bytes type response.data
+        response_body = (
+            response.data.decode("utf-8")
+            if hasattr(response.data, "decode")
+            else response.data
+        )
+
+        if response.status != 200:
+            raise exceptions.RefreshError(
+                "Unable to retrieve Identity Pool subject token", response_body
+            )
+        token_content = _TokenContent(response_body, self._url)
+        return _parse_token_data(
+            token_content, self._format_type, self._subject_token_field_name
+        )
+
+
+def _parse_token_data(token_content, format_type="text", subject_token_field_name=None):
+    if format_type == "text":
+        token = token_content.content
+    else:
+        try:
+            # Parse file content as JSON.
+            response_data = json.loads(token_content.content)
+            # Get the subject_token.
+            token = response_data[subject_token_field_name]
+        except (KeyError, ValueError):
+            raise exceptions.RefreshError(
+                "Unable to parse subject_token from JSON file '{}' using key '{}'".format(
+                    token_content.location, subject_token_field_name
+                )
+            )
+    if not token:
+        raise exceptions.RefreshError(
+            "Missing subject_token in the credential_source file"
+        )
+    return token
+
+
 class Credentials(external_account.Credentials):
     """External account credentials sourced from files and URLs."""
 
@@ -307,6 +418,20 @@ class Credentials(external_account.Credentials):
                     self._credential_source_field_name,
                     self._credential_source_headers,
                 )
+
+        if self._credential_source_file:
+            self._subject_token_supplier = _FileSupplier(
+                self._credential_source_file,
+                self._credential_source_format_type,
+                self._credential_source_field_name,
+            )
+        else:
+            self._subject_token_supplier = _UrlSupplier(
+                self._credential_source_url,
+                self._credential_source_format_type,
+                self._credential_source_field_name,
+                self._credential_source_headers,
+            )
 
     @_helpers.copy_docstring(external_account.Credentials)
     def retrieve_subject_token(self, request):
