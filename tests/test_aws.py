@@ -730,7 +730,7 @@ class TestCredentials(object):
             ],
         }
         # Include security token if available.
-        if aws_security_credentials.sessionToken is not None:
+        if aws_security_credentials.session_token is not None:
             reformatted_signed_request.get("headers").append(
                 {
                     "key": "x-amz-security-token",

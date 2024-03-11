@@ -143,8 +143,8 @@ class RequestSigner(object):
             headers[key] = additional_headers[key]
 
         # Add session token if available.
-        if aws_security_credentials.sessionToken is not None:
-            headers[_AWS_SECURITY_TOKEN_HEADER] = aws_security_credentials.sessionToken
+        if aws_security_credentials.session_token is not None:
+            headers[_AWS_SECURITY_TOKEN_HEADER] = aws_security_credentials.session_token
 
         signed_request = {"url": url, "method": method, "headers": headers}
         if request_payload:
@@ -265,8 +265,10 @@ def _generate_authentication_header_map(
     for key in additional_headers:
         full_headers[key.lower()] = additional_headers[key]
     # Add AWS session token if available.
-    if aws_security_credentials.sessionToken is not None:
-        full_headers[_AWS_SECURITY_TOKEN_HEADER] = aws_security_credentials.sessionToken
+    if aws_security_credentials.session_token is not None:
+        full_headers[
+            _AWS_SECURITY_TOKEN_HEADER
+        ] = aws_security_credentials.session_token
 
     # Required headers
     full_headers["host"] = host
@@ -313,7 +315,7 @@ def _generate_authentication_header_map(
 
     # https://docs.aws.amazon.com/general/latest/gr/sigv4-calculate-signature.html
     signing_key = _get_signing_key(
-        aws_security_credentials.secretAccesskey, date_stamp, region, service_name
+        aws_security_credentials.secret_access_key, date_stamp, region, service_name
     )
     signature = hmac.new(
         signing_key, string_to_sign.encode("utf-8"), hashlib.sha256
@@ -322,7 +324,7 @@ def _generate_authentication_header_map(
     # https://docs.aws.amazon.com/general/latest/gr/sigv4-add-signature-to-request.html
     authorization_header = "{} Credential={}/{}, SignedHeaders={}, Signature={}".format(
         _AWS_ALGORITHM,
-        aws_security_credentials.accessKeyId,
+        aws_security_credentials.access_key_id,
         credential_scope,
         signed_headers,
         signature,
@@ -340,14 +342,14 @@ class AwsSecurityCredentials:
     """An class that models AWS security credentials with an optional session token.
 
         Attributes:
-            accessKeyId (str): The AWS security credentials access key id.
-            secretAccesskey (str): The AWS security credentials secret access key.
-            sessionToken (Optional[str]): The optional AWS security credentials session token. This should be set when using temporary credentials.
+            access_key_id (str): The AWS security credentials access key id.
+            secret_access_key (str): The AWS security credentials secret access key.
+            session_token (Optional[str]): The optional AWS security credentials session token. This should be set when using temporary credentials.
     """
 
-    accessKeyId: str
-    secretAccesskey: str
-    sessionToken: Optional[str] = None
+    access_key_id: str
+    secret_access_key: str
+    session_token: Optional[str] = None
 
 
 class AwsSecurityCredentialsSupplier(metaclass=abc.ABCMeta):
