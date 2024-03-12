@@ -467,7 +467,7 @@ class Credentials(
             try:
                 self._trust_boundary = self.lookup_trust_boundary(request)
             except Exception as err:
-                if not self._trust_boundary:
+                if not isinstance(self._trust_boundary, dict):
                     raise err
                 # if we already have trust boundary values, we log the error
                 # and keep the cached trust boundary value to let it fail
