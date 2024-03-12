@@ -523,7 +523,7 @@ def lookup_trust_boundary(request, url, headers):
         headers (mapping): Basic auth headers for the request.
 
     Returns:
-        Mapping[str,list|str]: A response would be a dictionary containing the
+        Mapping[str,list|str]: A dictionary containing the
             "locations" as a list of allowed locations in string and
             "encoded_locations" as a hex string.
 
