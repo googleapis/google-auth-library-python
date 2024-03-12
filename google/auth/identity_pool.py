@@ -330,10 +330,13 @@ class Credentials(external_account.Credentials):
             metrics_options["source"] = "programmatic"
         return metrics_options
 
+    def _has_custom_supplier(self):
+        return not self._credential_source
+
     def _constructor_args(self):
         args = super(Credentials, self)._constructor_args()
         # If a custom supplier was used, append it to the args dict.
-        if self._credential_source is None:
+        if self._has_custom_supplier():
             args.update({"subject_token_supplier": self._subject_token_supplier})
         return args
 
