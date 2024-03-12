@@ -524,7 +524,7 @@ def lookup_trust_boundary(request, url, headers):
 
     Returns:
         Mapping[str,list|str]: A dictionary containing the
-            "locations" as a list of allowed locations in string and
+            "locations" as a list of allowed locations as strings and
             "encoded_locations" as a hex string.
 
             e.g:
