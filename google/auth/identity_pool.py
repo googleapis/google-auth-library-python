@@ -331,7 +331,7 @@ class Credentials(external_account.Credentials):
         return metrics_options
 
     def _has_custom_supplier(self):
-        return not self._credential_source
+        return self._credential_source is None
 
     def _constructor_args(self):
         args = super(Credentials, self)._constructor_args()
