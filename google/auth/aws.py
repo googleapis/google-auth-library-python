@@ -675,6 +675,7 @@ class Credentials(external_account.Credentials):
 
         if aws_security_credentials_supplier:
             self._aws_security_credentials_supplier = aws_security_credentials_supplier
+            # The regional cred verification URL would normally be provided through the credential source. So set it to the default one here.
             self._cred_verification_url = (
                 _DEFAULT_AWS_REGIONAL_CREDENTIAL_VERIFICATION_URL
             )
@@ -803,16 +804,19 @@ class Credentials(external_account.Credentials):
 
     def _create_default_metrics_options(self):
         metrics_options = super(Credentials, self)._create_default_metrics_options()
-        if self._credential_source:
-            metrics_options["source"] = "aws"
-        else:
+        if self._has_custom_supplier():
             metrics_options["source"] = "programmatic"
+        else:
+            metrics_options["source"] = "aws"
         return metrics_options
+
+    def _has_custom_supplier(self):
+        return not self._credential_source
 
     def _constructor_args(self):
         args = super(Credentials, self)._constructor_args()
         # If a custom supplier was used, append it to the args dict.
-        if self._credential_source is None:
+        if self._has_custom_supplier():
             args.update(
                 {
                     "aws_security_credentials_supplier": self._aws_security_credentials_supplier
