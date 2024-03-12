@@ -552,7 +552,7 @@ def lookup_trust_boundary(request, url, headers):
         response = request(method="GET", url=url, headers=headers)
     except Exception as e:
         raise exceptions.TransportError(
-            "Failed to make request to trust boundary global lookup endpoint {}".format(
+            "Failed to make request to the trust boundary global lookup endpoint {}".format(
                 e
             )
         )
