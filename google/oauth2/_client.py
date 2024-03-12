@@ -546,7 +546,7 @@ def lookup_trust_boundary(request, url, headers):
     Raises:
         exceptions.TransportError: If the request to the lookup endpoint fails.
         exceptions.RefreshError: If the query response is not 200.
-        exceptions.MalformedError: If the response not in valid format.
+        exceptions.MalformedError: If the response is not in a valid format.
     """
     try:
         response = request(method="GET", url=url, headers=headers)
