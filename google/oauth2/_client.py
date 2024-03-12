@@ -564,7 +564,7 @@ def lookup_trust_boundary(request, url, headers):
     )
     if response.status != http_client.OK:
         raise exceptions.RefreshError(
-            "Failed look up trust boundary, {}, {}".format(
+            "Trust boundary look up failed , {}, {}".format(
                 response.status, response_body
             )
         )
