@@ -249,7 +249,7 @@ class CredentialsWithTrustBoundary(Credentials):
         raise NotImplementedError("Missing definition of trust boundary lookup")
 
     def set_trust_boundary(self, trust_boundary):
-        """Set trust boudnary value to the credential"""
+        """Sets the trust boundary value to the credential"""
         self._trust_boundary = trust_boundary
 
     def _enable_trust_boundary(self):
