@@ -535,7 +535,7 @@ def lookup_trust_boundary(request, url, headers):
                 "encoded_locations": "0xA30"
             }
 
-            In the universe global lookup is not launched yet, a default
+            If the universe global lookup is not launched yet, a default
             trust boundary of "all" will be returned.
 
             {
