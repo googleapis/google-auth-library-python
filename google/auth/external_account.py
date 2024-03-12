@@ -453,12 +453,7 @@ class Credentials(
         return new_cred
 
     def _should_initialize_impersonated_credentials(self):
-        if (
-            self._service_account_impersonation_url
-            and not self._impersonated_credentials
-        ):
-            return True
-        return False
+            return self._service_account_impersonation_url is not None and self._impersonated_credentials is None
 
     def _initialize_impersonated_credentials(self):
         """Generates an impersonated credentials.
