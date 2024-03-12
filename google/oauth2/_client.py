@@ -512,7 +512,7 @@ def refresh_grant(
 
 
 def lookup_trust_boundary(request, url, headers):
-    """ Implements the global lookup of service account trust boundary
+    """ Implements the global lookup of a service account trust boundary.
 
     Args:
         request (google.auth.transport.Request): A callable used to make
