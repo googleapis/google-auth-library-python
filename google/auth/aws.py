@@ -64,6 +64,10 @@ _AWS_REQUEST_TYPE = "aws4_request"
 _AWS_SECURITY_TOKEN_HEADER = "x-amz-security-token"
 # The AWS authorization header name for the auto-generated date.
 _AWS_DATE_HEADER = "x-amz-date"
+# The default AWS regional credential verification URL.
+_DEFAULT_AWS_REGIONAL_CREDENTIAL_VERIFICATION_URL = (
+    "https://sts.{region}.amazonaws.com?Action=GetCallerIdentity&Version=2011-06-15"
+)
 
 
 class RequestSigner(object):
@@ -360,8 +364,9 @@ class AwsSecurityCredentialsSupplier(metaclass=abc.ABCMeta):
 
     @abc.abstractmethod
     def get_aws_security_credentials(self, context, request):
-        """Returns the AWS security credentials for the requested context. This is not cached by the calling
-        Google credential, so caching logic should be implemented in the supplier.
+        """Returns the AWS security credentials for the requested context.
+
+        .. warning: This is not cached by the calling Google credential, so caching logic should be implemented in the supplier.
 
         Args:
             context (google.auth.externalaccount.SupplierContext): The context object
@@ -603,8 +608,9 @@ class Credentials(external_account.Credentials):
         self,
         audience,
         subject_token_type,
-        token_url,
+        token_url=external_account._DEFAULT_TOKEN_URL,
         credential_source=None,
+        aws_security_credentials_supplier=None,
         *args,
         **kwargs
     ):
@@ -612,11 +618,30 @@ class Credentials(external_account.Credentials):
 
         Args:
             audience (str): The STS audience field.
-            subject_token_type (str): The subject token type.
-            token_url (str): The STS endpoint URL.
-            credential_source (Mapping): The credential source dictionary used
-                to provide instructions on how to retrieve external credential
-                to be exchanged for Google access tokens.
+            subject_token_type (str): The subject token type based on the Oauth2.0 token exchange spec.
+                Expected values include::
+
+                    “urn:ietf:params:aws:token-type:aws4_request”
+
+            token_url (Optional [str]): The STS endpoint URL. If not provided, will default to "https://sts.googleapis.com/v1/token".
+            credential_source (Optional [Mapping]): The credential source dictionary used
+                to provide instructions on how to retrieve external credential to be exchanged for Google access tokens.
+                Either a credential source or an AWS security credentials supplier must be provided.
+
+                Example credential_source for AWS credential::
+
+                    {
+                        "environment_id": "aws1",
+                        "regional_cred_verification_url": "https://sts.{region}.amazonaws.com?Action=GetCallerIdentity&Version=2011-06-15",
+                        "region_url": "http://169.254.169.254/latest/meta-data/placement/availability-zone",
+                        "url": "http://169.254.169.254/latest/meta-data/iam/security-credentials",
+                        imdsv2_session_token_url": "http://169.254.169.254/latest/api/token"
+                    }
+
+            aws_security_credentials_supplier (Optional [AwsSecurityCredentialsSupplier]): Optional AWS security credentials supplier.
+                This will be called to supply valid AWS security credentails which will then
+                be exchanged for Google access tokens. Either an AWS security credentials supplier
+                or a credential source must be provided.
             args (List): Optional positional arguments passed into the underlying :meth:`~external_account.Credentials.__init__` method.
             kwargs (Mapping): Optional keyword arguments passed into the underlying :meth:`~external_account.Credentials.__init__` method.
 
@@ -637,33 +662,52 @@ class Credentials(external_account.Credentials):
             *args,
             **kwargs
         )
-        credential_source = credential_source or {}
-        self._target_resource = audience
-        environment_id = credential_source.get("environment_id") or ""
-        self._aws_security_credentials_supplier = _DefaultAwsSecurityCredentialsSupplier(
-            credential_source
-        )
-        self._cred_verification_url = credential_source.get(
-            "regional_cred_verification_url"
-        )
-
-        # Get the environment ID. Currently, only one version supported (v1).
-        matches = re.match(r"^(aws)([\d]+)$", environment_id)
-        if matches:
-            env_id, env_version = matches.groups()
-        else:
-            env_id, env_version = (None, None)
-
-        if env_id != "aws" or self._cred_verification_url is None:
-            raise exceptions.InvalidResource(
-                "No valid AWS 'credential_source' provided"
-            )
-        elif int(env_version or "") != 1:
+        if credential_source is None and aws_security_credentials_supplier is None:
             raise exceptions.InvalidValue(
-                "aws version '{}' is not supported in the current build.".format(
-                    env_version
-                )
+                "A valid credential source or AWS security credentials supplier must be provided."
             )
+        if (
+            credential_source is not None
+            and aws_security_credentials_supplier is not None
+        ):
+            raise exceptions.InvalidValue(
+                "AWS credential cannot have both a credential source and an AWS security credentials supplier."
+            )
+
+        if aws_security_credentials_supplier:
+            self._aws_security_credentials_supplier = aws_security_credentials_supplier
+            # The regional cred verification URL would normally be provided through the credential source. So set it to the default one here.
+            self._cred_verification_url = (
+                _DEFAULT_AWS_REGIONAL_CREDENTIAL_VERIFICATION_URL
+            )
+        else:
+            environment_id = credential_source.get("environment_id") or ""
+            self._aws_security_credentials_supplier = _DefaultAwsSecurityCredentialsSupplier(
+                credential_source
+            )
+            self._cred_verification_url = credential_source.get(
+                "regional_cred_verification_url"
+            )
+
+            # Get the environment ID. Currently, only one version supported (v1).
+            matches = re.match(r"^(aws)([\d]+)$", environment_id)
+            if matches:
+                env_id, env_version = matches.groups()
+            else:
+                env_id, env_version = (None, None)
+
+            if env_id != "aws" or self._cred_verification_url is None:
+                raise exceptions.InvalidResource(
+                    "No valid AWS 'credential_source' provided"
+                )
+            elif int(env_version or "") != 1:
+                raise exceptions.InvalidValue(
+                    "aws version '{}' is not supported in the current build.".format(
+                        env_version
+                    )
+                )
+
+        self._target_resource = audience
         self._request_signer = None
 
     def retrieve_subject_token(self, request):
@@ -758,8 +802,25 @@ class Credentials(external_account.Credentials):
 
     def _create_default_metrics_options(self):
         metrics_options = super(Credentials, self)._create_default_metrics_options()
-        metrics_options["source"] = "aws"
+        if self._has_custom_supplier():
+            metrics_options["source"] = "programmatic"
+        else:
+            metrics_options["source"] = "aws"
         return metrics_options
+
+    def _has_custom_supplier(self):
+        return self._credential_source is None
+
+    def _constructor_args(self):
+        args = super(Credentials, self)._constructor_args()
+        # If a custom supplier was used, append it to the args dict.
+        if self._has_custom_supplier():
+            args.update(
+                {
+                    "aws_security_credentials_supplier": self._aws_security_credentials_supplier
+                }
+            )
+        return args
 
     @classmethod
     def from_info(cls, info, **kwargs):
@@ -776,6 +837,12 @@ class Credentials(external_account.Credentials):
         Raises:
             ValueError: For invalid parameters.
         """
+        aws_security_credentials_supplier = info.get(
+            "aws_security_credentials_supplier"
+        )
+        kwargs.update(
+            {"aws_security_credentials_supplier": aws_security_credentials_supplier}
+        )
         return super(Credentials, cls).from_info(info, **kwargs)
 
     @classmethod
