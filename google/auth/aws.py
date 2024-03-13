@@ -21,10 +21,11 @@ of long-live service account private keys.
 
 AWS Credentials are initialized using external_account arguments which are
 typically loaded from the external credentials JSON file.
-Unlike other Credentials that can be initialized with a list of explicit
-arguments, secrets or credentials, external account clients use the
-environment and hints/guidelines provided by the external_account JSON
-file to retrieve credentials and exchange them for Google access tokens.
+
+This module also provides a definition for an abstract AWS security credentials supplier.
+This supplier can be implemented to return valid AWS security credentials and an AWS region
+and used to create AWS credentials.The credentials will then call the
+supplier instead of using pre-defined methods such as calling the EC2 metadata endpoints.
 
 This module also provides a basic implementation of the
 `AWS Signature Version 4`_ request signing algorithm.
