@@ -30,7 +30,7 @@ an external credentials URL.
 
 This module also provides a definition for an abstract subject token supplier.
 This supplier can be implemented to return a valid OIDC or SAML2.0 subject token
-and used to create Identity Pool credentials.The credentials will then call the
+and used to create Identity Pool credentials. The credentials will then call the
 supplier instead of using pre-defined methods such as reading a local file or
 calling a URL.
 """

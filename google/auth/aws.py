@@ -24,7 +24,7 @@ typically loaded from the external credentials JSON file.
 
 This module also provides a definition for an abstract AWS security credentials supplier.
 This supplier can be implemented to return valid AWS security credentials and an AWS region
-and used to create AWS credentials.The credentials will then call the
+and used to create AWS credentials. The credentials will then call the
 supplier instead of using pre-defined methods such as calling the EC2 metadata endpoints.
 
 This module also provides a basic implementation of the
