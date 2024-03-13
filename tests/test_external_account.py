@@ -1059,6 +1059,21 @@ class TestCredentials(object):
         assert not credentials.expired
         assert credentials.token is None
 
+    def test_refresh_impersonation_invalid_impersonated_url_error(self):
+        credentials = self.make_credentials(
+            service_account_impersonation_url="https://iamcredentials.googleapis.com/v1/invalid",
+            scopes=self.SCOPES,
+        )
+
+        with pytest.raises(exceptions.RefreshError) as excinfo:
+            credentials.refresh(None)
+
+        assert excinfo.match(
+            r"Unable to determine target principal from service account impersonation URL."
+        )
+        assert not credentials.expired
+        assert credentials.token is None
+
     @mock.patch(
         "google.auth.metrics.python_and_auth_lib_version",
         return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,

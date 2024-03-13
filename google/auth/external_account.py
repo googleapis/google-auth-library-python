@@ -62,11 +62,13 @@ class SupplierContext:
 
         Attributes:
             subject_token_type (str): The requested subject token type based on the Oauth2.0 token exchange spec.
-                Expected values include:
+                Expected values include::
+
                     “urn:ietf:params:oauth:token-type:jwt”
                     “urn:ietf:params:oauth:token-type:id-token”
                     “urn:ietf:params:oauth:token-type:saml2”
                     “urn:ietf:params:aws:token-type:aws4_request”
+
             audience (str): The requested audience for the subject token.
     """
 
@@ -111,11 +113,13 @@ class Credentials(
         Args:
             audience (str): The STS audience field.
             subject_token_type (str): The subject token type based on the Oauth2.0 token exchange spec.
-                Expected values include:
+                Expected values include::
+
                     “urn:ietf:params:oauth:token-type:jwt”
                     “urn:ietf:params:oauth:token-type:id-token”
                     “urn:ietf:params:oauth:token-type:saml2”
                     “urn:ietf:params:aws:token-type:aws4_request”
+
             token_url (str): The STS endpoint URL.
             credential_source (Mapping): The credential source dictionary.
             service_account_impersonation_url (Optional[str]): The optional service account
@@ -453,7 +457,10 @@ class Credentials(
         return new_cred
 
     def _should_initialize_impersonated_credentials(self):
-            return self._service_account_impersonation_url is not None and self._impersonated_credentials is None
+        return (
+            self._service_account_impersonation_url is not None
+            and self._impersonated_credentials is None
+        )
 
     def _initialize_impersonated_credentials(self):
         """Generates an impersonated credentials.

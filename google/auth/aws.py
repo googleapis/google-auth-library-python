@@ -43,7 +43,6 @@ import hashlib
 import hmac
 import http.client as http_client
 import json
-import logging
 import os
 import posixpath
 import re
@@ -55,8 +54,6 @@ from google.auth import _helpers
 from google.auth import environment_vars
 from google.auth import exceptions
 from google.auth import external_account
-
-_LOGGER = logging.getLogger(__name__)
 
 # AWS Signature Version 4 signing algorithm identifier.
 _AWS_ALGORITHM = "AWS4-HMAC-SHA256"
@@ -367,8 +364,9 @@ class AwsSecurityCredentialsSupplier(metaclass=abc.ABCMeta):
 
     @abc.abstractmethod
     def get_aws_security_credentials(self, context, request):
-        """Returns the AWS security credentials for the requested context. This is not cached by the calling
-        Google credential, so caching logic should be implemented in the supplier.
+        """Returns the AWS security credentials for the requested context.
+
+        .. warning: This is not cached by the calling Google credential, so caching logic should be implemented in the supplier.
 
         Args:
             context (google.auth.externalaccount.SupplierContext): The context object
@@ -621,13 +619,15 @@ class Credentials(external_account.Credentials):
         Args:
             audience (str): The STS audience field.
             subject_token_type (str): The subject token type based on the Oauth2.0 token exchange spec.
-                Expected values include:
+                Expected values include::
+
                     “urn:ietf:params:aws:token-type:aws4_request”
-            token_url (str): The STS endpoint URL. If not provided, will default to "https://sts.googleapis.com/v1/token".
-            credential_source (Mapping): The credential source dictionary used
-                to provide instructions on how to retrieve external credential
-                to be exchanged for Google access tokens. Either a credential source or an AWS security
-                credentials supplier must be provided.
+
+            token_url (Optional [str]): The STS endpoint URL. If not provided, will default to "https://sts.googleapis.com/v1/token".
+            credential_source (Optional [Mapping]): The credential source dictionary used
+                to provide instructions on how to retrieve external credential to be exchanged for Google access tokens.
+                Either a credential source or an AWS security credentials supplier must be provided.
+
                 Example credential_source for AWS credential::
 
                     {
@@ -637,7 +637,8 @@ class Credentials(external_account.Credentials):
                         "url": "http://169.254.169.254/latest/meta-data/iam/security-credentials",
                         imdsv2_session_token_url": "http://169.254.169.254/latest/api/token"
                     }
-            aws_security_credentials_supplier (AwsSecurityCredentialsSupplier): Optional AWS security credentials supplier.
+
+            aws_security_credentials_supplier (Optional [AwsSecurityCredentialsSupplier]): Optional AWS security credentials supplier.
                 This will be called to supply valid AWS security credentails which will then
                 be exchanged for Google access tokens. Either an AWS security credentials supplier
                 or a credential source must be provided.
@@ -678,9 +679,6 @@ class Credentials(external_account.Credentials):
             # The regional cred verification URL would normally be provided through the credential source. So set it to the default one here.
             self._cred_verification_url = (
                 _DEFAULT_AWS_REGIONAL_CREDENTIAL_VERIFICATION_URL
-            )
-            _LOGGER.info(
-                "AWS security credentials supplier is being used. Note that the external account credential does not cache the AWS security credentials so caching should be implemented in the supplier."
             )
         else:
             environment_id = credential_source.get("environment_id") or ""
@@ -811,7 +809,7 @@ class Credentials(external_account.Credentials):
         return metrics_options
 
     def _has_custom_supplier(self):
-        return self._credential_source is not None
+        return self._credential_source is None
 
     def _constructor_args(self):
         args = super(Credentials, self)._constructor_args()

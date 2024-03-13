@@ -41,15 +41,12 @@ except ImportError:  # pragma: NO COVER
 import abc
 import io
 import json
-import logging
 import os
 from typing import NamedTuple
 
 from google.auth import _helpers
 from google.auth import exceptions
 from google.auth import external_account
-
-_LOGGER = logging.getLogger(__name__)
 
 
 class SubjectTokenSupplier(metaclass=abc.ABCMeta):
@@ -60,8 +57,9 @@ class SubjectTokenSupplier(metaclass=abc.ABCMeta):
 
     @abc.abstractmethod
     def get_subject_token(self, context, request):
-        """Returns the requested subject token. The subject token must be valid. This is not cached by the calling
-        Google credential, so caching logic should be implemented in the supplier.
+        """Returns the requested subject token. The subject token must be valid.
+
+        .. warning: This is not cached by the calling Google credential, so caching logic should be implemented in the supplier.
 
         Args:
             context (google.auth.externalaccount.SupplierContext): The context object
@@ -181,12 +179,14 @@ class Credentials(external_account.Credentials):
         Args:
             audience (str): The STS audience field.
             subject_token_type (str): The subject token type based on the Oauth2.0 token exchange spec.
-                Expected values include:
+                Expected values include::
+
                     “urn:ietf:params:oauth:token-type:jwt”
                     “urn:ietf:params:oauth:token-type:id-token”
                     “urn:ietf:params:oauth:token-type:saml2”
-            token_url (str): The STS endpoint URL. If not provided, will default to "https://sts.googleapis.com/v1/token".
-            credential_source (Mapping): The credential source dictionary used to
+
+            token_url (Optional [str]): The STS endpoint URL. If not provided, will default to "https://sts.googleapis.com/v1/token".
+            credential_source (Optional [Mapping]): The credential source dictionary used to
                 provide instructions on how to retrieve external credential to be
                 exchanged for Google access tokens. Either a credential source or
                 a subject token supplier must be provided.
@@ -207,7 +207,7 @@ class Credentials(external_account.Credentials):
                     {
                         "file": "/path/to/token/file.txt"
                     }
-            subject_token_supplier (SubjectTokenSupplier): Optional subject token supplier.
+            subject_token_supplier (Optional [SubjectTokenSupplier]): Optional subject token supplier.
                 This will be called to supply a valid subject token which will then
                 be exchanged for Google access tokens. Either a subject token  supplier
                 or a credential source must be provided.
@@ -243,9 +243,6 @@ class Credentials(external_account.Credentials):
 
         if subject_token_supplier is not None:
             self._subject_token_supplier = subject_token_supplier
-            _LOGGER.info(
-                "Subject token supplier is being used. Note that the external account credential does not cache the subject token so caching should be implemented in the supplier."
-            )
             self._credential_source_file = None
             self._credential_source_url = None
         else:
