@@ -11,8 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-
 """Interfaces for credentials."""
 
 import abc
@@ -54,7 +52,9 @@ class Credentials(metaclass=abc.ABCMeta):
         authenticated requests."""
         self.expiry = None
         """Optional[datetime]: When the token expires and is no longer valid.
-        If this is None, the token is assumed to never expire."""
+
+        If this is None, the token is assumed to never expire.
+        """
         self._quota_project_id = None
         """Optional[str]: Project to use for quota and billing purposes."""
         self._trust_boundary = None
@@ -62,8 +62,8 @@ class Credentials(metaclass=abc.ABCMeta):
         of allowed regions and an encoded string representation of credentials
         trust boundary."""
         self._universe_domain = DEFAULT_UNIVERSE_DOMAIN
-        """Optional[str]: The universe domain value, default is googleapis.com
-        """
+        """Optional[str]: The universe domain value, default is
+        googleapis.com."""
 
         self._use_non_blocking_refresh = False
         self._refresh_worker = RefreshThreadManager()
@@ -100,9 +100,7 @@ class Credentials(metaclass=abc.ABCMeta):
 
     @property
     def token_state(self):
-        """
-        See `:obj:`TokenState`
-        """
+        """See `:obj:`TokenState`"""
         if self.token is None:
             return TokenState.INVALID
 
@@ -225,12 +223,13 @@ class Credentials(metaclass=abc.ABCMeta):
 
 
 class CredentialsWithTrustBoundary(Credentials):
-    """Abstract base for credentials supporting trust boundary
-    A class with trust boundary will carry a trust boundary info as a cache.
-    The cache value can be either injected or fetch from a global lookup if
-    enabled.
-    Upon we apply credential headers to a request, a trust boundary value will
-    be added as a header. GFE will use the value to routing.
+    """Abstract base for credentials supporting trust boundary A class with
+    trust boundary will carry a trust boundary info as a cache.
+
+    The cache value can be either injected or fetch from a global lookup
+    if enabled. Upon we apply credential headers to a request, a trust
+    boundary value will be added as a header. GFE will use the value to
+    routing.
     """
 
     def apply(self, headers, token=None):
@@ -240,19 +239,22 @@ class CredentialsWithTrustBoundary(Credentials):
         encoded representation.
 
         An example of global lookup response:
-        {
-            "locations": [
-                "us-central1", "us-east1", "europe-west1", "asia-east1"
-            ]
-            "encoded_locations": "0xA30"
-        }
+
+        .. code-block::
+
+            {
+                "locations": [
+                    "us-central1", "us-east1", "europe-west1", "asia-east1"
+                ],
+                "encoded_locations": "0xA30"
+            }
         """
         super().apply(headers, token)
         if self._trust_boundary is not None:
             headers["x-allowed-locations"] = self._trust_boundary["encoded_locations"]
 
     def lookup_trust_boundary(self, request):
-        """Lookup trust boundary shall be implemented by subclasses
+        """Lookup trust boundary shall be implemented by subclasses.
 
         Upon the lookup, we send a request to the global lookup endlpoint and then
         parse the valid response. Service account credentials, workload identity
@@ -272,20 +274,25 @@ class CredentialsWithTrustBoundary(Credentials):
                 "encoded_locations" as a hex string.
 
                 e.g:
-                {
-                    "locations": [
-                        "us-central1", "us-east1", "europe-west1", "asia-east1"
-                    ],
-                    "encoded_locations": "0xA30"
-                }
+
+                .. code-block:
+
+                    {
+                        "locations": [
+                            "us-central1", "us-east1", "europe-west1", "asia-east1"
+                        ],
+                        "encoded_locations": "0xA30"
+                    }
 
                 If the universe global lookup is not launched yet, a default
                 trust boundary of "all" will be returned.
 
-                {
-                    "locations": [],
-                    "": "0x0"
-                }
+                .. code-block:
+
+                    {
+                        "locations": [],
+                        "": "0x0"
+                    }
 
         Raises:
             exceptions.TransportError: If the request to the lookup endpoint fails.
@@ -295,11 +302,11 @@ class CredentialsWithTrustBoundary(Credentials):
         raise NotImplementedError("Missing definition of trust boundary lookup")
 
     def set_trust_boundary(self, trust_boundary):
-        """Sets the trust boundary value to the credential"""
+        """Sets the trust boundary value to the credential."""
         self._trust_boundary = trust_boundary
 
     def _enable_trust_boundary_lookup(self):
-        """A private function to enable trust boundary"""
+        """A private function to enable trust boundary."""
         self._trust_boundary_lookup_enabled = True
 
     @property
@@ -312,7 +319,8 @@ class CredentialsWithTrustBoundary(Credentials):
 
 
 class CredentialsWithQuotaProject(Credentials):
-    """Abstract base for credentials supporting ``with_quota_project`` factory"""
+    """Abstract base for credentials supporting ``with_quota_project``
+    factory."""
 
     def with_quota_project(self, quota_project_id):
         """Returns a copy of these credentials with a modified quota project.
@@ -334,7 +342,7 @@ class CredentialsWithQuotaProject(Credentials):
 
 
 class CredentialsWithTokenUri(Credentials):
-    """Abstract base for credentials supporting ``with_token_uri`` factory"""
+    """Abstract base for credentials supporting ``with_token_uri`` factory."""
 
     def with_token_uri(self, token_uri):
         """Returns a copy of these credentials with a modified token uri.
@@ -349,7 +357,8 @@ class CredentialsWithTokenUri(Credentials):
 
 
 class CredentialsWithUniverseDomain(Credentials):
-    """Abstract base for credentials supporting ``with_universe_domain`` factory"""
+    """Abstract base for credentials supporting ``with_universe_domain``
+    factory."""
 
     def with_universe_domain(self, universe_domain):
         """Returns a copy of these credentials with a modified universe domain.
@@ -368,8 +377,8 @@ class CredentialsWithUniverseDomain(Credentials):
 class AnonymousCredentials(Credentials):
     """Credentials that do not provide any authentication information.
 
-    These are useful in the case of services that support anonymous access or
-    local service emulators that do not use credentials.
+    These are useful in the case of services that support anonymous
+    access or local service emulators that do not use credentials.
     """
 
     @property
@@ -448,8 +457,8 @@ class ReadOnlyScoped(metaclass=abc.ABCMeta):
 
     @abc.abstractproperty
     def requires_scopes(self):
-        """True if these credentials require scopes to obtain an access token.
-        """
+        """True if these credentials require scopes to obtain an access
+        token."""
         return False
 
     def has_scopes(self, scopes):
@@ -576,8 +585,8 @@ class Signing(metaclass=abc.ABCMeta):
 
 
 class TokenState(Enum):
-    """
-    Tracks the state of a token.
+    """Tracks the state of a token.
+
     FRESH: The token is valid. It is not expired or close to expired, or the token has no expiry.
     STALE: The token is close to expired, and should be refreshed. The token can be used normally.
     INVALID: The token is expired or invalid. The token cannot be used for a normal operation.
