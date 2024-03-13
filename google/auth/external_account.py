@@ -200,8 +200,14 @@ class Credentials(
             args.pop("workforce_pool_user_project")
         return args
 
-    def lookup_trust_boundary(self, reqeust):
-        """Current implementation of inject dummy headers"""
+    def lookup_trust_boundary(self, request):
+        """Current implementation of inject dummy headers
+        As we are not going to publish external_account lookup trust boundary
+        in short term but still want the header to be applied. We need this
+        dummy header to be put into all types of external account. The dummy
+        headers are going to be collected by GFE and doing an aggregation to
+        help backend team tracking the feature impacts.
+        """
         return credentials.DEFAULT_TRUST_BOUNDARY
 
     @property

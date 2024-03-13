@@ -35,6 +35,10 @@ class CredentialsImpl(credentials.Credentials):
 
 
 class CredentialsImplWithTrustBoundary(credentials.CredentialsWithTrustBoundary):
+    def __init__(self):
+        super().__init__()
+        self._trust_boundary_lookup_enabled = False
+
     def refresh(self, request):
         self.token = request
         self._trust_boundary = self.lookup_trust_boundary(request)
@@ -116,7 +120,7 @@ def test_before_request():
 
 def test_before_request_with_trust_boundary():
     credentials = CredentialsImplWithTrustBoundary()
-    credentials._enable_trust_boundary()
+    credentials._enable_trust_boundary_lookup()
     request = "token"
     headers = {}
 
@@ -351,3 +355,10 @@ def test_token_state_no_expiry():
     assert c.token_state == credentials.TokenState.FRESH
 
     c.before_request(request, "http://example.com", "GET", {})
+
+
+def test_credentials_with_trust_boundary_setter_and_getter():
+    credentials = CredentialsImplWithTrustBoundary()
+    assert credentials.trust_boundary_lookup_enabled is False
+    credentials.trust_boundary_lookup_enabled = True
+    assert credentials.trust_boundary_lookup_enabled is True

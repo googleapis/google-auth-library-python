@@ -489,7 +489,7 @@ class TestCredentials(object):
     @mock.patch("google.oauth2._client.jwt_grant", autospec=True)
     def test_refresh_success_with_trust_boundary(self, jwt_grant):
         credentials = self.make_credentials()
-        credentials._enable_trust_boundary()
+        credentials._enable_trust_boundary_lookup()
         token = "token"
         jwt_grant.return_value = (
             token,
@@ -498,7 +498,6 @@ class TestCredentials(object):
         )
         request = mock.create_autospec(transport.Request, instance=True)
 
-        # Refresh credentials
         with mock.patch(
             "google.oauth2._client.lookup_trust_boundary",
             return_value=DEFAULT_TRUST_BOUNDARY,
@@ -527,7 +526,7 @@ class TestCredentials(object):
         self, jwt_grant
     ):
         credentials = self.make_credentials()
-        credentials._enable_trust_boundary()
+        credentials._enable_trust_boundary_lookup()
         credentials.set_trust_boundary(None)
         token = "token"
         jwt_grant.return_value = (
@@ -572,7 +571,7 @@ class TestCredentials(object):
         self, jwt_grant
     ):
         credentials = self.make_credentials()
-        credentials._enable_trust_boundary()
+        credentials._enable_trust_boundary_lookup()
         credentials.set_trust_boundary(None)
         token = "token"
         jwt_grant.return_value = (
@@ -609,7 +608,7 @@ class TestCredentials(object):
         # expired)
         assert credentials.valid
 
-        credentials._enable_trust_boundary()
+        credentials._enable_trust_boundary_lookup()
         # wipe out caching boundary
         credentials.set_trust_boundary(None)
         with mock.patch(
@@ -642,7 +641,7 @@ class TestCredentials(object):
             "locations": ["us-central1", "us-east1", "europe-west1", "asia-east1"],
             "encoded_locations": "0xA30",
         }
-        credentials._enable_trust_boundary()
+        credentials._enable_trust_boundary_lookup()
         # wipe out caching boundary
         credentials.set_trust_boundary(TEST_CACHED_TRUST_BOUNDARY)
         with mock.patch(

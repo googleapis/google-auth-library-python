@@ -43,9 +43,6 @@ _IAM_IDTOKEN_ENDPOINT = (
     "https://iamcredentials.googleapis.com/v1/"
     + "projects/-/serviceAccounts/{}:generateIdToken"
 )
-_TRUST_BOUNDARY_LOOKUP_ENDPOINT = (
-    "iamcredentials.{}/v1/projects/-/serviceAccounts/{}/trustBoundary"
-)
 TRUST_BOUNDARY_ENABLED_UNIVERSES = ["googleapis.com"]
 
 
@@ -513,6 +510,10 @@ def refresh_grant(
 
 def lookup_trust_boundary(request, url, headers):
     """ Implements the global lookup of a service account trust boundary.
+
+    Upon the lookup, we send a request to the global lookup endlpoint and then
+    parse the valid response. Service account credentials, workload identity
+    pools and workforce pools implementation will be various.
 
     Args:
         request (google.auth.transport.Request): A callable used to make

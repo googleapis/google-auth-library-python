@@ -200,11 +200,13 @@ class Credentials(
             self._additional_claims = additional_claims
         else:
             self._additional_claims = {}
-        self._trust_boundary_enabled = (
+        self._trust_boundary_lookup_enabled = (
             os.environ.get(TRUST_BOUNDARY_LOOKUP_ENABLED_ENV) == "1"
         )
         self._trust_boundary = (
-            None if self._trust_boundary_enabled else credentials.DEFAULT_TRUST_BOUNDARY
+            None
+            if self._trust_boundary_lookup_enabled
+            else credentials.DEFAULT_TRUST_BOUNDARY
         )
 
     @classmethod
@@ -315,10 +317,15 @@ class Credentials(
         return cred
 
     def lookup_trust_boundary(self, request):
+        """Trust boundary lookup for service account using endpoint:
+            iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/{service_account_email}/allowedLocations
+
+            And we are using a fresh access token as basic auth.
+        """
         url = _TRUST_BOUNDARY_LOOKUP_ENDPOINT.format(
             self.universe_domain, self.service_account_email
         )
-        headers = {"Authorization": "Basic " + self.token}
+        headers = {"Authorization": f"Basic {self.token}"}
         return _client.lookup_trust_boundary(request, url, headers)
 
     def with_always_use_jwt_access(self, always_use_jwt_access):
@@ -460,20 +467,22 @@ class Credentials(
         # will attemp to fetch trust boundary but tolerant on errors if we
         # already have cached trust boundaries.
         if (
-            self.valid
-            and self.universe_domain in _client.TRUST_BOUNDARY_ENABLED_UNIVERSES
-            and self._trust_boundary_enabled
+            self.token_state == credentials.TokenState.FRESH
+            and self._should_lookup_trust_boundary()
         ):
             try:
                 self._trust_boundary = self.lookup_trust_boundary(request)
             except Exception as err:
                 if not isinstance(self._trust_boundary, dict):
-                    raise err
+                    _LOGGER.warning(
+                        "trust boundary lookup failed and a cache was not available"
+                    )
+                    raise
                 # if we already have trust boundary values, we log the error
                 # and keep the cached trust boundary value to let it fail
                 # afterwards.
                 else:
-                    _LOGGER.error(f"trust boundary refresh failed due to {err}")
+                    _LOGGER.warning(f"trust boundary refresh failed due to {err}")
 
         if self._use_self_signed_jwt():
             self._jwt_credentials.refresh(request)
@@ -488,11 +497,7 @@ class Credentials(
             self.expiry = expiry
 
         # In case of trust boundary never been fetched.
-        if (
-            self._trust_boundary is None
-            and self.universe_domain in _client.TRUST_BOUNDARY_ENABLED_UNIVERSES
-            and self._trust_boundary_enabled
-        ):
+        if self._trust_boundary is None and self._should_lookup_trust_boundary():
             self._trust_boundary = self.lookup_trust_boundary(request)
 
     def _create_self_signed_jwt(self, audience):
@@ -548,6 +553,12 @@ class Credentials(
     @_helpers.copy_docstring(credentials.Signing)
     def signer_email(self):
         return self._service_account_email
+
+    def _should_lookup_trust_boundary(self):
+        return (
+            self.universe_domain in _client.TRUST_BOUNDARY_ENABLED_UNIVERSES
+            and self._trust_boundary_lookup_enabled
+        )
 
 
 class IDTokenCredentials(

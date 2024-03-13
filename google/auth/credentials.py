@@ -16,6 +16,7 @@
 """Interfaces for credentials."""
 
 import abc
+import copy
 from enum import Enum
 import os
 
@@ -24,7 +25,7 @@ from google.auth import exceptions
 from google.auth import metrics
 from google.auth._refresh_worker import RefreshThreadManager
 
-DEFAULT_TRUST_BOUNDARY = {"locations": [], "encoded_locations": "0x0"}
+DEFAULT_TRUST_BOUNDARY = copy.deepcopy({"locations": [], "encoded_locations": "0x0"})
 DEFAULT_UNIVERSE_DOMAIN = "googleapis.com"
 
 
@@ -224,10 +225,15 @@ class Credentials(metaclass=abc.ABCMeta):
 
 
 class CredentialsWithTrustBoundary(Credentials):
-    """Abstract base for credentials supporting trust boundary factory"""
+    """Abstract base for credentials supporting trust boundary
+    A class with trust boundary will carry a trust boundary info as a cache.
+    The cache value can be either injected or fetch from a global lookup if
+    enabled.
+    Upon we apply credential headers to a request, a trust boundary value will
+    be added as a header. GFE will use the value to routing.
+    """
 
     def apply(self, headers, token=None):
-        super().apply(headers, token)
         """Trust boundary value will be a cached value from global lookup.
 
         The response of trust boundary will be a list of regions and a hex
@@ -241,20 +247,68 @@ class CredentialsWithTrustBoundary(Credentials):
             "encoded_locations": "0xA30"
         }
         """
+        super().apply(headers, token)
         if self._trust_boundary is not None:
             headers["x-allowed-locations"] = self._trust_boundary["encoded_locations"]
 
     def lookup_trust_boundary(self, request):
-        """Lookup trust boundary shall be implemented by subclasses"""
+        """Lookup trust boundary shall be implemented by subclasses
+
+        Upon the lookup, we send a request to the global lookup endlpoint and then
+        parse the valid response. Service account credentials, workload identity
+        pools and workforce pools implementation will be various.
+
+        Args:
+            request (google.auth.transport.Request): A callable used to make
+                HTTP requests.
+
+            url (str): The url of the look up request.
+
+            headers (mapping): Basic auth headers for the request.
+
+        Returns:
+            Mapping[str,list|str]: A dictionary containing the
+                "locations" as a list of allowed locations as strings and
+                "encoded_locations" as a hex string.
+
+                e.g:
+                {
+                    "locations": [
+                        "us-central1", "us-east1", "europe-west1", "asia-east1"
+                    ],
+                    "encoded_locations": "0xA30"
+                }
+
+                If the universe global lookup is not launched yet, a default
+                trust boundary of "all" will be returned.
+
+                {
+                    "locations": [],
+                    "": "0x0"
+                }
+
+        Raises:
+            exceptions.TransportError: If the request to the lookup endpoint fails.
+            exceptions.RefreshError: If the query response is not 200.
+            exceptions.MalformedError: If the response is not in a valid format.
+        """
         raise NotImplementedError("Missing definition of trust boundary lookup")
 
     def set_trust_boundary(self, trust_boundary):
         """Sets the trust boundary value to the credential"""
         self._trust_boundary = trust_boundary
 
-    def _enable_trust_boundary(self):
+    def _enable_trust_boundary_lookup(self):
         """A private function to enable trust boundary"""
-        self._trust_boundary_enabled = True
+        self._trust_boundary_lookup_enabled = True
+
+    @property
+    def trust_boundary_lookup_enabled(self):
+        return self._trust_boundary_lookup_enabled
+
+    @trust_boundary_lookup_enabled.setter
+    def trust_boundary_lookup_enabled(self, value):
+        self._trust_boundary_lookup_enabled = value
 
 
 class CredentialsWithQuotaProject(Credentials):

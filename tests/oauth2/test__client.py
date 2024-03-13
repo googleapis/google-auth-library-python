@@ -629,8 +629,9 @@ def test_lookup_trust_boundary_request_error():
         _client.lookup_trust_boundary(mock_request, "mock_url", {})
 
 
-def test_lookup_trust_boundary():
-    test_data = [
+@pytest.mark.parametrize(
+    "test_data",
+    [
         {
             "name": "normal happy case",
             "response_status": http_client.OK,
@@ -678,22 +679,23 @@ def test_lookup_trust_boundary():
             "expect_error": exceptions.MalformedError,
             "expect_error_messages": "Failed to load trust boundary info",
         },
-    ]
+    ],
+)
+def test_lookup_trust_boundary(test_data):
+    expect_error, msg = (
+        test_data.get("expect_error"),
+        test_data.get("expect_error_message"),
+    )
+    mock_response = mock.create_autospec(transport.Response, instance=True)
+    mock_response.status = test_data.get("response_status")
+    mock_response.data = test_data.get("response_data")
 
-    for data in test_data:
-        expect_error, msg = data.get("expect_error"), data.get("expect_error_message")
-        mock_response = mock.create_autospec(transport.Response, instance=True)
-        mock_response.status = data.get("response_status")
-        mock_response.data = data.get("response_data")
+    mock_request = mock.create_autospec(transport.Request)
+    mock_request.return_value = mock_response
 
-        mock_request = mock.create_autospec(transport.Request)
-        mock_request.return_value = mock_response
-
-        if not expect_error:
-            trust_boundary = _client.lookup_trust_boundary(mock_request, "mock_url", {})
-            assert trust_boundary == data.get("expect_trust_boundary")
-            # assert trust_boundary['locations'] == data.get('expect_trust_boundary')['locations']
-            # assert trust_boundary['encoded_locations'] == data.get('expect_trust_boundary')['encoded_locations']
-        else:
-            with pytest.raises(expect_error, match=msg):
-                _client.lookup_trust_boundary(mock_request, "mock_url", {})
+    if not expect_error:
+        trust_boundary = _client.lookup_trust_boundary(mock_request, "mock_url", {})
+        assert trust_boundary == test_data.get("expect_trust_boundary")
+    else:
+        with pytest.raises(expect_error, match=msg):
+            _client.lookup_trust_boundary(mock_request, "mock_url", {})
