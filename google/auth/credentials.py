@@ -256,7 +256,7 @@ class CredentialsWithTrustBoundary(Credentials):
     def lookup_trust_boundary(self, request):
         """Lookup trust boundary shall be implemented by subclasses.
 
-        Upon the lookup, we send a request to the global lookup endlpoint and then
+        Upon the lookup, we send a request to the global lookup endpoint and then
         parse the valid response. Service account credentials, workload identity
         pools and workforce pools implementation will be various.
 
