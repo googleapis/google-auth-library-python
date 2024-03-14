@@ -344,7 +344,7 @@ def _generate_authentication_header_map(
 
 @dataclass
 class AwsSecurityCredentials:
-    """An class that models AWS security credentials with an optional session token.
+    """A class that models AWS security credentials with an optional session token.
 
         Attributes:
             access_key_id (str): The AWS security credentials access key id.
@@ -803,10 +803,9 @@ class Credentials(external_account.Credentials):
 
     def _create_default_metrics_options(self):
         metrics_options = super(Credentials, self)._create_default_metrics_options()
+        metrics_options["source"] = "aws"
         if self._has_custom_supplier():
             metrics_options["source"] = "programmatic"
-        else:
-            metrics_options["source"] = "aws"
         return metrics_options
 
     def _has_custom_supplier(self):
