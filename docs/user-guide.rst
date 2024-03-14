@@ -495,7 +495,11 @@ to be specificed when creating a :class:`google.auth.identity_pool.Credential`. 
 return a valid OIDC or SAML2.0 subject token, which will then be exchanged for a
 Google Cloud access token. If an error occurs during token retrieval, the supplier
 should return a :class:`google.auth.exceptions.RefreshError` and indicate via the error
-whether the subject token retrieval is retryable.::
+whether the subject token retrieval is retryable.
+Any call to the supplier from the Identity Pool credential will send a :class:`google.auth.external_account.SupplierContext`
+object, which contains the requested audience and subject type. Additionally, the credential will
+send the :class:`google.auth.transport.requests.Request` passed in the credential refresh call which
+can be used to make HTTP requests.::
 
     from google.auth import exceptions
     from google.auth import identity_pool
@@ -544,7 +548,11 @@ to be specificed when creating a :class:`google.auth.aws.Credential`. The suppli
 return valid AWS security credentials, which will then be exchanged for a
 Google Cloud access token. If an error occurs during credential retrieval, the supplier
 should return a :class:`google.auth.exceptions.RefreshError` and indicate via the error
-whether the credential retrieval is retryable.::
+whether the credential retrieval is retryable.
+Any call to the supplier from the Identity Pool credential will send a :class:`google.auth.external_account.SupplierContext`
+object, which contains the requested audience and subject type. Additionally, the credential will
+send the :class:`google.auth.transport.requests.Request` passed in the credential refresh call which
+can be used to make HTTP requests.::
 
     from google.auth import aws
     from google.auth import exceptions
@@ -885,7 +893,11 @@ to be specificed when creating a :class:`google.auth.identity_pool.Credential`. 
 return a valid OIDC or SAML2.0 subject token, which will then be exchanged for a
 Google Cloud access token. If an error occurs during token retrieval, the supplier
 should return a :class:`google.auth.exceptions.RefreshError` and indicate via the error
-whether the subject token retrieval is retryable.::
+whether the subject token retrieval is retryable.
+Any call to the supplier from the Identity Pool credential will send a :class:`google.auth.external_account.SupplierContext`
+object, which contains the requested audience and subject type. Additionally, the credential will
+send the :class:`google.auth.transport.requests.Request` passed in the credential refresh call which
+can be used to make HTTP requests.::
 
     from google.auth import exceptions
     from google.auth import identity_pool
