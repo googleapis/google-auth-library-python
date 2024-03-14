@@ -26,11 +26,13 @@ long-live service account private keys.
 
 Identity Pool Credentials are initialized using external_account
 arguments which are typically loaded from an external credentials file or
-an external credentials URL. Unlike other Credentials that can be initialized
-with a list of explicit arguments, secrets or credentials, external account
-clients use the environment and hints/guidelines provided by the
-external_account JSON file to retrieve credentials and exchange them for Google
-access tokens.
+an external credentials URL.
+
+This module also provides a definition for an abstract subject token supplier.
+This supplier can be implemented to return a valid OIDC or SAML2.0 subject token
+and used to create Identity Pool credentials. The credentials will then call the
+supplier instead of using pre-defined methods such as reading a local file or
+calling a URL.
 """
 
 try:
