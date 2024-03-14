@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import copy
 import datetime
 import json
 import os
@@ -464,8 +465,8 @@ class TestCredentials(object):
 
         # Refresh credentials
         with mock.patch(
-            "google.oauth2._client.lookup_trust_boundary",
-            return_value=DEFAULT_TRUST_BOUNDARY,
+            "google.oauth2._client.handle_lookup_trust_boundary",
+            return_value=copy.deepcopy(DEFAULT_TRUST_BOUNDARY),
         ):
             credentials.refresh(request)
 
@@ -499,8 +500,8 @@ class TestCredentials(object):
         request = mock.create_autospec(transport.Request, instance=True)
 
         with mock.patch(
-            "google.oauth2._client.lookup_trust_boundary",
-            return_value=DEFAULT_TRUST_BOUNDARY,
+            "google.oauth2._client.handle_lookup_trust_boundary",
+            return_value=copy.deepcopy(DEFAULT_TRUST_BOUNDARY),
         ):
             credentials.refresh(request)
 
@@ -538,8 +539,8 @@ class TestCredentials(object):
 
         # Refresh credentials
         with mock.patch(
-            "google.oauth2._client.lookup_trust_boundary",
-            return_value=DEFAULT_TRUST_BOUNDARY,
+            "google.oauth2._client.handle_lookup_trust_boundary",
+            return_value=copy.deepcopy(DEFAULT_TRUST_BOUNDARY),
         ):
             credentials.refresh(request)
 
@@ -561,8 +562,8 @@ class TestCredentials(object):
         assert credentials.valid
 
         with mock.patch(
-            "google.oauth2._client.lookup_trust_boundary",
-            return_value=DEFAULT_TRUST_BOUNDARY,
+            "google.oauth2._client.handle_lookup_trust_boundary",
+            return_value=copy.deepcopy(DEFAULT_TRUST_BOUNDARY),
         ):
             credentials.refresh(request)
 
@@ -583,7 +584,7 @@ class TestCredentials(object):
 
         # Refresh credentials
         with mock.patch(
-            "google.oauth2._client.lookup_trust_boundary",
+            "google.oauth2._client.handle_lookup_trust_boundary",
             side_effect=exceptions.GoogleAuthError,
         ):
             with pytest.raises(exceptions.GoogleAuthError):
@@ -612,7 +613,7 @@ class TestCredentials(object):
         # wipe out caching boundary
         credentials.set_trust_boundary(None)
         with mock.patch(
-            "google.oauth2._client.lookup_trust_boundary",
+            "google.oauth2._client.handle_lookup_trust_boundary",
             side_effect=exceptions.GoogleAuthError,
         ):
             with pytest.raises(exceptions.GoogleAuthError):
@@ -645,7 +646,7 @@ class TestCredentials(object):
         # wipe out caching boundary
         credentials.set_trust_boundary(TEST_CACHED_TRUST_BOUNDARY)
         with mock.patch(
-            "google.oauth2._client.lookup_trust_boundary",
+            "google.oauth2._client.handle_lookup_trust_boundary",
             side_effect=exceptions.GoogleAuthError,
         ):
             credentials.refresh(request)
@@ -668,8 +669,8 @@ class TestCredentials(object):
 
         # before_request should cause a refresh
         with mock.patch(
-            "google.oauth2._client.lookup_trust_boundary",
-            return_value=DEFAULT_TRUST_BOUNDARY,
+            "google.oauth2._client.handle_lookup_trust_boundary",
+            return_value=copy.deepcopy(DEFAULT_TRUST_BOUNDARY),
         ):
             credentials.before_request(request, "GET", "http://example.com?a=1#3", {})
 
@@ -695,8 +696,8 @@ class TestCredentials(object):
 
         # before_request should cause a refresh
         with mock.patch(
-            "google.oauth2._client.lookup_trust_boundary",
-            return_value=DEFAULT_TRUST_BOUNDARY,
+            "google.oauth2._client.handle_lookup_trust_boundary",
+            return_value=copy.deepcopy(DEFAULT_TRUST_BOUNDARY),
         ):
             credentials.before_request(request, "GET", "http://example.com?a=1#3", {})
 
@@ -713,7 +714,7 @@ class TestCredentials(object):
     def test_refresh_with_valid_jwt_credentials(self, make_jwt):
         credentials = self.make_credentials()
         credentials._create_self_signed_jwt("https://pubsub.googleapis.com")
-        credentials.set_trust_boundary(DEFAULT_TRUST_BOUNDARY)
+        credentials.set_trust_boundary(copy.deepcopy(DEFAULT_TRUST_BOUNDARY))
 
         request = mock.create_autospec(transport.Request, instance=True)
 
@@ -726,8 +727,8 @@ class TestCredentials(object):
 
         # before_request should cause a refresh
         with mock.patch(
-            "google.oauth2._client.lookup_trust_boundary",
-            return_value=DEFAULT_TRUST_BOUNDARY,
+            "google.oauth2._client.handle_lookup_trust_boundary",
+            return_value=copy.deepcopy(DEFAULT_TRUST_BOUNDARY),
         ):
             credentials.before_request(request, "GET", "http://example.com?a=1#3", {})
 
@@ -737,8 +738,8 @@ class TestCredentials(object):
         # Call the refresh on a valid credential to trigger the flow of reset
         # trust boundary cache
         with mock.patch(
-            "google.oauth2._client.lookup_trust_boundary",
-            return_value=DEFAULT_TRUST_BOUNDARY,
+            "google.oauth2._client.handle_lookup_trust_boundary",
+            return_value=copy.deepcopy(DEFAULT_TRUST_BOUNDARY),
         ):
             credentials.refresh(request)
 
@@ -752,8 +753,8 @@ class TestCredentials(object):
         credentials = self.make_credentials()
         credentials._create_self_signed_jwt("https://pubsub.googleapis.com")
         with mock.patch(
-            "google.oauth2._client.lookup_trust_boundary",
-            return_value=DEFAULT_TRUST_BOUNDARY,
+            "google.oauth2._client.handle_lookup_trust_boundary",
+            return_value=copy.deepcopy(DEFAULT_TRUST_BOUNDARY),
         ):
             credentials.refresh(mock.Mock())
 
@@ -785,8 +786,8 @@ class TestCredentials(object):
 
         # Refresh credentials
         with mock.patch(
-            "google.oauth2._client.lookup_trust_boundary",
-            return_value=DEFAULT_TRUST_BOUNDARY,
+            "google.oauth2._client.handle_lookup_trust_boundary",
+            return_value=copy.deepcopy(DEFAULT_TRUST_BOUNDARY),
         ):
             credentials.refresh(request)
 

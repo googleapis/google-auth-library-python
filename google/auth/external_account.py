@@ -130,7 +130,7 @@ class Credentials(
         self._default_scopes = default_scopes
         self._workforce_pool_user_project = workforce_pool_user_project
         self._universe_domain = universe_domain or credentials.DEFAULT_UNIVERSE_DOMAIN
-        self._trust_boundary = credentials.DEFAULT_TRUST_BOUNDARY
+        self._trust_boundary = copy.deepcopy(credentials.DEFAULT_TRUST_BOUNDARY)
 
         if self._client_id:
             self._client_auth = utils.ClientAuthentication(
@@ -200,15 +200,9 @@ class Credentials(
             args.pop("workforce_pool_user_project")
         return args
 
-    def lookup_trust_boundary(self, request):
-        """Current implementation of inject dummy headers
-        As we are not going to publish external_account lookup trust boundary
-        in short term but still want the header to be applied. We need this
-        dummy header to be put into all types of external account. The dummy
-        headers are going to be collected by GFE and doing an aggregation to
-        help backend team tracking the feature impacts.
-        """
-        return credentials.DEFAULT_TRUST_BOUNDARY
+    def _lookup_trust_boundary(self, request):
+        """Currently for external account, a default trust boundary is used. """
+        return copy.deepcopy(credentials.DEFAULT_TRUST_BOUNDARY)
 
     @property
     def service_account_email(self):

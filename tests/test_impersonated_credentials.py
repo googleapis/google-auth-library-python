@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import copy
 import datetime
 import http.client as http_client
 import json
@@ -206,8 +207,8 @@ class TestImpersonatedCredentials(object):
             "google.auth.metrics.token_request_access_token_impersonate",
             return_value=ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
         ), mock.patch(
-            "google.oauth2._client.lookup_trust_boundary",
-            return_value=DEFAULT_TRUST_BOUNDARY,
+            "google.oauth2._client.handle_lookup_trust_boundary",
+            return_value=copy.deepcopy(DEFAULT_TRUST_BOUNDARY),
         ):
             credentials.refresh(request)
 
@@ -239,8 +240,8 @@ class TestImpersonatedCredentials(object):
         )
 
         with mock.patch(
-            "google.oauth2._client.lookup_trust_boundary",
-            return_value=DEFAULT_TRUST_BOUNDARY,
+            "google.oauth2._client.handle_lookup_trust_boundary",
+            return_value=copy.deepcopy(DEFAULT_TRUST_BOUNDARY),
         ):
             credentials.refresh(request)
 
@@ -302,8 +303,8 @@ class TestImpersonatedCredentials(object):
         )
 
         with mock.patch(
-            "google.oauth2._client.lookup_trust_boundary",
-            return_value=DEFAULT_TRUST_BOUNDARY,
+            "google.oauth2._client.handle_lookup_trust_boundary",
+            return_value=copy.deepcopy(DEFAULT_TRUST_BOUNDARY),
         ), pytest.raises(exceptions.RefreshError) as excinfo:
             credentials.refresh(request)
 
@@ -328,8 +329,8 @@ class TestImpersonatedCredentials(object):
         )
 
         with mock.patch(
-            "google.oauth2._client.lookup_trust_boundary",
-            return_value=DEFAULT_TRUST_BOUNDARY,
+            "google.oauth2._client.handle_lookup_trust_boundary",
+            return_value=copy.deepcopy(DEFAULT_TRUST_BOUNDARY),
         ), pytest.raises(exceptions.RefreshError) as excinfo:
             credentials.refresh(request)
 
@@ -368,8 +369,8 @@ class TestImpersonatedCredentials(object):
         )
 
         with mock.patch(
-            "google.oauth2._client.lookup_trust_boundary",
-            return_value=DEFAULT_TRUST_BOUNDARY,
+            "google.oauth2._client.handle_lookup_trust_boundary",
+            return_value=copy.deepcopy(DEFAULT_TRUST_BOUNDARY),
         ), pytest.raises(exceptions.RefreshError) as excinfo:
             credentials.refresh(request)
 
@@ -411,8 +412,8 @@ class TestImpersonatedCredentials(object):
         request.return_value = response
 
         with mock.patch(
-            "google.oauth2._client.lookup_trust_boundary",
-            return_value=DEFAULT_TRUST_BOUNDARY,
+            "google.oauth2._client.handle_lookup_trust_boundary",
+            return_value=copy.deepcopy(DEFAULT_TRUST_BOUNDARY),
         ):
             credentials.refresh(request)
 
@@ -464,8 +465,8 @@ class TestImpersonatedCredentials(object):
         )
 
         with mock.patch(
-            "google.oauth2._client.lookup_trust_boundary",
-            return_value=DEFAULT_TRUST_BOUNDARY,
+            "google.oauth2._client.handle_lookup_trust_boundary",
+            return_value=copy.deepcopy(DEFAULT_TRUST_BOUNDARY),
         ):
             quota_project_creds.refresh(request)
 
@@ -508,8 +509,8 @@ class TestImpersonatedCredentials(object):
         )
 
         with mock.patch(
-            "google.oauth2._client.lookup_trust_boundary",
-            return_value=DEFAULT_TRUST_BOUNDARY,
+            "google.oauth2._client.handle_lookup_trust_boundary",
+            return_value=copy.deepcopy(DEFAULT_TRUST_BOUNDARY),
         ):
             credentials.refresh(request)
 
@@ -571,8 +572,8 @@ class TestImpersonatedCredentials(object):
         )
 
         with mock.patch(
-            "google.oauth2._client.lookup_trust_boundary",
-            return_value=DEFAULT_TRUST_BOUNDARY,
+            "google.oauth2._client.handle_lookup_trust_boundary",
+            return_value=copy.deepcopy(DEFAULT_TRUST_BOUNDARY),
         ):
             credentials.refresh(request)
 
@@ -608,8 +609,8 @@ class TestImpersonatedCredentials(object):
         )
 
         with mock.patch(
-            "google.oauth2._client.lookup_trust_boundary",
-            return_value=DEFAULT_TRUST_BOUNDARY,
+            "google.oauth2._client.handle_lookup_trust_boundary",
+            return_value=copy.deepcopy(DEFAULT_TRUST_BOUNDARY),
         ):
             credentials.refresh(request)
 
@@ -653,8 +654,8 @@ class TestImpersonatedCredentials(object):
         )
 
         with mock.patch(
-            "google.oauth2._client.lookup_trust_boundary",
-            return_value=DEFAULT_TRUST_BOUNDARY,
+            "google.oauth2._client.handle_lookup_trust_boundary",
+            return_value=copy.deepcopy(DEFAULT_TRUST_BOUNDARY),
         ):
             credentials.refresh(request)
 
@@ -686,8 +687,8 @@ class TestImpersonatedCredentials(object):
         )
 
         with mock.patch(
-            "google.oauth2._client.lookup_trust_boundary",
-            return_value=DEFAULT_TRUST_BOUNDARY,
+            "google.oauth2._client.handle_lookup_trust_boundary",
+            return_value=copy.deepcopy(DEFAULT_TRUST_BOUNDARY),
         ):
             credentials.refresh(request)
 

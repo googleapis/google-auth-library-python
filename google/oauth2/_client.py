@@ -508,7 +508,7 @@ def refresh_grant(
     return _handle_refresh_grant_response(response_data, refresh_token)
 
 
-def lookup_trust_boundary(request, url, headers):
+def handle_lookup_trust_boundary(request, url, headers):
     """ Implements the global lookup of a service account trust boundary.
 
     Upon the lookup, we send a request to the global lookup endlpoint and then
@@ -536,8 +536,8 @@ def lookup_trust_boundary(request, url, headers):
                 "encoded_locations": "0xA30"
             }
 
-            If the universe global lookup is not launched yet, a default
-            trust boundary of "all" will be returned.
+            If user didn't make any changes to trust bundary, a trust boundary
+            of "all" will be returned as a default response.
 
             {
                 "locations": [],

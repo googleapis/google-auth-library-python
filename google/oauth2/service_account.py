@@ -206,7 +206,7 @@ class Credentials(
         self._trust_boundary = (
             None
             if self._trust_boundary_lookup_enabled
-            else credentials.DEFAULT_TRUST_BOUNDARY
+            else copy.deepcopy(credentials.DEFAULT_TRUST_BOUNDARY)
         )
 
     @classmethod
@@ -316,7 +316,7 @@ class Credentials(
         cred._default_scopes = default_scopes
         return cred
 
-    def lookup_trust_boundary(self, request):
+    def _lookup_trust_boundary(self, request):
         """Trust boundary lookup for service account using endpoint:
             iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/{service_account_email}/allowedLocations
 
@@ -326,7 +326,7 @@ class Credentials(
             self.universe_domain, self.service_account_email
         )
         headers = {"Authorization": f"Basic {self.token}"}
-        return _client.lookup_trust_boundary(request, url, headers)
+        return _client.handle_lookup_trust_boundary(request, url, headers)
 
     def with_always_use_jwt_access(self, always_use_jwt_access):
         """Create a copy of these credentials with the specified always_use_jwt_access value.
@@ -471,7 +471,7 @@ class Credentials(
             and self._should_lookup_trust_boundary()
         ):
             try:
-                self._trust_boundary = self.lookup_trust_boundary(request)
+                self._trust_boundary = self._lookup_trust_boundary(request)
             except Exception as err:
                 if not isinstance(self._trust_boundary, dict):
                     _LOGGER.warning(
@@ -498,7 +498,7 @@ class Credentials(
 
         # In case of trust boundary never been fetched.
         if self._trust_boundary is None and self._should_lookup_trust_boundary():
-            self._trust_boundary = self.lookup_trust_boundary(request)
+            self._trust_boundary = self._lookup_trust_boundary(request)
 
     def _create_self_signed_jwt(self, audience):
         """Create a self-signed JWT from the credentials if requirements are met.

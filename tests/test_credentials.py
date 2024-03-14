@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import copy
 import datetime
 
 import mock
@@ -41,10 +42,10 @@ class CredentialsImplWithTrustBoundary(credentials.CredentialsWithTrustBoundary)
 
     def refresh(self, request):
         self.token = request
-        self._trust_boundary = self.lookup_trust_boundary(request)
+        self._trust_boundary = self._lookup_trust_boundary(request)
 
-    def lookup_trust_boundary(self, request):
-        return credentials.DEFAULT_TRUST_BOUNDARY
+    def _lookup_trust_boundary(self, request):
+        return copy.deepcopy(credentials.DEFAULT_TRUST_BOUNDARY)
 
 
 class CredentialsImplWithMetrics(credentials.Credentials):

@@ -626,7 +626,7 @@ def test_lookup_trust_boundary_request_error():
     mock_request.side_effect = Exception("Mock Request Error")
 
     with pytest.raises(exceptions.TransportError):
-        _client.lookup_trust_boundary(mock_request, "mock_url", {})
+        _client.handle_lookup_trust_boundary(mock_request, "mock_url", {})
 
 
 @pytest.mark.parametrize(
@@ -694,8 +694,10 @@ def test_lookup_trust_boundary(test_data):
     mock_request.return_value = mock_response
 
     if not expect_error:
-        trust_boundary = _client.lookup_trust_boundary(mock_request, "mock_url", {})
+        trust_boundary = _client.handle_lookup_trust_boundary(
+            mock_request, "mock_url", {}
+        )
         assert trust_boundary == test_data.get("expect_trust_boundary")
     else:
         with pytest.raises(expect_error, match=msg):
-            _client.lookup_trust_boundary(mock_request, "mock_url", {})
+            _client.handle_lookup_trust_boundary(mock_request, "mock_url", {})

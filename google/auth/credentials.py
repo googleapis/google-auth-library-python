@@ -14,7 +14,6 @@
 """Interfaces for credentials."""
 
 import abc
-import copy
 from enum import Enum
 import os
 
@@ -23,7 +22,7 @@ from google.auth import exceptions
 from google.auth import metrics
 from google.auth._refresh_worker import RefreshThreadManager
 
-DEFAULT_TRUST_BOUNDARY = copy.deepcopy({"locations": [], "encoded_locations": "0x0"})
+DEFAULT_TRUST_BOUNDARY = {"locations": [], "encoded_locations": "0x0"}
 DEFAULT_UNIVERSE_DOMAIN = "googleapis.com"
 
 
@@ -223,13 +222,14 @@ class Credentials(metaclass=abc.ABCMeta):
 
 
 class CredentialsWithTrustBoundary(Credentials):
-    """Abstract base for credentials supporting trust boundary A class with
-    trust boundary will carry a trust boundary info as a cache.
+    """Abstract base for credentials supporting trust boundary.
 
-    The cache value can be either injected or fetch from a global lookup
-    if enabled. Upon we apply credential headers to a request, a trust
-    boundary value will be added as a header. GFE will use the value to
-    routing.
+    A credential with trust boundary will carry a trust boundary info as a
+    cache. The cache value can be either or fetch from a global lookup or
+    injected via ``set_trust_boundary``.
+
+    Upon we apply credential headers to a request, a trust boundary value will
+    be added as a header. GFE will use the value to routing.
     """
 
     def apply(self, headers, token=None):
@@ -253,12 +253,12 @@ class CredentialsWithTrustBoundary(Credentials):
         if self._trust_boundary is not None:
             headers["x-allowed-locations"] = self._trust_boundary["encoded_locations"]
 
-    def lookup_trust_boundary(self, request):
+    def _lookup_trust_boundary(self, request):
         """Lookup trust boundary shall be implemented by subclasses.
 
         Upon the lookup, we send a request to the global lookup endpoint and then
         parse the valid response. Service account credentials, workload identity
-        pools and workforce pools implementation will be various.
+        pools and workforce pools will have different endpoints.
 
         Args:
             request (google.auth.transport.Request): A callable used to make
