@@ -493,8 +493,11 @@ Accessing resources using a custom supplier with OIDC or SAML
 This library also allows for a custom implementation of :class:`google.auth.identity_pool.SubjectTokenSupplier`
 to be specificed when creating a :class:`google.auth.identity_pool.Credential`. The supplier must
 return a valid OIDC or SAML2.0 subject token, which will then be exchanged for a
-Google Cloud access token.::
+Google Cloud access token. If an error occurs during token retrieval, the supplier
+should return a :class:`google.auth.exceptions.RefreshError` and indicate via the error
+whether the subject token retrieval is retryable.::
 
+    from google.auth import exceptions
     from google.auth import identity_pool
 
     class CustomSubjectTokenSupplier(identity_pool.SubjectTokenSupplier):
@@ -502,7 +505,12 @@ Google Cloud access token.::
         def get_subject_token(self, context, request):
             audience = context.audience
             subject_token_type = context.subject_token_type
-            # Return a valid subject token of the requested type for the requested audience.
+            try:
+                # Attempt to return the valid subject token of the requested type for the requested audience.
+            except Exception as e:
+                # If token retrieval fails, raise a refresh error, setting retryable to true if the client should
+                # attempt to retrieve the subject token again.
+                raise exceptions.RefreshError(e, retryable=True)
 
     supplier = CustomSubjectTokenSupplier()
 
@@ -533,17 +541,25 @@ Accessing resources using a custom supplier with AWS
 This library also allows for a custom implementation of :class:`google.auth.aws.AwsSecurityCredentialsSupplier`
 to be specificed when creating a :class:`google.auth.aws.Credential`. The supplier must
 return valid AWS security credentials, which will then be exchanged for a
-Google Cloud access token.::
+Google Cloud access token. If an error occurs during credential retrieval, the supplier
+should return a :class:`google.auth.exceptions.RefreshError` and indicate via the error
+whether the credential retrieval is retryable.::
 
     from google.auth import aws
+    from google.auth import exceptions
 
     class CustomAwsSecurityCredentialsSupplier(aws.AwsSecurityCredentialsSupplier):
 
         def get_aws_security_credentials(self, context, request):
             audience = context.audience
-            # Return valid AWS security credentials. These credentials are not cached by
-            # the google credential, so caching should be implemented in the supplier.
-            return aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, SESSION_TOKEN)
+            try:
+                # Return valid AWS security credentials. These credentials are not cached by
+                # the google credential, so caching should be implemented in the supplier.
+                return aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, SESSION_TOKEN)
+            except Exception as e:
+                # If credentials retrieval fails, raise a refresh error, setting retryable to true if the client should
+                # attempt to retrieve the subject token again.
+                raise exceptions.RefreshError(e, retryable=True)
 
         def get_aws_region(self, context, request):
             # Return active AWS region.
@@ -865,8 +881,11 @@ Accessing resources using a custom supplier with OIDC or SAML
 This library also allows for a custom implementation of :class:`google.auth.identity_pool.SubjectTokenSupplier`
 to be specificed when creating a :class:`google.auth.identity_pool.Credential`. The supplier must
 return a valid OIDC or SAML2.0 subject token, which will then be exchanged for a
-Google Cloud access token.::
+Google Cloud access token. If an error occurs during token retrieval, the supplier
+should return a :class:`google.auth.exceptions.RefreshError` and indicate via the error
+whether the subject token retrieval is retryable.::
 
+    from google.auth import exceptions
     from google.auth import identity_pool
 
     class CustomSubjectTokenSupplier(identity_pool.SubjectTokenSupplier):
@@ -874,7 +893,13 @@ Google Cloud access token.::
         def get_subject_token(self, context, request):
             audience = context.audience
             subject_token_type = context.subject_token_type
-            # Return a valid subject token of the requested type for the requested audience.
+            try:
+                # Attempt to return the valid subject token of the requested type for the requested audience.
+            except Exception as e:
+                # If token retrieval fails, raise a refresh error, setting retryable to true if the client should
+                # attempt to retrieve the subject token again.
+                raise exceptions.RefreshError(e, retryable=True)
+
 
     supplier = CustomSubjectTokenSupplier()
 
