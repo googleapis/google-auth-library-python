@@ -521,10 +521,11 @@ whether the subject token retrieval is retryable.::
         scopes=SCOPES # Set desired scopes.
     )
 
-Where the `audience`_ is: ``//iam.googleapis.com/locations/global/workloadPools/$WORKLOAD_POOL_ID/providers/$PROVIDER_ID``
+Where the `audience`_ is: ``///iam.googleapis.com/projects/PROJECT_NUMBER/locations/global/workloadIdentityPools/POOL_ID/providers/PROVIDER_ID``
 Where the following variables need to be substituted:
 
-* ``$WORKLOAD_POOL_ID``: The workload pool ID.
+* ``$PROJECT_NUMBER``: The project number.
+* ``$POOL_ID``: The workload pool ID.
 * ``$PROVIDER_ID``: The provider ID.
 
 The values for audience, service account impersonation URL, and any other builder field can also be found
@@ -573,10 +574,11 @@ whether the credential retrieval is retryable.::
         scopes=SCOPES # Set desired scopes.
     )
 
-Where the `audience`_ is: ``//iam.googleapis.com/locations/global/workloadPools/$WORKLOAD_POOL_ID/providers/$PROVIDER_ID``
+Where the `audience`_ is: ``///iam.googleapis.com/projects/PROJECT_NUMBER/locations/global/workloadIdentityPools/POOL_ID/providers/PROVIDER_ID``
 Where the following variables need to be substituted:
 
-* ``$WORKLOAD_POOL_ID``: The workload pool ID.
+* ``$PROJECT_NUMBER``: The project number.
+* ``$POOL_ID``: The workload pool ID.
 * ``$PROVIDER_ID``: The provider ID.
 
 The values for audience, service account impersonation URL, and any other builder field can also be found

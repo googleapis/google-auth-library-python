@@ -53,8 +53,9 @@ from google.auth import external_account
 
 class SubjectTokenSupplier(metaclass=abc.ABCMeta):
     """Base class for subject token suppliers. This can be implemented with custom logic to retrieve
-    a subject token to exchange for a Google Cloud access token. The identity pool credential does
-    not cache the subject token, so caching logic should be added in the implementation.
+    a subject token to exchange for a Google Cloud access token when using Workload or
+    Workforce Identity Federation. The identity pool credential does not cache the subject token,
+    so caching logic should be added in the implementation.
     """
 
     @abc.abstractmethod
