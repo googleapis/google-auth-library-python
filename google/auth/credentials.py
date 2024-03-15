@@ -284,8 +284,7 @@ class CredentialsWithTrustBoundary(Credentials):
                         "encoded_locations": "0xA30"
                     }
 
-                If the universe global lookup is not launched yet, a default
-                trust boundary of "all" will be returned.
+                If there are no trust boundaries set, we assume all are valid.
 
                 .. code-block:
 
