@@ -706,7 +706,7 @@ class Credentials(external_account.Credentials):
                 raise exceptions.InvalidResource(
                     "No valid AWS 'credential_source' provided"
                 )
-            if env_version is None or int(env_version) != 1:
+            elif env_version is None or int(env_version) != 1:
                 raise exceptions.InvalidValue(
                     "aws version '{}' is not supported in the current build.".format(
                         env_version
