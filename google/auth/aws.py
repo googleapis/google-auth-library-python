@@ -70,7 +70,7 @@ _DEFAULT_AWS_REGIONAL_CREDENTIAL_VERIFICATION_URL = (
     "https://sts.{region}.amazonaws.com?Action=GetCallerIdentity&Version=2011-06-15"
 )
 # IMDSV2 session token lifetime. This is set to a low value because the session token is used immediately.
-_IMDSV2_SESSION_TOKEN_TTL = "300"
+_IMDSV2_SESSION_TOKEN_TTL_SECONDS = "300"
 
 
 class RequestSigner(object):
@@ -490,7 +490,7 @@ class _DefaultAwsSecurityCredentialsSupplier(AwsSecurityCredentialsSupplier):
     def _get_imdsv2_session_token(self, request):
         if request is not None and self._imdsv2_session_token_url is not None:
             headers = {
-                "X-aws-ec2-metadata-token-ttl-seconds": _IMDSV2_SESSION_TOKEN_TTL
+                "X-aws-ec2-metadata-token-ttl-seconds": _IMDSV2_SESSION_TOKEN_TTL_SECONDS
             }
 
             imdsv2_session_token_response = request(
