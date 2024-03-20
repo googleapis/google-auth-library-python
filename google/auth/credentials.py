@@ -14,6 +14,7 @@
 """Interfaces for credentials."""
 
 import abc
+import copy
 from enum import Enum
 import os
 
@@ -250,8 +251,8 @@ class CredentialsWithTrustBoundary(Credentials):
             }
         """
         super().apply(headers, token)
-        if self._trust_boundary is not None:
-            headers["x-allowed-locations"] = self._trust_boundary["encoded_locations"]
+        if self.trust_boundary is not None:
+            headers["x-allowed-locations"] = self.trust_boundary["encoded_locations"]
 
     def _lookup_trust_boundary(self, request):
         """Lookup trust boundary shall be implemented by subclasses.
@@ -298,23 +299,17 @@ class CredentialsWithTrustBoundary(Credentials):
             exceptions.RefreshError: If the query response is not 200.
             exceptions.MalformedError: If the response is not in a valid format.
         """
-        raise NotImplementedError("Missing definition of trust boundary lookup")
-
-    def set_trust_boundary(self, trust_boundary):
-        """Sets the trust boundary value to the credential."""
-        self._trust_boundary = trust_boundary
-
-    def _enable_trust_boundary_lookup(self):
-        """A private function to enable trust boundary."""
-        self._trust_boundary_lookup_enabled = True
+        return copy.deepcopy(DEFAULT_TRUST_BOUNDARY)
 
     @property
-    def trust_boundary_lookup_enabled(self):
-        return self._trust_boundary_lookup_enabled
+    def trust_boundary(self):
+        """Sets the trust boundary value to the credential."""
+        return self._trust_boundary
 
-    @trust_boundary_lookup_enabled.setter
-    def trust_boundary_lookup_enabled(self, value):
-        self._trust_boundary_lookup_enabled = value
+    @trust_boundary.setter
+    def trust_boundary(self, trust_boundary):
+        """Sets the trust boundary value to the credential."""
+        self._trust_boundary = trust_boundary
 
 
 class CredentialsWithQuotaProject(Credentials):

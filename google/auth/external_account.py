@@ -231,9 +231,6 @@ class Credentials(
             args.pop("workforce_pool_user_project")
         return args
 
-    def _lookup_trust_boundary(self, request):
-        """Currently for external account, a default trust boundary is used. """
-        return copy.deepcopy(credentials.DEFAULT_TRUST_BOUNDARY)
 
     @property
     def service_account_email(self):

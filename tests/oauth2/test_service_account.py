@@ -490,7 +490,7 @@ class TestCredentials(object):
     @mock.patch("google.oauth2._client.jwt_grant", autospec=True)
     def test_refresh_success_with_trust_boundary(self, jwt_grant):
         credentials = self.make_credentials()
-        credentials._enable_trust_boundary_lookup()
+        credentials.trust_boundary = copy.deepcopy(DEFAULT_TRUST_BOUNDARY)
         token = "token"
         jwt_grant.return_value = (
             token,
@@ -498,12 +498,7 @@ class TestCredentials(object):
             {},
         )
         request = mock.create_autospec(transport.Request, instance=True)
-
-        with mock.patch(
-            "google.oauth2._client.handle_lookup_trust_boundary",
-            return_value=copy.deepcopy(DEFAULT_TRUST_BOUNDARY),
-        ):
-            credentials.refresh(request)
+        credentials.refresh(request)
 
         # Check jwt grant call.
         assert jwt_grant.called
@@ -523,135 +518,28 @@ class TestCredentials(object):
         assert credentials.valid
 
     @mock.patch("google.oauth2._client.jwt_grant", autospec=True)
-    def test_refresh_success_with_trust_boundary_when_token_still_valid(
-        self, jwt_grant
-    ):
+    def test_before_request_with_trust_boundary_refreshes(self, jwt_grant):
         credentials = self.make_credentials()
-        credentials._enable_trust_boundary_lookup()
-        credentials.set_trust_boundary(None)
+        credentials.trust_boundary = copy.deepcopy(DEFAULT_TRUST_BOUNDARY)
         token = "token"
         jwt_grant.return_value = (
             token,
             _helpers.utcnow() + datetime.timedelta(seconds=500),
-            {},
+            None,
         )
         request = mock.create_autospec(transport.Request, instance=True)
 
-        # Refresh credentials
-        with mock.patch(
-            "google.oauth2._client.handle_lookup_trust_boundary",
-            return_value=copy.deepcopy(DEFAULT_TRUST_BOUNDARY),
-        ):
-            credentials.refresh(request)
+        # Credentials should start as invalid
+        assert not credentials.valid
 
-        # Check jwt grant call.
+        # before_request should cause a refresh
+        credentials.before_request(request, "GET", "http://example.com?a=1#3", {})
+
+        # The refresh endpoint should've been called.
         assert jwt_grant.called
 
-        called_request, token_uri, assertion = jwt_grant.call_args[0]
-        assert called_request == request
-        assert token_uri == credentials._token_uri
-        assert jwt.decode(assertion, PUBLIC_CERT_BYTES)
-        # No further assertion done on the token, as there are separate tests
-        # for checking the authorization grant assertion.
-
-        # Check that the credentials have the token.
-        assert credentials.token == token
-
-        # Check that the credentials are valid (have a token and are not
-        # expired)
+        # Credentials should now be valid.
         assert credentials.valid
-
-        with mock.patch(
-            "google.oauth2._client.handle_lookup_trust_boundary",
-            return_value=copy.deepcopy(DEFAULT_TRUST_BOUNDARY),
-        ):
-            credentials.refresh(request)
-
-    @mock.patch("google.oauth2._client.jwt_grant", autospec=True)
-    def test_refresh_with_trust_boundary_when_initial_lookup_encounter_errors(
-        self, jwt_grant
-    ):
-        credentials = self.make_credentials()
-        credentials._enable_trust_boundary_lookup()
-        credentials.set_trust_boundary(None)
-        token = "token"
-        jwt_grant.return_value = (
-            token,
-            _helpers.utcnow() + datetime.timedelta(seconds=500),
-            {},
-        )
-        request = mock.create_autospec(transport.Request, instance=True)
-
-        # Refresh credentials
-        with mock.patch(
-            "google.oauth2._client.handle_lookup_trust_boundary",
-            side_effect=exceptions.GoogleAuthError,
-        ):
-            with pytest.raises(exceptions.GoogleAuthError):
-                credentials.refresh(request)
-
-    @mock.patch("google.oauth2._client.jwt_grant", autospec=True)
-    def test_refresh_with_trust_boundary_when_token_still_valid_encounter_errors_when_no_cached_boundary(
-        self, jwt_grant
-    ):
-        credentials = self.make_credentials()
-        token = "token"
-        jwt_grant.return_value = (
-            token,
-            _helpers.utcnow() + datetime.timedelta(seconds=500),
-            {},
-        )
-        request = mock.create_autospec(transport.Request, instance=True)
-
-        # Refresh credentials
-        credentials.refresh(request)
-        # Check that the credentials are valid (have a token and are not
-        # expired)
-        assert credentials.valid
-
-        credentials._enable_trust_boundary_lookup()
-        # wipe out caching boundary
-        credentials.set_trust_boundary(None)
-        with mock.patch(
-            "google.oauth2._client.handle_lookup_trust_boundary",
-            side_effect=exceptions.GoogleAuthError,
-        ):
-            with pytest.raises(exceptions.GoogleAuthError):
-                credentials.refresh(request)
-
-    @mock.patch("google.oauth2._client.jwt_grant", autospec=True)
-    def test_refresh_with_trust_boundary_when_token_still_valid_encounter_errors_with_cached_boundary_ignore_error(
-        self, jwt_grant
-    ):
-        credentials = self.make_credentials()
-        token = "token"
-        jwt_grant.return_value = (
-            token,
-            _helpers.utcnow() + datetime.timedelta(seconds=500),
-            {},
-        )
-        request = mock.create_autospec(transport.Request, instance=True)
-
-        # Refresh credentials
-        credentials.refresh(request)
-        # Check that the credentials are valid (have a token and are not
-        # expired)
-        assert credentials.valid
-
-        TEST_CACHED_TRUST_BOUNDARY = {
-            "locations": ["us-central1", "us-east1", "europe-west1", "asia-east1"],
-            "encoded_locations": "0xA30",
-        }
-        credentials._enable_trust_boundary_lookup()
-        # wipe out caching boundary
-        credentials.set_trust_boundary(TEST_CACHED_TRUST_BOUNDARY)
-        with mock.patch(
-            "google.oauth2._client.handle_lookup_trust_boundary",
-            side_effect=exceptions.GoogleAuthError,
-        ):
-            credentials.refresh(request)
-
-        assert credentials._trust_boundary == TEST_CACHED_TRUST_BOUNDARY
 
     @mock.patch("google.oauth2._client.jwt_grant", autospec=True)
     def test_before_request_refreshes(self, jwt_grant):
@@ -668,11 +556,7 @@ class TestCredentials(object):
         assert not credentials.valid
 
         # before_request should cause a refresh
-        with mock.patch(
-            "google.oauth2._client.handle_lookup_trust_boundary",
-            return_value=copy.deepcopy(DEFAULT_TRUST_BOUNDARY),
-        ):
-            credentials.before_request(request, "GET", "http://example.com?a=1#3", {})
+        credentials.before_request(request, "GET", "http://example.com?a=1#3", {})
 
         # The refresh endpoint should've been called.
         assert jwt_grant.called
@@ -714,7 +598,7 @@ class TestCredentials(object):
     def test_refresh_with_valid_jwt_credentials(self, make_jwt):
         credentials = self.make_credentials()
         credentials._create_self_signed_jwt("https://pubsub.googleapis.com")
-        credentials.set_trust_boundary(copy.deepcopy(DEFAULT_TRUST_BOUNDARY))
+        credentials.trust_boundary = copy.deepcopy(DEFAULT_TRUST_BOUNDARY)
 
         request = mock.create_autospec(transport.Request, instance=True)
 
@@ -726,22 +610,12 @@ class TestCredentials(object):
         assert not credentials.valid
 
         # before_request should cause a refresh
-        with mock.patch(
-            "google.oauth2._client.handle_lookup_trust_boundary",
-            return_value=copy.deepcopy(DEFAULT_TRUST_BOUNDARY),
-        ):
-            credentials.before_request(request, "GET", "http://example.com?a=1#3", {})
+        credentials.before_request(request, "GET", "http://example.com?a=1#3", {})
 
         # Credentials should now be valid.
         assert credentials.valid
 
-        # Call the refresh on a valid credential to trigger the flow of reset
-        # trust boundary cache
-        with mock.patch(
-            "google.oauth2._client.handle_lookup_trust_boundary",
-            return_value=copy.deepcopy(DEFAULT_TRUST_BOUNDARY),
-        ):
-            credentials.refresh(request)
+        credentials.refresh(request)
 
         # Assert make_jwt was called
         assert make_jwt.call_count == 2
@@ -816,6 +690,36 @@ class TestCredentials(object):
             credentials.refresh(None)
         assert excinfo.match("domain wide delegation is not supported")
 
+
+    @pytest.mark.parametrize("test_data", [
+        {
+            "name": "happy path",
+            "expect_return": {
+                "locations": "us-east1",
+                "encoded_locations": "0x30"
+            }
+        },
+        {
+            "name": "lookup trust boundary error",
+            "expect_error": exceptions.GoogleAuthError,
+            "expect_error_msg": "mock error"
+        }
+    ])
+    def test_lookup_trust_boundary(self, test_data):
+        credentials = self.make_credentials()
+        if not test_data.get("expect_error"):
+            with mock.patch(
+                "google.oauth2._client.handle_lookup_trust_boundary",
+                return_value=test_data["expect_return"]
+            ):
+                assert test_data["expect_return"] == credentials._lookup_trust_boundary(mock.Mock())
+        else:
+            with mock.patch(
+                "google.oauth2._client.handle_lookup_trust_boundary",
+                side_effect=test_data["expect_error"],
+            ):
+                with pytest.raises(test_data["expect_error"]):
+                    credentials._lookup_trust_boundary(mock.Mock())
 
 class TestIDTokenCredentials(object):
     SERVICE_ACCOUNT_EMAIL = "service-account@example.com"

@@ -35,25 +35,16 @@ class CredentialsImpl(credentials.Credentials):
         raise NotImplementedError()
 
 
-class CredentialsImplWithTrustBoundary(credentials.CredentialsWithTrustBoundary):
-    def __init__(self):
-        super().__init__()
-        self._trust_boundary_lookup_enabled = False
-
-    def refresh(self, request):
-        self.token = request
-        self._trust_boundary = self._lookup_trust_boundary(request)
-
-    def _lookup_trust_boundary(self, request):
-        return copy.deepcopy(credentials.DEFAULT_TRUST_BOUNDARY)
-
-
 class CredentialsImplWithMetrics(credentials.Credentials):
     def refresh(self, request):
         self.token = request
 
     def _metric_header_for_usage(self):
         return "foo"
+
+class CredentialsWithTrustBoundaryImpl(credentials.CredentialsWithTrustBoundary):
+    def refresh(self, request):
+        self.token = request
 
 
 def test_credentials_constructor():
@@ -120,33 +111,27 @@ def test_before_request():
 
 
 def test_before_request_with_trust_boundary():
-    credentials = CredentialsImplWithTrustBoundary()
-    credentials._enable_trust_boundary_lookup()
+    credentials = CredentialsWithTrustBoundaryImpl()
     request = "token"
     headers = {}
+    test_trust_boundary = {
+        "locations": [],
+        "encoded_locations": "0x30"
+    }
 
-    # First call should call refresh, setting the token.
-    credentials.before_request(request, "http://example.com", "GET", headers)
-    assert credentials.valid
-    assert credentials.token == "token"
-    assert headers["authorization"] == "Bearer token"
-    assert (
-        headers["x-allowed-locations"]
-        == credentials._trust_boundary["encoded_locations"]
-    )
-
-    request = "token2"
-    headers = {}
-
-    # Second call shouldn't call refresh and we removed the trust boundary
-    # so that the "x-allowed-locations" shouldn't be applied to headers
-    credentials.set_trust_boundary(None)
     credentials.before_request(request, "http://example.com", "GET", headers)
     assert credentials.valid
     assert credentials.token == "token"
     assert headers["authorization"] == "Bearer token"
     assert "x-allowed-locations" not in headers
 
+    credentials.trust_boundary = copy.deepcopy(test_trust_boundary)
+    credentials.before_request(request, "http://example.com", "GET", headers)
+    assert credentials.valid
+    assert credentials.valid
+    assert credentials.token == "token"
+    assert headers["authorization"] == "Bearer token"
+    assert headers["x-allowed-locations"] == test_trust_boundary["encoded_locations"]
 
 def test_before_request_metrics():
     credentials = CredentialsImplWithMetrics()
@@ -358,8 +343,6 @@ def test_token_state_no_expiry():
     c.before_request(request, "http://example.com", "GET", {})
 
 
-def test_credentials_with_trust_boundary_setter_and_getter():
-    credentials = CredentialsImplWithTrustBoundary()
-    assert credentials.trust_boundary_lookup_enabled is False
-    credentials.trust_boundary_lookup_enabled = True
-    assert credentials.trust_boundary_lookup_enabled is True
+def test_credentials_with_trust_boundary_lookup():
+    c = CredentialsWithTrustBoundaryImpl()
+    assert c._lookup_trust_boundary(None) == credentials.DEFAULT_TRUST_BOUNDARY

@@ -461,29 +461,7 @@ class Credentials(
             raise exceptions.RefreshError(
                 "domain wide delegation is not supported for non-default universe domain"
             )
-
-        # If a refresh is triggered under the case of credential not expired
-        # that means some abnormal cases proactively trigger this refresh, we
-        # will attemp to fetch trust boundary but tolerant on errors if we
-        # already have cached trust boundaries.
-        if (
-            self.token_state == credentials.TokenState.FRESH
-            and self._should_lookup_trust_boundary()
-        ):
-            try:
-                self._trust_boundary = self._lookup_trust_boundary(request)
-            except Exception as err:
-                if not isinstance(self._trust_boundary, dict):
-                    _LOGGER.warning(
-                        "trust boundary lookup failed and a cache was not available"
-                    )
-                    raise
-                # if we already have trust boundary values, we log the error
-                # and keep the cached trust boundary value to let it fail
-                # afterwards.
-                else:
-                    _LOGGER.warning(f"trust boundary refresh failed due to {err}")
-
+        
         if self._use_self_signed_jwt():
             self._jwt_credentials.refresh(request)
             self.token = self._jwt_credentials.token.decode()
@@ -496,9 +474,6 @@ class Credentials(
             self.token = access_token
             self.expiry = expiry
 
-        # In case of trust boundary never been fetched.
-        if self._trust_boundary is None and self._should_lookup_trust_boundary():
-            self._trust_boundary = self._lookup_trust_boundary(request)
 
     def _create_self_signed_jwt(self, audience):
         """Create a self-signed JWT from the credentials if requirements are met.
@@ -553,12 +528,6 @@ class Credentials(
     @_helpers.copy_docstring(credentials.Signing)
     def signer_email(self):
         return self._service_account_email
-
-    def _should_lookup_trust_boundary(self):
-        return (
-            self.universe_domain in _client.TRUST_BOUNDARY_ENABLED_UNIVERSES
-            and self._trust_boundary_lookup_enabled
-        )
 
 
 class IDTokenCredentials(
