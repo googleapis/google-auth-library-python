@@ -73,7 +73,6 @@ specific subject using :meth:`~Credentials.with_subject`.
 import copy
 import datetime
 import logging
-import os
 
 from google.auth import _helpers
 from google.auth import _service_account_info
