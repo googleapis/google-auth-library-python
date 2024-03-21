@@ -90,7 +90,6 @@ _GOOGLE_OAUTH2_TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token"
 _TRUST_BOUNDARY_LOOKUP_ENDPOINT = (
     "iamcredentials.{}/v1/projects/-/serviceAccounts/{}/trustBoundary"
 )
-TRUST_BOUNDARY_LOOKUP_ENABLED_ENV = "TRUST_BOUNDARY_LOOKUP_ENABLED"
 
 
 class Credentials(
@@ -200,14 +199,7 @@ class Credentials(
             self._additional_claims = additional_claims
         else:
             self._additional_claims = {}
-        self._trust_boundary_lookup_enabled = (
-            os.environ.get(TRUST_BOUNDARY_LOOKUP_ENABLED_ENV) == "1"
-        )
-        self._trust_boundary = (
-            None
-            if self._trust_boundary_lookup_enabled
-            else copy.deepcopy(credentials.DEFAULT_TRUST_BOUNDARY)
-        )
+        self._trust_boundary = copy.deepcopy(credentials.DEFAULT_TRUST_BOUNDARY)
 
     @classmethod
     def _from_signer_and_info(cls, signer, info, **kwargs):
