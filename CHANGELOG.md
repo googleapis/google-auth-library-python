@@ -4,6 +4,32 @@
 
 [1]: https://pypi.org/project/google-auth/#history
 
+## [2.29.0](https://github.com/googleapis/google-auth-library-python/compare/v2.28.2...v2.29.0) (2024-03-18)
+
+
+### Features
+
+* Adds support for custom suppliers in AWS and Identity Pool credentials ([#1496](https://github.com/googleapis/google-auth-library-python/issues/1496)) ([3af1768](https://github.com/googleapis/google-auth-library-python/commit/3af176879fc356f785b9f5b449ce4270f437db7e))
+
+
+### Bug Fixes
+
+* Refactor tech debt in aws and identity pool credentials ([#1501](https://github.com/googleapis/google-auth-library-python/issues/1501)) ([ce435b0](https://github.com/googleapis/google-auth-library-python/commit/ce435b0b13f43ef9258c8693f6c3beac06da64e2))
+
+## [2.28.2](https://github.com/googleapis/google-auth-library-python/compare/v2.28.1...v2.28.2) (2024-03-08)
+
+
+### Bug Fixes
+
+* Remove gce log for expected 404 ([#1491](https://github.com/googleapis/google-auth-library-python/issues/1491)) ([cb04e49](https://github.com/googleapis/google-auth-library-python/commit/cb04e49efa17004bff3aaa9ed974396d10f839b5))
+
+## [2.28.1](https://github.com/googleapis/google-auth-library-python/compare/v2.28.0...v2.28.1) (2024-02-21)
+
+
+### Bug Fixes
+
+* Typo when setting the state for the pickle deserializer. ([#1479](https://github.com/googleapis/google-auth-library-python/issues/1479)) ([08b5cc3](https://github.com/googleapis/google-auth-library-python/commit/08b5cc38d09d388a5a7c11942b7992870ee012b7))
+
 ## [2.28.0](https://github.com/googleapis/google-auth-library-python/compare/v2.27.0...v2.28.0) (2024-02-15)
 
 
