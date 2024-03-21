@@ -42,6 +42,7 @@ class CredentialsImplWithMetrics(credentials.Credentials):
     def _metric_header_for_usage(self):
         return "foo"
 
+
 class CredentialsWithTrustBoundaryImpl(credentials.CredentialsWithTrustBoundary):
     def refresh(self, request):
         self.token = request
@@ -114,10 +115,7 @@ def test_before_request_with_trust_boundary():
     credentials = CredentialsWithTrustBoundaryImpl()
     request = "token"
     headers = {}
-    test_trust_boundary = {
-        "locations": [],
-        "encoded_locations": "0x30"
-    }
+    test_trust_boundary = {"locations": [], "encoded_locations": "0x30"}
 
     credentials.before_request(request, "http://example.com", "GET", headers)
     assert credentials.valid
@@ -132,6 +130,7 @@ def test_before_request_with_trust_boundary():
     assert credentials.token == "token"
     assert headers["authorization"] == "Bearer token"
     assert headers["x-allowed-locations"] == test_trust_boundary["encoded_locations"]
+
 
 def test_before_request_metrics():
     credentials = CredentialsImplWithMetrics()

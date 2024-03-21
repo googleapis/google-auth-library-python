@@ -453,7 +453,7 @@ class Credentials(
             raise exceptions.RefreshError(
                 "domain wide delegation is not supported for non-default universe domain"
             )
-        
+
         if self._use_self_signed_jwt():
             self._jwt_credentials.refresh(request)
             self.token = self._jwt_credentials.token.decode()
@@ -465,7 +465,6 @@ class Credentials(
             )
             self.token = access_token
             self.expiry = expiry
-
 
     def _create_self_signed_jwt(self, audience):
         """Create a self-signed JWT from the credentials if requirements are met.

@@ -231,7 +231,6 @@ class Credentials(
             args.pop("workforce_pool_user_project")
         return args
 
-
     @property
     def service_account_email(self):
         """Returns the service account email if service account impersonation is used.

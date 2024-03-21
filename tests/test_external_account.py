@@ -1925,6 +1925,7 @@ class TestCredentials(object):
         assert trust_boundary["locations"] == []
         assert trust_boundary["encoded_locations"] == "0x0"
 
+
 def test_supplier_context():
     context = external_account.SupplierContext("TestTokenType", "TestAudience")
 

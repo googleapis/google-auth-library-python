@@ -690,29 +690,30 @@ class TestCredentials(object):
             credentials.refresh(None)
         assert excinfo.match("domain wide delegation is not supported")
 
-
-    @pytest.mark.parametrize("test_data", [
-        {
-            "name": "happy path",
-            "expect_return": {
-                "locations": "us-east1",
-                "encoded_locations": "0x30"
-            }
-        },
-        {
-            "name": "lookup trust boundary error",
-            "expect_error": exceptions.GoogleAuthError,
-            "expect_error_msg": "mock error"
-        }
-    ])
+    @pytest.mark.parametrize(
+        "test_data",
+        [
+            {
+                "name": "happy path",
+                "expect_return": {"locations": "us-east1", "encoded_locations": "0x30"},
+            },
+            {
+                "name": "lookup trust boundary error",
+                "expect_error": exceptions.GoogleAuthError,
+                "expect_error_msg": "mock error",
+            },
+        ],
+    )
     def test_lookup_trust_boundary(self, test_data):
         credentials = self.make_credentials()
         if not test_data.get("expect_error"):
             with mock.patch(
                 "google.oauth2._client.handle_lookup_trust_boundary",
-                return_value=test_data["expect_return"]
+                return_value=test_data["expect_return"],
             ):
-                assert test_data["expect_return"] == credentials._lookup_trust_boundary(mock.Mock())
+                assert test_data["expect_return"] == credentials._lookup_trust_boundary(
+                    mock.Mock()
+                )
         else:
             with mock.patch(
                 "google.oauth2._client.handle_lookup_trust_boundary",
@@ -720,6 +721,7 @@ class TestCredentials(object):
             ):
                 with pytest.raises(test_data["expect_error"]):
                     credentials._lookup_trust_boundary(mock.Mock())
+
 
 class TestIDTokenCredentials(object):
     SERVICE_ACCOUNT_EMAIL = "service-account@example.com"
