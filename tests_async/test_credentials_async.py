@@ -76,7 +76,7 @@ async def test_before_request():
     headers = {}
 
     # Second call shouldn't call refresh.
-    credentials.before_request(request, "http://example.com", "GET", headers)
+    await credentials.before_request(request, "http://example.com", "GET", headers)
 
     assert credentials.valid
     assert credentials.token == "token"
