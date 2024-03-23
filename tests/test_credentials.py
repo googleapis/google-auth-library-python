@@ -14,12 +14,14 @@
 
 import copy
 import datetime
+import json
 
 import mock
 import pytest  # type: ignore
 
 from google.auth import _helpers
 from google.auth import credentials
+from google.auth import exceptions
 
 
 class CredentialsImpl(credentials.Credentials):
@@ -345,3 +347,50 @@ def test_token_state_no_expiry():
 def test_credentials_with_trust_boundary_lookup():
     c = CredentialsWithTrustBoundaryImpl()
     assert c._lookup_trust_boundary(None) == credentials.DEFAULT_TRUST_BOUNDARY
+
+
+@pytest.mark.parametrize(
+    "test_data",
+    [
+        {
+            "name": "valid payload",
+            "expect_trust_boundary": {
+                "locations": ["us-central1", "us-east1", "europe-west1", "asia-east1"],
+                "encoded_locations": "0xA30",
+            },
+            "trust_boundary_string": json.dumps(
+                {
+                    "locations": [
+                        "us-central1",
+                        "us-east1",
+                        "europe-west1",
+                        "asia-east1",
+                    ],
+                    "encoded_locations": "0xA30",
+                }
+            ),
+        },
+        {
+            "name": "missing fields",
+            "trust_boundary_string": json.dumps({}),
+            "expect_error": exceptions.MalformedError,
+        },
+        {
+            "name": "invalid payload",
+            "trust_boundary_string": "afwewfwe",
+            "expect_error": exceptions.MalformedError,
+        },
+    ],
+)
+def test_parse_trust_boundary(test_data):
+    if not test_data.get("expect_error"):
+        assert test_data[
+            "expect_trust_boundary"
+        ] == credentials.CredentialsWithTrustBoundary.parse_trust_boundary(
+            test_data["trust_boundary_string"]
+        )
+    else:
+        with pytest.raises(test_data["expect_error"]):
+            credentials.CredentialsWithTrustBoundary.parse_trust_boundary(
+                test_data["trust_boundary_string"]
+            )

@@ -16,6 +16,7 @@
 import abc
 import copy
 from enum import Enum
+import json
 import os
 
 from google.auth import _helpers, environment_vars
@@ -310,6 +311,20 @@ class CredentialsWithTrustBoundary(Credentials):
     def trust_boundary(self, trust_boundary):
         """Sets the trust boundary value to the credential."""
         self._trust_boundary = trust_boundary
+
+    def parse_trust_boundary(trust_boundary_string: str):
+        try:
+            trust_boundary = json.loads(trust_boundary_string)
+            if (
+                "locations" not in trust_boundary
+                or "encoded_locations" not in trust_boundary
+            ):
+                raise exceptions.MalformedError
+            return trust_boundary
+        except Exception:
+            raise exceptions.MalformedError(
+                "Cannot parse trust boundary {}".format(trust_boundary_string)
+            )
 
 
 class CredentialsWithQuotaProject(Credentials):

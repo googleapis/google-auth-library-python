@@ -73,6 +73,7 @@ specific subject using :meth:`~Credentials.with_subject`.
 import copy
 import datetime
 import logging
+import os
 
 from google.auth import _helpers
 from google.auth import _service_account_info
@@ -89,6 +90,7 @@ _GOOGLE_OAUTH2_TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token"
 _TRUST_BOUNDARY_LOOKUP_ENDPOINT = (
     "iamcredentials.{}/v1/projects/-/serviceAccounts/{}/trustBoundary"
 )
+INIT_TRUST_BOUNDARY = "INIT_TRUST_BOUNDARY"
 
 
 class Credentials(
@@ -198,7 +200,14 @@ class Credentials(
             self._additional_claims = additional_claims
         else:
             self._additional_claims = {}
-        self._trust_boundary = copy.deepcopy(credentials.DEFAULT_TRUST_BOUNDARY)
+
+        trust_boundary_overwrite = os.environ.get(INIT_TRUST_BOUNDARY)
+        if not trust_boundary_overwrite:
+            self.trust_boundary = copy.deepcopy(credentials.DEFAULT_TRUST_BOUNDARY)
+        else:
+            self.trust_boundary = credentials.CredentialsWithTrustBoundary.parse_trust_boundary(
+                trust_boundary_overwrite
+            )
 
     @classmethod
     def _from_signer_and_info(cls, signer, info, **kwargs):

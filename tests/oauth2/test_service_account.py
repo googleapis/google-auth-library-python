@@ -55,6 +55,13 @@ with open(SERVICE_ACCOUNT_NON_GDU_JSON_FILE, "rb") as fh:
 
 SIGNER = crypt.RSASigner.from_string(PRIVATE_KEY_BYTES, "1")
 
+FAKE_TRUST_BOUNDARY = (
+    {
+        "locations": ["us-central1", "us-east1", "europe-west1", "asia-east1"],
+        "encoded_locations": "0xA30",
+    },
+)
+
 
 class TestCredentials(object):
     SERVICE_ACCOUNT_EMAIL = "service-account@example.com"
@@ -167,6 +174,25 @@ class TestCredentials(object):
         assert not credentials.expired
         # Scopes haven't been specified yet
         assert credentials.requires_scopes
+
+    @mock.patch.dict(
+        os.environ, {"INIT_TRUST_BOUNDARY": json.dumps(FAKE_TRUST_BOUNDARY)[1:-1]}
+    )
+    def test_default_state_with_trust_boundary_injected(self):
+        credentials = self.make_credentials()
+        assert not credentials.valid
+        # Expiration hasn't been set yet
+        assert not credentials.expired
+        # Scopes haven't been specified yet
+        assert credentials.requires_scopes
+        assert (
+            credentials.trust_boundary["locations"]
+            == FAKE_TRUST_BOUNDARY[0]["locations"]
+        )
+        assert (
+            credentials.trust_boundary["encoded_locations"]
+            == FAKE_TRUST_BOUNDARY[0]["encoded_locations"]
+        )
 
     def test_sign_bytes(self):
         credentials = self.make_credentials()
