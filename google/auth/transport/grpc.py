@@ -126,7 +126,7 @@ def secure_authorized_channel(
 
         # Create a channel.
         channel = google.auth.transport.grpc.secure_authorized_channel(
-            credentials, regular_endpoint, request,
+            credentials, request, regular_endpoint,
             ssl_credentials=grpc.ssl_channel_credentials())
 
         # Use the channel to create a stub.
