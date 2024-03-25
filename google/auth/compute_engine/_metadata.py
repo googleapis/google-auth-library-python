@@ -199,6 +199,7 @@ def get(
     url = _helpers.update_query(base_url, query_params)
 
     retries = 0
+    last_exception = None
     while retries < retry_count:
         try:
             response = request(url=url, method="GET", headers=headers_to_use)
@@ -213,11 +214,12 @@ def get(
                 e,
             )
             retries += 1
+            last_exception = e
     else:
         raise exceptions.TransportError(
             "Failed to retrieve {} from the Google Compute Engine "
             "metadata service. Compute Engine Metadata server unavailable".format(url)
-        )
+        ) from last_exception
 
     content = _helpers.from_bytes(response.data)
 
