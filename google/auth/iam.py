@@ -82,7 +82,7 @@ class Signer(crypt.Signer):
         message = _helpers.to_bytes(message)
 
         method = "POST"
-        url = _IAM_SIGN_ENDPOINT.format(self._service_account_email) + "?alt=json"
+        url = _IAM_SIGN_ENDPOINT.format(self._service_account_email)
         headers = {"Content-Type": "application/json"}
         body = json.dumps(
             {"payload": base64.b64encode(message).decode("utf-8")}
