@@ -147,7 +147,7 @@ class Credentials(
         super(Credentials, self).__init__()
         self._audience = audience
         self._subject_token_type = subject_token_type
-        self._universe_domain = universe_domain or credentials.DEFAULT_UNIVERSE_DOMAIN
+        self._universe_domain = universe_domain
         self._token_url = token_url
         if self._token_url == _DEFAULT_TOKEN_URL:
             self._token_url = self._token_url.replace(
