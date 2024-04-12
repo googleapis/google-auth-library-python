@@ -53,8 +53,7 @@ _METADATA_HEADERS = {_METADATA_FLAVOR_HEADER: _METADATA_FLAVOR_VALUE}
 
 # Timeout in seconds to wait for the GCE metadata server when detecting the
 # GCE environment.
-_METADATA_DEFAULT_TIMEOUT = 3
-
+_METADATA_PING_DEFAULT_TIMEOUT = 3
 # Detect GCE Residency
 _GOOGLE = "Google"
 _GCE_PRODUCT_NAME_FILE = "/sys/class/dmi/id/product_name"
@@ -117,7 +116,12 @@ def ping(request, timeout=None, retry_count=3):
     #       the metadata resolution was particularly slow. The latter case is
     #       "unlikely".
     if timeout is None:
-        timeout = float(os.getenv("GCE_METADATA_TIMEOUT", _METADATA_DEFAULT_TIMEOUT))
+        try:
+            timeout = float(os.getenv(
+                environment_vars.GCE_METADATA_TIMEOUT,
+                str(_METADATA_PING_DEFAULT_TIMEOUT)))
+        except ValueError:
+            timeout = _METADATA_PING_DEFAULT_TIMEOUT
 
     retries = 0
     headers = _METADATA_HEADERS.copy()
