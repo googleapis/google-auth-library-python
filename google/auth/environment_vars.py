@@ -72,6 +72,9 @@ LEGACY_APPENGINE_RUNTIME = "APPENGINE_RUNTIME"
 Used to distinguish between GAE gen1 and GAE gen2+.
 """
 
+GCE_METADATA_TIMEOUT = "GCE_METADATA_TIMEOUT"
+"""Environment variable for setting timeouts in seconds for metadata queries."""
+
 # AWS environment variables used with AWS workload identity pools to retrieve
 # AWS security credentials and the AWS region needed to create a serialized
 # signed requests to the AWS STS GetCalledIdentity API that can be exchanged
