@@ -192,7 +192,6 @@ def _run_next_challenge(msg, request, access_token):
 
 
 def _obtain_rapt(request, access_token, requested_scopes):
-
     """Given an http request method and reauth access token, get rapt token.
 
     Args:
