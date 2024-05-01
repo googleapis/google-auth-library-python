@@ -124,7 +124,7 @@ def cover(session):
 def docs(session):
     """Build the docs for this library."""
 
-    session.install("-e", ".[aiohttp]")
+    session.install("-e", ".[aiohttp,reauth]")
     session.install("sphinx", "alabaster", "recommonmark", "sphinx-docstring-typing")
 
     shutil.rmtree(os.path.join("docs", "_build"), ignore_errors=True)
