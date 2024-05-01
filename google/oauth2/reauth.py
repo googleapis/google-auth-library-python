@@ -34,6 +34,8 @@ Those steps are:
 
 import sys
 
+from pyu2f import errors as pyu2f_errors
+
 from google.auth import exceptions
 from google.auth import metrics
 from google.oauth2 import _client
@@ -190,6 +192,7 @@ def _run_next_challenge(msg, request, access_token):
 
 
 def _obtain_rapt(request, access_token, requested_scopes):
+
     """Given an http request method and reauth access token, get rapt token.
 
     Args:
@@ -230,12 +233,17 @@ def _obtain_rapt(request, access_token, requested_scopes):
                 " in an interactive session."
             )
 
-        msg = _run_next_challenge(msg, request, access_token)
+        try:
+            msg = _run_next_challenge(msg, request, access_token)
 
-        if not msg:
-            raise exceptions.ReauthFailError("Failed to obtain rapt token.")
-        if msg["status"] == _AUTHENTICATED:
-            return msg["encodedProofOfReauthToken"]
+            if not msg:
+                raise exceptions.ReauthFailError("Failed to obtain rapt token.")
+            if msg["status"] == _AUTHENTICATED:
+                return msg["encodedProofOfReauthToken"]
+        except pyu2f_errors.OsHidError as e:
+            raise exceptions.ReauthFailError(
+                "A security key reauthentication challenge was issued but no key was found. Try manually reauthenticating."
+            ) from e
 
     # If we got here it means we didn't get authenticated.
     raise exceptions.ReauthFailError("Failed to obtain rapt token.")
