@@ -195,7 +195,7 @@ def test_custom_tls_signer():
                     get_cert.assert_called_once()
                     get_sign_callback.assert_called_once()
                     offload_lib.ConfigureSslContext.assert_called_once()
-    assert signer_object.should_use_provider() == False
+    assert not signer_object.should_use_provider()
     assert signer_object._enterprise_cert_file_path == ENTERPRISE_CERT_FILE
     assert signer_object._offload_lib == offload_lib
     assert signer_object._signer_lib == signer_lib
