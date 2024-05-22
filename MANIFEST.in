@@ -1,3 +1,5 @@
 include README.rst LICENSE CHANGELOG.rst
+include google/auth/py.typed
+include google/oauth2/py.typed
 recursive-include tests *
 global-exclude *.pyc __pycache__
