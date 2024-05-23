@@ -16,13 +16,15 @@
 
 import json
 import logging
-from os import path
+from os import environ, path
 import re
 import subprocess
 
 from google.auth import exceptions
 
 CONTEXT_AWARE_METADATA_PATH = "~/.secureConnect/context_aware_metadata.json"
+_CERTIFICATE_CONFIGURATION_DEFAULT_PATH = "~/.config/gcloud/certificate_config.json"
+_CERTIFICATE_CONFIGURATION_ENV = "GOOGLE_API_CERTIFICATE_CONFIG"
 _CERT_PROVIDER_COMMAND = "cert_provider_command"
 _CERT_REGEX = re.compile(
     b"-----BEGIN CERTIFICATE-----.+-----END CERTIFICATE-----\r?\n?", re.DOTALL
@@ -63,26 +65,110 @@ def _check_dca_metadata_path(metadata_path):
     return metadata_path
 
 
-def _read_dca_metadata_file(metadata_path):
-    """Loads context aware metadata from the given path.
+def _read_json_file(path):
+    """Loads JSON from the given path.
 
     Args:
-        metadata_path (str): context aware metadata path.
+        path (str): the path to read from.
 
     Returns:
-        Dict[str, str]: The metadata.
+        Dict[str, str]: The JSON stored at the file.
 
     Raises:
-        google.auth.exceptions.ClientCertError: If failed to parse metadata as JSON.
+        google.auth.exceptions.ClientCertError: If failed to parse the file as JSON.
     """
     try:
-        with open(metadata_path) as f:
+        with open(path) as f:
             metadata = json.load(f)
     except ValueError as caught_exc:
         new_exc = exceptions.ClientCertError(caught_exc)
         raise new_exc from caught_exc
 
     return metadata
+
+
+def _get_workload_x509(certificate_config_path=None):
+    """Read the cert and key files specified in the certificate config provided.
+    If no config path is provided, check the environment variable and well known
+    gcloud location.
+
+    Args:
+        certificate_config_path (string): The certificate config path. If no path is provided,
+        the well known gcloud location will be used.
+
+    Returns:
+        Tuple[bytes, bytes]: client certificate bytes in PEM format and key
+            bytes in PEM format.
+
+    Raises:
+        google.auth.exceptions.ClientCertError: if problems occurs when retrieving
+        the certificate or key information.
+    """
+    absolute_path = _get_cert_config_path(certificate_config_path)
+    if absolute_path is None:
+        return None, None
+    data = _read_json_file(certificate_config_path)
+
+    workload = data["cert_configs"]["workload"]
+
+    cert_path = workload["cert_path"]
+    key_path = workload["key_path"]
+
+    return _read_cert_and_key_files(cert_path, key_path)
+
+
+def _get_cert_config_path(certificate_config_path=None):
+    """Gets the certificate configuration full path. If an override is provided,
+    check that the file exists, otherwise return the path stored at the environment
+    variable or the well known gcloud location.
+
+    Args:
+        certificate_config_path (string): The certificate config path. If provided, the well known
+        location and environment variable will be ignored.
+
+    Returns:
+        The absolute path of the certificate config file, and None if the file does not exist.
+    """
+
+    if certificate_config_path is None:
+        env_path = environ.get(_CERTIFICATE_CONFIGURATION_ENV, None)
+        if env_path is not None and env_path != "":
+            certificate_config_path = env_path
+        else:
+            certificate_config_path = _CERTIFICATE_CONFIGURATION_DEFAULT_PATH
+
+    certificate_config_path = path.expanduser(certificate_config_path)
+    if not path.exists(certificate_config_path):
+        return None
+    return certificate_config_path
+
+
+def _read_cert_and_key_files(cert_path, key_path):
+    cert_data = _read_cert_file(cert_path)
+    key_data = _read_key_file(key_path)
+
+    return cert_data, key_data
+
+
+def _read_cert_file(cert_path):
+    with open(cert_path, "rb") as cert_file:
+        cert_data = cert_file.read()
+
+    cert_match = re.findall(_CERT_REGEX, cert_data)
+    if len(cert_match) != 1:
+        raise exceptions.ClientCertError("Certificate file is invalid")
+    return cert_match[0]
+
+
+def _read_key_file(key_path):
+    with open(key_path, "rb") as key_file:
+        key_data = key_file.read()
+
+    key_match = re.findall(_KEY_REGEX, key_data)
+    if len(key_match) != 1:
+        raise exceptions.ClientCertError("Private key file is invalid")
+
+    return key_match[0]
 
 
 def _run_cert_provider_command(command, expect_encrypted_key=False):
@@ -163,7 +249,7 @@ def get_client_ssl_credentials(
     metadata_path = _check_dca_metadata_path(context_aware_metadata_path)
 
     if metadata_path:
-        metadata_json = _read_dca_metadata_file(metadata_path)
+        metadata_json = _read_json_file(metadata_path)
 
         if _CERT_PROVIDER_COMMAND not in metadata_json:
             raise exceptions.ClientCertError("Cert provider command is not found")
