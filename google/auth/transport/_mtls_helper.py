@@ -65,8 +65,8 @@ def _check_dca_metadata_path(metadata_path):
     return metadata_path
 
 
-def _read_json_file(path):
-    """Loads JSON from the given path.
+def _load_json_file(path):
+    """Reads and loads JSON from the given path.
 
     Args:
         path (str): the path to read from.
@@ -79,25 +79,25 @@ def _read_json_file(path):
     """
     try:
         with open(path) as f:
-            metadata = json.load(f)
+            json_data = json.load(f)
     except ValueError as caught_exc:
         new_exc = exceptions.ClientCertError(caught_exc)
         raise new_exc from caught_exc
 
-    return metadata
+    return json_data
 
 
-def _get_workload_x509(certificate_config_path=None):
-    """Read the cert and key files specified in the certificate config provided.
-    If no config path is provided, check the environment variable and well known
-    gcloud location.
+def _get_workload_cert_and_key(certificate_config_path=None):
+    """Read the workload identity cert and key files specified in the certificate config provided.
+    If no config path is provided, check the environment variable: "GOOGLE_API_CERTIFICATE_CONFIG"
+    first, then the well known gcloud location: "~/.config/gcloud/certificate_config.json".
 
     Args:
         certificate_config_path (string): The certificate config path. If no path is provided,
-        the well known gcloud location will be used.
+        the environment variable will be checked first, then the well known gcloud location.
 
     Returns:
-        Tuple[bytes, bytes]: client certificate bytes in PEM format and key
+        Tuple[Optional[bytes], Optional[bytes]]: client certificate bytes in PEM format and key
             bytes in PEM format.
 
     Raises:
@@ -107,20 +107,51 @@ def _get_workload_x509(certificate_config_path=None):
     absolute_path = _get_cert_config_path(certificate_config_path)
     if absolute_path is None:
         return None, None
-    data = _read_json_file(certificate_config_path)
+    data = _load_json_file(absolute_path)
 
-    workload = data["cert_configs"]["workload"]
+    if "cert_configs" not in data:
+        raise exceptions.ClientCertError(
+            'Certificate config file {} is in an invalid format, a "cert configs" object is expected'.format(
+                absolute_path
+            )
+        )
+    cert_configs = data["cert_configs"]
 
+    if "workload" not in cert_configs:
+        raise exceptions.ClientCertError(
+            'Certificate config file {} is in an invalid format, a "workload" cert config is expected'.format(
+                absolute_path
+            )
+        )
+    workload = cert_configs["workload"]
+
+    if "cert_path" not in workload:
+        raise exceptions.ClientCertError(
+            'Certificate config file {} is in an invalid format, a "cert_path" is expected in the workload cert config'.format(
+                absolute_path
+            )
+        )
     cert_path = workload["cert_path"]
+
+    if "key_path" not in workload:
+        raise exceptions.ClientCertError(
+            'Certificate config file {} is in an invalid format, a "key_path" is expected in the workload cert config'.format(
+                absolute_path
+            )
+        )
     key_path = workload["key_path"]
 
     return _read_cert_and_key_files(cert_path, key_path)
 
 
 def _get_cert_config_path(certificate_config_path=None):
-    """Gets the certificate configuration full path. If an override is provided,
-    check that the file exists, otherwise return the path stored at the environment
-    variable or the well known gcloud location.
+    """Gets the certificate configuration full path using the following order of precedence:
+
+    1: Explicit override, if set
+    2: Environment variable, if set
+    3: Well-known location
+
+    Returns "None" if the selected config file does not exist.
 
     Args:
         certificate_config_path (string): The certificate config path. If provided, the well known
@@ -156,7 +187,11 @@ def _read_cert_file(cert_path):
 
     cert_match = re.findall(_CERT_REGEX, cert_data)
     if len(cert_match) != 1:
-        raise exceptions.ClientCertError("Certificate file is invalid")
+        raise exceptions.ClientCertError(
+            "Certificate file {} is in an invalid format, a single PEM formatted certificate is expected".format(
+                cert_path
+            )
+        )
     return cert_match[0]
 
 
@@ -166,7 +201,11 @@ def _read_key_file(key_path):
 
     key_match = re.findall(_KEY_REGEX, key_data)
     if len(key_match) != 1:
-        raise exceptions.ClientCertError("Private key file is invalid")
+        raise exceptions.ClientCertError(
+            "Private key file {} is in an invalid format, a single PEM formatted private key is expected".format(
+                key_path
+            )
+        )
 
     return key_match[0]
 
@@ -249,7 +288,7 @@ def get_client_ssl_credentials(
     metadata_path = _check_dca_metadata_path(context_aware_metadata_path)
 
     if metadata_path:
-        metadata_json = _read_json_file(metadata_path)
+        metadata_json = _load_json_file(metadata_path)
 
         if _CERT_PROVIDER_COMMAND not in metadata_json:
             raise exceptions.ClientCertError("Cert provider command is not found")
