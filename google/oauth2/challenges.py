@@ -18,16 +18,28 @@
 import abc
 import base64
 import getpass
+import os
 import sys
 
 from google.auth import _helpers
 from google.auth import exceptions
+
+from google.oauth2.webauthn_types import (
+   PublicKeyCredentialDescriptor,
+   AuthenticationExtensionsClientInputs,
+   GetRequest,
+   GetResponse
+)
+
+
+from google.oauth2 import webauthn_handler, webauthn_handler_factory
 
 
 REAUTH_ORIGIN = "https://accounts.google.com"
 SAML_CHALLENGE_MESSAGE = (
     "Please run `gcloud auth login` to complete reauthentication with SAML."
 )
+WEBAUTHN_TIMEOUT_MS = 120000 # Two minute timeout
 
 
 def get_user_password(text):
@@ -110,6 +122,17 @@ class SecurityKeyChallenge(ReauthChallenge):
 
     @_helpers.copy_docstring(ReauthChallenge)
     def obtain_challenge_input(self, metadata):
+        # Check if there is an available Webauthn Handler, if not use pyu2f
+        try:
+            factory = webauthn_handler_factory.WebauthnHandlerFactory()
+            webauthn_handler = factory.get_handler()
+            if webauthn_handler is not None:
+                return self._obtain_challenge_input_webauthn(metadata, webauthn_handler)
+        except Exception as e:
+            # Attempt pyu2f if exception in webauthn flow
+            # traceback.print_exc()
+            pass
+
         try:
             import pyu2f.convenience.authenticator  # type: ignore
             import pyu2f.errors  # type: ignore
@@ -172,6 +195,55 @@ class SecurityKeyChallenge(ReauthChallenge):
             except pyu2f.errors.NoDeviceFoundError:
                 sys.stderr.write("No security key found.\n")
             return None
+
+    def _obtain_challenge_input_webauthn(self, metadata, webauthn_handler):
+        sk = metadata["securityKey"]
+        challenges = sk["challenges"]        
+        application_id = sk["applicationId"]
+        relying_party_id = sk["relyingPartyId"]
+
+        allow_credentials = []
+        for challenge in challenges:
+            key_handle = self._urlsafe_b64recode(challenge['keyHandle'])
+            # TODO: do we need to set transports
+            allow_credentials.append(
+                PublicKeyCredentialDescriptor(id = key_handle))
+
+        extension = AuthenticationExtensionsClientInputs(
+            appid = application_id)
+
+        get_request = GetRequest(
+            origin = REAUTH_ORIGIN,
+            rpid = relying_party_id,
+            challenge =  self._urlsafe_b64recode(challenges[0]['challenge']),
+            timeout_ms = WEBAUTHN_TIMEOUT_MS,
+            allow_credentials = allow_credentials,
+            user_verification =  'required',
+            extensions = extension
+        )
+
+        try:
+            sys.stderr.write('Please insert and touch your security key\n')
+            get_response = webauthn_handler.get(get_request)
+        except Exception as e:
+            sys.stderr.write("Webauthn Error: {}.\n".format(e))
+            raise e
+
+        response = {
+            'clientData': get_response.response.client_data_json,
+            'authenticatorData': get_response.response.authenticator_data,
+            'signatureData': get_response.response.signature,
+            'applicationId': application_id,
+            'keyHandle': get_response.id,
+            'securityKeyReplyType': 2
+        }
+        return {"securityKey": response}
+
+    def _urlsafe_b64recode(self, s):
+        """Converts standard b64 encoded string to url safe b64 encoded string 
+        with no padding."""
+        b = base64.urlsafe_b64decode(s)
+        return base64.urlsafe_b64encode(b).decode().rstrip('=')
 
 
 class SamlChallenge(ReauthChallenge):
