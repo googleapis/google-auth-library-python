@@ -23,7 +23,7 @@ import pytest  # type: ignore
 import pyu2f  # type: ignore
 
 from google.auth import exceptions
-from google.oauth2 import challenges #, webauthn_handler, webauthn_handler_factory
+from google.oauth2 import challenges
 from google.oauth2.webauthn_types import (
     AuthenticatorAssertionResponse, 
     GetRequest, 

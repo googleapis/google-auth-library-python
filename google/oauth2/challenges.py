@@ -18,7 +18,6 @@
 import abc
 import base64
 import getpass
-import os
 import sys
 
 from google.auth import _helpers
