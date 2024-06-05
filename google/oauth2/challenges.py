@@ -126,6 +126,7 @@ class SecurityKeyChallenge(ReauthChallenge):
             factory = webauthn_handler_factory.WebauthnHandlerFactory()
             webauthn_handler = factory.get_handler()
             if webauthn_handler is not None:
+                sys.stderr.write('Please insert and touch your security key\n')
                 return self._obtain_challenge_input_webauthn(metadata, webauthn_handler)
         except Exception as e:
             # Attempt pyu2f if exception in webauthn flow
@@ -204,7 +205,6 @@ class SecurityKeyChallenge(ReauthChallenge):
         allow_credentials = []
         for challenge in challenges:
             key_handle = self._urlsafe_b64recode(challenge['keyHandle'])
-            # TODO: do we need to set transports
             allow_credentials.append(
                 PublicKeyCredentialDescriptor(id = key_handle))
 
@@ -222,7 +222,6 @@ class SecurityKeyChallenge(ReauthChallenge):
         )
 
         try:
-            sys.stderr.write('Please insert and touch your security key\n')
             get_response = webauthn_handler.get(get_request)
         except Exception as e:
             sys.stderr.write("Webauthn Error: {}.\n".format(e))
