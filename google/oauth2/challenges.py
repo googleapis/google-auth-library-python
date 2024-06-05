@@ -126,7 +126,6 @@ class SecurityKeyChallenge(ReauthChallenge):
                 return self._obtain_challenge_input_webauthn(metadata, webauthn_handler)
         except Exception:
             # Attempt pyu2f if exception in webauthn flow
-            # traceback.print_exc()
             pass
 
         try:
@@ -193,10 +192,18 @@ class SecurityKeyChallenge(ReauthChallenge):
             return None
 
     def _obtain_challenge_input_webauthn(self, metadata, webauthn_handler):
-        sk = metadata["securityKey"]
-        challenges = sk["challenges"]
-        application_id = sk["applicationId"]
-        relying_party_id = sk["relyingPartyId"]
+        sk = metadata.get("securityKey")
+        challenges = sk.get("challenges")
+        application_id = sk.get("applicationId")
+        relying_party_id = sk.get("relyingPartyId")
+        if sk is None:
+            raise exceptions.InvalidValue("securityKey is None")
+        if challenges is None or len(challenges) < 1:
+            raise exceptions.InvalidValue("challenges is None or empty")
+        if application_id is None:
+            raise exceptions.InvalidValue("application_id is None")
+        if relying_party_id is None:
+            raise exceptions.InvalidValue("relying_party_id is None")
 
         allow_credentials = []
         for challenge in challenges:
@@ -205,10 +212,14 @@ class SecurityKeyChallenge(ReauthChallenge):
 
         extension = AuthenticationExtensionsClientInputs(appid=application_id)
 
+        challenge = challenges[0].get("challenge")
+        if challenge is None:
+            raise exceptions.InvalidValue("challenge is None")
+
         get_request = GetRequest(
             origin=REAUTH_ORIGIN,
             rpid=relying_party_id,
-            challenge=self._urlsafe_b64recode(challenges[0]["challenge"]),
+            challenge=self._urlsafe_b64recode(challenge),
             timeout_ms=WEBAUTHN_TIMEOUT_MS,
             allow_credentials=allow_credentials,
             user_verification="required",
