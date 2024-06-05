@@ -1,17 +1,16 @@
-import sys
+from typing import List, Optional
 
-from typing import List
+from google.oauth2.webauthn_handler import PluginHandler, WebAuthnHandler
 
-from google.oauth2.webauthn_handler import WebAuthnHandler, PluginHandler
 
 class WebauthnHandlerFactory:
-  handlers: List[WebAuthnHandler]
+    handlers: List[WebAuthnHandler]
 
-  def __init__(self):
-    self.handlers = [PluginHandler()]
+    def __init__(self):
+        self.handlers = [PluginHandler()]
 
-  def get_handler(self) -> WebAuthnHandler:
-    for handler in self.handlers:
-      if handler.is_available():
-        return handler
-    return None
+    def get_handler(self) -> Optional[WebAuthnHandler]:
+        for handler in self.handlers:
+            if handler.is_available():
+                return handler
+        return None

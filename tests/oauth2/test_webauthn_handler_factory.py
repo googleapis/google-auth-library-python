@@ -1,13 +1,8 @@
-import json
-import struct
-
 import mock
 import pytest  # type: ignore
 
-from google.auth import exceptions
 from google.oauth2 import webauthn_handler
 from google.oauth2 import webauthn_handler_factory
-from google.oauth2 import webauthn_types
 
 
 @pytest.fixture
@@ -19,6 +14,7 @@ def os_get_stub():
         name="fake os.environ.get",
     ) as mock_os_environ_get:
         yield mock_os_environ_get
+
 
 # Check that get_handler returns a value when env is set,
 # that type is PluginHandler, and that no value is returned

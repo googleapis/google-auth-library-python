@@ -25,11 +25,11 @@ import pyu2f  # type: ignore
 from google.auth import exceptions
 from google.oauth2 import challenges
 from google.oauth2.webauthn_types import (
-    AuthenticatorAssertionResponse, 
-    GetRequest, 
-    GetResponse, 
-    PublicKeyCredentialDescriptor, 
-    AuthenticationExtensionsClientInputs
+    AuthenticationExtensionsClientInputs,
+    AuthenticatorAssertionResponse,
+    GetRequest,
+    GetResponse,
+    PublicKeyCredentialDescriptor,
 )
 
 
@@ -63,7 +63,7 @@ def test_security_key():
     # Test the case that security key challenge is passed with applicationId and
     # relyingPartyId the same.
     os.environ.pop('"GOOGLE_AUTH_WEBAUTHN_PLUGIN"', None)
-    
+
     with mock.patch("pyu2f.model.RegisteredKey", return_value=mock_key):
         with mock.patch(
             "pyu2f.convenience.authenticator.CompositeAuthenticator.Authenticate"
@@ -83,14 +83,15 @@ def test_security_key():
     # Test the case that webauthn plugin is available
     os.environ["GOOGLE_AUTH_WEBAUTHN_PLUGIN"] = "plugin"
 
-    with mock.patch("google.oauth2.challenges.SecurityKeyChallenge._obtain_challenge_input_webauthn", 
-        return_value={"securityKey": "security key response"}):
+    with mock.patch(
+        "google.oauth2.challenges.SecurityKeyChallenge._obtain_challenge_input_webauthn",
+        return_value={"securityKey": "security key response"},
+    ):
 
         assert challenge.obtain_challenge_input(metadata) == {
             "securityKey": "security key response"
         }
     os.environ.pop('"GOOGLE_AUTH_WEBAUTHN_PLUGIN"', None)
-
 
     # Test the case that security key challenge is passed with applicationId and
     # relyingPartyId different, first call works.
@@ -218,47 +219,46 @@ def test_security_key_webauthn():
 
     sk = metadata["securityKey"]
     sk_challenges = sk["challenges"]
-    
+
     application_id = sk["applicationId"]
-    relying_party_id = sk["relyingPartyId"]
 
     allow_credentials = []
     for sk_challenge in sk_challenges:
         allow_credentials.append(
-            PublicKeyCredentialDescriptor(id = sk_challenge['keyHandle']))
+            PublicKeyCredentialDescriptor(id=sk_challenge["keyHandle"])
+        )
 
-    extension = AuthenticationExtensionsClientInputs(
-        appid = application_id)
+    extension = AuthenticationExtensionsClientInputs(appid=application_id)
 
     get_request = GetRequest(
-            origin = challenges.REAUTH_ORIGIN,
-            rpid = application_id,
-            challenge =  challenge._urlsafe_b64recode(sk_challenge['challenge']),
-            timeout_ms = challenges.WEBAUTHN_TIMEOUT_MS,
-            allow_credentials = allow_credentials,
-            user_verification =  'required',
-            extensions = extension
+        origin=challenges.REAUTH_ORIGIN,
+        rpid=application_id,
+        challenge=challenge._urlsafe_b64recode(sk_challenge["challenge"]),
+        timeout_ms=challenges.WEBAUTHN_TIMEOUT_MS,
+        allow_credentials=allow_credentials,
+        user_verification="required",
+        extensions=extension,
     )
 
     assertion_resp = AuthenticatorAssertionResponse(
-            client_data_json="clientDataJSON",
-            authenticator_data="authenticatorData",
-            signature="signature",
-            user_handle="userHandle",
+        client_data_json="clientDataJSON",
+        authenticator_data="authenticatorData",
+        signature="signature",
+        user_handle="userHandle",
     )
     get_response = GetResponse(
-            id="id",
-            response=assertion_resp,
-            authenticator_attachment="authenticatorAttachment",
-            client_extension_results="clientExtensionResults",
+        id="id",
+        response=assertion_resp,
+        authenticator_attachment="authenticatorAttachment",
+        client_extension_results="clientExtensionResults",
     )
     response = {
-            'clientData': get_response.response.client_data_json,
-            'authenticatorData': get_response.response.authenticator_data,
-            'signatureData': get_response.response.signature,
-            'applicationId': "security_key_application_id",
-            'keyHandle': get_response.id,
-            'securityKeyReplyType': 2
+        "clientData": get_response.response.client_data_json,
+        "authenticatorData": get_response.response.authenticator_data,
+        "signatureData": get_response.response.signature,
+        "applicationId": "security_key_application_id",
+        "keyHandle": get_response.id,
+        "securityKeyReplyType": 2,
     }
 
     mock_handler = mock.Mock()
@@ -266,9 +266,9 @@ def test_security_key_webauthn():
 
     # Test success case
     assert challenge._obtain_challenge_input_webauthn(metadata, mock_handler) == {
-                "securityKey": response
-            }
-    mock_handler.get.assert_called_with(get_request) 
+        "securityKey": response
+    }
+    mock_handler.get.assert_called_with(get_request)
 
     # Test exceptions
     mock_handler.get.side_effect = exceptions.MalformedError
@@ -281,7 +281,7 @@ def test_security_key_webauthn():
 
     mock_handler.get.side_effect = exceptions.ReauthFailError
     with pytest.raises(exceptions.ReauthFailError):
-        challenge._obtain_challenge_input_webauthn(metadata, mock_handler) 
+        challenge._obtain_challenge_input_webauthn(metadata, mock_handler)
 
 
 @mock.patch("getpass.getpass", return_value="foo")
