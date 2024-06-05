@@ -207,7 +207,10 @@ class SecurityKeyChallenge(ReauthChallenge):
 
         allow_credentials = []
         for challenge in challenges:
-            key_handle = self._urlsafe_b64recode(challenge["keyHandle"])
+            kh = challenge.get("keyHandle")
+            if kh is None:
+                raise exceptions.InvalidValue("keyHandle is None")
+            key_handle = self._unpadded_urlsafe_b64recode(kh)
             allow_credentials.append(PublicKeyCredentialDescriptor(id=key_handle))
 
         extension = AuthenticationExtensionsClientInputs(appid=application_id)
@@ -219,7 +222,7 @@ class SecurityKeyChallenge(ReauthChallenge):
         get_request = GetRequest(
             origin=REAUTH_ORIGIN,
             rpid=relying_party_id,
-            challenge=self._urlsafe_b64recode(challenge),
+            challenge=self._unpadded_urlsafe_b64recode(challenge),
             timeout_ms=WEBAUTHN_TIMEOUT_MS,
             allow_credentials=allow_credentials,
             user_verification="required",
@@ -242,7 +245,7 @@ class SecurityKeyChallenge(ReauthChallenge):
         }
         return {"securityKey": response}
 
-    def _urlsafe_b64recode(self, s):
+    def _unpadded_urlsafe_b64recode(self, s):
         """Converts standard b64 encoded string to url safe b64 encoded string
         with no padding."""
         b = base64.urlsafe_b64decode(s)
