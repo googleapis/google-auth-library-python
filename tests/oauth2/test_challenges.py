@@ -233,7 +233,7 @@ def test_security_key_webauthn():
     get_request = GetRequest(
         origin=challenges.REAUTH_ORIGIN,
         rpid=application_id,
-        challenge=challenge._urlsafe_b64recode(sk_challenge["challenge"]),
+        challenge=challenge._unpadded_urlsafe_b64recode(sk_challenge["challenge"]),
         timeout_ms=challenges.WEBAUTHN_TIMEOUT_MS,
         allow_credentials=allow_credentials,
         user_verification="required",
@@ -271,6 +271,48 @@ def test_security_key_webauthn():
     mock_handler.get.assert_called_with(get_request)
 
     # Test exceptions
+
+    # Missing Values
+    sk = metadata["securityKey"]
+    metadata["securityKey"] = None
+    with pytest.raises(exceptions.InvalidValue):
+        challenge._obtain_challenge_input_webauthn(metadata, mock_handler)
+    metadata["securityKey"] = sk
+
+    c = metadata["securityKey"]["challenges"]
+    metadata["securityKey"]["challenges"] = None
+    with pytest.raises(exceptions.InvalidValue):
+        challenge._obtain_challenge_input_webauthn(metadata, mock_handler)
+    metadata["securityKey"]["challenges"] = []
+    with pytest.raises(exceptions.InvalidValue):
+        challenge._obtain_challenge_input_webauthn(metadata, mock_handler)
+    metadata["securityKey"]["challenges"] = c
+
+    aid = metadata["securityKey"]["applicationId"]
+    metadata["securityKey"]["applicationId"] = None
+    with pytest.raises(exceptions.InvalidValue):
+        challenge._obtain_challenge_input_webauthn(metadata, mock_handler)
+    metadata["securityKey"]["applicationId"] = aid
+
+    rpi = metadata["securityKey"]["relyingPartyId"]
+    metadata["securityKey"]["relyingPartyId"] = None
+    with pytest.raises(exceptions.InvalidValue):
+        challenge._obtain_challenge_input_webauthn(metadata, mock_handler)
+    metadata["securityKey"]["relyingPartyId"] = rpi
+
+    kh = metadata["securityKey"]["challenges"][0]["keyHandle"]
+    metadata["securityKey"]["challenges"][0]["keyHandle"] = None
+    with pytest.raises(exceptions.InvalidValue):
+        challenge._obtain_challenge_input_webauthn(metadata, mock_handler)
+    metadata["securityKey"]["challenges"][0]["keyHandle"] = kh
+
+    ch = metadata["securityKey"]["challenges"][0]["challenge"]
+    metadata["securityKey"]["challenges"][0]["challenge"] = None
+    with pytest.raises(exceptions.InvalidValue):
+        challenge._obtain_challenge_input_webauthn(metadata, mock_handler)
+    metadata["securityKey"]["challenges"][0]["challenge"] = ch
+
+    # Handler Exceptions
     mock_handler.get.side_effect = exceptions.MalformedError
     with pytest.raises(exceptions.MalformedError):
         challenge._obtain_challenge_input_webauthn(metadata, mock_handler)

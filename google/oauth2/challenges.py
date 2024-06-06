@@ -193,11 +193,11 @@ class SecurityKeyChallenge(ReauthChallenge):
 
     def _obtain_challenge_input_webauthn(self, metadata, webauthn_handler):
         sk = metadata.get("securityKey")
+        if sk is None:
+            raise exceptions.InvalidValue("securityKey is None")
         challenges = sk.get("challenges")
         application_id = sk.get("applicationId")
         relying_party_id = sk.get("relyingPartyId")
-        if sk is None:
-            raise exceptions.InvalidValue("securityKey is None")
         if challenges is None or len(challenges) < 1:
             raise exceptions.InvalidValue("challenges is None or empty")
         if application_id is None:
