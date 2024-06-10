@@ -66,7 +66,8 @@ def _check_dca_metadata_path(metadata_path):
 
 
 def _load_json_file(path):
-    """Reads and loads JSON from the given path.
+    """Reads and loads JSON from the given path. Used to read both X509 workload certificate and
+    secure connect configurations.
 
     Args:
         path (str): the path to read from.
