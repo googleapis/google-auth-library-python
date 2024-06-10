@@ -447,7 +447,7 @@ class TestGetWorkloadCertAndKey(object):
     def test_no_cert_file(self, mock_get_cert_config_path, mock_load_json_file):
         mock_get_cert_config_path.return_value = "/path/to/cert"
         mock_load_json_file.return_value = {
-            "cert_configs": {"workload": {"key_file": "path/to/key"}}
+            "cert_configs": {"workload": {"key_path": "path/to/key"}}
         }
 
         with pytest.raises(exceptions.ClientCertError):
@@ -460,7 +460,7 @@ class TestGetWorkloadCertAndKey(object):
     def test_no_key_file(self, mock_get_cert_config_path, mock_load_json_file):
         mock_get_cert_config_path.return_value = "/path/to/cert"
         mock_load_json_file.return_value = {
-            "cert_configs": {"workload": {"cert_file": "path/to/key"}}
+            "cert_configs": {"workload": {"cert_path": "path/to/key"}}
         }
 
         with pytest.raises(exceptions.ClientCertError):
