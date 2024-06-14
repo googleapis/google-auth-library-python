@@ -268,6 +268,7 @@ class _MutualTlsOffloadAdapter(requests.adapters.HTTPAdapter):
         self.signer.load_libraries()
 
         import urllib3.contrib.pyopenssl
+
         urllib3.contrib.pyopenssl.inject_into_urllib3()
 
         poolmanager = create_urllib3_context()
