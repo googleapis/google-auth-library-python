@@ -48,6 +48,7 @@ from typing import NamedTuple
 from google.auth import _helpers
 from google.auth import exceptions
 from google.auth import external_account
+from google.auth.transport import _mtls_helper
 
 
 class SubjectTokenSupplier(metaclass=abc.ABCMeta):
@@ -139,6 +140,14 @@ class _UrlSupplier(SubjectTokenSupplier):
         return _parse_token_data(
             token_content, self._format_type, self._subject_token_field_name
         )
+
+
+class _X509Supplier(SubjectTokenSupplier):
+    """ Internal implementation of subject token supplier for X509 workload credentials, always returns an empty string."""
+
+    @_helpers.copy_docstring(SubjectTokenSupplier)
+    def get_subject_token(self, context, request):
+        return ""
 
 
 def _parse_token_data(token_content, format_type="text", subject_token_field_name=None):
@@ -247,6 +256,7 @@ class Credentials(external_account.Credentials):
             self._subject_token_supplier = subject_token_supplier
             self._credential_source_file = None
             self._credential_source_url = None
+            self._credential_source_certificate = None
         else:
             if not isinstance(credential_source, Mapping):
                 self._credential_source_executable = None
@@ -255,45 +265,45 @@ class Credentials(external_account.Credentials):
                 )
             self._credential_source_file = credential_source.get("file")
             self._credential_source_url = credential_source.get("url")
-            self._credential_source_headers = credential_source.get("headers")
-            credential_source_format = credential_source.get("format", {})
-            # Get credential_source format type. When not provided, this
-            # defaults to text.
-            self._credential_source_format_type = (
-                credential_source_format.get("type") or "text"
-            )
+            self._credential_source_certificate = credential_source.get("certificate")
+
             # environment_id is only supported in AWS or dedicated future external
             # account credentials.
             if "environment_id" in credential_source:
                 raise exceptions.MalformedError(
                     "Invalid Identity Pool credential_source field 'environment_id'"
                 )
-            if self._credential_source_format_type not in ["text", "json"]:
-                raise exceptions.MalformedError(
-                    "Invalid credential_source format '{}'".format(
-                        self._credential_source_format_type
-                    )
-                )
-            # For JSON types, get the required subject_token field name.
-            if self._credential_source_format_type == "json":
-                self._credential_source_field_name = credential_source_format.get(
-                    "subject_token_field_name"
-                )
-                if self._credential_source_field_name is None:
-                    raise exceptions.MalformedError(
-                        "Missing subject_token_field_name for JSON credential_source format"
-                    )
-            else:
-                self._credential_source_field_name = None
 
-            if self._credential_source_file and self._credential_source_url:
-                raise exceptions.MalformedError(
-                    "Ambiguous credential_source. 'file' is mutually exclusive with 'url'."
+            # check that only one of file, url, or certificate are provided.
+            if (
+                sum(
+                    map(
+                        bool,
+                        [
+                            self._credential_source_file,
+                            self._credential_source_url,
+                            self._credential_source_certificate,
+                        ],
+                    )
                 )
-            if not self._credential_source_file and not self._credential_source_url:
+                > 1
+            ):
                 raise exceptions.MalformedError(
-                    "Missing credential_source. A 'file' or 'url' must be provided."
+                    "Ambiguous credential_source. 'file', 'url', and 'certificate' are mutually exclusive.."
                 )
+            if (
+                not self._credential_source_file
+                and not self._credential_source_url
+                and not self._credential_source_certificate
+            ):
+                raise exceptions.MalformedError(
+                    "Missing credential_source. A 'file', 'url', or 'certificate' must be provided."
+                )
+
+            if self._credential_source_certificate:
+                self._validate_certificate_credential_source()
+            else:
+                self._validate_file_url_credential_source(credential_source)
 
             if self._credential_source_file:
                 self._subject_token_supplier = _FileSupplier(
@@ -301,13 +311,15 @@ class Credentials(external_account.Credentials):
                     self._credential_source_format_type,
                     self._credential_source_field_name,
                 )
-            else:
+            elif self._credential_source_url:
                 self._subject_token_supplier = _UrlSupplier(
                     self._credential_source_url,
                     self._credential_source_format_type,
                     self._credential_source_field_name,
                     self._credential_source_headers,
                 )
+            else:
+                self._subject_token_supplier = _X509Supplier()
 
     @_helpers.copy_docstring(external_account.Credentials)
     def retrieve_subject_token(self, request):
@@ -315,16 +327,31 @@ class Credentials(external_account.Credentials):
             self._supplier_context, request
         )
 
+    def _get_mtls_cert(self):
+        if self._credential_source_certificate == None:
+            raise exceptions.RefreshError(
+                'The credential is not configured to use mtls requests. The credential should include a "certificate" section in the credential source.'
+            )
+        else:
+            return _mtls_helper._get_workload_cert_and_key_paths(
+                self._certificate_config_location
+            )
+
+    def _should_add_mtls(self):
+        return self._credential_source_certificate is not None
+
     def _create_default_metrics_options(self):
         metrics_options = super(Credentials, self)._create_default_metrics_options()
-        # Check that credential source is a dict before checking for file vs url. This check needs to be done
+        # Check that credential source is a dict before checking for credential type. This check needs to be done
         # here because the external_account credential constructor needs to pass the metrics options to the
         # impersonated credential object before the identity_pool credentials are validated.
         if isinstance(self._credential_source, Mapping):
             if self._credential_source.get("file"):
                 metrics_options["source"] = "file"
-            else:
+            elif self._credential_source.get("url"):
                 metrics_options["source"] = "url"
+            else:
+                metrics_options["source"] = "x509"
         else:
             metrics_options["source"] = "programmatic"
         return metrics_options
@@ -338,6 +365,50 @@ class Credentials(external_account.Credentials):
         if self._has_custom_supplier():
             args.update({"subject_token_supplier": self._subject_token_supplier})
         return args
+
+    def _validate_certificate_credential_source(self):
+        self._certificate_config_location = self._credential_source_certificate.get(
+            "certificate_config_location"
+        )
+        use_default = self._credential_source_certificate.get(
+            "use_default_certificate_config"
+        )
+        if self._certificate_config_location:
+            if use_default:
+                raise exceptions.MalformedError(
+                    "Invalid certificate configuration, certificate_config_location cannot be specified when use_default_certificate_config = true."
+                )
+        else:
+            if not use_default:
+                raise exceptions.MalformedError(
+                    "Invalid certificate configuration, use_default_certificate_config should be true if no certificate_config_location is provided."
+                )
+
+    def _validate_file_url_credential_source(self, credential_source):
+        self._credential_source_headers = credential_source.get("headers")
+        credential_source_format = credential_source.get("format", {})
+        # Get credential_source format type. When not provided, this
+        # defaults to text.
+        self._credential_source_format_type = (
+            credential_source_format.get("type") or "text"
+        )
+        if self._credential_source_format_type not in ["text", "json"]:
+            raise exceptions.MalformedError(
+                "Invalid credential_source format '{}'".format(
+                    self._credential_source_format_type
+                )
+            )
+        # For JSON types, get the required subject_token field name.
+        if self._credential_source_format_type == "json":
+            self._credential_source_field_name = credential_source_format.get(
+                "subject_token_field_name"
+            )
+            if self._credential_source_field_name is None:
+                raise exceptions.MalformedError(
+                    "Missing subject_token_field_name for JSON credential_source format"
+                )
+        else:
+            self._credential_source_field_name = None
 
     @classmethod
     def from_info(cls, info, **kwargs):

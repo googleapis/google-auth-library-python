@@ -31,6 +31,7 @@ import abc
 import copy
 from dataclasses import dataclass
 import datetime
+import functools
 import io
 import json
 import re
@@ -40,6 +41,7 @@ from google.auth import credentials
 from google.auth import exceptions
 from google.auth import impersonated_credentials
 from google.auth import metrics
+from google.auth.transport.requests import _MutualTlsAdapter
 from google.oauth2 import sts
 from google.oauth2 import utils
 
@@ -393,12 +395,18 @@ class Credentials(
     @_helpers.copy_docstring(credentials.Credentials)
     def refresh(self, request):
         scopes = self._scopes if self._scopes is not None else self._default_scopes
+        auth_request = request
+
+        # if mtls is required, wrap the incoming request in a partial to set the cert.
+        if self._should_add_mtls():
+            print("mtls yeah")
+            auth_request = functools.partial(request, cert=self._get_mtls_cert())
 
         if self._should_initialize_impersonated_credentials():
             self._impersonated_credentials = self._initialize_impersonated_credentials()
 
         if self._impersonated_credentials:
-            self._impersonated_credentials.refresh(request)
+            self._impersonated_credentials.refresh(auth_request)
             self.token = self._impersonated_credentials.token
             self.expiry = self._impersonated_credentials.expiry
         else:
@@ -414,7 +422,7 @@ class Credentials(
                 )
             }
             response_data = self._sts_client.exchange_token(
-                request=request,
+                request=auth_request,
                 grant_type=_STS_GRANT_TYPE,
                 subject_token=self.retrieve_subject_token(request),
                 subject_token_type=self._subject_token_type,
@@ -522,6 +530,12 @@ class Credentials(
             metrics_options["config-lifetime"] = "false"
 
         return metrics_options
+
+    def _should_add_mtls(self):
+        return False
+
+    def _get_mtls_cert(self):
+        raise NotImplementedError("_get_mtls_cert must be implemented.")
 
     @classmethod
     def from_info(cls, info, **kwargs):
