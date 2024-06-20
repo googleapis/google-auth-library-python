@@ -105,8 +105,45 @@ def test_ping_success(mock_metrics_header_value):
     request.assert_called_once_with(
         method="GET",
         url=_metadata._METADATA_IP_ROOT,
-        headers=MDS_PING_REQUEST_HEADER,
-        timeout=_metadata._METADATA_DEFAULT_TIMEOUT,
+        headers=_metadata._METADATA_HEADER,
+        timeout=_metadata._METADATA_PING_DEFAULT_TIMEOUT,
+    )
+
+@mock.patch("google.auth.metrics.mds_ping", return_value=MDS_PING_METRICS_HEADER_VALUE)
+def test_ping_success_with_gce_metadata_timeout(mock_metrics_header_value):
+    request = make_request("", headers=_metadata._METADATA_HEADERS)
+    gce_metadata_timeout = .5
+    os.environ[
+        environment_vars.GCE_METADATA_TIMEOUT] = str(gce_metadata_timeout)
+
+    try:
+        assert _metadata.ping(request)
+    finally:
+        del os.environ[environment_vars.GCE_METADATA_TIMEOUT]
+
+    request.assert_called_once_with(
+        method="GET",
+        url=_metadata._METADATA_IP_ROOT,
+        headers=_metadata._METADATA_HEADER,
+        timeout=gce_metadata_timeout,
+    )
+
+@mock.patch("google.auth.metrics.mds_ping", return_value=MDS_PING_METRICS_HEADER_VALUE)
+def test_ping_success_with_invalid_gce_metadata_timeout(mock_metrics_header_value):
+    request = make_request("", headers=_metadata._METADATA_HEADERS)
+    os.environ[
+        environment_vars.GCE_METADATA_TIMEOUT] = "Not a valid float value!"
+
+    try:
+        assert _metadata.ping(request)
+    finally:
+        del os.environ[environment_vars.GCE_METADATA_TIMEOUT]
+
+    request.assert_called_once_with(
+        method="GET",
+        url=_metadata._METADATA_IP_ROOT,
+        headers=_metadata._METADATA_HEADERS,
+        timeout=_metadata._METADATA_PING_DEFAULT_TIMEOUT, # Fallback value.
     )
 
 
@@ -156,7 +193,7 @@ def test_ping_success_custom_root(mock_metrics_header_value):
         method="GET",
         url="http://" + fake_ip,
         headers=MDS_PING_REQUEST_HEADER,
-        timeout=_metadata._METADATA_DEFAULT_TIMEOUT,
+        timeout=_metadata._METADATA_PING_DEFAULT_TIMEOUT,
     )
 
 
