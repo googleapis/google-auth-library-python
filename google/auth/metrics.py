@@ -150,5 +150,5 @@ def add_metric_header(headers, metric_header_value):
         return
     if API_CLIENT_HEADER not in headers:
         headers[API_CLIENT_HEADER] = metric_header_value
-    else:
+    elif metric_header_value not in headers[API_CLIENT_HEADER]:
         headers[API_CLIENT_HEADER] += " " + metric_header_value
