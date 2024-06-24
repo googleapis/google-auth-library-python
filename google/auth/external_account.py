@@ -41,7 +41,6 @@ from google.auth import credentials
 from google.auth import exceptions
 from google.auth import impersonated_credentials
 from google.auth import metrics
-from google.auth.transport.requests import _MutualTlsAdapter
 from google.oauth2 import sts
 from google.oauth2 import utils
 
@@ -399,7 +398,6 @@ class Credentials(
 
         # if mtls is required, wrap the incoming request in a partial to set the cert.
         if self._should_add_mtls():
-            print("mtls yeah")
             auth_request = functools.partial(request, cert=self._get_mtls_cert())
 
         if self._should_initialize_impersonated_credentials():

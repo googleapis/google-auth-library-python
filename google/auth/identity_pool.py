@@ -275,30 +275,7 @@ class Credentials(external_account.Credentials):
                 )
 
             # check that only one of file, url, or certificate are provided.
-            if (
-                sum(
-                    map(
-                        bool,
-                        [
-                            self._credential_source_file,
-                            self._credential_source_url,
-                            self._credential_source_certificate,
-                        ],
-                    )
-                )
-                > 1
-            ):
-                raise exceptions.MalformedError(
-                    "Ambiguous credential_source. 'file', 'url', and 'certificate' are mutually exclusive.."
-                )
-            if (
-                not self._credential_source_file
-                and not self._credential_source_url
-                and not self._credential_source_certificate
-            ):
-                raise exceptions.MalformedError(
-                    "Missing credential_source. A 'file', 'url', or 'certificate' must be provided."
-                )
+            self._validate_only_one_source()
 
             if self._credential_source_certificate:
                 self._validate_certificate_credential_source()
@@ -409,6 +386,32 @@ class Credentials(external_account.Credentials):
                 )
         else:
             self._credential_source_field_name = None
+
+    def _validate_only_one_source(self):
+        if (
+            sum(
+                map(
+                    bool,
+                    [
+                        self._credential_source_file,
+                        self._credential_source_url,
+                        self._credential_source_certificate,
+                    ],
+                )
+            )
+            > 1
+        ):
+            raise exceptions.MalformedError(
+                "Ambiguous credential_source. 'file', 'url', and 'certificate' are mutually exclusive.."
+            )
+        if (
+            not self._credential_source_file
+            and not self._credential_source_url
+            and not self._credential_source_certificate
+        ):
+            raise exceptions.MalformedError(
+                "Missing credential_source. A 'file', 'url', or 'certificate' must be provided."
+            )
 
     @classmethod
     def from_info(cls, info, **kwargs):
