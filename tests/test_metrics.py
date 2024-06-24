@@ -29,9 +29,9 @@ def test_add_metric_header():
     metrics.add_metric_header(headers, "bar")
     assert headers == {"x-goog-api-client": "foo bar"}
 
-    headers = {"x-goog-api-client": "foo"}
-    metrics.add_metric_header(headers, "foo")
-    assert headers == {"x-goog-api-client": "foo"}
+    headers = {"x-goog-api-client": "cred-type/mds"}
+    metrics.add_metric_header(headers, "cred-type/mds")
+    assert headers == {"x-goog-api-client": "cred-type/mds"}
 
     headers = {}
     metrics.add_metric_header(headers, "bar")
