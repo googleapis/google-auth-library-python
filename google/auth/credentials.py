@@ -229,7 +229,7 @@ class Credentials(metaclass=abc.ABCMeta):
         else:
             self._blocking_refresh(request)
 
-        metrics.add_metric_header(headers, self._metric_header_for_usage())
+        # metrics.add_metric_header(headers, self._metric_header_for_usage())
         self.apply(headers)
 
     def with_non_blocking_refresh(self):
