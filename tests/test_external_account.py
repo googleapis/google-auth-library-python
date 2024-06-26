@@ -241,7 +241,7 @@ class TestCredentials(object):
         assert request_kwargs["url"] == cls.TOKEN_URL
         assert request_kwargs["method"] == "POST"
         assert request_kwargs["headers"] == headers
-        if cert != None:
+        if cert is not None:
             assert request_kwargs["cert"] == cert
         else:
             assert "cert" not in request_kwargs
@@ -258,7 +258,7 @@ class TestCredentials(object):
         assert request_kwargs["url"] == cls.SERVICE_ACCOUNT_IMPERSONATION_URL
         assert request_kwargs["method"] == "POST"
         assert request_kwargs["headers"] == headers
-        if cert != None:
+        if cert is not None:
             assert request_kwargs["cert"] == cert
         else:
             assert "cert" not in request_kwargs
@@ -686,12 +686,12 @@ class TestCredentials(object):
         "google.auth.external_account.Credentials._should_add_mtls", return_value=True
     )
     @mock.patch(
-        "google.auth.external_account.Credentials._get_mtls_cert",
-        return_value=("test1", "test2"),
+        "google.auth.external_account.Credentials._get_mtls_cert_and_key_location",
+        return_value=("path/to/cert.pem", "path/to/key.pem"),
     )
     def test_refresh_with_mtls(
         self,
-        mock_get_mtls_cert,
+        mock_get_mtls_cert_and_key_location,
         mock_should_add_mtls,
         unused_utcnow,
         mock_auth_lib_value,
@@ -718,7 +718,7 @@ class TestCredentials(object):
 
         credentials.refresh(request)
 
-        expected_cert_path = ("test1", "test2")
+        expected_cert_path = ("path/to/cert.pem", "path/to/key.pem")
         self.assert_token_request_kwargs(
             request.call_args[1], headers, request_data, expected_cert_path
         )
@@ -943,12 +943,12 @@ class TestCredentials(object):
         "google.auth.external_account.Credentials._should_add_mtls", return_value=True
     )
     @mock.patch(
-        "google.auth.external_account.Credentials._get_mtls_cert",
-        return_value=("test1", "test2"),
+        "google.auth.external_account.Credentials._get_mtls_cert_and_key_location",
+        return_value=("path/to/cert.pem", "path/to/key.pem"),
     )
     def test_refresh_impersonation_with_mtls_success(
         self,
-        mock_get_mtls_cert,
+        mock_get_mtls_cert_and_key_location,
         mock_should_add_mtls,
         mock_metrics_header_value,
         mock_auth_lib_value,
@@ -1007,7 +1007,7 @@ class TestCredentials(object):
         # Only 2 requests should be processed.
         assert len(request.call_args_list) == 2
         # Verify token exchange request parameters.
-        expected_cert_paths = ("test1", "test2")
+        expected_cert_paths = ("path/to/cert.pem", "path/to/key.pem")
         self.assert_token_request_kwargs(
             request.call_args_list[0][1],
             token_headers,

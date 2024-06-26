@@ -304,8 +304,8 @@ class Credentials(external_account.Credentials):
             self._supplier_context, request
         )
 
-    def _get_mtls_cert(self):
-        if self._credential_source_certificate == None:
+    def _get_mtls_cert_and_key_location(self):
+        if self._credential_source_certificate is None:
             raise exceptions.RefreshError(
                 'The credential is not configured to use mtls requests. The credential should include a "certificate" section in the credential source.'
             )

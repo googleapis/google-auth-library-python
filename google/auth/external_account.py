@@ -398,7 +398,9 @@ class Credentials(
 
         # If mtls is required, wrap the incoming request in a partial to set the cert.
         if self._should_add_mtls():
-            auth_request = functools.partial(request, cert=self._get_mtls_cert())
+            auth_request = functools.partial(
+                request, cert=self._get_mtls_cert_and_key_location()
+            )
 
         if self._should_initialize_impersonated_credentials():
             self._impersonated_credentials = self._initialize_impersonated_credentials()
@@ -530,9 +532,28 @@ class Credentials(
         return metrics_options
 
     def _should_add_mtls(self):
+        """Returns a boolean representing whether the current credential is configured
+        for mTLS and should add a certificate to the outgoing calls to the sts and service
+        account impersonation endpoint.
+
+        Returns:
+            bool: True if the credential is configured for mTLS, False if it is not.
+        """
         return False
 
-    def _get_mtls_cert(self):
+    def _get_mtls_cert_and_key_location(self):
+        """Gets the file locations for a certificate and private key file
+        to be used for configuring mTLS for the sts and service account
+        impersonation calls. Currently only expected to return a value when using
+        X509 workload identity federation.
+
+        Returns:
+            Tuple[str, str]: The cert and key file locations as strings in a tuple.
+
+        Raises:
+            NotImplementedError: When the current credential is not configured for
+                mTLS.
+        """
         raise NotImplementedError("_get_mtls_cert must be implemented.")
 
     @classmethod

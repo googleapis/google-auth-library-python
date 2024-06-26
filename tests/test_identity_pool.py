@@ -1595,7 +1595,7 @@ class TestCredentials(object):
             credential_source=self.CREDENTIAL_SOURCE_CERTIFICATE.copy()
         )
 
-        cert, key = credentials._get_mtls_cert()
+        cert, key = credentials._get_mtls_cert_and_key_location()
         assert cert == "cert"
         assert key == "key"
 
@@ -1605,7 +1605,7 @@ class TestCredentials(object):
         )
 
         with pytest.raises(exceptions.RefreshError) as excinfo:
-            credentials._get_mtls_cert()
+            credentials._get_mtls_cert_and_key_location()
 
         assert excinfo.match(
             'The credential is not configured to use mtls requests. The credential should include a "certificate" section in the credential source.'
