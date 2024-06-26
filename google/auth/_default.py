@@ -240,6 +240,8 @@ def _get_gcloud_sdk_credentials(quota_project_id=None):
 
     if not project_id:
         project_id = _cloud_sdk.get_project_id()
+    
+    credentials._source = "~/.config/gcloud/application_default_credentials.json"
 
     return credentials, project_id
 
@@ -270,6 +272,7 @@ def _get_explicit_environ_credentials(quota_project_id=None):
         credentials, project_id = load_credentials_from_file(
             os.environ[environment_vars.CREDENTIALS], quota_project_id=quota_project_id
         )
+        credentials._source = f"{explicit_file} via {environment_vars.CREDENTIALS} environment variable"
 
         return credentials, project_id
 
