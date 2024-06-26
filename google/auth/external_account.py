@@ -396,7 +396,7 @@ class Credentials(
         scopes = self._scopes if self._scopes is not None else self._default_scopes
         auth_request = request
 
-        # If mtls is required, wrap the incoming request in a partial to set the cert.
+        # Inject client certificate into request.
         if self._should_add_mtls():
             auth_request = functools.partial(
                 request, cert=self._get_mtls_cert_and_key_location()
@@ -554,7 +554,7 @@ class Credentials(
             NotImplementedError: When the current credential is not configured for
                 mTLS.
         """
-        raise NotImplementedError("_get_mtls_cert must be implemented.")
+        raise NotImplementedError("_get_mtls_cert_and_key_location must be implemented.")
 
     @classmethod
     def from_info(cls, info, **kwargs):

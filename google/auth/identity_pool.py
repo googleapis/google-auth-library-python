@@ -295,7 +295,7 @@ class Credentials(external_account.Credentials):
                     self._credential_source_field_name,
                     self._credential_source_headers,
                 )
-            else:
+            else: # self._credential_source_certificate
                 self._subject_token_supplier = _X509Supplier()
 
     @_helpers.copy_docstring(external_account.Credentials)
