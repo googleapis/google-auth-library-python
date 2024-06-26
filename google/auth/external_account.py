@@ -396,7 +396,7 @@ class Credentials(
         scopes = self._scopes if self._scopes is not None else self._default_scopes
         auth_request = request
 
-        # if mtls is required, wrap the incoming request in a partial to set the cert.
+        # If mtls is required, wrap the incoming request in a partial to set the cert.
         if self._should_add_mtls():
             auth_request = functools.partial(request, cert=self._get_mtls_cert())
 

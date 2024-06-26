@@ -143,7 +143,7 @@ class _UrlSupplier(SubjectTokenSupplier):
 
 
 class _X509Supplier(SubjectTokenSupplier):
-    """ Internal implementation of subject token supplier for X509 workload credentials, always returns an empty string."""
+    """Internal supplier for X509 workload credentials. This class is used internally and always returns an empty string as the subject token."""
 
     @_helpers.copy_docstring(SubjectTokenSupplier)
     def get_subject_token(self, context, request):
