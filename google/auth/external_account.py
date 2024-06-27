@@ -394,19 +394,18 @@ class Credentials(
     @_helpers.copy_docstring(credentials.Credentials)
     def refresh(self, request):
         scopes = self._scopes if self._scopes is not None else self._default_scopes
-        auth_request = request
 
         # Inject client certificate into request.
-        if self._should_add_mtls():
-            auth_request = functools.partial(
-                request, cert=self._get_mtls_cert_and_key_location()
+        if self._mtls_required():
+            request = functools.partial(
+                request, cert=self._get_mtls_cert_and_key_paths()
             )
 
         if self._should_initialize_impersonated_credentials():
             self._impersonated_credentials = self._initialize_impersonated_credentials()
 
         if self._impersonated_credentials:
-            self._impersonated_credentials.refresh(auth_request)
+            self._impersonated_credentials.refresh(request)
             self.token = self._impersonated_credentials.token
             self.expiry = self._impersonated_credentials.expiry
         else:
@@ -422,7 +421,7 @@ class Credentials(
                 )
             }
             response_data = self._sts_client.exchange_token(
-                request=auth_request,
+                request=request,
                 grant_type=_STS_GRANT_TYPE,
                 subject_token=self.retrieve_subject_token(request),
                 subject_token_type=self._subject_token_type,
@@ -531,7 +530,7 @@ class Credentials(
 
         return metrics_options
 
-    def _should_add_mtls(self):
+    def _mtls_required(self):
         """Returns a boolean representing whether the current credential is configured
         for mTLS and should add a certificate to the outgoing calls to the sts and service
         account impersonation endpoint.
@@ -541,7 +540,7 @@ class Credentials(
         """
         return False
 
-    def _get_mtls_cert_and_key_location(self):
+    def _get_mtls_cert_and_key_paths(self):
         """Gets the file locations for a certificate and private key file
         to be used for configuring mTLS for the sts and service account
         impersonation calls. Currently only expected to return a value when using

@@ -683,16 +683,16 @@ class TestCredentials(object):
     )
     @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
     @mock.patch(
-        "google.auth.external_account.Credentials._should_add_mtls", return_value=True
+        "google.auth.external_account.Credentials._mtls_required", return_value=True
     )
     @mock.patch(
-        "google.auth.external_account.Credentials._get_mtls_cert_and_key_location",
+        "google.auth.external_account.Credentials._get_mtls_cert_and_key_paths",
         return_value=("path/to/cert.pem", "path/to/key.pem"),
     )
     def test_refresh_with_mtls(
         self,
-        mock_get_mtls_cert_and_key_location,
-        mock_should_add_mtls,
+        mock_get_mtls_cert_and_key_paths,
+        mock_mtls_required,
         unused_utcnow,
         mock_auth_lib_value,
     ):
@@ -940,16 +940,16 @@ class TestCredentials(object):
         return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
     )
     @mock.patch(
-        "google.auth.external_account.Credentials._should_add_mtls", return_value=True
+        "google.auth.external_account.Credentials._mtls_required", return_value=True
     )
     @mock.patch(
-        "google.auth.external_account.Credentials._get_mtls_cert_and_key_location",
+        "google.auth.external_account.Credentials._get_mtls_cert_and_key_paths",
         return_value=("path/to/cert.pem", "path/to/key.pem"),
     )
     def test_refresh_impersonation_with_mtls_success(
         self,
-        mock_get_mtls_cert_and_key_location,
-        mock_should_add_mtls,
+        mock_get_mtls_cert_and_key_paths,
+        mock_mtls_required,
         mock_metrics_header_value,
         mock_auth_lib_value,
     ):

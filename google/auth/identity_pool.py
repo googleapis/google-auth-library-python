@@ -275,12 +275,12 @@ class Credentials(external_account.Credentials):
                 )
 
             # check that only one of file, url, or certificate are provided.
-            self._validate_only_one_source()
+            self._validate_single_source()
 
             if self._credential_source_certificate:
-                self._validate_certificate_credential_source()
+                self._validate_certificate_config()
             else:
-                self._validate_file_url_credential_source(credential_source)
+                self._validate_file_or_url_config(credential_source)
 
             if self._credential_source_file:
                 self._subject_token_supplier = _FileSupplier(
@@ -304,7 +304,7 @@ class Credentials(external_account.Credentials):
             self._supplier_context, request
         )
 
-    def _get_mtls_cert_and_key_location(self):
+    def _get_mtls_cert_and_key_paths(self):
         if self._credential_source_certificate is None:
             raise exceptions.RefreshError(
                 'The credential is not configured to use mtls requests. The credential should include a "certificate" section in the credential source.'
@@ -314,7 +314,7 @@ class Credentials(external_account.Credentials):
                 self._certificate_config_location
             )
 
-    def _should_add_mtls(self):
+    def _mtls_required(self):
         return self._credential_source_certificate is not None
 
     def _create_default_metrics_options(self):
@@ -343,25 +343,23 @@ class Credentials(external_account.Credentials):
             args.update({"subject_token_supplier": self._subject_token_supplier})
         return args
 
-    def _validate_certificate_credential_source(self):
+    def _validate_certificate_config(self):
         self._certificate_config_location = self._credential_source_certificate.get(
             "certificate_config_location"
         )
         use_default = self._credential_source_certificate.get(
             "use_default_certificate_config"
         )
-        if self._certificate_config_location:
-            if use_default:
+        if self._certificate_config_location and use_default:
                 raise exceptions.MalformedError(
                     "Invalid certificate configuration, certificate_config_location cannot be specified when use_default_certificate_config = true."
                 )
-        else:
-            if not use_default:
+        if not self._certificate_config_location and not use_default:
                 raise exceptions.MalformedError(
                     "Invalid certificate configuration, use_default_certificate_config should be true if no certificate_config_location is provided."
                 )
 
-    def _validate_file_url_credential_source(self, credential_source):
+    def _validate_file_or_url_config(self, credential_source):
         self._credential_source_headers = credential_source.get("headers")
         credential_source_format = credential_source.get("format", {})
         # Get credential_source format type. When not provided, this
@@ -387,7 +385,7 @@ class Credentials(external_account.Credentials):
         else:
             self._credential_source_field_name = None
 
-    def _validate_only_one_source(self):
+    def _validate_single_source(self):
         if (
             sum(
                 map(
