@@ -57,6 +57,8 @@ AUDIENCE = "//iam.googleapis.com/projects/123456/locations/global/workloadIdenti
 REGION_URL = "http://169.254.169.254/latest/meta-data/placement/availability-zone"
 IMDSV2_SESSION_TOKEN_URL = "http://169.254.169.254/latest/api/token"
 SECURITY_CREDS_URL = "http://169.254.169.254/latest/meta-data/iam/security-credentials"
+CONTAINER_SECURITY_CREDS_URL = "http://169.254.170.2"
+CONTAINER_SECURITY_CREDS_RELATIVE_URL = "/v2/credentials/29f1da9c-33b7-11ef-a309-734d15444575"
 REGION_URL_IPV6 = "http://[fd00:ec2::254]/latest/meta-data/placement/availability-zone"
 IMDSV2_SESSION_TOKEN_URL_IPV6 = "http://[fd00:ec2::254]/latest/api/token"
 SECURITY_CREDS_URL_IPV6 = (
@@ -792,6 +794,8 @@ class TestCredentials(object):
         impersonation_data=None,
         imdsv2_session_token_status=None,
         imdsv2_session_token_data=None,
+        container_security_credentials_status=None,
+        container_security_credentials_data=None,
     ):
         """Utility function to generate a mock HTTP request object.
         This will facilitate testing various edge cases by specify how the
@@ -861,6 +865,16 @@ class TestCredentials(object):
             impersonation_response.status = impersonation_status
             impersonation_response.data = json.dumps(impersonation_data).encode("utf-8")
             responses.append(impersonation_response)
+
+        if container_security_credentials_status:
+            container_security_credentials_response = mock.create_autospec(
+                transport.Response, instance=True
+            )
+            container_security_credentials_response.status = container_security_credentials_status
+            container_security_credentials_response.data = json.dumps(
+                container_security_credentials_data
+            ).encode("utf-8")
+            responses.append(container_security_credentials_response)
 
         request = mock.create_autospec(transport.Request)
         request.side_effect = responses
@@ -1894,6 +1908,46 @@ class TestCredentials(object):
             credentials.retrieve_subject_token(request)
 
         assert excinfo.match(r"Unable to retrieve AWS security credentials")
+
+    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch.dict(
+        os.environ,
+        {
+            environment_vars.AWS_CONTAINER_CREDENTIALS_RELATIVE_URI: CONTAINER_SECURITY_CREDS_RELATIVE_URL,
+            environment_vars.AWS_REGION: AWS_REGION
+        },
+    )
+    def test_retrieve_container_credentials(
+        self, utcnow
+    ):
+        utcnow.return_value = datetime.datetime.strptime(
+            self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
+        )
+        request = self.make_mock_request(
+            container_security_credentials_status=http_client.OK,
+            container_security_credentials_data=self.AWS_SECURITY_CREDENTIALS_RESPONSE,
+        )
+        credential_source_container_security_url = self.CREDENTIAL_SOURCE.copy()
+        credential_source_container_security_url[
+            "url"
+        ] = CONTAINER_SECURITY_CREDS_URL
+        credential_source_container_security_url.pop("region_url")
+        credentials = self.make_credentials(
+            credential_source=credential_source_container_security_url
+        )
+        subject_token = credentials.retrieve_subject_token(request)
+        assert subject_token == self.make_serialized_aws_signed_request(
+            aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
+        )
+
+        # Assert security credentials request.
+        self.assert_aws_metadata_request_kwargs(
+            request.call_args_list[0][1],
+            "{}{}".format(CONTAINER_SECURITY_CREDS_URL, CONTAINER_SECURITY_CREDS_RELATIVE_URL),
+            {
+                "Content-Type": "application/json",
+            },
+        )
 
     @mock.patch(
         "google.auth.metrics.python_and_auth_lib_version",

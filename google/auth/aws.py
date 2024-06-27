@@ -434,13 +434,20 @@ class _DefaultAwsSecurityCredentialsSupplier(AwsSecurityCredentialsSupplier):
                 env_aws_access_key_id, env_aws_secret_access_key, env_aws_session_token
             )
 
-        imdsv2_session_token = self._get_imdsv2_session_token(request)
-        role_name = self._get_metadata_role_name(request, imdsv2_session_token)
-
-        # Get security credentials.
-        credentials = self._get_metadata_security_credentials(
-            request, role_name, imdsv2_session_token
+        env_container_credentials_url = os.environ.get(
+                environment_vars.AWS_CONTAINER_CREDENTIALS_RELATIVE_URI
         )
+
+        if env_container_credentials_url is not None:
+            credentials = self._get_container_security_credentials(request, env_container_credentials_url)
+        else:
+            imdsv2_session_token = self._get_imdsv2_session_token(request)
+            role_name = self._get_metadata_role_name(request, imdsv2_session_token)
+
+            # Get security credentials.
+            credentials = self._get_metadata_security_credentials(
+                request, role_name, imdsv2_session_token
+            )
 
         return AwsSecurityCredentials(
             credentials.get("AccessKeyId"),
@@ -537,6 +544,48 @@ class _DefaultAwsSecurityCredentialsSupplier(AwsSecurityCredentialsSupplier):
 
         response = request(
             url="{}/{}".format(self._security_credentials_url, role_name),
+            method="GET",
+            headers=headers,
+        )
+
+        # support both string and bytes type response.data
+        response_body = (
+            response.data.decode("utf-8")
+            if hasattr(response.data, "decode")
+            else response.data
+        )
+
+        if response.status != http_client.OK:
+            raise exceptions.RefreshError(
+                "Unable to retrieve AWS security credentials: {}".format(response_body)
+            )
+
+        credentials_response = json.loads(response_body)
+
+        return credentials_response
+
+    def _get_container_security_credentials(self, request, url):
+        """Retrieves the AWS security credentials required for signing AWS
+        requests from the AWS ECS metadata service.
+
+        Args:
+            request (google.auth.transport.Request): A callable used to make
+                HTTP requests.
+
+            url (str): Relative URL to query for credentials.
+
+        Returns:
+            Mapping[str, str]: The AWS ECS metadata server security credentials
+                response.
+
+        Raises:
+            google.auth.exceptions.RefreshError: If an error occurs while
+                retrieving the AWS security credentials.
+        """
+        headers = {"Content-Type": "application/json"}
+
+        response = request(
+            url="{}{}".format(self._security_credentials_url.rstrip("/"), url),
             method="GET",
             headers=headers,
         )
