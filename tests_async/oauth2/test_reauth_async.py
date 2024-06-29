@@ -13,8 +13,8 @@
 # limitations under the License.
 
 import copy
+from unittest import mock
 
-import mock
 import pytest  # type: ignore
 
 from google.auth import exceptions
@@ -22,7 +22,7 @@ from google.oauth2 import _reauth_async
 from google.oauth2 import reauth
 
 
-MOCK_REQUEST = mock.AsyncMock(spec=["transport.Request"])
+MOCK_REQUEST = mock.AsyncMock(spec=["transport.Request"])  # type: ignore
 CHALLENGES_RESPONSE_TEMPLATE = {
     "status": "CHALLENGE_REQUIRED",
     "sessionId": "123",

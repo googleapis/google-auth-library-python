@@ -1,7 +1,6 @@
 # Unit test requirements
 flask
 freezegun
-mock
 oauth2client
 pyopenssl
 pytest
