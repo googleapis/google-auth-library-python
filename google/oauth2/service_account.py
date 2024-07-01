@@ -141,6 +141,7 @@ class Credentials(
         always_use_jwt_access=False,
         universe_domain=credentials.DEFAULT_UNIVERSE_DOMAIN,
         trust_boundary=None,
+        source=None,
     ):
         """
         Args:
@@ -182,6 +183,7 @@ class Credentials(
         self._quota_project_id = quota_project_id
         self._token_uri = token_uri
         self._always_use_jwt_access = always_use_jwt_access
+        self._source = source
         self._universe_domain = universe_domain or credentials.DEFAULT_UNIVERSE_DOMAIN
 
         if universe_domain != credentials.DEFAULT_UNIVERSE_DOMAIN:
@@ -293,6 +295,7 @@ class Credentials(
             additional_claims=self._additional_claims.copy(),
             always_use_jwt_access=self._always_use_jwt_access,
             universe_domain=self._universe_domain,
+            source=self._source,
         )
         return cred
 
@@ -502,7 +505,16 @@ class Credentials(
     @_helpers.copy_docstring(credentials.Signing)
     def signer_email(self):
         return self._service_account_email
-
+    
+    @_helpers.copy_docstring(credentials.Credentials)
+    def get_cred_info(self):
+        if self._source and self.service_account_email:
+            return f"This API call is authenticated as {self.service_account_email} from {self._source}."
+        if self._source:
+            return f"This API call is authenticated from {self._source}."
+        if self.service_account_email:
+            return f"This API call is authenticated as {self.service_account_email}."
+        return None
 
 class IDTokenCredentials(
     credentials.Signing,

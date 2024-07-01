@@ -87,6 +87,7 @@ class Credentials(credentials.ReadOnlyScoped, credentials.CredentialsWithQuotaPr
         trust_boundary=None,
         universe_domain=credentials.DEFAULT_UNIVERSE_DOMAIN,
         account=None,
+        source=None,
     ):
         """
         Args:
@@ -151,6 +152,7 @@ class Credentials(credentials.ReadOnlyScoped, credentials.CredentialsWithQuotaPr
         self._trust_boundary = trust_boundary
         self._universe_domain = universe_domain or credentials.DEFAULT_UNIVERSE_DOMAIN
         self._account = account or ""
+        self._source = source
 
     def __getstate__(self):
         """A __getstate__ method must exist for the __setstate__ to be called
@@ -189,6 +191,7 @@ class Credentials(credentials.ReadOnlyScoped, credentials.CredentialsWithQuotaPr
         self._universe_domain = (
             d.get("_universe_domain") or credentials.DEFAULT_UNIVERSE_DOMAIN
         )
+        self._source = d.get("_source")
         # The refresh_handler setter should be used to repopulate this.
         self._refresh_handler = None
         self._refresh_worker = None
@@ -278,6 +281,16 @@ class Credentials(credentials.ReadOnlyScoped, credentials.CredentialsWithQuotaPr
         """str: The user account associated with the credential. If the account is unknown an empty string is returned."""
         return self._account
 
+    @_helpers.copy_docstring(credentials.Credentials)
+    def get_cred_info(self):
+        if self._source and self._account:
+            return f"This API call is authenticated as {self._account} from {self._source}."
+        if self._source:
+            return f"This API call is authenticated from {self._source}."
+        if self._account:
+            return f"This API call is authenticated as {self._account}."
+        return None
+
     @_helpers.copy_docstring(credentials.CredentialsWithQuotaProject)
     def with_quota_project(self, quota_project_id):
 
@@ -297,6 +310,7 @@ class Credentials(credentials.ReadOnlyScoped, credentials.CredentialsWithQuotaPr
             trust_boundary=self._trust_boundary,
             universe_domain=self._universe_domain,
             account=self._account,
+            source=self._source,
         )
 
     @_helpers.copy_docstring(credentials.CredentialsWithTokenUri)
@@ -318,6 +332,7 @@ class Credentials(credentials.ReadOnlyScoped, credentials.CredentialsWithQuotaPr
             trust_boundary=self._trust_boundary,
             universe_domain=self._universe_domain,
             account=self._account,
+            source=self._source,
         )
 
     def with_account(self, account):
@@ -346,6 +361,7 @@ class Credentials(credentials.ReadOnlyScoped, credentials.CredentialsWithQuotaPr
             trust_boundary=self._trust_boundary,
             universe_domain=self._universe_domain,
             account=account,
+            source=self._source,
         )
 
     @_helpers.copy_docstring(credentials.CredentialsWithUniverseDomain)
@@ -367,6 +383,7 @@ class Credentials(credentials.ReadOnlyScoped, credentials.CredentialsWithQuotaPr
             trust_boundary=self._trust_boundary,
             universe_domain=universe_domain,
             account=self._account,
+            source=self._source,
         )
 
     def _metric_header_for_usage(self):

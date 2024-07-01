@@ -172,6 +172,7 @@ class Credentials(
         lifetime=_DEFAULT_TOKEN_LIFETIME_SECS,
         quota_project_id=None,
         iam_endpoint_override=None,
+        source=None,
     ):
         """
         Args:
@@ -315,6 +316,15 @@ class Credentials(
     @property
     def requires_scopes(self):
         return not self._target_scopes
+
+    @_helpers.copy_docstring(credentials.Credentials)
+    def get_cred_info(self):
+        info = f"This API call is authenticated as {self._target_principal}"
+        if self._source:
+            info += f" from {self._source}."
+        else:
+            info += "."
+        return info
 
     @_helpers.copy_docstring(credentials.CredentialsWithQuotaProject)
     def with_quota_project(self, quota_project_id):

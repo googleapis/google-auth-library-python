@@ -107,6 +107,7 @@ class Credentials(
         workforce_pool_user_project=None,
         universe_domain=credentials.DEFAULT_UNIVERSE_DOMAIN,
         trust_boundary=None,
+        source=None,
     ):
         """Instantiates an external account credentials object.
 
@@ -169,6 +170,7 @@ class Credentials(
             "locations": [],
             "encoded_locations": "0x0",
         }  # expose a placeholder trust boundary value.
+        self._source = source
 
         if self._client_id:
             self._client_auth = utils.ClientAuthentication(
@@ -233,6 +235,7 @@ class Credentials(
             "scopes": self._scopes,
             "default_scopes": self._default_scopes,
             "universe_domain": self._universe_domain,
+            "source": self._source,
         }
         if not self.is_workforce_pool:
             args.pop("workforce_pool_user_project")
@@ -319,6 +322,17 @@ class Credentials(
         """Optional[str]: The STS token introspection endpoint."""
 
         return self._token_info_url
+
+    @_helpers.copy_docstring(credentials.Credentials)
+    def cget_red_info(self):
+        info = None
+        if self._source and self.service_account_email:
+            info = f"This API call is authenticated as {self.service_account_email} from {self._source}."
+        elif self._source:
+            info = f"This API call is authenticated from {self._source}."
+        elif self.service_account_email:
+            info = f"This API call is authenticated as {self.service_account_email}."
+        return info
 
     @_helpers.copy_docstring(credentials.Scoped)
     def with_scopes(self, scopes, default_scopes=None):
