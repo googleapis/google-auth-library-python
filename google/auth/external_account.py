@@ -553,7 +553,9 @@ class Credentials(
             NotImplementedError: When the current credential is not configured for
                 mTLS.
         """
-        raise NotImplementedError("_get_mtls_cert_and_key_location must be implemented.")
+        raise NotImplementedError(
+            "_get_mtls_cert_and_key_location must be implemented."
+        )
 
     @classmethod
     def from_info(cls, info, **kwargs):

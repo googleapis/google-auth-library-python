@@ -295,7 +295,7 @@ class Credentials(external_account.Credentials):
                     self._credential_source_field_name,
                     self._credential_source_headers,
                 )
-            else: # self._credential_source_certificate
+            else:  # self._credential_source_certificate
                 self._subject_token_supplier = _X509Supplier()
 
     @_helpers.copy_docstring(external_account.Credentials)
@@ -351,13 +351,13 @@ class Credentials(external_account.Credentials):
             "use_default_certificate_config"
         )
         if self._certificate_config_location and use_default:
-                raise exceptions.MalformedError(
-                    "Invalid certificate configuration, certificate_config_location cannot be specified when use_default_certificate_config = true."
-                )
+            raise exceptions.MalformedError(
+                "Invalid certificate configuration, certificate_config_location cannot be specified when use_default_certificate_config = true."
+            )
         if not self._certificate_config_location and not use_default:
-                raise exceptions.MalformedError(
-                    "Invalid certificate configuration, use_default_certificate_config should be true if no certificate_config_location is provided."
-                )
+            raise exceptions.MalformedError(
+                "Invalid certificate configuration, use_default_certificate_config should be true if no certificate_config_location is provided."
+            )
 
     def _validate_file_or_url_config(self, credential_source):
         self._credential_source_headers = credential_source.get("headers")
@@ -386,10 +386,16 @@ class Credentials(external_account.Credentials):
             self._credential_source_field_name = None
 
     def _validate_single_source(self):
-        credential_sources = [self._credential_source_file, self._credential_source_url, self._credential_source_certificate]
-        valid_credential_sources = list(filter(lambda source: source is not None, credential_sources))
-        
-        if len(valid_credential_sources) > 1: 
+        credential_sources = [
+            self._credential_source_file,
+            self._credential_source_url,
+            self._credential_source_certificate,
+        ]
+        valid_credential_sources = list(
+            filter(lambda source: source is not None, credential_sources)
+        )
+
+        if len(valid_credential_sources) > 1:
             raise exceptions.MalformedError(
                 "Ambiguous credential_source. 'file', 'url', and 'certificate' are mutually exclusive.."
             )
