@@ -115,7 +115,7 @@ def _get_workload_cert_and_key(certificate_config_path=None):
 
 
 def _get_cert_config_path(certificate_config_path=None):
-    """Gets the certificate configuration full path using the following order of precedence:
+    """Get the certificate configuration path based on the following order:
 
     1: Explicit override, if set
     2: Environment variable, if set

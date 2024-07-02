@@ -386,27 +386,14 @@ class Credentials(external_account.Credentials):
             self._credential_source_field_name = None
 
     def _validate_single_source(self):
-        if (
-            sum(
-                map(
-                    bool,
-                    [
-                        self._credential_source_file,
-                        self._credential_source_url,
-                        self._credential_source_certificate,
-                    ],
-                )
-            )
-            > 1
-        ):
+        credential_sources = [self._credential_source_file, self._credential_source_url, self._credential_source_certificate]
+        valid_credential_sources = list(filter(lambda source: source is not None, credential_sources))
+        
+        if len(valid_credential_sources) > 1: 
             raise exceptions.MalformedError(
                 "Ambiguous credential_source. 'file', 'url', and 'certificate' are mutually exclusive.."
             )
-        if (
-            not self._credential_source_file
-            and not self._credential_source_url
-            and not self._credential_source_certificate
-        ):
+        if len(valid_credential_sources) != 1:
             raise exceptions.MalformedError(
                 "Missing credential_source. A 'file', 'url', or 'certificate' must be provided."
             )
