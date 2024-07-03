@@ -72,7 +72,7 @@ class ExponentialBackoff:
     ):
         if total_attempts < 1:
             raise exceptions.InvalidValue(
-                f"total_attempts must be greater than or equal to 1 but was {total_attempts=}"
+                f"total_attempts must be greater than or equal to 1 but was {total_attempts}"
             )
 
         self._total_attempts = total_attempts
