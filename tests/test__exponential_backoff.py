@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import mock
-import pytest
+import pytest # type: ignore
 
 from google.auth import _exponential_backoff
 from google.auth import exceptions
