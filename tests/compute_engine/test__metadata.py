@@ -125,15 +125,13 @@ def test_ping_success_retry(mock_metrics_header_value):
     assert request.call_count == 2
 
 
-@mock.patch("time.sleep", return_value=None)
-def test_ping_failure_bad_flavor(mock_sleep):
+def test_ping_failure_bad_flavor():
     request = make_request("", headers={_metadata._METADATA_FLAVOR_HEADER: "meep"})
 
     assert not _metadata.ping(request)
 
 
-@mock.patch("time.sleep", return_value=None)
-def test_ping_failure_connection_failed(mock_sleep):
+def test_ping_failure_connection_failed():
     request = make_request("")
     request.side_effect = exceptions.TransportError()
 
@@ -196,8 +194,7 @@ def test_get_success_json_content_type_charset():
     assert result[key] == value
 
 
-@mock.patch("time.sleep", return_value=None)
-def test_get_success_retry(mock_sleep):
+def test_get_success_retry():
     key, value = "foo", "bar"
 
     data = json.dumps({key: value})
@@ -313,8 +310,7 @@ def test_get_success_custom_root_old_variable():
     )
 
 
-@mock.patch("time.sleep", return_value=None)
-def test_get_failure(mock_sleep):
+def test_get_failure():
     request = make_request("Metadata error", status=http_client.NOT_FOUND)
 
     with pytest.raises(exceptions.TransportError) as excinfo:
@@ -341,8 +337,7 @@ def test_get_return_none_for_not_found_error():
     )
 
 
-@mock.patch("time.sleep", return_value=None)
-def test_get_failure_connection_failed(mock_sleep):
+def test_get_failure_connection_failed():
     request = make_request("")
     request.side_effect = exceptions.TransportError()
 

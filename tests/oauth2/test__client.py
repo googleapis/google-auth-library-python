@@ -194,7 +194,7 @@ def test__token_endpoint_request_internal_failure_error():
         _client._token_endpoint_request(
             request, "http://example.com", {"error_description": "internal_failure"}
         )
-    # request with 3 retries
+    # request with 2 retries
     assert request.call_count == 3
 
     request = make_request(
@@ -205,7 +205,7 @@ def test__token_endpoint_request_internal_failure_error():
         _client._token_endpoint_request(
             request, "http://example.com", {"error": "internal_failure"}
         )
-    # request with 3 retries
+    # request with 2 retries
     assert request.call_count == 3
 
 
