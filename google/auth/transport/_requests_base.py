@@ -49,7 +49,6 @@ class _BaseAuthorizedSession(metaclass=abc.ABCMeta):
             account credentials.
     """
 
-
     def __init__(
         self,
         credentials,
@@ -67,13 +66,19 @@ class _BaseAuthorizedSession(metaclass=abc.ABCMeta):
         self._default_host = default_host
         self._auth_request = auth_request
 
-
     @abc.abstractmethod
-    def request(self, method, url, data=None, headers=None, max_allowed_time=None, timeout=_DEFAULT_TIMEOUT, **kwargs):
+    def request(
+        self,
+        method,
+        url,
+        data=None,
+        headers=None,
+        max_allowed_time=None,
+        timeout=_DEFAULT_TIMEOUT,
+        **kwargs
+    ):
         raise NotImplementedError("Request must be implemented")
 
-    
     @abc.abstractmethod
     def close(self):
         raise NotImplementedError("Close must be implemented")
-    
