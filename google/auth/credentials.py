@@ -55,7 +55,7 @@ class Credentials(_BaseCredentials):
             token (Optional[str]): If specified, overrides the current access
                 token.
         """
-        return self._apply(headers, token)
+        self._apply(headers, token)
     
     def _blocking_refresh(self, request):
         if not self.valid:
