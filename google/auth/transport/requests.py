@@ -33,11 +33,12 @@ import requests.exceptions  # pylint: disable=ungrouped-imports
 from requests.packages.urllib3.util.ssl_ import (  # type: ignore
     create_urllib3_context,
 )  # pylint: disable=ungrouped-imports
-
+from google.auth import environment_vars
 from google.auth import exceptions
 from google.auth import transport
 from google.auth.transport._requests_base import _BaseAuthorizedSession
 from google.oauth2 import service_account
+import google.auth.transport._mtls_helper
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -191,6 +192,107 @@ class Request(transport.Request):
             raise new_exc from caught_exc
 
 
+class _MutualTlsAdapter(requests.adapters.HTTPAdapter):
+    """
+    A TransportAdapter that enables mutual TLS.
+
+    Args:
+        cert (bytes): client certificate in PEM format
+        key (bytes): client private key in PEM format
+
+    Raises:
+        ImportError: if certifi or pyOpenSSL is not installed
+        OpenSSL.crypto.Error: if client cert or key is invalid
+    """
+
+    def __init__(self, cert, key):
+        import certifi
+        from OpenSSL import crypto
+        import urllib3.contrib.pyopenssl  # type: ignore
+
+        urllib3.contrib.pyopenssl.inject_into_urllib3()
+
+        pkey = crypto.load_privatekey(crypto.FILETYPE_PEM, key)
+        x509 = crypto.load_certificate(crypto.FILETYPE_PEM, cert)
+
+        ctx_poolmanager = create_urllib3_context()
+        ctx_poolmanager.load_verify_locations(cafile=certifi.where())
+        ctx_poolmanager._ctx.use_certificate(x509)
+        ctx_poolmanager._ctx.use_privatekey(pkey)
+        self._ctx_poolmanager = ctx_poolmanager
+
+        ctx_proxymanager = create_urllib3_context()
+        ctx_proxymanager.load_verify_locations(cafile=certifi.where())
+        ctx_proxymanager._ctx.use_certificate(x509)
+        ctx_proxymanager._ctx.use_privatekey(pkey)
+        self._ctx_proxymanager = ctx_proxymanager
+
+        super(_MutualTlsAdapter, self).__init__()
+
+    def init_poolmanager(self, *args, **kwargs):
+        kwargs["ssl_context"] = self._ctx_poolmanager
+        super(_MutualTlsAdapter, self).init_poolmanager(*args, **kwargs)
+
+    def proxy_manager_for(self, *args, **kwargs):
+        kwargs["ssl_context"] = self._ctx_proxymanager
+        return super(_MutualTlsAdapter, self).proxy_manager_for(*args, **kwargs)
+
+
+class _MutualTlsOffloadAdapter(requests.adapters.HTTPAdapter):
+    """
+    A TransportAdapter that enables mutual TLS and offloads the client side
+    signing operation to the signing library.
+
+    Args:
+        enterprise_cert_file_path (str): the path to a enterprise cert JSON
+            file. The file should contain the following field:
+
+                {
+                    "libs": {
+                        "signer_library": "...",
+                        "offload_library": "..."
+                    }
+                }
+
+    Raises:
+        ImportError: if certifi or pyOpenSSL is not installed
+        google.auth.exceptions.MutualTLSChannelError: If mutual TLS channel
+            creation failed for any reason.
+    """
+
+    def __init__(self, enterprise_cert_file_path):
+        import certifi
+        from google.auth.transport import _custom_tls_signer
+
+        self.signer = _custom_tls_signer.CustomTlsSigner(enterprise_cert_file_path)
+        self.signer.load_libraries()
+
+        if not self.signer.should_use_provider():
+            import urllib3.contrib.pyopenssl
+
+            urllib3.contrib.pyopenssl.inject_into_urllib3()
+
+        poolmanager = create_urllib3_context()
+        poolmanager.load_verify_locations(cafile=certifi.where())
+        self.signer.attach_to_ssl_context(poolmanager)
+        self._ctx_poolmanager = poolmanager
+
+        proxymanager = create_urllib3_context()
+        proxymanager.load_verify_locations(cafile=certifi.where())
+        self.signer.attach_to_ssl_context(proxymanager)
+        self._ctx_proxymanager = proxymanager
+
+        super(_MutualTlsOffloadAdapter, self).__init__()
+
+    def init_poolmanager(self, *args, **kwargs):
+        kwargs["ssl_context"] = self._ctx_poolmanager
+        super(_MutualTlsOffloadAdapter, self).init_poolmanager(*args, **kwargs)
+
+    def proxy_manager_for(self, *args, **kwargs):
+        kwargs["ssl_context"] = self._ctx_proxymanager
+        return super(_MutualTlsOffloadAdapter, self).proxy_manager_for(*args, **kwargs)
+
+
 class AuthorizedSession(requests.Session, _BaseAuthorizedSession):
     """A Requests Session class with credentials.
 
@@ -314,6 +416,58 @@ class AuthorizedSession(requests.Session, _BaseAuthorizedSession):
                 "https://{}/".format(self._default_host) if self._default_host else None
             )
 
+    def configure_mtls_channel(self, client_cert_callback=None):
+        """Configure the client certificate and key for SSL connection.
+
+        The function does nothing unless `GOOGLE_API_USE_CLIENT_CERTIFICATE` is
+        explicitly set to `true`. In this case if client certificate and key are
+        successfully obtained (from the given client_cert_callback or from application
+        default SSL credentials), a :class:`_MutualTlsAdapter` instance will be mounted
+        to "https://" prefix.
+
+        Args:
+            client_cert_callback (Optional[Callable[[], (bytes, bytes)]]):
+                The optional callback returns the client certificate and private
+                key bytes both in PEM format.
+                If the callback is None, application default SSL credentials
+                will be used.
+
+        Raises:
+            google.auth.exceptions.MutualTLSChannelError: If mutual TLS channel
+                creation failed for any reason.
+        """
+        use_client_cert = os.getenv(
+            environment_vars.GOOGLE_API_USE_CLIENT_CERTIFICATE, "false"
+        )
+        if use_client_cert != "true":
+            self._is_mtls = False
+            return
+
+        try:
+            import OpenSSL
+        except ImportError as caught_exc:
+            new_exc = exceptions.MutualTLSChannelError(caught_exc)
+            raise new_exc from caught_exc
+
+        try:
+            (
+                self._is_mtls,
+                cert,
+                key,
+            ) = google.auth.transport._mtls_helper.get_client_cert_and_key(
+                client_cert_callback
+            )
+
+            if self._is_mtls:
+                mtls_adapter = _MutualTlsAdapter(cert, key)
+                self.mount("https://", mtls_adapter)
+        except (
+            exceptions.ClientCertError,
+            ImportError,
+            OpenSSL.crypto.Error,
+        ) as caught_exc:
+            new_exc = exceptions.MutualTLSChannelError(caught_exc)
+            raise new_exc from caught_exc
 
     def request(
         self,
@@ -432,3 +586,8 @@ class AuthorizedSession(requests.Session, _BaseAuthorizedSession):
         if self._auth_request_session is not None:
             self._auth_request_session.close()
         super(AuthorizedSession, self).close()
+
+    @property
+    def is_mtls(self):
+        """Indicates if the created SSL channel is mutual TLS."""
+        return self._is_mtls
