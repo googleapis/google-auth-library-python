@@ -202,4 +202,3 @@ class _TokenState(Enum):
     FRESH = 1
     STALE = 2
     INVALID = 3
-

@@ -391,7 +391,6 @@ class AuthorizedSession(requests.Session, _BaseAuthorizedSession):
     ):
         super(AuthorizedSession, self).__init__()
 
-
         if auth_request is None:
             self._auth_request_session = requests.Session()
 
@@ -407,8 +406,16 @@ class AuthorizedSession(requests.Session, _BaseAuthorizedSession):
         else:
             self._auth_request_session = None
 
-        _BaseAuthorizedSession.__init__(self, credentials, refresh_status_codes, max_refresh_attempts, refresh_timeout, auth_request, default_host)
-        
+        _BaseAuthorizedSession.__init__(
+            self,
+            credentials,
+            refresh_status_codes,
+            max_refresh_attempts,
+            refresh_timeout,
+            auth_request,
+            default_host,
+        )
+
         # https://google.aip.dev/auth/4111
         # Attempt to use self-signed JWTs when a service account is used.
         if isinstance(self.credentials, service_account.Credentials):

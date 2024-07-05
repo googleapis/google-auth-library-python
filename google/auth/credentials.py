@@ -22,7 +22,11 @@ import os
 from google.auth import _helpers, environment_vars
 from google.auth import exceptions
 from google.auth import metrics
-from google.auth._credentials_base import _BaseCredentials, _TokenState as TokenState, _DEFAULT_UNIVERSE_DOMAIN as DEFAULT_UNIVERSE_DOMAIN
+from google.auth._credentials_base import (
+    _BaseCredentials,
+    _TokenState as TokenState,
+    _DEFAULT_UNIVERSE_DOMAIN as DEFAULT_UNIVERSE_DOMAIN,
+)
 
 
 class Credentials(_BaseCredentials):
@@ -367,4 +371,3 @@ class Signing(metaclass=abc.ABCMeta):
         # pylint: disable=missing-raises-doc
         # (pylint doesn't recognize that this is abstract)
         raise NotImplementedError("Signer must be implemented.")
-
