@@ -60,7 +60,7 @@ class Credentials(_BaseCredentials):
                 token.
         """
         self._apply(headers, token)
-    
+
     def _blocking_refresh(self, request):
         if not self.valid:
             self.refresh(request)
