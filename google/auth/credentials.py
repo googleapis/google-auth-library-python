@@ -47,6 +47,16 @@ class Credentials(_BaseCredentials):
     def __init__(self):
         super(Credentials, self).__init__()
 
+    def apply(self, headers, token=None):
+        """Apply the token to the authentication header.
+
+        Args:
+            headers (Mapping): The HTTP request headers.
+            token (Optional[str]): If specified, overrides the current access
+                token.
+        """
+        return self._apply(headers, token)
+    
     def _blocking_refresh(self, request):
         if not self.valid:
             self.refresh(request)

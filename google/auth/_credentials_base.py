@@ -161,7 +161,7 @@ class _BaseCredentials(metaclass=abc.ABCMeta):
         """
         return None
 
-    def apply(self, headers, token=None):
+    def _apply(self, headers, token=None):
         """Apply the token to the authentication header.
 
         Args:
@@ -189,25 +189,6 @@ class _BaseCredentials(metaclass=abc.ABCMeta):
             headers["x-allowed-locations"] = self._trust_boundary["encoded_locations"]
         if self.quota_project_id:
             headers["x-goog-user-project"] = self.quota_project_id
-
-    def before_request(self, request, method, url, headers):
-        """Performs credential-specific before request logic.
-
-        Refreshes the credentials if necessary, then calls :meth:`apply` to
-        apply the token to the authentication header.
-
-        Args:
-            request (google.auth.transport.Request): The object used to make
-                HTTP requests.
-            method (str): The request's HTTP method or the RPC method being
-                invoked.
-            url (str): The request's URI or the RPC service's URI.
-            headers (Mapping): The request's headers.
-        """
-        return NotImplementedError("before_request must be implemented")
-
-    def with_non_blocking_refresh(self):
-        self._use_non_blocking_refresh = True
 
 
 class _TokenState(Enum):
