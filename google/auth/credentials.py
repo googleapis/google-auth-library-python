@@ -62,6 +62,9 @@ class Credentials(_BaseCredentials):
         self._universe_domain = DEFAULT_UNIVERSE_DOMAIN
         """Optional[str]: The universe domain value, default is googleapis.com
         """
+        self._cred_file_path = None
+        """Optional[str]: The credential file path.
+        """
 
         self._use_non_blocking_refresh = False
         self._refresh_worker = RefreshThreadManager()
@@ -127,6 +130,10 @@ class Credentials(_BaseCredentials):
     def universe_domain(self):
         """The universe domain value."""
         return self._universe_domain
+
+    def _get_cred_info(self):
+        """The credential information string."""
+        return None
 
     @abc.abstractmethod
     def refresh(self, request):
