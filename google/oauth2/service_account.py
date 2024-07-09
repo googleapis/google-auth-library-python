@@ -294,7 +294,7 @@ class Credentials(
             always_use_jwt_access=self._always_use_jwt_access,
             universe_domain=self._universe_domain,
         )
-        cred._cred_file_path = self.__cred_file_path
+        cred._cred_file_path = self._cred_file_path
         return cred
 
     @_helpers.copy_docstring(credentials.Scoped)
