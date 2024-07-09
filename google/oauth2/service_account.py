@@ -507,7 +507,7 @@ class Credentials(
     @_helpers.copy_docstring(credentials.Credentials)
     def _get_cred_info(self):
         if self._cred_file_path and self.service_account_email:
-            return f"This API call is authenticated as {self.service_account_email} from {self._source} via the GOOGLE_APPLICATION_CREDENTIALS environment variable."
+            return f"This API call is authenticated as {self.service_account_email} from {self._cred_file_path} via the GOOGLE_APPLICATION_CREDENTIALS environment variable."
         if self._cred_file_path:
             return f"This API call is authenticated from {self._cred_file_path} via the GOOGLE_APPLICATION_CREDENTIALS environment variable."
         return None
