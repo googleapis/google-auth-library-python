@@ -157,6 +157,10 @@ class Credentials(
         self._universe_domain_cached = True
         return self._universe_domain
 
+    @_helpers.copy_docstring(credentials.Credentials)
+    def _get_cred_info(self):
+        return f"This API call is authenticated as {self.service_account_email} from the metadata server."
+
     @_helpers.copy_docstring(credentials.CredentialsWithQuotaProject)
     def with_quota_project(self, quota_project_id):
         creds = self.__class__(
