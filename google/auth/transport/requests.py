@@ -589,12 +589,13 @@ class AuthorizedSession(requests.Session, _BaseAuthorizedSession):
 
         return response
 
+    @property
+    def is_mtls(self):
+        """Indicates if the created SSL channel is mutual TLS."""
+        return self._is_mtls
+
     def close(self):
         if self._auth_request_session is not None:
             self._auth_request_session.close()
         super(AuthorizedSession, self).close()
 
-    @property
-    def is_mtls(self):
-        """Indicates if the created SSL channel is mutual TLS."""
-        return self._is_mtls
