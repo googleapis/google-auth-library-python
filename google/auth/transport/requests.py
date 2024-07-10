@@ -598,4 +598,3 @@ class AuthorizedSession(requests.Session, _BaseAuthorizedSession):
         if self._auth_request_session is not None:
             self._auth_request_session.close()
         super(AuthorizedSession, self).close()
-
