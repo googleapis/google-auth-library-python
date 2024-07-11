@@ -111,15 +111,15 @@ class TestCertAndKeyRegex(object):
         )
 
 
-class TestCheckaMetadataPath(object):
+class TestCheckConfigPath(object):
     def test_success(self):
         metadata_path = os.path.join(pytest.data_dir, "context_aware_metadata.json")
-        returned_path = _mtls_helper._check_dca_metadata_path(metadata_path)
+        returned_path = _mtls_helper._check_config_path(metadata_path)
         assert returned_path is not None
 
     def test_failure(self):
         metadata_path = os.path.join(pytest.data_dir, "not_exists.json")
-        returned_path = _mtls_helper._check_dca_metadata_path(metadata_path)
+        returned_path = _mtls_helper._check_config_path(metadata_path)
         assert returned_path is None
 
 
@@ -279,15 +279,15 @@ class TestGetClientSslCredentials(object):
     )
     @mock.patch("google.auth.transport._mtls_helper._load_json_file", autospec=True)
     @mock.patch(
-        "google.auth.transport._mtls_helper._check_dca_metadata_path", autospec=True
+        "google.auth.transport._mtls_helper._check_config_path", autospec=True
     )
-    def test_success(
+    def test_success_with_context_aware_metadata(
         self,
-        mock_check_dca_metadata_path,
+        mock_check_config_path,
         mock_load_json_file,
         mock_run_cert_provider_command,
     ):
-        mock_check_dca_metadata_path.return_value = True
+        mock_check_config_path.return_value = True
         mock_load_json_file.return_value = {"cert_provider_command": ["command"]}
         mock_run_cert_provider_command.return_value = (b"cert", b"key", None)
         has_cert, cert, key, passphrase = _mtls_helper.get_client_ssl_credentials()
@@ -297,10 +297,47 @@ class TestGetClientSslCredentials(object):
         assert passphrase is None
 
     @mock.patch(
-        "google.auth.transport._mtls_helper._check_dca_metadata_path", autospec=True
+        "google.auth.transport._mtls_helper._check_config_path", autospec=True
     )
-    def test_success_without_metadata(self, mock_check_dca_metadata_path):
-        mock_check_dca_metadata_path.return_value = False
+    @mock.patch("google.auth.transport._mtls_helper._load_json_file", autospec=True)
+    @mock.patch(
+        "google.auth.transport._mtls_helper._get_cert_config_path", autospec=True
+    )
+    @mock.patch(
+        "google.auth.transport._mtls_helper._read_cert_and_key_files", autospec=True
+    )
+    def test_success_with_certificate_config(
+        self,
+        mock_check_config_path,
+        mock_load_json_file,
+        mock_get_cert_config_path,
+        mock_read_cert_and_key_files,
+    ):
+        cert_config_path = "/path/to/cert"
+        mock_check_config_path.return_value = True
+        mock_load_json_file.return_value = {
+            "cert_configs": {
+                "workload": {"cert_path": "cert/path", "key_path": "key/path"}
+            }
+        }
+        mock_get_cert_config_path.return_value = cert_config_path
+        mock_read_cert_and_key_files.return_value = (
+            pytest.public_cert_bytes,
+            pytest.private_key_bytes,
+        )
+
+        has_cert, cert, key, passphrase = _mtls_helper.get_client_ssl_credentials(
+            certificate_config_path=cert_config_path)
+        assert has_cert
+        assert cert == pytest.public_cert_bytes
+        assert key == pytest.private_key_bytes
+        assert passphrase is None
+
+    @mock.patch(
+        "google.auth.transport._mtls_helper._check_config_path", autospec=True
+    )
+    def test_success_without_metadata(self, mock_check_config_path):
+        mock_check_config_path.return_value = False
         has_cert, cert, key, passphrase = _mtls_helper.get_client_ssl_credentials()
         assert not has_cert
         assert cert is None
@@ -312,15 +349,15 @@ class TestGetClientSslCredentials(object):
     )
     @mock.patch("google.auth.transport._mtls_helper._load_json_file", autospec=True)
     @mock.patch(
-        "google.auth.transport._mtls_helper._check_dca_metadata_path", autospec=True
+        "google.auth.transport._mtls_helper._check_config_path", autospec=True
     )
     def test_success_with_encrypted_key(
         self,
-        mock_check_dca_metadata_path,
+        mock_check_config_path,
         mock_load_json_file,
         mock_run_cert_provider_command,
     ):
-        mock_check_dca_metadata_path.return_value = True
+        mock_check_config_path.return_value = True
         mock_load_json_file.return_value = {"cert_provider_command": ["command"]}
         mock_run_cert_provider_command.return_value = (b"cert", b"key", b"passphrase")
         has_cert, cert, key, passphrase = _mtls_helper.get_client_ssl_credentials(
@@ -336,12 +373,12 @@ class TestGetClientSslCredentials(object):
 
     @mock.patch("google.auth.transport._mtls_helper._load_json_file", autospec=True)
     @mock.patch(
-        "google.auth.transport._mtls_helper._check_dca_metadata_path", autospec=True
+        "google.auth.transport._mtls_helper._check_config_path", autospec=True
     )
     def test_missing_cert_command(
-        self, mock_check_dca_metadata_path, mock_load_json_file
+        self, mock_check_config_path, mock_load_json_file
     ):
-        mock_check_dca_metadata_path.return_value = True
+        mock_check_config_path.return_value = True
         mock_load_json_file.return_value = {}
         with pytest.raises(exceptions.ClientCertError):
             _mtls_helper.get_client_ssl_credentials()
@@ -351,16 +388,16 @@ class TestGetClientSslCredentials(object):
     )
     @mock.patch("google.auth.transport._mtls_helper._load_json_file", autospec=True)
     @mock.patch(
-        "google.auth.transport._mtls_helper._check_dca_metadata_path", autospec=True
+        "google.auth.transport._mtls_helper._check_config_path", autospec=True
     )
     def test_customize_context_aware_metadata_path(
         self,
-        mock_check_dca_metadata_path,
+        mock_check_config_path,
         mock_load_json_file,
         mock_run_cert_provider_command,
     ):
         context_aware_metadata_path = "/path/to/metata/data"
-        mock_check_dca_metadata_path.return_value = context_aware_metadata_path
+        mock_check_config_path.return_value = context_aware_metadata_path
         mock_load_json_file.return_value = {"cert_provider_command": ["command"]}
         mock_run_cert_provider_command.return_value = (b"cert", b"key", None)
 
@@ -372,7 +409,7 @@ class TestGetClientSslCredentials(object):
         assert cert == b"cert"
         assert key == b"key"
         assert passphrase is None
-        mock_check_dca_metadata_path.assert_called_with(context_aware_metadata_path)
+        mock_check_config_path.assert_called_with(context_aware_metadata_path)
         mock_load_json_file.assert_called_with(context_aware_metadata_path)
 
 
