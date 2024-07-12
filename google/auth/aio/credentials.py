@@ -17,10 +17,12 @@
 
 import abc
 
-from google.auth import _helpers
+from google.auth._credentials_base import (
+    _BaseCredentials
+)
 
 
-class Credentials(metaclass=abc.ABCMeta):
+class Credentials(_BaseCredentials):
     """Base class for all async credentials.
 
     All credentials have a :attr:`token` that is used for authentication and
@@ -40,9 +42,7 @@ class Credentials(metaclass=abc.ABCMeta):
     """
 
     def __init__(self):
-        self.token = None
-        """str: The bearer token that can be used in HTTP headers to make
-        authenticated requests."""
+        super(Credentials, self).__init__()
 
     async def apply(self, headers, token=None):
         """Apply the token to the authentication header.
@@ -52,10 +52,21 @@ class Credentials(metaclass=abc.ABCMeta):
             token (Optional[str]): If specified, overrides the current access
                 token.
         """
-        headers["authorization"] = "Bearer {}".format(
-            _helpers.from_bytes(token or self.token)
-        )
+        self._apply(headers, token=token)
 
+    async def refresh(self, request):
+        """Refreshes the access token.
+
+        Args:
+            request (google.auth.aio.transport.Request): The object used to make
+                HTTP requests.
+
+        Raises:
+            google.auth.exceptions.RefreshError: If the credentials could
+                not be refreshed.
+        """
+        raise NotImplementedError("Refresh must be implemented")
+    
     async def before_request(self, request, method, url, headers):
         """Performs credential-specific before request logic.
 
@@ -63,7 +74,7 @@ class Credentials(metaclass=abc.ABCMeta):
         apply the token to the authentication header.
 
         Args:
-            request (google.auth.transport.Request): The object used to make
+            request (google.auth.aio.transport.Request): The object used to make
                 HTTP requests.
             method (str): The request's HTTP method or the RPC method being
                 invoked.
