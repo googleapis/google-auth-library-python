@@ -14,10 +14,8 @@
 
 """Transport adapter for Base Requests."""
 
-import os
 
 import abc
-from google.auth import transport
 
 
 _DEFAULT_TIMEOUT = 120  # in second
@@ -31,40 +29,13 @@ class _BaseAuthorizedSession(metaclass=abc.ABCMeta):
     Args:
         credentials (google.auth._credentials_base.BaseCredentials): The credentials to
             add to the request.
-        refresh_status_codes (Sequence[int]): Which HTTP status codes indicate
-            that credentials should be refreshed and the request should be
-            retried.
-        max_refresh_attempts (int): The maximum number of times to attempt to
-            refresh the credentials and retry the request.
-        refresh_timeout (Optional[int]): The timeout value in seconds for
-            credential refresh HTTP requests.
-        auth_request (google.auth.transport.requests.Request):
-            (Optional) An instance of
-            :class:`~google.auth.transport.requests.Request` used when
-            refreshing credentials. If not passed,
-            an instance of :class:`~google.auth.transport.requests.Request`
-            is created.
-        default_host (Optional[str]): A host like "pubsub.googleapis.com".
-            This is used when a self-signed JWT is created from service
-            account credentials.
     """
 
     def __init__(
         self,
         credentials,
-        refresh_status_codes=transport.DEFAULT_REFRESH_STATUS_CODES,
-        max_refresh_attempts=transport.DEFAULT_MAX_REFRESH_ATTEMPTS,
-        refresh_timeout=None,
-        auth_request=None,
-        default_host=None,
     ):
         self.credentials = credentials
-        self._refresh_status_codes = refresh_status_codes
-        self._max_refresh_attempts = max_refresh_attempts
-        self._refresh_timeout = refresh_timeout
-        self._is_mtls = False
-        self._default_host = default_host
-        self._auth_request = auth_request
 
     @abc.abstractmethod
     def request(

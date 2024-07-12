@@ -1,4 +1,4 @@
-# Copyright 2016 Google LLC
+# Copyright 2024 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -33,12 +33,13 @@ import requests.exceptions  # pylint: disable=ungrouped-imports
 from requests.packages.urllib3.util.ssl_ import (  # type: ignore
     create_urllib3_context,
 )  # pylint: disable=ungrouped-imports
+
 from google.auth import environment_vars
 from google.auth import exceptions
 from google.auth import transport
 from google.auth.transport._requests_base import _BaseAuthorizedSession
-from google.oauth2 import service_account
 import google.auth.transport._mtls_helper
+from google.oauth2 import service_account
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -267,10 +268,9 @@ class _MutualTlsOffloadAdapter(requests.adapters.HTTPAdapter):
         self.signer = _custom_tls_signer.CustomTlsSigner(enterprise_cert_file_path)
         self.signer.load_libraries()
 
-        if not self.signer.should_use_provider():
-            import urllib3.contrib.pyopenssl
+        import urllib3.contrib.pyopenssl
 
-            urllib3.contrib.pyopenssl.inject_into_urllib3()
+        urllib3.contrib.pyopenssl.inject_into_urllib3()
 
         poolmanager = create_urllib3_context()
         poolmanager.load_verify_locations(cafile=certifi.where())
@@ -390,6 +390,12 @@ class AuthorizedSession(requests.Session, _BaseAuthorizedSession):
         default_host=None,
     ):
         super(AuthorizedSession, self).__init__()
+        _BaseAuthorizedSession.__init__(self, credentials)
+        self._refresh_status_codes = refresh_status_codes
+        self._max_refresh_attempts = max_refresh_attempts
+        self._refresh_timeout = refresh_timeout
+        self._is_mtls = False
+        self._default_host = default_host
 
         if auth_request is None:
             self._auth_request_session = requests.Session()
@@ -406,15 +412,9 @@ class AuthorizedSession(requests.Session, _BaseAuthorizedSession):
         else:
             self._auth_request_session = None
 
-        _BaseAuthorizedSession.__init__(
-            self,
-            credentials,
-            refresh_status_codes,
-            max_refresh_attempts,
-            refresh_timeout,
-            auth_request,
-            default_host,
-        )
+        # Request instance used by internal methods (for example,
+        # credentials.refresh).
+        self._auth_request = auth_request
 
         # https://google.aip.dev/auth/4111
         # Attempt to use self-signed JWTs when a service account is used.
@@ -598,4 +598,3 @@ class AuthorizedSession(requests.Session, _BaseAuthorizedSession):
         if self._auth_request_session is not None:
             self._auth_request_session.close()
         super(AuthorizedSession, self).close()
-
