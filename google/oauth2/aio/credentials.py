@@ -50,3 +50,4 @@ class Credentials(credentials.Credentials):
 
     async def refresh(self, request):
         raise NotImplementedError("refresh is currently not supported for oauth2 access tokens.")
+    
