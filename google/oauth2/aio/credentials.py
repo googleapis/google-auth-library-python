@@ -37,18 +37,6 @@ from google.auth.aio import credentials
 class Credentials(credentials.Credentials):
     """Asynchronous Credentials using OAuth 2.0 access and refresh tokens.
 
-    The credentials are considered immutable except the tokens and the token
-    expiry, which are updated after refresh. If you want to modify the quota
-    project, use :meth:`with_quota_project` or ::
-
-        credentials = credentials.with_quota_project('myproject-123')
-
-    Reauth is disabled by default. To enable reauth, set the
-    `enable_reauth_refresh` parameter to True in the constructor. Note that
-    reauth feature is intended for gcloud to use only.
-    If reauth is enabled, `pyu2f` dependency has to be installed in order to use security
-    key reauth feature. Dependency can be installed via `pip install pyu2f` or `pip install
-    google-auth[reauth]`.
     """
 
     def __init__(self, token):

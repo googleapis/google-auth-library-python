@@ -15,8 +15,6 @@
 """Google Auth AIO Library for Python."""
 
 import logging
-import sys
-import warnings
 
 from google.auth import version as google_auth_version
 
