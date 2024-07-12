@@ -23,7 +23,7 @@ import subprocess
 from google.auth import exceptions
 
 CONTEXT_AWARE_METADATA_PATH = "~/.secureConnect/context_aware_metadata.json"
-_CERTIFICATE_CONFIGURATION_DEFAULT_PATH = "~/.config/gcloud/certificate_config.json"
+CERTIFICATE_CONFIGURATION_DEFAULT_PATH = "~/.config/gcloud/certificate_config.json"
 _CERTIFICATE_CONFIGURATION_ENV = "GOOGLE_API_CERTIFICATE_CONFIG"
 _CERT_PROVIDER_COMMAND = "cert_provider_command"
 _CERT_REGEX = re.compile(
@@ -136,7 +136,7 @@ def _get_cert_config_path(certificate_config_path=None):
         if env_path is not None and env_path != "":
             certificate_config_path = env_path
         else:
-            certificate_config_path = _CERTIFICATE_CONFIGURATION_DEFAULT_PATH
+            certificate_config_path = CERTIFICATE_CONFIGURATION_DEFAULT_PATH
 
     certificate_config_path = path.expanduser(certificate_config_path)
     if not path.exists(certificate_config_path):
@@ -279,7 +279,7 @@ def _run_cert_provider_command(command, expect_encrypted_key=False):
 def get_client_ssl_credentials(
     generate_encrypted_key=False,
     context_aware_metadata_path=CONTEXT_AWARE_METADATA_PATH,
-    certificate_config_path=_CERTIFICATE_CONFIGURATION_DEFAULT_PATH,
+    certificate_config_path=CERTIFICATE_CONFIGURATION_DEFAULT_PATH,
 ):
     """Returns the client side certificate, private key and passphrase.
 

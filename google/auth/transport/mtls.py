@@ -24,10 +24,8 @@ def has_default_client_cert_source():
     Returns:
         bool: indicating if the default client cert source exists.
     """
-    metadata_path = _mtls_helper._check_dca_metadata_path(
-        _mtls_helper.CONTEXT_AWARE_METADATA_PATH
-    )
-    return metadata_path is not None
+    return (_mtls_helper._check_config_path(_mtls_helper.CONTEXT_AWARE_METADATA_PATH) is not None) or
+        (_mtls_helper._check_config_path(_mtls_helper.CERTIFICATE_CONFIGURATION_DEFAULT_PATH) is not None)
 
 
 def default_client_cert_source():
