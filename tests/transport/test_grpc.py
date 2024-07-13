@@ -143,11 +143,11 @@ class TestAuthMetadataPlugin(object):
 class TestSecureAuthorizedChannel(object):
     @mock.patch("google.auth.transport._mtls_helper._load_json_file", autospec=True)
     @mock.patch(
-        "google.auth.transport._mtls_helper._check_dca_metadata_path", autospec=True
+        "google.auth.transport._mtls_helper._check_config_path", autospec=True
     )
     def test_secure_authorized_channel_adc(
         self,
-        check_dca_metadata_path,
+        check_config_path,
         load_json_file,
         secure_channel,
         ssl_channel_credentials,
@@ -161,7 +161,7 @@ class TestSecureAuthorizedChannel(object):
 
         # Mock the context aware metadata and client cert/key so mTLS SSL channel
         # will be used.
-        check_dca_metadata_path.return_value = METADATA_PATH
+        check_config_path.return_value = METADATA_PATH
         load_json_file.return_value = {"cert_provider_command": ["some command"]}
         get_client_ssl_credentials.return_value = (
             True,
@@ -332,11 +332,11 @@ class TestSecureAuthorizedChannel(object):
 
     @mock.patch("google.auth.transport._mtls_helper._load_json_file", autospec=True)
     @mock.patch(
-        "google.auth.transport._mtls_helper._check_dca_metadata_path", autospec=True
+        "google.auth.transport._mtls_helper._check_config_path", autospec=True
     )
     def test_secure_authorized_channel_with_client_cert_callback_failure(
         self,
-        check_dca_metadata_path,
+        check_config_path,
         load_json_file,
         secure_channel,
         ssl_channel_credentials,
@@ -401,18 +401,18 @@ class TestSecureAuthorizedChannel(object):
 )
 @mock.patch("google.auth.transport._mtls_helper._load_json_file", autospec=True)
 @mock.patch(
-    "google.auth.transport._mtls_helper._check_dca_metadata_path", autospec=True
+    "google.auth.transport._mtls_helper._check_config_path", autospec=True
 )
 class TestSslCredentials(object):
     def test_no_context_aware_metadata(
         self,
-        mock_check_dca_metadata_path,
+        mock_check_config_path,
         mock_load_json_file,
         mock_get_client_ssl_credentials,
         mock_ssl_channel_credentials,
     ):
         # Mock that the metadata file doesn't exist.
-        mock_check_dca_metadata_path.return_value = None
+        mock_check_config_path.return_value = None
 
         with mock.patch.dict(
             os.environ, {environment_vars.GOOGLE_API_USE_CLIENT_CERTIFICATE: "true"}
@@ -429,12 +429,12 @@ class TestSslCredentials(object):
 
     def test_get_client_ssl_credentials_failure(
         self,
-        mock_check_dca_metadata_path,
+        mock_check_config_path,
         mock_load_json_file,
         mock_get_client_ssl_credentials,
         mock_ssl_channel_credentials,
     ):
-        mock_check_dca_metadata_path.return_value = METADATA_PATH
+        mock_check_config_path.return_value = METADATA_PATH
         mock_load_json_file.return_value = {"cert_provider_command": ["some command"]}
 
         # Mock that client cert and key are not loaded and exception is raised.
@@ -448,12 +448,12 @@ class TestSslCredentials(object):
 
     def test_get_client_ssl_credentials_success(
         self,
-        mock_check_dca_metadata_path,
+        mock_check_config_path,
         mock_load_json_file,
         mock_get_client_ssl_credentials,
         mock_ssl_channel_credentials,
     ):
-        mock_check_dca_metadata_path.return_value = METADATA_PATH
+        mock_check_config_path.return_value = METADATA_PATH
         mock_load_json_file.return_value = {"cert_provider_command": ["some command"]}
         mock_get_client_ssl_credentials.return_value = (
             True,
@@ -476,7 +476,7 @@ class TestSslCredentials(object):
 
     def test_get_client_ssl_credentials_without_client_cert_env(
         self,
-        mock_check_dca_metadata_path,
+        mock_check_config_path,
         mock_load_json_file,
         mock_get_client_ssl_credentials,
         mock_ssl_channel_credentials,
@@ -486,7 +486,7 @@ class TestSslCredentials(object):
 
         assert ssl_credentials.ssl_credentials is not None
         assert not ssl_credentials.is_mtls
-        mock_check_dca_metadata_path.assert_not_called()
+        mock_check_config_path.assert_not_called()
         mock_load_json_file.assert_not_called()
         mock_get_client_ssl_credentials.assert_not_called()
         mock_ssl_channel_credentials.assert_called_once()

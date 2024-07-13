@@ -20,13 +20,13 @@ from google.auth.transport import mtls
 
 
 @mock.patch(
-    "google.auth.transport._mtls_helper._check_dca_metadata_path", autospec=True
+    "google.auth.transport._mtls_helper._check_config_path", autospec=True
 )
-def test_has_default_client_cert_source(check_dca_metadata_path):
-    check_dca_metadata_path.return_value = mock.Mock()
+def test_has_default_client_cert_source(check_config_path):
+    check_config_path.return_value = mock.Mock()
     assert mtls.has_default_client_cert_source()
 
-    check_dca_metadata_path.return_value = None
+    check_config_path.return_value = None
     assert not mtls.has_default_client_cert_source()
 
 
