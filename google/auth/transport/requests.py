@@ -37,8 +37,8 @@ from requests.packages.urllib3.util.ssl_ import (  # type: ignore
 from google.auth import environment_vars
 from google.auth import exceptions
 from google.auth import transport
-from google.auth.transport._requests_base import _BaseAuthorizedSession
 import google.auth.transport._mtls_helper
+from google.auth.transport._requests_base import _BaseAuthorizedSession
 from google.oauth2 import service_account
 
 _LOGGER = logging.getLogger(__name__)
