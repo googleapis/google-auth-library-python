@@ -31,10 +31,7 @@ class _BaseAuthorizedSession(metaclass=abc.ABCMeta):
             add to the request.
     """
 
-    def __init__(
-        self,
-        credentials,
-    ):
+    def __init__(self, credentials):
         self.credentials = credentials
 
     @abc.abstractmethod

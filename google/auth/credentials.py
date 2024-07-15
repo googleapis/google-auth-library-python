@@ -49,7 +49,7 @@ class Credentials(_BaseCredentials):
 
     def __init__(self):
         super(Credentials, self).__init__()
-        
+
         self.expiry = None
         """Optional[datetime]: When the token expires and is no longer valid.
         If this is None, the token is assumed to never expire."""
