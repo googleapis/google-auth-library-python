@@ -39,15 +39,39 @@ class Credentials(credentials.Credentials):
 
     """
 
-    def __init__(self, token):
-        """
-        Args:
-            token (Optional(str)): The OAuth 2.0 access token. Can be None
-                if refresh information is provided.
-        """
+    def __init__(self):
         super(Credentials, self).__init__()
-        self.token = token
 
     async def refresh(self, request):
-        raise NotImplementedError("refresh is currently not supported for oauth2 access tokens.")
+        raise NotImplementedError("refresh is currently not supported for OAuth 2.0 access tokens.")
+
+
+class CredentialsBuilder():
+    """Builder class for constructing Asynchronous Credentials using OAuth 2.0 access and refresh tokens.
     
+    """
+
+    def __init__(self):
+        self.credentials = Credentials()
+    
+    def setToken(self, token):
+        """Sets the OAuth 2.0 access token.
+
+        Args:
+            token (str): The OAuth 2.0 access token.
+        """
+        self.credentials.token = token
+        return self
+
+    # TODO(ohmayr): Implement this once expiry is added to the base credentials.
+    # def setExpiry(self, expiry=None):
+    #     self.credentials.expiry = expiry
+    #     return self
+    
+    def build(self):
+        """Constructs and returns google.oauth2.aio.credentials.Credentials object.
+
+        Returns:
+            google.oauth2.aio.credentials.Credentials: The constructed google.oauth2.aio.credentials.Credentials object.
+        """
+        return self.credentials
