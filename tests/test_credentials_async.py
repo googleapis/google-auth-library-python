@@ -41,7 +41,7 @@ async def test_before_request():
 
     request = "token2"
     headers = {}
-    
+
     # Second call shouldn't affect token or headers.
     await credentials.before_request(request, "http://example.com", "GET", headers)
     assert credentials.token == "orchid"
@@ -63,7 +63,7 @@ async def test_static_credentials_before_request():
 
     request = "token2"
     headers = {}
-    
+
     # Second call shouldn't affect token or headers.
     await static_creds.before_request(request, "http://example.com", "GET", headers)
     assert static_creds.token == "orchid"

@@ -18,9 +18,7 @@
 import abc
 
 from google.auth import _helpers
-from google.auth._credentials_base import (
-    _BaseCredentials
-)
+from google.auth._credentials_base import _BaseCredentials
 
 
 class Credentials(_BaseCredentials):
@@ -67,7 +65,7 @@ class Credentials(_BaseCredentials):
                 not be refreshed.
         """
         raise NotImplementedError("Refresh must be implemented")
-    
+
     async def before_request(self, request, method, url, headers):
         """Performs credential-specific before request logic.
 
@@ -97,15 +95,15 @@ class StaticCredentials(Credentials):
     token is valid and not expired. StaticCredentials will never attempt to 
     refresh the token.
     """
-   
+
     def __init__(self, token):
         super(StaticCredentials, self).__init__()
         self.token = token
-    
+
     @_helpers.copy_docstring(Credentials)
     async def refresh(self, request):
         raise NotImplementedError("Refresh is not supported in StaticCredentials.")
-    
+
     @_helpers.copy_docstring(Credentials)
     async def before_request(self, request, method, url, headers):
         await self.apply(headers)
