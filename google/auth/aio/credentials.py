@@ -17,6 +17,7 @@
 
 import abc
 
+from google.auth import _helpers
 from google.auth._credentials_base import (
     _BaseCredentials
 )
@@ -83,3 +84,28 @@ class Credentials(_BaseCredentials):
         """
         await self.apply(headers)
 
+
+class StaticCredentials(Credentials):
+    """Credentials using access tokens.
+
+    The credentials are considered immutable except the tokens which can be
+    configured in the constructor ::
+
+        credentials = StaticCredentials(token="token123")
+
+    StaticCredentials does not support :meth `refresh` and assumes that the configured
+    token is valid and not expired. StaticCredentials will never attempt to 
+    refresh the token.
+    """
+   
+    def __init__(self, token):
+        super(StaticCredentials, self).__init__()
+        self.token = token
+    
+    @_helpers.copy_docstring(Credentials)
+    async def refresh(self, request):
+        raise NotImplementedError("Refresh is not supported in StaticCredentials.")
+    
+    @_helpers.copy_docstring(Credentials)
+    async def before_request(self, request, method, url, headers):
+        await self.apply(headers)

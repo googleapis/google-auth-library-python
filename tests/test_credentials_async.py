@@ -31,12 +31,12 @@ async def test_before_request():
     credentials = CredentialsImpl()
     request = "token"
     headers = {}
-    credentials.token = "token"
+    credentials.token = "orchid"
 
     # before_request should not affect the value of the token.
     await credentials.before_request(request, "http://example.com", "GET", headers)
-    assert credentials.token == "token"
-    assert headers["authorization"] == "Bearer token"
+    assert credentials.token == "orchid"
+    assert headers["authorization"] == "Bearer orchid"
     assert "x-allowed-locations" not in headers
 
     request = "token2"
@@ -44,6 +44,38 @@ async def test_before_request():
     
     # Second call shouldn't affect token or headers.
     await credentials.before_request(request, "http://example.com", "GET", headers)
-    assert credentials.token == "token"
-    assert headers["authorization"] == "Bearer token"
+    assert credentials.token == "orchid"
+    assert headers["authorization"] == "Bearer orchid"
     assert "x-allowed-locations" not in headers
+
+
+@pytest.mark.asyncio
+async def test_static_credentials_before_request():
+    static_creds = credentials.StaticCredentials(token="orchid")
+    request = "token"
+    headers = {}
+
+    # before_request should not affect the value of the token.
+    await static_creds.before_request(request, "http://example.com", "GET", headers)
+    assert static_creds.token == "orchid"
+    assert headers["authorization"] == "Bearer orchid"
+    assert "x-allowed-locations" not in headers
+
+    request = "token2"
+    headers = {}
+    
+    # Second call shouldn't affect token or headers.
+    await static_creds.before_request(request, "http://example.com", "GET", headers)
+    assert static_creds.token == "orchid"
+    assert headers["authorization"] == "Bearer orchid"
+    assert "x-allowed-locations" not in headers
+
+
+@pytest.mark.asyncio
+async def test_static_credentials_refresh():
+    static_creds = credentials.StaticCredentials(token="orchid")
+    request = "token"
+
+    with pytest.raises(NotImplementedError) as exc:
+        await static_creds.refresh(request)
+        assert exc.value == "Refresh is not supported in StaticCredentials."
