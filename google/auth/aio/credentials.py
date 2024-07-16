@@ -19,10 +19,11 @@ import abc
 
 from google.auth import _helpers
 from google.auth._credentials_base import _BaseCredentials
+from google.auth import exceptions
 
 
 class Credentials(_BaseCredentials):
-    """Base class for all async credentials.
+    """Base class for all asynchronous credentials.
 
     All credentials have a :attr:`token` that is used for authentication and
     may also optionally set an :attr:`expiry` to indicate when the token will
@@ -84,7 +85,7 @@ class Credentials(_BaseCredentials):
 
 
 class StaticCredentials(Credentials):
-    """Credentials using access tokens.
+    """Asynchronous Credentials using access tokens.
 
     The credentials are considered immutable except the tokens which can be
     configured in the constructor ::
@@ -102,7 +103,7 @@ class StaticCredentials(Credentials):
 
     @_helpers.copy_docstring(Credentials)
     async def refresh(self, request):
-        raise NotImplementedError("Refresh is not supported in StaticCredentials.")
+        raise exceptions.InvalidOperation("Static credentials cannot be refreshed.")
 
     @_helpers.copy_docstring(Credentials)
     async def before_request(self, request, method, url, headers):

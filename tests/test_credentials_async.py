@@ -15,6 +15,7 @@
 import pytest  # type: ignore
 
 from google.auth.aio import credentials
+from google.auth import exceptions
 
 
 class CredentialsImpl(credentials.Credentials):
@@ -76,6 +77,6 @@ async def test_static_credentials_refresh():
     static_creds = credentials.StaticCredentials(token="orchid")
     request = "earth"
 
-    with pytest.raises(NotImplementedError) as exc:
+    with pytest.raises(exceptions.InvalidOperation) as exc:
         await static_creds.refresh(request)
-        assert exc.value == "Refresh is not supported in StaticCredentials."
+        assert exc.value == "Static credentials cannot be refreshed."
