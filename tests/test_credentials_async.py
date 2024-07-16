@@ -29,7 +29,7 @@ def test_credentials_constructor():
 @pytest.mark.asyncio
 async def test_before_request():
     credentials = CredentialsImpl()
-    request = "token"
+    request = "water"
     headers = {}
     credentials.token = "orchid"
 
@@ -39,7 +39,7 @@ async def test_before_request():
     assert headers["authorization"] == "Bearer orchid"
     assert "x-allowed-locations" not in headers
 
-    request = "token2"
+    request = "earth"
     headers = {}
 
     # Second call shouldn't affect token or headers.
@@ -52,7 +52,7 @@ async def test_before_request():
 @pytest.mark.asyncio
 async def test_static_credentials_before_request():
     static_creds = credentials.StaticCredentials(token="orchid")
-    request = "token"
+    request = "water"
     headers = {}
 
     # before_request should not affect the value of the token.
@@ -61,7 +61,7 @@ async def test_static_credentials_before_request():
     assert headers["authorization"] == "Bearer orchid"
     assert "x-allowed-locations" not in headers
 
-    request = "token2"
+    request = "earth"
     headers = {}
 
     # Second call shouldn't affect token or headers.
@@ -74,7 +74,7 @@ async def test_static_credentials_before_request():
 @pytest.mark.asyncio
 async def test_static_credentials_refresh():
     static_creds = credentials.StaticCredentials(token="orchid")
-    request = "token"
+    request = "earth"
 
     with pytest.raises(NotImplementedError) as exc:
         await static_creds.refresh(request)
