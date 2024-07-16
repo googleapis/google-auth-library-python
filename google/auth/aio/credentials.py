@@ -108,3 +108,30 @@ class StaticCredentials(Credentials):
     @_helpers.copy_docstring(Credentials)
     async def before_request(self, request, method, url, headers):
         await self.apply(headers)
+
+
+class AnonymousCredentials(Credentials):
+    """Asynchronous Credentials that do not provide any authentication information.
+
+    These are useful in the case of services that support anonymous access or
+    local service emulators that do not use credentials.
+    """
+
+    async def refresh(self, request):
+        """Raises :class:``InvalidOperation``, anonymous credentials cannot be
+        refreshed."""
+        raise exceptions.InvalidOperation("Anonymous credentials cannot be refreshed.")
+
+    async def apply(self, headers, token=None):
+        """Anonymous credentials do nothing to the request.
+
+        The optional ``token`` argument is not supported.
+
+        Raises:
+            google.auth.exceptions.InvalidValue: If a token was specified.
+        """
+        if token is not None:
+            raise exceptions.InvalidValue("Anonymous credentials don't support tokens.")
+
+    async def before_request(self, request, method, url, headers):
+        """Anonymous credentials do nothing to the request."""
