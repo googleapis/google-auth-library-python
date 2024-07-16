@@ -98,6 +98,10 @@ class StaticCredentials(Credentials):
     """
 
     def __init__(self, token):
+        """
+        Args:
+            token (str): The OAuth 2.0 or JWT access token.
+        """
         super(StaticCredentials, self).__init__()
         self.token = token
 
