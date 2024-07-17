@@ -37,9 +37,9 @@ class _BaseCredentials(metaclass=abc.ABCMeta):
     keys, scopes, and other options. These options are not changeable after
     construction. Some classes will provide mechanisms to copy the credentials
     with modifications such as :meth:`ScopedCredentials.with_scopes`.
-    
+
     Attributes:
-        token (Optional[str]): The bearer token that can be used in HTTP headers to make 
+        token (Optional[str]): The bearer token that can be used in HTTP headers to make
             authenticated requests.
     """
 

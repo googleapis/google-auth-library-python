@@ -15,11 +15,10 @@
 
 """Interfaces for asynchronous credentials."""
 
-import abc
 
 from google.auth import _helpers
-from google.auth._credentials_base import _BaseCredentials
 from google.auth import exceptions
+from google.auth._credentials_base import _BaseCredentials
 
 
 class Credentials(_BaseCredentials):
@@ -93,7 +92,7 @@ class StaticCredentials(Credentials):
         credentials = StaticCredentials(token="token123")
 
     StaticCredentials does not support :meth `refresh` and assumes that the configured
-    token is valid and not expired. StaticCredentials will never attempt to 
+    token is valid and not expired. StaticCredentials will never attempt to
     refresh the token.
     """
 
