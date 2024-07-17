@@ -60,10 +60,10 @@ async def test_static_credentials_ctor():
 async def test_static_credentials_apply_default():
     static_creds = credentials.StaticCredentials(token="earth")
     headers = {}
-    
+
     await static_creds.apply(headers)
     assert headers["authorization"] == "Bearer earth"
-    
+
     await static_creds.apply(headers, token="orchid")
     assert headers["authorization"] == "Bearer orchid"
 
