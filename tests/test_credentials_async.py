@@ -57,6 +57,18 @@ async def test_static_credentials_ctor():
 
 
 @pytest.mark.asyncio
+async def test_static_credentials_apply_default():
+    static_creds = credentials.StaticCredentials(token="earth")
+    headers = {}
+    
+    await static_creds.apply(headers)
+    assert headers["authorization"] == "Bearer earth"
+    
+    await static_creds.apply(headers, token="orchid")
+    assert headers["authorization"] == "Bearer orchid"
+
+
+@pytest.mark.asyncio
 async def test_static_credentials_before_request():
     static_creds = credentials.StaticCredentials(token="orchid")
     request = "water"
@@ -85,7 +97,7 @@ async def test_static_credentials_refresh():
 
     with pytest.raises(exceptions.InvalidOperation) as exc:
         await static_creds.refresh(request)
-        assert exc.value == "Static credentials cannot be refreshed."
+    assert exc.match("Static credentials cannot be refreshed.")
 
 
 @pytest.mark.asyncio
@@ -98,15 +110,16 @@ async def test_anonymous_credentials_ctor():
 async def test_anonymous_credentials_refresh():
     anon = credentials.AnonymousCredentials()
     request = object()
-    with pytest.raises(ValueError):
+    with pytest.raises(exceptions.InvalidOperation) as exc:
         await anon.refresh(request)
+    assert exc.match("Anonymous credentials cannot be refreshed.")
 
 
 @pytest.mark.asyncio
 async def test_anonymous_credentials_apply_default():
     anon = credentials.AnonymousCredentials()
     headers = {}
-    anon.apply(headers)
+    await anon.apply(headers)
     assert headers == {}
     with pytest.raises(ValueError):
         await anon.apply(headers, token="orchid")
@@ -119,5 +132,5 @@ async def test_anonymous_credentials_before_request():
     method = "GET"
     url = "https://example.com/api/endpoint"
     headers = {}
-    anon.before_request(request, method, url, headers)
+    await anon.before_request(request, method, url, headers)
     assert headers == {}
