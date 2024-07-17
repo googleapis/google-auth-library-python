@@ -85,7 +85,7 @@ class Credentials(_BaseCredentials):
 
 
 class StaticCredentials(Credentials):
-    """Asynchronous Credentials using access tokens.
+    """Asynchronous Credentials representing an immutable access token.
 
     The credentials are considered immutable except the tokens which can be
     configured in the constructor ::
@@ -100,7 +100,7 @@ class StaticCredentials(Credentials):
     def __init__(self, token):
         """
         Args:
-            token (str): The OAuth 2.0 or JWT access token.
+            token (str): The access token.
         """
         super(StaticCredentials, self).__init__()
         self.token = token
@@ -109,6 +109,8 @@ class StaticCredentials(Credentials):
     async def refresh(self, request):
         raise exceptions.InvalidOperation("Static credentials cannot be refreshed.")
 
+    # Note: before_request should never try to refresh access tokens.
+    # StaticCredentials intentionally does not support it.
     @_helpers.copy_docstring(Credentials)
     async def before_request(self, request, method, url, headers):
         await self.apply(headers)
@@ -139,3 +141,4 @@ class AnonymousCredentials(Credentials):
 
     async def before_request(self, request, method, url, headers):
         """Anonymous credentials do nothing to the request."""
+        pass

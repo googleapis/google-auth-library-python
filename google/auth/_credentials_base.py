@@ -39,7 +39,7 @@ class _BaseCredentials(metaclass=abc.ABCMeta):
     with modifications such as :meth:`ScopedCredentials.with_scopes`.
     
     Attributes:
-        token (str): The bearer token that can be used in HTTP headers to make 
+        token (Optional[str]): The bearer token that can be used in HTTP headers to make 
             authenticated requests.
     """
 
