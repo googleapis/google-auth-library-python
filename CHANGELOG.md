@@ -4,6 +4,41 @@
 
 [1]: https://pypi.org/project/google-auth/#history
 
+## [2.32.0](https://github.com/googleapis/google-auth-library-python/compare/v2.31.0...v2.32.0) (2024-07-08)
+
+
+### Features
+
+* Adds support for X509 workload credential type ([#1541](https://github.com/googleapis/google-auth-library-python/issues/1541)) ([1270217](https://github.com/googleapis/google-auth-library-python/commit/1270217556a0249b6be8824e2b6209371f24e400))
+
+## [2.31.0](https://github.com/googleapis/google-auth-library-python/compare/v2.30.0...v2.31.0) (2024-06-27)
+
+
+### Features
+
+* Adds X509 workload cert logic ([#1527](https://github.com/googleapis/google-auth-library-python/issues/1527)) ([05220e0](https://github.com/googleapis/google-auth-library-python/commit/05220e06a23b3d4c398628918dab113abcce52db))
+
+
+### Bug Fixes
+
+* Added py.typed to MANIFEST.in ([#1526](https://github.com/googleapis/google-auth-library-python/issues/1526)) ([1829a3b](https://github.com/googleapis/google-auth-library-python/commit/1829a3be18aea5eca8b7272111d75eb61a6077b1))
+* Pass trust_env kwarg to ClientSession ([#1533](https://github.com/googleapis/google-auth-library-python/issues/1533)) ([6c15c9a](https://github.com/googleapis/google-auth-library-python/commit/6c15c9ad0ff90cf9bac044b38e72956aa3039cf6)), closes [#1530](https://github.com/googleapis/google-auth-library-python/issues/1530)
+
+## [2.30.0](https://github.com/googleapis/google-auth-library-python/compare/v2.29.0...v2.30.0) (2024-06-06)
+
+
+### Features
+
+* Add WebAuthn plugin component to handle WebAuthn get assertion request ([#1464](https://github.com/googleapis/google-auth-library-python/issues/1464)) ([e25f336](https://github.com/googleapis/google-auth-library-python/commit/e25f336ab49c2018a222458a95ebe083e8a4eb2a))
+* ECP Provider drop cryptography requirement ([#1524](https://github.com/googleapis/google-auth-library-python/issues/1524)) ([a821d71](https://github.com/googleapis/google-auth-library-python/commit/a821d719e2fc7bcdc21737fdf175d6f06aa9a56a))
+* Enable webauthn plugin for security keys ([#1528](https://github.com/googleapis/google-auth-library-python/issues/1528)) ([e2d5e63](https://github.com/googleapis/google-auth-library-python/commit/e2d5e635da2cb2caf8240fb9e07fc381442a9d0c))
+
+
+### Bug Fixes
+
+* Fix id_token iam endpoint for non-gdu service credentials ([#1506](https://github.com/googleapis/google-auth-library-python/issues/1506)) ([93d681e](https://github.com/googleapis/google-auth-library-python/commit/93d681e6cfb15eb4a3efada623be8ba73b302257))
+* Makes default token_url universe aware ([#1514](https://github.com/googleapis/google-auth-library-python/issues/1514)) ([045776e](https://github.com/googleapis/google-auth-library-python/commit/045776e5dfa3fb172ffaeb59bfe5c637778a5d34))
+
 ## [2.29.0](https://github.com/googleapis/google-auth-library-python/compare/v2.28.2...v2.29.0) (2024-03-18)
 
 
