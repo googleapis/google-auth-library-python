@@ -25,6 +25,19 @@ from contextlib import asynccontextmanager
 
 @asynccontextmanager
 async def timeout_guard(timeout):
+    """
+    timeout_guard is an asynchronous context manager to apply a timeout to an asynchronous block of code.
+
+    Args:
+        timeout (float): The time in seconds before the context manager times out.
+
+    Raises:
+        google.auth.exceptions.TimeoutError: If the code within the context exceeds the provided timeout.
+
+    Usage:
+        async with timeout_guard(10) as with_timeout:
+            await with_timeout(async_function())
+    """
     start = time.monotonic()
     total_timeout = timeout
 
@@ -35,13 +48,13 @@ async def timeout_guard(timeout):
             raise TimeoutError(f"Context manager exceeded the configured timeout of {total_timeout}s.")
         remaining
     
-    async def with_timeout(op):
+    async def with_timeout(coro):
         try:
             remaining = _remaining_time()
-            response = await asyncio.wait_for(op, remaining)
+            response = await asyncio.wait_for(coro, remaining)
             return response
         except (asyncio.TimeoutError, TimeoutError):
-            raise TimeoutError(f"The operation {op} exceeded the configured timeout of {total_timeout}s.")
+            raise TimeoutError(f"The operation {coro} exceeded the configured timeout of {total_timeout}s.")
     
     try:
         yield with_timeout
