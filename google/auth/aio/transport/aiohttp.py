@@ -14,3 +14,37 @@
 
 """Transport adapter for Asynchronous HTTP Requests.
 """
+
+
+from google.auth.exceptions import TimeoutError
+
+import asyncio
+import time
+from contextlib import asynccontextmanager
+
+
+@asynccontextmanager
+async def timeout_guard(timeout):
+    start = time.monotonic()
+    total_timeout = timeout
+
+    def _remaining_time():
+        elapsed = time.monotonic() - start
+        remaining = total_timeout - elapsed
+        if remaining <= 0:
+            raise TimeoutError(f"Context manager exceeded the configured timeout of {total_timeout}s.")
+        remaining
+    
+    async def with_timeout(op):
+        try:
+            remaining = _remaining_time()
+            response = await asyncio.wait_for(op, remaining)
+            return response
+        except (asyncio.TimeoutError, TimeoutError):
+            raise TimeoutError(f"The operation {op} exceeded the configured timeout of {total_timeout}s.")
+    
+    try:
+        yield with_timeout
+
+    finally:
+        _remaining_time()

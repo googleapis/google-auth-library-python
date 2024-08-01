@@ -14,3 +14,83 @@
 
 import google.auth.aio.transport.aiohttp as auth_aiohttp
 import pytest # type: ignore
+import asyncio
+from google.auth.exceptions import TimeoutError
+from unittest.mock import patch
+
+@pytest.fixture
+async def simple_async_task():
+        await asyncio.sleep(0.1)
+        return True
+
+@pytest.fixture
+async def long_running_async_task():
+    await asyncio.sleep(0.3)
+    return True
+
+class TestTimeoutGuard(object):
+
+    def make_timeout_guard(self, timeout):
+        return requests_aio.timeout_guard(timeout)
+
+
+    @pytest.mark.asyncio
+    async def test_timeout_with_single_async_task_within_bounds(self, simple_async_task):
+        async with self.make_timeout_guard(timeout=0.2) as with_timeout:
+                task = await with_timeout(simple_async_task)
+        
+        # Task succeeds.
+        assert task is True
+
+    
+    @pytest.mark.asyncio
+    async def test_timeout_with_single_async_task_out_of_bounds(self, simple_async_task):
+        
+        with pytest.raises(TimeoutError) as exc:
+            async with self.make_timeout_guard(timeout=0.1) as with_timeout:
+                    task = await with_timeout(simple_async_task)
+        
+        # Task succeeds but the context manager times out i.e. no remaining time left.
+        assert task is True
+        assert exc.match("Context manager exceeded the configured timeout of 0.1s.") 
+
+
+    @pytest.mark.asyncio
+    async def test_timeout_with_multiple_async_tasks_within_bounds(self, simple_async_task, long_running_async_task):
+        async with self.make_timeout_guard(timeout=0.5) as with_timeout:
+            
+            task_1 = await with_timeout(simple_async_task)
+            task_2 = await with_timeout(long_running_async_task)
+
+        # Tasks succeed.
+        assert task_1 is True
+        assert task_2 is True
+
+
+    @pytest.mark.asyncio
+    async def test_timeout_with_multiple_async_tasks_out_of_bounds(self, simple_async_task, long_running_async_task):
+        
+        with pytest.raises(TimeoutError) as exc:
+            async with self.make_timeout_guard(timeout=0.4) as with_timeout:
+                
+                # First task succeeds
+                task_1 = await with_timeout(simple_async_task)
+                task_2 = await with_timeout(long_running_async_task)
+        
+        # Tasks succeed but the context manager times out i.e. no remaining time left.
+        assert task_1 is True
+        assert task_2 is True
+        assert exc.match("Context manager exceeded the configured timeout of 0.4s.")
+
+    
+
+    @pytest.mark.asyncio
+    async def test_timeout_with_async_task_timing_out_before_context(self, simple_async_task):
+        
+        with pytest.raises(TimeoutError) as exc:
+                async with self.make_timeout_guard(timeout=0.4) as with_timeout:
+                    with patch('asyncio.wait_for', side_effect=asyncio.TimeoutError):
+                        task_1 = await with_timeout(simple_async_task)
+        
+        # Task does not complete i.e. the operation times out.
+        assert exc.match(f"The operation {simple_async_task} exceeded the configured timeout of 0.4s.")
