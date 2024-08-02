@@ -60,4 +60,3 @@ class TestResponse(object):
     @pytest.mark.asyncio
     async def test_response_read(self, mock_response):
         assert await mock_response.read() == b'Catfish have over 27,000 tastebuds.'
-    
