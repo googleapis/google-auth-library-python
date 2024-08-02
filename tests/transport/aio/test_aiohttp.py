@@ -33,7 +33,6 @@ class TestTimeoutGuard(object):
     def make_timeout_guard(self, timeout):
         return requests_aio.timeout_guard(timeout)
 
-
     @pytest.mark.asyncio
     async def test_timeout_with_single_async_task_within_bounds(self, simple_async_task):
         async with self.make_timeout_guard(timeout=0.2) as with_timeout:
@@ -41,7 +40,6 @@ class TestTimeoutGuard(object):
         
         # Task succeeds.
         assert task is True
-
     
     @pytest.mark.asyncio
     async def test_timeout_with_single_async_task_out_of_bounds(self, simple_async_task):
@@ -54,7 +52,6 @@ class TestTimeoutGuard(object):
         assert task is True
         assert exc.match("Context manager exceeded the configured timeout of 0.1s.") 
 
-
     @pytest.mark.asyncio
     async def test_timeout_with_multiple_async_tasks_within_bounds(self, simple_async_task, long_running_async_task):
         async with self.make_timeout_guard(timeout=0.5) as with_timeout:
@@ -65,7 +62,6 @@ class TestTimeoutGuard(object):
         # Tasks succeed.
         assert task_1 is True
         assert task_2 is True
-
 
     @pytest.mark.asyncio
     async def test_timeout_with_multiple_async_tasks_out_of_bounds(self, simple_async_task, long_running_async_task):
@@ -81,8 +77,6 @@ class TestTimeoutGuard(object):
         assert task_1 is True
         assert task_2 is True
         assert exc.match("Context manager exceeded the configured timeout of 0.4s.")
-
-    
 
     @pytest.mark.asyncio
     async def test_timeout_with_async_task_timing_out_before_context(self, simple_async_task):
