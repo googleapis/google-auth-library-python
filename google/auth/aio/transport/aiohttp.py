@@ -46,7 +46,7 @@ async def timeout_guard(timeout):
         remaining = total_timeout - elapsed
         if remaining <= 0:
             raise TimeoutError(f"Context manager exceeded the configured timeout of {total_timeout}s.")
-        remaining
+        return remaining
     
     async def with_timeout(coro):
         try:
