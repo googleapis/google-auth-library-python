@@ -47,9 +47,9 @@ class TestTimeoutGuard(object):
         with pytest.raises(TimeoutError) as exc:
             async with self.make_timeout_guard(timeout=0.1) as with_timeout:
                     task = await with_timeout(simple_async_task)
+                    # Task succeeds but the context manager times out i.e. no remaining time left.
+                    assert task is True
         
-        # Task succeeds but the context manager times out i.e. no remaining time left.
-        assert task is True
         assert exc.match("Context manager exceeded the configured timeout of 0.1s.") 
 
     @pytest.mark.asyncio
@@ -72,10 +72,11 @@ class TestTimeoutGuard(object):
                 # First task succeeds
                 task_1 = await with_timeout(simple_async_task)
                 task_2 = await with_timeout(long_running_async_task)
+
+                # Tasks succeed but the context manager times out i.e. no remaining time left.
+                assert task_1 is True
+                assert task_2 is True
         
-        # Tasks succeed but the context manager times out i.e. no remaining time left.
-        assert task_1 is True
-        assert task_2 is True
         assert exc.match("Context manager exceeded the configured timeout of 0.4s.")
 
     @pytest.mark.asyncio
