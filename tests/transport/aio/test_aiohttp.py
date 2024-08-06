@@ -31,7 +31,7 @@ async def long_running_async_task():
 class TestTimeoutGuard(object):
 
     def make_timeout_guard(self, timeout):
-        return requests_aio.timeout_guard(timeout)
+        return auth_aiohttp.timeout_guard(timeout)
 
     @pytest.mark.asyncio
     async def test_timeout_with_single_async_task_within_bounds(self, simple_async_task):
