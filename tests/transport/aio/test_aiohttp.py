@@ -12,5 +12,5 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import google.auth.aio.transport.requests as requests_aio
+import google.auth.aio.transport.aiohttp as auth_aiohttp
 import pytest # type: ignore
