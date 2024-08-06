@@ -96,7 +96,7 @@ class TestTimeoutGuard(object):
     async def test_timeout_with_async_task_timing_out_before_context(
         self, simple_async_task
     ):
-        task_1 = task_2 = False
+        task_1 = False
         with pytest.raises(TimeoutError) as exc:
             async with self.make_timeout_guard(timeout=0.4) as with_timeout:
                 with patch("asyncio.wait_for", side_effect=asyncio.TimeoutError):
