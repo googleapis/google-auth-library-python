@@ -45,17 +45,21 @@ async def timeout_guard(timeout):
         elapsed = time.monotonic() - start
         remaining = total_timeout - elapsed
         if remaining <= 0:
-            raise TimeoutError(f"Context manager exceeded the configured timeout of {total_timeout}s.")
+            raise TimeoutError(
+                f"Context manager exceeded the configured timeout of {total_timeout}s."
+            )
         return remaining
-    
+
     async def with_timeout(coro):
         try:
             remaining = _remaining_time()
             response = await asyncio.wait_for(coro, remaining)
             return response
         except (asyncio.TimeoutError, TimeoutError):
-            raise TimeoutError(f"The operation {coro} exceeded the configured timeout of {total_timeout}s.")
-    
+            raise TimeoutError(
+                f"The operation {coro} exceeded the configured timeout of {total_timeout}s."
+            )
+
     try:
         yield with_timeout
 
