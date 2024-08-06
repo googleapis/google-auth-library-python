@@ -55,10 +55,10 @@ async def timeout_guard(timeout):
             remaining = _remaining_time()
             response = await asyncio.wait_for(coro, remaining)
             return response
-        except (asyncio.TimeoutError, TimeoutError):
+        except (asyncio.TimeoutError, TimeoutError) as e:
             raise TimeoutError(
                 f"The operation {coro} exceeded the configured timeout of {total_timeout}s."
-            )
+            ) from e
 
     try:
         yield with_timeout
