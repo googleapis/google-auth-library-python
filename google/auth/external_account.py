@@ -321,11 +321,20 @@ class Credentials(
 
         return self._token_info_url
 
+    @_helpers.copy_docstring(credentials.Credentials)
+    def _get_red_info(self):
+        if self._cred_file_path and self.service_account_email:
+            return f"This API call is authenticated as {self.service_account_email} from {self._cred_file_path} via the GOOGLE_APPLICATION_CREDENTIALS environment variable."
+        elif self._cred_file_path:
+            return f"This API call is authenticated from {self._cred_file_path} via the GOOGLE_APPLICATION_CREDENTIALS environment variable."
+        return None
+
     @_helpers.copy_docstring(credentials.Scoped)
     def with_scopes(self, scopes, default_scopes=None):
         kwargs = self._constructor_args()
         kwargs.update(scopes=scopes, default_scopes=default_scopes)
         scoped = self.__class__(**kwargs)
+        scoped._cred_file_path = self._cred_file_path
         scoped._metrics_options = self._metrics_options
         return scoped
 
@@ -448,6 +457,7 @@ class Credentials(
         kwargs = self._constructor_args()
         kwargs.update(quota_project_id=quota_project_id)
         new_cred = self.__class__(**kwargs)
+        new_cred._cred_file_path = self._cred_file_path
         new_cred._metrics_options = self._metrics_options
         return new_cred
 
@@ -456,6 +466,7 @@ class Credentials(
         kwargs = self._constructor_args()
         kwargs.update(token_url=token_uri)
         new_cred = self.__class__(**kwargs)
+        new_cred._cred_file_path = self._cred_file_path
         new_cred._metrics_options = self._metrics_options
         return new_cred
 
@@ -464,6 +475,7 @@ class Credentials(
         kwargs = self._constructor_args()
         kwargs.update(universe_domain=universe_domain)
         new_cred = self.__class__(**kwargs)
+        new_cred._cred_file_path = self._cred_file_path
         new_cred._metrics_options = self._metrics_options
         return new_cred
 
@@ -593,7 +605,7 @@ class Credentials(
             universe_domain=info.get(
                 "universe_domain", credentials.DEFAULT_UNIVERSE_DOMAIN
             ),
-            **kwargs
+            **kwargs,
         )
 
     @classmethod

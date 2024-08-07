@@ -220,7 +220,7 @@ class Credentials(
                 "universe_domain", credentials.DEFAULT_UNIVERSE_DOMAIN
             ),
             trust_boundary=info.get("trust_boundary"),
-            **kwargs
+            **kwargs,
         )
 
     @classmethod
@@ -294,6 +294,7 @@ class Credentials(
             always_use_jwt_access=self._always_use_jwt_access,
             universe_domain=self._universe_domain,
         )
+        cred._cred_file_path = self._cred_file_path
         return cred
 
     @_helpers.copy_docstring(credentials.Scoped)
@@ -502,6 +503,14 @@ class Credentials(
     @_helpers.copy_docstring(credentials.Signing)
     def signer_email(self):
         return self._service_account_email
+
+    @_helpers.copy_docstring(credentials.Credentials)
+    def _get_cred_info(self):
+        if self._cred_file_path and self.service_account_email:
+            return f"This API call is authenticated as {self.service_account_email} from {self._cred_file_path} via the GOOGLE_APPLICATION_CREDENTIALS environment variable."
+        if self._cred_file_path:
+            return f"This API call is authenticated from {self._cred_file_path} via the GOOGLE_APPLICATION_CREDENTIALS environment variable."
+        return None
 
 
 class IDTokenCredentials(

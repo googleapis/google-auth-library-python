@@ -316,9 +316,15 @@ class Credentials(
     def requires_scopes(self):
         return not self._target_scopes
 
+    @_helpers.copy_docstring(credentials.Credentials)
+    def _get_cred_info(self):
+        if self._cred_file_path:
+            return f"This API call is authenticated as {self._target_principal}, using the {self._cred_file_path} file via the GOOGLE_APPLICATION_CREDENTIALS environment variable."
+        return None
+
     @_helpers.copy_docstring(credentials.CredentialsWithQuotaProject)
     def with_quota_project(self, quota_project_id):
-        return self.__class__(
+        cred = self.__class__(
             self._source_credentials,
             target_principal=self._target_principal,
             target_scopes=self._target_scopes,
@@ -327,10 +333,12 @@ class Credentials(
             quota_project_id=quota_project_id,
             iam_endpoint_override=self._iam_endpoint_override,
         )
+        cred._cred_file_path = self._cred_file_path
+        return cred
 
     @_helpers.copy_docstring(credentials.Scoped)
     def with_scopes(self, scopes, default_scopes=None):
-        return self.__class__(
+        cred = self.__class__(
             self._source_credentials,
             target_principal=self._target_principal,
             target_scopes=scopes or default_scopes,
@@ -339,6 +347,8 @@ class Credentials(
             quota_project_id=self._quota_project_id,
             iam_endpoint_override=self._iam_endpoint_override,
         )
+        cred._cred_file_path = self._cred_file_path
+        return cred
 
 
 class IDTokenCredentials(credentials.CredentialsWithQuotaProject):
