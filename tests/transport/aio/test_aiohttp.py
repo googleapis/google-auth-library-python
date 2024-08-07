@@ -14,13 +14,12 @@
 
 import google.auth.aio.transport.aiohttp as auth_aiohttp
 import pytest  # type: ignore
-import aiohttp
 from unittest.mock import Mock, AsyncMock
 
 
 @pytest.fixture
 def mock_response():
-    response = Mock(spec=aiohttp.ClientResponse)
+    response = Mock()
     response.status = 200
     response.headers = {"Content-Type": "application/json", "Content-Length": "100"}
     response.content = Mock()

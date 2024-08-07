@@ -15,7 +15,12 @@
 """Transport adapter for Asynchronous HTTP Requests.
 """
 
-import aiohttp
+try:
+    import aiohttp
+except ImportError as caught_exc:  # pragma: NO COVER
+    raise ImportError(
+        "The aiohttp library is not installed from please install the aiohttp package to use the aiohttp transport."
+    ) from caught_exc
 from google.auth.aio import transport
 from google.auth import _helpers
 
