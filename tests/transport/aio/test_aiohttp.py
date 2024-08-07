@@ -41,7 +41,8 @@ class TestResponse(object):
 
     @pytest.mark.asyncio
     async def test_response_content(self, mock_response):
-        assert await mock_response.content.read() == b"Cavefish have no sight."
+        content = await mock_response.content
+        assert await content.read() == b"Cavefish have no sight."
 
     @pytest.mark.asyncio
     async def test_response_close(self, mock_response):

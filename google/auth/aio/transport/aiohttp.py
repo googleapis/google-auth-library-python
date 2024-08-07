@@ -56,7 +56,7 @@ class Response(transport.Response):
 
     @property
     @_helpers.copy_docstring(transport.Response)
-    def content(self):
+    async def content(self):
         return self._response.content
 
     @_helpers.copy_docstring(transport.Response)

@@ -41,7 +41,7 @@ class Response(metaclass=abc.ABCMeta):
         raise NotImplementedError("headers must be implemented.")
 
     @abc.abstractmethod
-    def content(self):
+    async def content(self):
         """bytes: The raw response content."""
         raise NotImplementedError("content must be implemented.")
 
