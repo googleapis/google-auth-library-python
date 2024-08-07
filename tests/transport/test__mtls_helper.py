@@ -281,9 +281,7 @@ class TestGetClientSslCredentials(object):
         "google.auth.transport._mtls_helper._run_cert_provider_command", autospec=True
     )
     @mock.patch("google.auth.transport._mtls_helper._load_json_file", autospec=True)
-    @mock.patch(
-        "google.auth.transport._mtls_helper._check_config_path", autospec=True
-    )
+    @mock.patch("google.auth.transport._mtls_helper._check_config_path", autospec=True)
     def test_success_with_context_aware_metadata(
         self,
         mock_check_config_path,
@@ -308,9 +306,7 @@ class TestGetClientSslCredentials(object):
         "google.auth.transport._mtls_helper._get_cert_config_path", autospec=True
     )
     @mock.patch("google.auth.transport._mtls_helper._load_json_file", autospec=True)
-    @mock.patch(
-        "google.auth.transport._mtls_helper._check_config_path", autospec=True
-    )
+    @mock.patch("google.auth.transport._mtls_helper._check_config_path", autospec=True)
     def test_success_with_certificate_config(
         self,
         mock_check_config_path,
@@ -337,9 +333,7 @@ class TestGetClientSslCredentials(object):
         assert key == pytest.private_key_bytes
         assert passphrase is None
 
-    @mock.patch(
-        "google.auth.transport._mtls_helper._check_config_path", autospec=True
-    )
+    @mock.patch("google.auth.transport._mtls_helper._check_config_path", autospec=True)
     def test_success_without_metadata(self, mock_check_config_path):
         mock_check_config_path.return_value = False
         has_cert, cert, key, passphrase = _mtls_helper.get_client_ssl_credentials()
@@ -355,9 +349,7 @@ class TestGetClientSslCredentials(object):
         "google.auth.transport._mtls_helper._run_cert_provider_command", autospec=True
     )
     @mock.patch("google.auth.transport._mtls_helper._load_json_file", autospec=True)
-    @mock.patch(
-        "google.auth.transport._mtls_helper._check_config_path", autospec=True
-    )
+    @mock.patch("google.auth.transport._mtls_helper._check_config_path", autospec=True)
     def test_success_with_encrypted_key(
         self,
         mock_check_config_path,
@@ -384,9 +376,7 @@ class TestGetClientSslCredentials(object):
         "google.auth.transport._mtls_helper._get_workload_cert_and_key", autospec=True
     )
     @mock.patch("google.auth.transport._mtls_helper._load_json_file", autospec=True)
-    @mock.patch(
-        "google.auth.transport._mtls_helper._check_config_path", autospec=True
-    )
+    @mock.patch("google.auth.transport._mtls_helper._check_config_path", autospec=True)
     def test_missing_cert_command(
         self,
         mock_check_config_path,
@@ -403,9 +393,7 @@ class TestGetClientSslCredentials(object):
         "google.auth.transport._mtls_helper._run_cert_provider_command", autospec=True
     )
     @mock.patch("google.auth.transport._mtls_helper._load_json_file", autospec=True)
-    @mock.patch(
-        "google.auth.transport._mtls_helper._check_config_path", autospec=True
-    )
+    @mock.patch("google.auth.transport._mtls_helper._check_config_path", autospec=True)
     def test_customize_context_aware_metadata_path(
         self,
         mock_check_config_path,

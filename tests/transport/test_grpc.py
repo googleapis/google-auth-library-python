@@ -142,9 +142,7 @@ class TestAuthMetadataPlugin(object):
 @mock.patch("grpc.secure_channel", autospec=True)
 class TestSecureAuthorizedChannel(object):
     @mock.patch("google.auth.transport._mtls_helper._load_json_file", autospec=True)
-    @mock.patch(
-        "google.auth.transport._mtls_helper._check_config_path", autospec=True
-    )
+    @mock.patch("google.auth.transport._mtls_helper._check_config_path", autospec=True)
     def test_secure_authorized_channel_adc(
         self,
         check_config_path,
@@ -331,9 +329,7 @@ class TestSecureAuthorizedChannel(object):
         )
 
     @mock.patch("google.auth.transport._mtls_helper._load_json_file", autospec=True)
-    @mock.patch(
-        "google.auth.transport._mtls_helper._check_config_path", autospec=True
-    )
+    @mock.patch("google.auth.transport._mtls_helper._check_config_path", autospec=True)
     def test_secure_authorized_channel_with_client_cert_callback_failure(
         self,
         check_config_path,
@@ -400,9 +396,7 @@ class TestSecureAuthorizedChannel(object):
     "google.auth.transport._mtls_helper.get_client_ssl_credentials", autospec=True
 )
 @mock.patch("google.auth.transport._mtls_helper._load_json_file", autospec=True)
-@mock.patch(
-    "google.auth.transport._mtls_helper._check_config_path", autospec=True
-)
+@mock.patch("google.auth.transport._mtls_helper._check_config_path", autospec=True)
 class TestSslCredentials(object):
     def test_no_context_aware_metadata(
         self,
