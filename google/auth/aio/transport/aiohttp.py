@@ -23,6 +23,7 @@ except ImportError as caught_exc:  # pragma: NO COVER
     ) from caught_exc
 from google.auth.aio import transport
 from google.auth import _helpers
+from typing import AsyncGenerator, Dict
 
 
 class Response(transport.Response):
@@ -46,18 +47,18 @@ class Response(transport.Response):
 
     @property
     @_helpers.copy_docstring(transport.Response)
-    def status_code(self):
+    def status_code(self) -> int:
         return self._response.status
 
     @property
     @_helpers.copy_docstring(transport.Response)
-    def headers(self):
-        return self._response.headers
+    def headers(self) -> Dict[str, str]:
+        return {key: value for key, value in self._response.headers.items()}
 
-    @property
     @_helpers.copy_docstring(transport.Response)
-    async def content(self):
-        return self._response.content
+    async def content(self, chunk_size: int = 1024) -> AsyncGenerator[bytes, None]:
+        async for chunk in self._response.content.iter_chunked(chunk_size):
+            yield chunk
 
     @_helpers.copy_docstring(transport.Response)
     async def close(self):

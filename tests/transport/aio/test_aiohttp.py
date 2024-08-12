@@ -22,8 +22,11 @@ def mock_response():
     response = Mock()
     response.status = 200
     response.headers = {"Content-Type": "application/json", "Content-Length": "100"}
-    response.content = Mock()
-    response.content.read = AsyncMock(return_value=b"Cavefish have no sight.")
+    mock_iterator = AsyncMock()
+    mock_iterator.__aiter__.return_value = iter(
+        [b"Cavefish ", b"have ", b"no ", b"sight."]
+    )
+    response.content.iter_chunked = lambda chunk_size: mock_iterator
     response.close = AsyncMock()
 
     return auth_aiohttp.Response(response)
@@ -41,8 +44,8 @@ class TestResponse(object):
 
     @pytest.mark.asyncio
     async def test_response_content(self, mock_response):
-        content = await mock_response.content
-        assert await content.read() == b"Cavefish have no sight."
+        content = b"".join([chunk async for chunk in mock_response.content()])
+        assert content == b"Cavefish have no sight."
 
     @pytest.mark.asyncio
     async def test_response_close(self, mock_response):

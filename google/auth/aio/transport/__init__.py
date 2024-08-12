@@ -25,27 +25,48 @@ for the return value of :class:`Request`.
 """
 
 import abc
+from typing import AsyncGenerator, Dict
 
 
 class Response(metaclass=abc.ABCMeta):
     """Asynchronous HTTP Response Interface."""
 
+    @property
     @abc.abstractmethod
-    async def status_code(self):
-        """int: The HTTP status code."""
+    def status_code(self) -> int:
+        """
+        The HTTP response status code..
+
+        Returns:
+            int: The HTTP response status code.
+
+        """
         raise NotImplementedError("status_code must be implemented.")
 
+    @property
     @abc.abstractmethod
-    def headers(self):
-        """Mapping[str, str]: The HTTP response headers."""
+    def headers(self) -> Dict[str, str]:
+        """The HTTP response headers.
+
+        Returns:
+            Dict[str, str]: The HTTP response headers.
+        """
         raise NotImplementedError("headers must be implemented.")
 
     @abc.abstractmethod
-    async def content(self):
-        """bytes: The raw response content."""
+    async def content(self, chunk_size: int = 1024) -> AsyncGenerator[bytes, None]:
+        """The raw response content.
+        
+        Args:
+            chunk_size (int): The size of each chunk. Defaults to 1024.
+
+        Yields:
+            AsyncGenerator[bytes, None]: An asynchronous generator yielding
+            response chunks as bytes.
+        """
         raise NotImplementedError("content must be implemented.")
 
     @abc.abstractmethod
     async def close(self):
-        """Release the connection back to the connection pool."""
+        """Close the response."""
         raise NotImplementedError("close must be implemented.")
