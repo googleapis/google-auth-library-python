@@ -77,5 +77,5 @@ class Response(metaclass=abc.ABCMeta):
 
     @abc.abstractmethod
     async def close(self):
-        """Close the response."""
+        """Close the response after it is fully consumed to resource."""
         raise NotImplementedError("close must be implemented.")

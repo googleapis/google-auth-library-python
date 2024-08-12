@@ -29,9 +29,7 @@ from typing import AsyncGenerator, Dict
 class Response(transport.Response):
 
     """
-    Instances of Response class are returned by 
-    ``google.auth.aio.transport.requests.AuthorizedSession`` and provide methods to interact
-    with the response data.
+    Represents an HTTP response and its data. It is returned by ``google.auth.aio.transport.sessions.AuthorizedSession``
     
     Args:
         response (aiohttp.ClientResponse): An instance of aiohttp.ClientResponse.
