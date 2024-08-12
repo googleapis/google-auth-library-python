@@ -60,5 +60,9 @@ class Response(transport.Response):
             yield chunk
 
     @_helpers.copy_docstring(transport.Response)
+    async def read(self) -> bytes:
+        return await self._response.read()
+
+    @_helpers.copy_docstring(transport.Response)
     async def close(self):
         return await self._response.close()

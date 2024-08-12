@@ -67,6 +67,15 @@ class Response(metaclass=abc.ABCMeta):
         raise NotImplementedError("content must be implemented.")
 
     @abc.abstractmethod
+    async def read(self) -> bytes:
+        """Read the entire response content as bytes.
+
+        Returns:
+            bytes: The entire response content.
+        """
+        raise NotImplementedError("read must be implemented.")
+
+    @abc.abstractmethod
     async def close(self):
         """Close the response."""
         raise NotImplementedError("close must be implemented.")
