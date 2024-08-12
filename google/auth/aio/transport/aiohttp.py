@@ -21,16 +21,17 @@ except ImportError as caught_exc:  # pragma: NO COVER
     raise ImportError(
         "The aiohttp library is not installed from please install the aiohttp package to use the aiohttp transport."
     ) from caught_exc
-from google.auth.aio import transport
-from google.auth import _helpers
 from typing import AsyncGenerator, Dict
+
+from google.auth import _helpers
+from google.auth.aio import transport
 
 
 class Response(transport.Response):
 
     """
-    Represents an HTTP response and its data. It is returned by ``google.auth.aio.transport.sessions.AuthorizedSession``
-    
+    Represents an HTTP response and its data. It is returned by ``google.auth.aio.transport.sessions.AuthorizedSession``.
+
     Args:
         response (aiohttp.ClientResponse): An instance of aiohttp.ClientResponse.
 

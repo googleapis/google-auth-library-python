@@ -12,9 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import google.auth.aio.transport.aiohttp as auth_aiohttp
+from unittest.mock import AsyncMock, Mock
+
 import pytest  # type: ignore
-from unittest.mock import Mock, AsyncMock
+
+import google.auth.aio.transport.aiohttp as auth_aiohttp
 
 
 @pytest.fixture

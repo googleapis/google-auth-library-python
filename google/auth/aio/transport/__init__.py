@@ -56,7 +56,7 @@ class Response(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     async def content(self, chunk_size: int = 1024) -> AsyncGenerator[bytes, None]:
         """The raw response content.
-        
+
         Args:
             chunk_size (int): The size of each chunk. Defaults to 1024.
 
