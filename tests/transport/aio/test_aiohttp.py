@@ -51,3 +51,15 @@ class TestResponse(object):
     async def test_response_close(self, mock_response):
         await mock_response.close()
         mock_response._response.close.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_response_content_stream(self, mock_response):
+        itr = mock_response.content().__aiter__()
+        content = []
+        try:
+            while True:
+                chunk = await itr.__anext__()
+                content.append(chunk)
+        except StopAsyncIteration:
+            pass
+        assert b"".join(content) ==  b"Cavefish have no sight."

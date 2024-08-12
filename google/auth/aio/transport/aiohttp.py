@@ -38,8 +38,7 @@ class Response(transport.Response):
 
     Attributes:
         status_code (int): The HTTP status code of the response.
-        headers (dict): A case-insensitive multidict proxy wiht HTTP headers of response.
-        content (aiohttp.StreamReader): The payload stream which contains the response's body.
+        headers (Dict[str, str]): A case-insensitive multidict proxy wiht HTTP headers of response.
     """
 
     def __init__(self, response: aiohttp.ClientResponse):
