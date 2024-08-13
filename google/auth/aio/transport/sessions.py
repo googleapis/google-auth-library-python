@@ -159,6 +159,11 @@ class AuthorizedSession:
                         )
                     )
                     if response.status_code in transport.DEFAULT_REFRESH_STATUS_CODES:
+                        
+                        # Note: Credentials should not be refreshed if an attempt to refresh
+                        # is already made by another request. To ensure that multiple, requests
+                        # do not attempt to refresh credentials, acquiring and releasing lock
+                        # to safeguard this should happen within the refresh method.
                         await with_timeout(self.credentials.refresh(self._auth_request))
                         _credentials_refresh_attempt += 1
                     else:
