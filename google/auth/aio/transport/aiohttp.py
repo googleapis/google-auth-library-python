@@ -116,7 +116,7 @@ class Response(transport.Response):
 
     @_helpers.copy_docstring(transport.Response)
     async def close(self):
-        return await self._response.close()
+        self._response.close()
 
 
 class Request(transport.Request):

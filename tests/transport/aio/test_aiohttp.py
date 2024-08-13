@@ -168,7 +168,6 @@ class TestRequest:
             assert response.headers == {"Content-Type": "application/json"}
             content = b"".join([chunk async for chunk in response.content()])
             assert content == b"Cavefish have no sight."
-            assert await response.close()
 
     async def test_request_call_raises_client_error(self, aiohttp_request):
         with aioresponses() as m:
