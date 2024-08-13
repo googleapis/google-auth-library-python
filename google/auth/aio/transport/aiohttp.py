@@ -133,11 +133,11 @@ class Request(transport.Request):
         import aiohttp
         import google.auth.aio.transport.aiohttp
 
-        # Use Case 1:
+        # Default example:
         request = google.auth.aio.transport.aiohttp.Request()
         await credentials.refresh(request)
 
-        # Use Case 2:
+        # Custom aiohttp Session Example:
         session = session=aiohttp.ClientSession(auto_decompress=False)
         request = google.auth.aio.transport.aiohttp.Request(session=session)
         auth_sesion = google.auth.aio.transport.sessions.AuthorizedSession(auth_request=request)
