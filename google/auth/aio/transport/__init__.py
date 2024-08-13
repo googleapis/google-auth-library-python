@@ -94,10 +94,10 @@ class Request(metaclass=abc.ABCMeta):
     async def __call__(
         self,
         url: str,
-        method: Optional[str],
+        method: str,
         body: bytes,
-        headers: Mapping[str, str],
-        timeout: Optional[float],
+        headers: Optional[Mapping[str, str]],
+        timeout: float,
         **kwargs
     ) -> Response:
         """Make an HTTP request.
@@ -108,10 +108,10 @@ class Request(metaclass=abc.ABCMeta):
                 to 'GET'.
             body (bytes): The payload / body in HTTP request.
             headers (Mapping[str, str]): Request headers.
-            timeout (Optional[float]): The number of seconds to wait for a
+            timeout (float): The number of seconds to wait for a
                 response from the server. If not specified or if None, the
                 transport-specific default timeout will be used.
-            kwargs: Additionally arguments passed on to the transport's
+            kwargs: Additional arguments passed on to the transport's
                 request method.
 
         Returns:

@@ -155,12 +155,10 @@ class Request(transport.Request):
     async def __call__(
         self,
         url: str,
-        method: Optional[str] = "GET",
+        method: str = "GET",
         body: Optional[bytes] = None,
-        headers: Optional[
-            Mapping[str, str]
-        ] = None,
-        timeout: Optional[float] = _DEFAULT_TIMEOUT_SECONDS,
+        headers: Optional[Mapping[str, str]] = None,
+        timeout: float = _DEFAULT_TIMEOUT_SECONDS,
         **kwargs,
     ) -> transport.Response:
         """
@@ -174,7 +172,7 @@ class Request(transport.Request):
                 The payload or body in HTTP request.
             headers (Optional[Mapping[str, str]]):
                 Request headers.
-            timeout (Optional[float]): The number of seconds to wait for a
+            timeout (float): The number of seconds to wait for a
                 response from the server. If not specified or if None, the
                 requests default timeout will be used.
             kwargs: Additional arguments passed through to the underlying
