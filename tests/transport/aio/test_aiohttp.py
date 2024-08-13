@@ -12,15 +12,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import asyncio
 from unittest.mock import AsyncMock, Mock, patch
 
+from aioresponses import aioresponses
 import pytest  # type: ignore
+import pytest_asyncio
 
-import asyncio
-
+from google.auth import exceptions
 import google.auth.aio.transport.aiohttp as auth_aiohttp
-
 from google.auth.exceptions import TimeoutError
+
+
+try:
+    import aiohttp
+except ImportError as caught_exc:  # pragma: NO COVER
+    raise ImportError(
+        "The aiohttp library is not installed from please install the aiohttp package to use the aiohttp transport."
+    ) from caught_exc
 
 
 @pytest.fixture
@@ -139,3 +148,41 @@ class TestTimeoutGuard(object):
         assert exc.match(
             f"The operation {simple_async_task} exceeded the configured timeout of {self.default_timeout}s."
         )
+
+
+@pytest.mark.asyncio
+class TestRequest:
+    @pytest_asyncio.fixture
+    async def aiohttp_request(self):
+        request = auth_aiohttp.Request()
+        yield request
+        await request.close()
+
+    async def test_request_call_success(self, aiohttp_request):
+        with aioresponses() as m:
+            mocked_chunks = [b"Cavefish ", b"have ", b"no ", b"sight."]
+            mocked_response = b"".join(mocked_chunks)
+            m.get("http://example.com", status=200, body=mocked_response)
+            response = await aiohttp_request("http://example.com")
+            assert response.status_code == 200
+            assert response.headers == {"Content-Type": "application/json"}
+            content = b"".join([chunk async for chunk in response.content()])
+            assert content == b"Cavefish have no sight."
+
+    async def test_request_call_raises_client_error(self, aiohttp_request):
+        with aioresponses() as m:
+            m.get("http://example.com", exception=aiohttp.ClientError)
+
+            with pytest.raises(exceptions.TransportError) as exc:
+                await aiohttp_request("http://example.com/api")
+
+            exc.match("Failed to send request to http://example.com/api.")
+
+    async def test_request_call_raises_timeout_error(self, aiohttp_request):
+        with aioresponses() as m:
+            m.get("http://example.com", exception=asyncio.TimeoutError)
+
+            with pytest.raises(exceptions.TimeoutError) as exc:
+                await aiohttp_request("http://example.com")
+
+            exc.match("Request timed out after 180 seconds.")
