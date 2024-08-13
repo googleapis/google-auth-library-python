@@ -16,6 +16,9 @@
 """
 
 import asyncio
+from contextlib import asynccontextmanager
+import time
+from typing import AsyncGenerator, Dict, Mapping, Optional
 
 try:
     import aiohttp
@@ -23,18 +26,14 @@ except ImportError as caught_exc:  # pragma: NO COVER
     raise ImportError(
         "The aiohttp library is not installed from please install the aiohttp package to use the aiohttp transport."
     ) from caught_exc
-from google.auth import exceptions
-from google.auth.exceptions import TimeoutError
-
-from typing import AsyncGenerator, Dict
 
 from google.auth import _helpers
+from google.auth import exceptions
 from google.auth.aio import transport
+from google.auth.exceptions import TimeoutError
 
-import time
-from contextlib import asynccontextmanager
 
-_DEFAULT_TIMEOUT = 180  # in seconds
+_DEFAULT_TIMEOUT_SECONDS = 180
 
 
 @asynccontextmanager
@@ -120,21 +119,28 @@ class Response(transport.Response):
         return await self._response.close()
 
 
-class Request:
+class Request(transport.Request):
     """Asynchronous Requests request adapter.
 
-    This class is used internally for making requests using asyncio transports
+    This class is used internally for making requests using aiohttp
     in a consistent way. If you use :class:`AuthorizedSession` you do not need
     to construct or use this class directly.
 
-    This class can be useful if you want to manually refresh a
-    :class:`~google.auth.aio.credentials.Credentials` instance::
+    This class can be useful if you want to configure a Request callable
+    with a custom ``aiohttp.ClientSession`` in :class:`AuthorizedSession` or if
+    you want to manually refresh a :class:`~google.auth.aio.credentials.Credentials` instance::
 
+        import aiohttp
         import google.auth.aio.transport.aiohttp
 
+        # Use Case 1:
         request = google.auth.aio.transport.aiohttp.Request()
-
         await credentials.refresh(request)
+
+        # Use Case 2:
+        session = session=aiohttp.ClientSession(auto_decompress=False)
+        request = google.auth.aio.transport.aiohttp.Request(session=session)
+        auth_sesion = google.auth.aio.transport.sessions.AuthorizedSession(auth_request=request)
 
     Args:
         session (aiohttp.ClientSession): An instance :class:`aiohttp.ClientSession` used
@@ -143,22 +149,22 @@ class Request:
     .. automethod:: __call__
     """
 
-    def __init__(self, session=None):
-        # TODO(ohmayr): Evaluate if we want auto_decompress=False.
-        # and if we want to update it in the passed in session.
-        self.session = session or aiohttp.ClientSession(auto_decompress=False)
+    def __init__(self, session: aiohttp.ClientSession = None):
+        self.session = session or aiohttp.ClientSession()
 
     async def __call__(
         self,
-        url,
-        method="GET",
-        body=None,
-        headers=None,
-        timeout=_DEFAULT_TIMEOUT,
+        url: str,
+        method: Optional[str] = "GET",
+        body: Optional[bytes] = None,
+        headers: Optional[
+            Mapping[str, str]
+        ] = None,
+        timeout: Optional[float] = _DEFAULT_TIMEOUT_SECONDS,
         **kwargs,
-    ):
+    ) -> transport.Response:
         """
-        Make an Asynchronous HTTP request using aiohttp.
+        Make an HTTP request using aiohttp.
 
         Args:
             url (str): The URL to be requested.
@@ -168,41 +174,44 @@ class Request:
                 The payload or body in HTTP request.
             headers (Optional[Mapping[str, str]]):
                 Request headers.
-            timeout (Optional[int]): The number of seconds to wait for a
+            timeout (Optional[float]): The number of seconds to wait for a
                 response from the server. If not specified or if None, the
                 requests default timeout will be used.
             kwargs: Additional arguments passed through to the underlying
                 aiohttp :meth:`aiohttp.Session.request` method.
 
         Returns:
-            google.auth.aio.transport.aiohttp.Response: The HTTP response.
+            google.auth.aio.transport.Response: The HTTP response.
 
         Raises:
-            google.auth.exceptions.TransportError: If any exception occurred.
+            - google.auth.exceptions.TransportError: If the request fails.
+            - google.auth.exceptions.TimeoutError: If the request times out.
         """
 
         try:
-            # TODO (ohmayr): verify the timeout type. We may need to pass
-            # in aiohttp.ClientTimeout. Alternatively, we can incorporate
-            # per request timeout within the timeout_guard context manager.
+            client_timeout = aiohttp.ClientTimeout(total=timeout)
             response = await self.session.request(
-                method, url, data=body, headers=headers, timeout=timeout, **kwargs
+                method,
+                url,
+                data=body,
+                headers=headers,
+                timeout=client_timeout,
+                **kwargs,
             )
-            # TODO(ohmayr): Wrap this with Custom Response.
-            return response
+            return Response(response)
 
         except aiohttp.ClientError as caught_exc:
-            new_exc = exceptions.TransportError(caught_exc)
+            new_exc = exceptions.TransportError(f"Failed to send request to {url}.")
             raise new_exc from caught_exc
 
         except asyncio.TimeoutError as caught_exc:
-
-            # TODO(ohmayr): Raise Custom Timeout Error instead
-            new_exc = exceptions.TransportError(caught_exc)
+            new_exc = exceptions.TimeoutError(
+                f"Request timed out after {timeout} seconds."
+            )
             raise new_exc from caught_exc
 
-    async def close(self):
+    async def close(self) -> None:
         """
-        Close the underlying aiohttp session.
+        Close the underlying aiohttp session to release the acquired resources.
         """
         await self.session.close()

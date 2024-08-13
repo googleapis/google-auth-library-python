@@ -25,7 +25,7 @@ for the return value of :class:`Request`.
 """
 
 import abc
-from typing import AsyncGenerator, Dict
+from typing import AsyncGenerator, Dict, Mapping, Optional
 
 
 class Response(metaclass=abc.ABCMeta):
@@ -92,8 +92,14 @@ class Request(metaclass=abc.ABCMeta):
 
     @abc.abstractmethod
     async def __call__(
-        self, url, method="GET", body=None, headers=None, timeout=None, **kwargs
-    ):
+        self,
+        url: str,
+        method: Optional[str] = "GET",
+        body: bytes = None,
+        headers: Mapping[str, str] = None, # TODO (ohmayr): headers in the response be the same type?
+        timeout: Optional[float] = None,
+        **kwargs
+    ) -> Response:
         """Make an HTTP request.
 
         Args:
@@ -102,14 +108,14 @@ class Request(metaclass=abc.ABCMeta):
                 to 'GET'.
             body (bytes): The payload / body in HTTP request.
             headers (Mapping[str, str]): Request headers.
-            timeout (Optional[int]): The number of seconds to wait for a
+            timeout (Optional[float]): The number of seconds to wait for a
                 response from the server. If not specified or if None, the
                 transport-specific default timeout will be used.
             kwargs: Additionally arguments passed on to the transport's
                 request method.
 
         Returns:
-            Response: The HTTP response.
+            google.auth.aio.transport.Response: The HTTP response.
 
         Raises:
             google.auth.exceptions.TransportError: If any exception occurred.
@@ -118,7 +124,7 @@ class Request(metaclass=abc.ABCMeta):
         # (pylint doesn't play well with abstract docstrings.)
         raise NotImplementedError("__call__ must be implemented.")
 
-    async def close(self):
+    async def close(self) -> None:
         """
         Close the underlying session.
         """
