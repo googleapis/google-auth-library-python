@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import asyncio
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import AsyncMock, Mock
 
 from aioresponses import aioresponses
 import pytest  # type: ignore
@@ -21,7 +21,6 @@ import pytest_asyncio
 
 from google.auth import exceptions
 import google.auth.aio.transport.aiohttp as auth_aiohttp
-from google.auth.exceptions import TimeoutError
 
 
 try:
@@ -30,11 +29,6 @@ except ImportError as caught_exc:  # pragma: NO COVER
     raise ImportError(
         "The aiohttp library is not installed from please install the aiohttp package to use the aiohttp transport."
     ) from caught_exc
-
-
-@pytest.fixture
-async def simple_async_task():
-    return True
 
 
 @pytest.fixture
@@ -89,65 +83,6 @@ class TestResponse(object):
         except StopAsyncIteration:
             pass
         assert b"".join(content) == b"Cavefish have no sight."
-
-
-class TestTimeoutGuard(object):
-    default_timeout = 1
-
-    def make_timeout_guard(self, timeout):
-        return auth_aiohttp.timeout_guard(timeout)
-
-    @pytest.mark.asyncio
-    async def test_timeout_with_simple_async_task_within_bounds(
-        self, simple_async_task
-    ):
-        task = False
-        with patch("time.monotonic", side_effect=[0, 0.25, 0.75]):
-            with patch("asyncio.wait_for", lambda coro, timeout: coro):
-                async with self.make_timeout_guard(
-                    timeout=self.default_timeout
-                ) as with_timeout:
-                    task = await with_timeout(simple_async_task)
-
-        # Task succeeds.
-        assert task is True
-
-    @pytest.mark.asyncio
-    async def test_timeout_with_simple_async_task_out_of_bounds(
-        self, simple_async_task
-    ):
-        task = False
-        with patch("time.monotonic", side_effect=[0, 1, 1]):
-            with patch("asyncio.wait_for", lambda coro, timeout: coro):
-                with pytest.raises(TimeoutError) as exc:
-                    async with self.make_timeout_guard(
-                        timeout=self.default_timeout
-                    ) as with_timeout:
-                        task = await with_timeout(simple_async_task)
-
-        # Task does not succeed and the context manager times out i.e. no remaining time left.
-        assert task is False
-        assert exc.match(
-            f"Context manager exceeded the configured timeout of {self.default_timeout}s."
-        )
-
-    @pytest.mark.asyncio
-    async def test_timeout_with_async_task_timing_out_before_context(
-        self, simple_async_task
-    ):
-        task = False
-        with pytest.raises(TimeoutError) as exc:
-            async with self.make_timeout_guard(
-                timeout=self.default_timeout
-            ) as with_timeout:
-                with patch("asyncio.wait_for", side_effect=asyncio.TimeoutError):
-                    task = await with_timeout(simple_async_task)
-
-        # Task does not complete i.e. the operation times out.
-        assert task is False
-        assert exc.match(
-            f"The operation {simple_async_task} exceeded the configured timeout of {self.default_timeout}s."
-        )
 
 
 @pytest.mark.asyncio

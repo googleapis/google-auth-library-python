@@ -12,10 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import asyncio
+from contextlib import asynccontextmanager
+import time
 from typing import Mapping, Optional
+
 
 from google.auth.aio import transport
 from google.auth.aio.credentials import Credentials
+from google.auth.exceptions import TimeoutError
 
 try:
     import aiohttp
@@ -24,11 +29,49 @@ try:
 except ImportError:
     AIOHTTP_INSTALLED = False
 
-# TODO (ohmayr): Uncomment this when the timeout guard PR is merged.
-# from google.auth.exceptions import TimeoutError
 
-# TODO (ohmayr): Maybe move _DEFAULT_TIMEOUT to __init__.py
-_DEFAULT_TIMEOUT = 180  # in seconds
+@asynccontextmanager
+async def timeout_guard(timeout):
+    """
+    timeout_guard is an asynchronous context manager to apply a timeout to an asynchronous block of code.
+
+    Args:
+        timeout (float): The time in seconds before the context manager times out.
+
+    Raises:
+        google.auth.exceptions.TimeoutError: If the code within the context exceeds the provided timeout.
+
+    Usage:
+        async with timeout_guard(10) as with_timeout:
+            await with_timeout(async_function())
+    """
+    start = time.monotonic()
+    total_timeout = timeout
+
+    def _remaining_time():
+        elapsed = time.monotonic() - start
+        remaining = total_timeout - elapsed
+        if remaining <= 0:
+            raise TimeoutError(
+                f"Context manager exceeded the configured timeout of {total_timeout}s."
+            )
+        return remaining
+
+    async def with_timeout(coro):
+        try:
+            remaining = _remaining_time()
+            response = await asyncio.wait_for(coro, remaining)
+            return response
+        except (asyncio.TimeoutError, TimeoutError) as e:
+            raise TimeoutError(
+                f"The operation {coro} exceeded the configured timeout of {total_timeout}s."
+            ) from e
+
+    try:
+        yield with_timeout
+
+    finally:
+        _remaining_time()
 
 
 class AuthorizedSession:
@@ -89,7 +132,7 @@ class AuthorizedSession:
         max_allowed_time: Optional[
             float
         ] = None,  # TODO (ohmayr): set a default value for timeout.
-        timeout: Optional[float] = _DEFAULT_TIMEOUT,
+        timeout: Optional[float] = transport._DEFAULT_TIMEOUT_SECONDS,
         **kwargs,
     ) -> transport.Response:
 
@@ -182,7 +225,7 @@ class AuthorizedSession:
         max_allowed_time: Optional[
             float
         ] = None,  # TODO (ohmayr): set a default value for timeout.
-        timeout: Optional[float] = _DEFAULT_TIMEOUT,
+        timeout: Optional[float] = transport._DEFAULT_TIMEOUT_SECONDS,
         **kwargs,
     ) -> transport.Response:
         return await self.request(
@@ -197,7 +240,7 @@ class AuthorizedSession:
         max_allowed_time: Optional[
             float
         ] = None,  # TODO (ohmayr): set a default value for timeout.
-        timeout: Optional[float] = _DEFAULT_TIMEOUT,
+        timeout: Optional[float] = transport._DEFAULT_TIMEOUT_SECONDS,
         **kwargs,
     ) -> transport.Response:
         return await self.request(
@@ -212,7 +255,7 @@ class AuthorizedSession:
         max_allowed_time: Optional[
             float
         ] = None,  # TODO (ohmayr): set a default value for timeout.
-        timeout: Optional[float] = _DEFAULT_TIMEOUT,
+        timeout: Optional[float] = transport._DEFAULT_TIMEOUT_SECONDS,
         **kwargs,
     ) -> transport.Response:
         return await self.request(
@@ -227,7 +270,7 @@ class AuthorizedSession:
         max_allowed_time: Optional[
             float
         ] = None,  # TODO (ohmayr): set a default value for timeout.
-        timeout: Optional[float] = _DEFAULT_TIMEOUT,
+        timeout: Optional[float] = transport._DEFAULT_TIMEOUT_SECONDS,
         **kwargs,
     ) -> transport.Response:
         return await self.request(
@@ -242,7 +285,7 @@ class AuthorizedSession:
         max_allowed_time: Optional[
             float
         ] = None,  # TODO (ohmayr): set a default value for timeout.
-        timeout: Optional[float] = _DEFAULT_TIMEOUT,
+        timeout: Optional[float] = transport._DEFAULT_TIMEOUT_SECONDS,
         **kwargs,
     ) -> transport.Response:
         return await self.request(

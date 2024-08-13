@@ -29,6 +29,8 @@ import http.client as http_client
 from typing import AsyncGenerator, Dict, Mapping, Optional
 
 
+_DEFAULT_TIMEOUT_SECONDS = 180
+
 DEFAULT_RETRYABLE_STATUS_CODES = (
     http_client.INTERNAL_SERVER_ERROR,
     http_client.SERVICE_UNAVAILABLE,

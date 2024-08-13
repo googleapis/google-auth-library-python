@@ -16,8 +16,6 @@
 """
 
 import asyncio
-from contextlib import asynccontextmanager
-import time
 from typing import AsyncGenerator, Dict, Mapping, Optional
 
 try:
@@ -30,54 +28,6 @@ except ImportError as caught_exc:  # pragma: NO COVER
 from google.auth import _helpers
 from google.auth import exceptions
 from google.auth.aio import transport
-from google.auth.exceptions import TimeoutError
-
-
-_DEFAULT_TIMEOUT_SECONDS = 180
-
-
-@asynccontextmanager
-async def timeout_guard(timeout):
-    """
-    timeout_guard is an asynchronous context manager to apply a timeout to an asynchronous block of code.
-
-    Args:
-        timeout (float): The time in seconds before the context manager times out.
-
-    Raises:
-        google.auth.exceptions.TimeoutError: If the code within the context exceeds the provided timeout.
-
-    Usage:
-        async with timeout_guard(10) as with_timeout:
-            await with_timeout(async_function())
-    """
-    start = time.monotonic()
-    total_timeout = timeout
-
-    def _remaining_time():
-        elapsed = time.monotonic() - start
-        remaining = total_timeout - elapsed
-        if remaining <= 0:
-            raise TimeoutError(
-                f"Context manager exceeded the configured timeout of {total_timeout}s."
-            )
-        return remaining
-
-    async def with_timeout(coro):
-        try:
-            remaining = _remaining_time()
-            response = await asyncio.wait_for(coro, remaining)
-            return response
-        except (asyncio.TimeoutError, TimeoutError) as e:
-            raise TimeoutError(
-                f"The operation {coro} exceeded the configured timeout of {total_timeout}s."
-            ) from e
-
-    try:
-        yield with_timeout
-
-    finally:
-        _remaining_time()
 
 
 class Response(transport.Response):
@@ -158,7 +108,7 @@ class Request(transport.Request):
         method: str = "GET",
         body: Optional[bytes] = None,
         headers: Optional[Mapping[str, str]] = None,
-        timeout: float = _DEFAULT_TIMEOUT_SECONDS,
+        timeout: float = transport._DEFAULT_TIMEOUT_SECONDS,
         **kwargs,
     ) -> transport.Response:
         """
