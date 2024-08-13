@@ -94,10 +94,10 @@ class Request(metaclass=abc.ABCMeta):
     async def __call__(
         self,
         url: str,
-        method: Optional[str] = "GET",
-        body: bytes = None,
-        headers: Mapping[str, str] = None, # TODO (ohmayr): headers in the response be the same type?
-        timeout: Optional[float] = None,
+        method: Optional[str],
+        body: bytes,
+        headers: Mapping[str, str],
+        timeout: Optional[float],
         **kwargs
     ) -> Response:
         """Make an HTTP request.
