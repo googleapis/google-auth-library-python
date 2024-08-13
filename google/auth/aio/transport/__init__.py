@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Transport - Async HTTP client library support.
+"""Transport - Asynchronous HTTP client library support.
 
 :mod:`google.auth.aio` is designed to work with various asynchronous client libraries such
 as aiohttp. In order to work across these libraries with different
@@ -24,8 +24,10 @@ to support HTTP libraries. :class:`Request` defines the interface expected by
 for the return value of :class:`Request`.
 """
 
-
+import abc
 import http.client as http_client
+from typing import AsyncGenerator, Dict, Mapping, Optional
+
 
 DEFAULT_RETRYABLE_STATUS_CODES = (
     http_client.INTERNAL_SERVER_ERROR,
@@ -36,7 +38,6 @@ DEFAULT_RETRYABLE_STATUS_CODES = (
 """Sequence[int]:  HTTP status codes indicating a request can be retried.
 """
 
-
 DEFAULT_REFRESH_STATUS_CODES = (http_client.UNAUTHORIZED,)
 """Sequence[int]:  Which HTTP status code indicate that credentials should be
 refreshed.
@@ -44,3 +45,106 @@ refreshed.
 
 DEFAULT_MAX_REFRESH_ATTEMPTS = 2
 """int: How many times to refresh the credentials and retry a request."""
+
+
+class Response(metaclass=abc.ABCMeta):
+    """Asynchronous HTTP Response Interface."""
+
+    @property
+    @abc.abstractmethod
+    def status_code(self) -> int:
+        """
+        The HTTP response status code..
+
+        Returns:
+            int: The HTTP response status code.
+
+        """
+        raise NotImplementedError("status_code must be implemented.")
+
+    @property
+    @abc.abstractmethod
+    def headers(self) -> Dict[str, str]:
+        """The HTTP response headers.
+
+        Returns:
+            Dict[str, str]: The HTTP response headers.
+        """
+        raise NotImplementedError("headers must be implemented.")
+
+    @abc.abstractmethod
+    async def content(self, chunk_size: int = 1024) -> AsyncGenerator[bytes, None]:
+        """The raw response content.
+
+        Args:
+            chunk_size (int): The size of each chunk. Defaults to 1024.
+
+        Yields:
+            AsyncGenerator[bytes, None]: An asynchronous generator yielding
+            response chunks as bytes.
+        """
+        raise NotImplementedError("content must be implemented.")
+
+    @abc.abstractmethod
+    async def read(self) -> bytes:
+        """Read the entire response content as bytes.
+
+        Returns:
+            bytes: The entire response content.
+        """
+        raise NotImplementedError("read must be implemented.")
+
+    @abc.abstractmethod
+    async def close(self):
+        """Close the response after it is fully consumed to resource."""
+        raise NotImplementedError("close must be implemented.")
+
+
+class Request(metaclass=abc.ABCMeta):
+    """Interface for a callable that makes HTTP requests.
+
+    Specific transport implementations should provide an implementation of
+    this that adapts their specific request / response API.
+
+    .. automethod:: __call__
+    """
+
+    @abc.abstractmethod
+    async def __call__(
+        self,
+        url: str,
+        method: str,
+        body: bytes,
+        headers: Optional[Mapping[str, str]],
+        timeout: float,
+        **kwargs
+    ) -> Response:
+        """Make an HTTP request.
+
+        Args:
+            url (str): The URI to be requested.
+            method (str): The HTTP method to use for the request. Defaults
+                to 'GET'.
+            body (bytes): The payload / body in HTTP request.
+            headers (Mapping[str, str]): Request headers.
+            timeout (float): The number of seconds to wait for a
+                response from the server. If not specified or if None, the
+                transport-specific default timeout will be used.
+            kwargs: Additional arguments passed on to the transport's
+                request method.
+
+        Returns:
+            google.auth.aio.transport.Response: The HTTP response.
+
+        Raises:
+            google.auth.exceptions.TransportError: If any exception occurred.
+        """
+        # pylint: disable=redundant-returns-doc, missing-raises-doc
+        # (pylint doesn't play well with abstract docstrings.)
+        raise NotImplementedError("__call__ must be implemented.")
+
+    async def close(self) -> None:
+        """
+        Close the underlying session.
+        """
+        raise NotImplementedError("close must be implemented.")

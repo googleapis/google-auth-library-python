@@ -45,7 +45,7 @@ class AuthorizedSession:
 
         import aiohttp
         from google.auth.aio.transport import sessions
-        
+
         async with sessions.AuthorizedSession(credentials) as authed_session:
             response = await authed_session.request(
                 'GET', 'https://www.googleapis.com/storage/v1/b')
@@ -98,7 +98,7 @@ class AuthorizedSession:
                 method (str): The http method used to make the request.
                 url (str): The URI to be requested.
                 data (bytes): The payload or body in HTTP request.
-                headers (Mapping[str, str]): Request headers.       
+                headers (Mapping[str, str]): Request headers.
                 timeout (Optional[float]):
                 The amount of time in seconds to wait for the server response
                 with each individual request.
@@ -114,7 +114,7 @@ class AuthorizedSession:
                 itself does not timeout, e.g. if a large file is being
                 transmitted. The timout error will be raised after such
                 request completes.
-        
+
         Raises:
         # TODO (ohmayr): populate this.
 
@@ -122,7 +122,7 @@ class AuthorizedSession:
         # TODO (ohmayr): populate this.
 
         # TODO (ohmayr): Investigate if this is required.
-        # I think it is reasonable to agree on a strict type for headers and 
+        # I think it is reasonable to agree on a strict type for headers and
         # let the caller handle any translation.
             if headers:
                 for key in headers.keys():
@@ -159,7 +159,7 @@ class AuthorizedSession:
                         )
                     )
                     if response.status_code in transport.DEFAULT_REFRESH_STATUS_CODES:
-                        
+
                         # Note: Credentials should not be refreshed if an attempt to refresh
                         # is already made by another request. To ensure that multiple, requests
                         # do not attempt to refresh credentials, acquiring and releasing lock
