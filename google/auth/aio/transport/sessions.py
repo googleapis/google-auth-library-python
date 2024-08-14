@@ -18,12 +18,13 @@ import time
 from typing import Mapping, Optional
 
 
+from google.auth import _exponential_backoff, exceptions
 from google.auth.aio import transport
 from google.auth.aio.credentials import Credentials
 from google.auth.aio.transport.aiohttp import Request as AIOHTTP_Request
 from google.auth.exceptions import TimeoutError
-from google.auth import exceptions, _exponential_backoff
 
+# TODO (ohmayr): lint issue for aiohttp imported but unused.
 try:
     import aiohttp
 
@@ -166,7 +167,7 @@ class AuthorizedSession:
 
         Returns:
                 google.auth.aio.transport.Response: The HTTP response.
-        
+
         Raises:
                 google.auth.exceptions.TimeoutError: If the method does not complete within
                 the configured `max_allowed_time` or the request exceeds the configured
@@ -185,8 +186,10 @@ class AuthorizedSession:
         # but sometimes the operations return these in bytes types.
         """
 
-        # retries = _exponential_backoff.ExponentialBackoff()
-        _retry_attempts = 0
+        retries = _exponential_backoff.AsyncExponentialBackoff(
+            total_attempts=transport.DEFAULT_MAX_REFRESH_ATTEMPTS
+        )
+        response = None
         try:
             async with timeout_guard(max_allowed_time) as with_timeout:
                 if self._credentials:
@@ -196,15 +199,16 @@ class AuthorizedSession:
                             self._auth_request, method, url, headers
                         )
                     )
-                while _retry_attempts < transport.DEFAULT_MAX_REFRESH_ATTEMPTS:
+                async for _ in retries:
                     response = await with_timeout(
                         self._auth_request(
                             url, method, data, headers, timeout, **kwargs
                         )
                     )
-                    if response.status_code in transport.DEFAULT_RETRYABLE_STATUS_CODES:
-                        _retry_attempts += 1
-                    else:
+                    if (
+                        response.status_code
+                        not in transport.DEFAULT_RETRYABLE_STATUS_CODES
+                    ):
                         return response
 
         except TimeoutError as exc:

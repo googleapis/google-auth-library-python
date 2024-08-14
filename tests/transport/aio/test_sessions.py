@@ -13,23 +13,20 @@
 # limitations under the License.
 
 import asyncio
+from typing import AsyncGenerator
 from unittest.mock import Mock, patch
 
+from aioresponses import aioresponses
 import pytest  # type: ignore
 
+from google.auth.aio.credentials import AnonymousCredentials
 from google.auth.aio.transport import (
-    sessions,
+    _DEFAULT_TIMEOUT_SECONDS,
     Request,
     Response,
-    _DEFAULT_TIMEOUT_SECONDS,
+    sessions,
 )
-from google.auth.exceptions import TimeoutError, TransportError, InvalidType
-from google.auth.aio.credentials import AnonymousCredentials
-
-# import aiohttp
-from aioresponses import aioresponses
-
-from typing import AsyncGenerator
+from google.auth.exceptions import InvalidType, TimeoutError, TransportError
 
 
 @pytest.fixture
@@ -90,7 +87,7 @@ class TestTimeoutGuard(object):
     default_timeout = 1
 
     def make_timeout_guard(self, timeout):
-        return auth_sessions.timeout_guard(timeout)
+        return sessions.timeout_guard(timeout)
 
     @pytest.mark.asyncio
     async def test_timeout_with_simple_async_task_within_bounds(
