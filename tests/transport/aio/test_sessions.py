@@ -13,17 +13,77 @@
 # limitations under the License.
 
 import asyncio
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import pytest  # type: ignore
 
-import google.auth.aio.transport.sessions as auth_sessions
-from google.auth.exceptions import TimeoutError
+from google.auth.aio.transport import (
+    sessions,
+    Request,
+    Response,
+    _DEFAULT_TIMEOUT_SECONDS,
+)
+from google.auth.exceptions import TimeoutError, TransportError, InvalidType
+from google.auth.aio.credentials import AnonymousCredentials
+
+# import aiohttp
+from aioresponses import aioresponses
+
+from typing import AsyncGenerator
 
 
 @pytest.fixture
 async def simple_async_task():
     return True
+
+
+class MockRequest(Request):
+    def __init__(self, response=None, side_effect=None):
+        self._closed = False
+        self._response = response
+        self._side_effect = side_effect
+
+    async def __call__(
+        self,
+        url,
+        method="GET",
+        body=None,
+        headers=None,
+        timeout=_DEFAULT_TIMEOUT_SECONDS,
+        **kwargs,
+    ):
+        if self._side_effect:
+            raise self._side_effect
+        return self._response
+
+    async def close(self):
+        self._closed = True
+        return None
+
+
+class MockResponse(Response):
+    def __init__(self, status_code, headers, content):
+        self._status_code = status_code
+        self._headers = headers
+        self._content = content
+        self._close = False
+
+    @property
+    def status_code(self):
+        return self._status_code
+
+    @property
+    def headers(self):
+        return self._headers
+
+    async def read(self) -> bytes:
+        return b"".join([chunk async for chunk in self._content])
+
+    async def content(self) -> AsyncGenerator:
+        return self._content
+
+    async def close(self) -> None:
+        self._close = True
 
 
 class TestTimeoutGuard(object):
@@ -83,3 +143,78 @@ class TestTimeoutGuard(object):
         assert exc.match(
             f"The operation {simple_async_task} exceeded the configured timeout of {self.default_timeout}s."
         )
+
+
+class TestAuthorizedSession(object):
+    TEST_URL = "http://example.com/"
+    credentials = AnonymousCredentials()
+
+    @pytest.fixture
+    async def mocked_content(self):
+        content = [b"Cavefish ", b"have ", b"no ", b"sight."]
+        for chunk in content:
+            yield chunk
+
+    def test_constructor_with_default_auth_request(self):
+        with patch("google.auth.aio.transport.sessions.AIOHTTP_INSTALLED", True):
+            authed_session = sessions.AuthorizedSession(self.credentials)
+        assert authed_session._credentials == self.credentials
+
+    def test_constructor_with_provided_auth_request(self):
+        auth_request = MockRequest()
+        authed_session = sessions.AuthorizedSession(
+            self.credentials, auth_request=auth_request
+        )
+
+        assert authed_session._auth_request is auth_request
+
+    def test_constructor_raises_no_auth_request_error(self):
+        with patch("google.auth.aio.transport.sessions.AIOHTTP_INSTALLED", False):
+            with pytest.raises(TransportError) as exc:
+                sessions.AuthorizedSession(self.credentials)
+
+        exc.match(
+            "`auth_request` must either be configured or the external package `aiohttp` must be installed to use the default value."
+        )
+
+    def test_constructor_raises_incorrect_credentials_error(self):
+        credentials = Mock()
+        with pytest.raises(InvalidType) as exc:
+            sessions.AuthorizedSession(credentials)
+
+        exc.match(
+            f"The configured credentials of type {type(credentials)} are invalid and must be of type `google.auth.aio.credentials.Credentials`"
+        )
+
+    @pytest.mark.asyncio
+    async def test_request_default_auth_request_simple(self):
+        with aioresponses() as m:
+            mocked_chunks = [b"Cavefish ", b"have ", b"no ", b"sight."]
+            mocked_response = b"".join(mocked_chunks)
+            m.get(self.TEST_URL, status=200, body=mocked_response)
+            authed_session = sessions.AuthorizedSession(self.credentials)
+            response = await authed_session.request("GET", self.TEST_URL)
+            assert response.status_code == 200
+            assert response.headers == {"Content-Type": "application/json"}
+            assert await response.read() == b"Cavefish have no sight."
+
+    @pytest.mark.asyncio
+    async def test_request_provided_auth_request_simple(self, mocked_content):
+        mocked_response = MockResponse(
+            status_code=200,
+            headers={"Content-Type": "application/json"},
+            content=mocked_content,
+        )
+        auth_request = MockRequest(mocked_response)
+        authed_session = sessions.AuthorizedSession(self.credentials, auth_request)
+        response = await authed_session.request("GET", self.TEST_URL)
+        assert response.status_code == 200
+        assert response.headers == {"Content-Type": "application/json"}
+        assert await response.read() == b"Cavefish have no sight."
+
+    @pytest.mark.asyncio
+    async def test_request_raises_timeout_error(self):
+        auth_request = MockRequest(side_effect=asyncio.TimeoutError)
+        authed_session = sessions.AuthorizedSession(self.credentials, auth_request)
+        with pytest.raises(TimeoutError):
+            await authed_session.request("GET", self.TEST_URL)

@@ -25,27 +25,24 @@ for the return value of :class:`Request`.
 """
 
 import abc
-import http.client as http_client
 from typing import AsyncGenerator, Dict, Mapping, Optional
+
+import google.auth.transport
 
 
 _DEFAULT_TIMEOUT_SECONDS = 180
 
-DEFAULT_RETRYABLE_STATUS_CODES = (
-    http_client.INTERNAL_SERVER_ERROR,
-    http_client.SERVICE_UNAVAILABLE,
-    http_client.REQUEST_TIMEOUT,
-    http_client.TOO_MANY_REQUESTS,
-)
+DEFAULT_RETRYABLE_STATUS_CODES = google.auth.transport.DEFAULT_RETRYABLE_STATUS_CODES
 """Sequence[int]:  HTTP status codes indicating a request can be retried.
 """
 
-DEFAULT_REFRESH_STATUS_CODES = (http_client.UNAUTHORIZED,)
+DEFAULT_REFRESH_STATUS_CODES = google.auth.transport.DEFAULT_REFRESH_STATUS_CODES
 """Sequence[int]:  Which HTTP status code indicate that credentials should be
 refreshed.
 """
 
-DEFAULT_MAX_REFRESH_ATTEMPTS = 2
+# TODO (ohmayr): We are no longer using this. Should this be removed?
+DEFAULT_MAX_REFRESH_ATTEMPTS = google.auth.transport.DEFAULT_MAX_REFRESH_ATTEMPTS
 """int: How many times to refresh the credentials and retry a request."""
 
 
