@@ -41,7 +41,6 @@ DEFAULT_REFRESH_STATUS_CODES = google.auth.transport.DEFAULT_REFRESH_STATUS_CODE
 refreshed.
 """
 
-# TODO (ohmayr): We are no longer using this. Should this be removed?
 DEFAULT_MAX_REFRESH_ATTEMPTS = google.auth.transport.DEFAULT_MAX_REFRESH_ATTEMPTS
 """int: How many times to refresh the credentials and retry a request."""
 
