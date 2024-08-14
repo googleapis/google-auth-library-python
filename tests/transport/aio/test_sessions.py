@@ -14,7 +14,7 @@
 
 import asyncio
 from typing import AsyncGenerator
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import Mock, patch
 
 from aioresponses import aioresponses
 import pytest  # type: ignore
@@ -237,10 +237,18 @@ class TestAuthorizedSession(object):
             await authed_session.request("GET", self.TEST_URL)
 
     @pytest.mark.asyncio
+    async def test_request_max_allowed_time_exceeded_error(self):
+        auth_request = MockRequest(side_effect=TransportError)
+        authed_session = sessions.AuthorizedSession(self.credentials, auth_request)
+        with patch("time.monotonic", side_effect=[0, 1, 1]):
+            with pytest.raises(TimeoutError):
+                await authed_session.request("GET", self.TEST_URL, max_allowed_time=1)
+
+    @pytest.mark.asyncio
     async def test_request_max_retries(self):
         mocked_response = MockResponse(status_code=500)
         auth_request = MockRequest(mocked_response)
-        with patch("asyncio.sleep", return_value=AsyncMock(return_value=None)):
+        with patch("asyncio.sleep", return_value=None):
             authed_session = sessions.AuthorizedSession(self.credentials, auth_request)
             await authed_session.request("GET", self.TEST_URL)
             assert auth_request.call_count == DEFAULT_MAX_REFRESH_ATTEMPTS

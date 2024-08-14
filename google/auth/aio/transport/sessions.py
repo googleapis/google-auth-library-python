@@ -207,10 +207,8 @@ class AuthorizedSession:
                         not in transport.DEFAULT_RETRYABLE_STATUS_CODES
                     ):
                         return response
-
         except TimeoutError as exc:
             raise exc
-
         return response
 
     async def get(
