@@ -21,12 +21,10 @@ from typing import Mapping, Optional
 from google.auth import _exponential_backoff, exceptions
 from google.auth.aio import transport
 from google.auth.aio.credentials import Credentials
-from google.auth.aio.transport.aiohttp import Request as AIOHTTP_Request
 from google.auth.exceptions import TimeoutError
 
-# TODO (ohmayr): lint issue for aiohttp imported but unused.
 try:
-    import aiohttp
+    from google.auth.aio.transport.aiohttp import Request as AiohttpRequest
 
     AIOHTTP_INSTALLED = True
 except ImportError:
@@ -118,18 +116,18 @@ class AuthorizedSession:
     def __init__(
         self, credentials: Credentials, auth_request: transport.Request = None
     ):
-        self._auth_request = auth_request or (AIOHTTP_INSTALLED and AIOHTTP_Request())
-        if not self._auth_request:
-            raise exceptions.TransportError(
-                "`auth_request` must either be configured or the external package `aiohttp` must be installed to use the default value."
-            )
-
         if not isinstance(credentials, Credentials):
             raise exceptions.InvalidType(
                 f"The configured credentials of type {type(credentials)} are invalid and must be of type `google.auth.aio.credentials.Credentials`"
             )
 
         self._credentials = credentials
+
+        self._auth_request = auth_request or (AIOHTTP_INSTALLED and AiohttpRequest())
+        if not self._auth_request:
+            raise exceptions.TransportError(
+                "`auth_request` must either be configured or the external package `aiohttp` must be installed to use the default value."
+            )
 
     async def request(
         self,
@@ -192,13 +190,12 @@ class AuthorizedSession:
         response = None
         try:
             async with timeout_guard(max_allowed_time) as with_timeout:
-                if self._credentials:
-                    await with_timeout(
-                        # Note: before_request will attempt to refresh the credentials if expired.
-                        self._credentials.before_request(
-                            self._auth_request, method, url, headers
-                        )
+                await with_timeout(
+                    # Note: before_request will attempt to refresh the credentials if expired.
+                    self._credentials.before_request(
+                        self._auth_request, method, url, headers
                     )
+                )
                 async for _ in retries:
                     response = await with_timeout(
                         self._auth_request(
@@ -285,5 +282,4 @@ class AuthorizedSession:
         """
         Close the underlying auth request session.
         """
-        if self._auth_request:
-            await self._auth_request.close()
+        await self._auth_request.close()

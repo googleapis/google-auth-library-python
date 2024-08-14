@@ -14,7 +14,7 @@
 
 import asyncio
 from typing import AsyncGenerator
-from unittest.mock import Mock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 from aioresponses import aioresponses
 import pytest  # type: ignore
@@ -22,6 +22,7 @@ import pytest  # type: ignore
 from google.auth.aio.credentials import AnonymousCredentials
 from google.auth.aio.transport import (
     _DEFAULT_TIMEOUT_SECONDS,
+    DEFAULT_MAX_REFRESH_ATTEMPTS,
     Request,
     Response,
     sessions,
@@ -39,6 +40,7 @@ class MockRequest(Request):
         self._closed = False
         self._response = response
         self._side_effect = side_effect
+        self.call_count = 0
 
     async def __call__(
         self,
@@ -49,6 +51,7 @@ class MockRequest(Request):
         timeout=_DEFAULT_TIMEOUT_SECONDS,
         **kwargs,
     ):
+        self.call_count += 1
         if self._side_effect:
             raise self._side_effect
         return self._response
@@ -59,7 +62,7 @@ class MockRequest(Request):
 
 
 class MockResponse(Response):
-    def __init__(self, status_code, headers, content):
+    def __init__(self, status_code, headers=None, content=None):
         self._status_code = status_code
         self._headers = headers
         self._content = content
@@ -152,20 +155,25 @@ class TestAuthorizedSession(object):
         for chunk in content:
             yield chunk
 
-    def test_constructor_with_default_auth_request(self):
+    @pytest.mark.asyncio
+    async def test_constructor_with_default_auth_request(self):
         with patch("google.auth.aio.transport.sessions.AIOHTTP_INSTALLED", True):
             authed_session = sessions.AuthorizedSession(self.credentials)
         assert authed_session._credentials == self.credentials
+        await authed_session.close()
 
-    def test_constructor_with_provided_auth_request(self):
+    @pytest.mark.asyncio
+    async def test_constructor_with_provided_auth_request(self):
         auth_request = MockRequest()
         authed_session = sessions.AuthorizedSession(
             self.credentials, auth_request=auth_request
         )
 
         assert authed_session._auth_request is auth_request
+        await authed_session.close()
 
-    def test_constructor_raises_no_auth_request_error(self):
+    @pytest.mark.asyncio
+    async def test_constructor_raises_no_auth_request_error(self):
         with patch("google.auth.aio.transport.sessions.AIOHTTP_INSTALLED", False):
             with pytest.raises(TransportError) as exc:
                 sessions.AuthorizedSession(self.credentials)
@@ -174,7 +182,8 @@ class TestAuthorizedSession(object):
             "`auth_request` must either be configured or the external package `aiohttp` must be installed to use the default value."
         )
 
-    def test_constructor_raises_incorrect_credentials_error(self):
+    @pytest.mark.asyncio
+    async def test_constructor_raises_incorrect_credentials_error(self):
         credentials = Mock()
         with pytest.raises(InvalidType) as exc:
             sessions.AuthorizedSession(credentials)
@@ -184,7 +193,7 @@ class TestAuthorizedSession(object):
         )
 
     @pytest.mark.asyncio
-    async def test_request_default_auth_request_simple(self):
+    async def test_request_default_auth_request_success(self):
         with aioresponses() as m:
             mocked_chunks = [b"Cavefish ", b"have ", b"no ", b"sight."]
             mocked_response = b"".join(mocked_chunks)
@@ -195,8 +204,10 @@ class TestAuthorizedSession(object):
             assert response.headers == {"Content-Type": "application/json"}
             assert await response.read() == b"Cavefish have no sight."
 
+        await authed_session.close()
+
     @pytest.mark.asyncio
-    async def test_request_provided_auth_request_simple(self, mocked_content):
+    async def test_request_provided_auth_request_success(self, mocked_content):
         mocked_response = MockResponse(
             status_code=200,
             headers={"Content-Type": "application/json"},
@@ -209,9 +220,56 @@ class TestAuthorizedSession(object):
         assert response.headers == {"Content-Type": "application/json"}
         assert await response.read() == b"Cavefish have no sight."
 
+        await authed_session.close()
+
     @pytest.mark.asyncio
     async def test_request_raises_timeout_error(self):
         auth_request = MockRequest(side_effect=asyncio.TimeoutError)
         authed_session = sessions.AuthorizedSession(self.credentials, auth_request)
         with pytest.raises(TimeoutError):
             await authed_session.request("GET", self.TEST_URL)
+
+    @pytest.mark.asyncio
+    async def test_request_raises_transport_error(self):
+        auth_request = MockRequest(side_effect=TransportError)
+        authed_session = sessions.AuthorizedSession(self.credentials, auth_request)
+        with pytest.raises(TransportError):
+            await authed_session.request("GET", self.TEST_URL)
+
+    @pytest.mark.asyncio
+    async def test_request_max_retries(self):
+        mocked_response = MockResponse(status_code=500)
+        auth_request = MockRequest(mocked_response)
+        with patch("asyncio.sleep", return_value=AsyncMock(return_value=None)):
+            authed_session = sessions.AuthorizedSession(self.credentials, auth_request)
+            await authed_session.request("GET", self.TEST_URL)
+            assert auth_request.call_count == DEFAULT_MAX_REFRESH_ATTEMPTS
+
+    @pytest.mark.asyncio
+    async def test_http_methods_success(self):
+        with aioresponses() as m:
+            mocked_chunks = [b"Cavefish ", b"have ", b"no ", b"sight."]
+            mocked_response = b"".join(mocked_chunks)
+            authed_session = sessions.AuthorizedSession(self.credentials)
+
+            m.get(self.TEST_URL, status=200, body=mocked_response)
+            response = await authed_session.get(self.TEST_URL)
+            assert response.status_code == 200
+
+            m.post(self.TEST_URL, status=200, body=mocked_response)
+            response = await authed_session.post(self.TEST_URL)
+            assert response.status_code == 200
+
+            m.put(self.TEST_URL, status=200, body=mocked_response)
+            response = await authed_session.put(self.TEST_URL)
+            assert response.status_code == 200
+
+            m.patch(self.TEST_URL, status=200, body=mocked_response)
+            response = await authed_session.patch(self.TEST_URL)
+            assert response.status_code == 200
+
+            m.delete(self.TEST_URL, status=200, body=mocked_response)
+            response = await authed_session.delete(self.TEST_URL)
+            assert response.status_code == 200
+
+        await authed_session.close()
