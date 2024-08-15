@@ -14,9 +14,9 @@
 
 import asyncio
 from typing import AsyncGenerator
-from unittest.mock import Mock, patch
 
 from aioresponses import aioresponses
+from mock import Mock, patch
 import pytest  # type: ignore
 
 from google.auth.aio.credentials import AnonymousCredentials
@@ -254,30 +254,51 @@ class TestAuthorizedSession(object):
             assert auth_request.call_count == DEFAULT_MAX_REFRESH_ATTEMPTS
 
     @pytest.mark.asyncio
-    async def test_http_methods_success(self):
+    async def test_http_get_method_success(self):
+        expected_payload = b"content is retrieved."
+        authed_session = sessions.AuthorizedSession(self.credentials)
         with aioresponses() as m:
-            mocked_chunks = [b"Cavefish ", b"have ", b"no ", b"sight."]
-            mocked_response = b"".join(mocked_chunks)
-            authed_session = sessions.AuthorizedSession(self.credentials)
-
-            m.get(self.TEST_URL, status=200, body=mocked_response)
+            m.get(self.TEST_URL, status=200, body=expected_payload)
             response = await authed_session.get(self.TEST_URL)
-            assert response.status_code == 200
+            assert await response.read() == expected_payload
+            response = await authed_session.close()
 
-            m.post(self.TEST_URL, status=200, body=mocked_response)
+    @pytest.mark.asyncio
+    async def test_http_post_method_success(self):
+        expected_payload = b"content is posted."
+        authed_session = sessions.AuthorizedSession(self.credentials)
+        with aioresponses() as m:
+            m.post(self.TEST_URL, status=200, body=expected_payload)
             response = await authed_session.post(self.TEST_URL)
-            assert response.status_code == 200
+            assert await response.read() == expected_payload
+            response = await authed_session.close()
 
-            m.put(self.TEST_URL, status=200, body=mocked_response)
+    @pytest.mark.asyncio
+    async def test_http_put_method_success(self):
+        expected_payload = b"content is retrieved."
+        authed_session = sessions.AuthorizedSession(self.credentials)
+        with aioresponses() as m:
+            m.put(self.TEST_URL, status=200, body=expected_payload)
             response = await authed_session.put(self.TEST_URL)
-            assert response.status_code == 200
+            assert await response.read() == expected_payload
+            response = await authed_session.close()
 
-            m.patch(self.TEST_URL, status=200, body=mocked_response)
+    @pytest.mark.asyncio
+    async def test_http_patch_method_success(self):
+        expected_payload = b"content is retrieved."
+        authed_session = sessions.AuthorizedSession(self.credentials)
+        with aioresponses() as m:
+            m.patch(self.TEST_URL, status=200, body=expected_payload)
             response = await authed_session.patch(self.TEST_URL)
-            assert response.status_code == 200
+            assert await response.read() == expected_payload
+            response = await authed_session.close()
 
-            m.delete(self.TEST_URL, status=200, body=mocked_response)
+    @pytest.mark.asyncio
+    async def test_http_delete_method_success(self):
+        expected_payload = b"content is deleted."
+        authed_session = sessions.AuthorizedSession(self.credentials)
+        with aioresponses() as m:
+            m.delete(self.TEST_URL, status=200, body=expected_payload)
             response = await authed_session.delete(self.TEST_URL)
-            assert response.status_code == 200
-
-        await authed_session.close()
+            assert await response.read() == expected_payload
+            response = await authed_session.close()

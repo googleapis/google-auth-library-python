@@ -57,17 +57,17 @@ def test_minimum_total_attempts():
 
 
 @pytest.mark.asyncio
-@mock.patch("asyncio.sleep", return_value=mock.AsyncMock(return_value=None))
-async def test_exponential_backoff_async(mock_time):
+@mock.patch("asyncio.sleep", return_value=None)
+async def test_exponential_backoff_async(mock_time_async):
     eb = _exponential_backoff.AsyncExponentialBackoff()
     curr_wait = eb._current_wait_in_seconds
     iteration_count = 0
 
     async for attempt in eb:
         if attempt == 1:
-            assert mock_time.call_count == 0
+            assert mock_time_async.call_count == 0
         else:
-            backoff_interval = mock_time.call_args[0][0]
+            backoff_interval = mock_time_async.call_args[0][0]
             jitter = curr_wait * eb._randomization_factor
 
             assert (curr_wait - jitter) <= backoff_interval <= (curr_wait + jitter)
@@ -82,7 +82,8 @@ async def test_exponential_backoff_async(mock_time):
     assert eb.backoff_count == _exponential_backoff._DEFAULT_RETRY_TOTAL_ATTEMPTS
     assert iteration_count == _exponential_backoff._DEFAULT_RETRY_TOTAL_ATTEMPTS
     assert (
-        mock_time.call_count == _exponential_backoff._DEFAULT_RETRY_TOTAL_ATTEMPTS - 1
+        mock_time_async.call_count
+        == _exponential_backoff._DEFAULT_RETRY_TOTAL_ATTEMPTS - 1
     )
 
 
