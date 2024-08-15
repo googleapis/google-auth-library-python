@@ -14,9 +14,9 @@
 
 import asyncio
 from contextlib import asynccontextmanager
+import functools
 import time
 from typing import Mapping, Optional
-
 
 from google.auth import _exponential_backoff, exceptions
 from google.auth.aio import transport
@@ -76,10 +76,10 @@ async def timeout_guard(timeout):
 
 
 class AuthorizedSession:
-    """This is an asynchronous implementation of the Authorized Session class. We utilize an
-    instance of a class that implements `google.auth.aio.transport.Request` configured by the caller
-    or otherwise default to `google.auth.aio.transport.aiohttp.Request` if the external aiohttp package
-    is installed.
+    """This is an asynchronous implementation of :class:`google.auth.requests.AuthorizedSession` class.
+    We utilize an instance of a class that implements :class:`google.auth.aio.transport.Request` configured
+    by the caller or otherwise default to `google.auth.aio.transport.aiohttp.Request` if the external aiohttp
+    package is installed.
 
     A Requests Session class with credentials.
 
@@ -114,30 +114,29 @@ class AuthorizedSession:
     """
 
     def __init__(
-        self, credentials: Credentials, auth_request: transport.Request = None
+        self, credentials: Credentials, auth_request: Optional[transport.Request] = None
     ):
         if not isinstance(credentials, Credentials):
             raise exceptions.InvalidType(
                 f"The configured credentials of type {type(credentials)} are invalid and must be of type `google.auth.aio.credentials.Credentials`"
             )
-
         self._credentials = credentials
-
-        self._auth_request = auth_request or (AIOHTTP_INSTALLED and AiohttpRequest())
-        if not self._auth_request:
+        _auth_request = auth_request
+        if not _auth_request and AIOHTTP_INSTALLED:
+            _auth_request = AiohttpRequest()
+        if _auth_request is None:
             raise exceptions.TransportError(
                 "`auth_request` must either be configured or the external package `aiohttp` must be installed to use the default value."
             )
+        self._auth_request = _auth_request
 
     async def request(
         self,
         method: str,
         url: str,
-        data: bytes = None,
-        headers: Mapping[str, str] = None,
-        max_allowed_time: Optional[
-            float
-        ] = transport._DEFAULT_TIMEOUT_SECONDS,  # TODO (ohmayr): Do we want the default value for both to be the same?s
+        data: Optional[bytes] = None,
+        headers: Optional[Mapping[str, str]] = None,
+        max_allowed_time: float = transport._DEFAULT_TIMEOUT_SECONDS,
         timeout: float = transport._DEFAULT_TIMEOUT_SECONDS,
         **kwargs,
     ) -> transport.Response:
@@ -145,8 +144,8 @@ class AuthorizedSession:
         Args:
                 method (str): The http method used to make the request.
                 url (str): The URI to be requested.
-                data (bytes): The payload or body in HTTP request.
-                headers (Mapping[str, str]): Request headers.
+                data (Optional[bytes]): The payload or body in HTTP request.
+                headers (Optional[Mapping[str, str]]): Request headers.
                 timeout (float):
                 The amount of time in seconds to wait for the server response
                 with each individual request.
@@ -170,53 +169,33 @@ class AuthorizedSession:
                 google.auth.exceptions.TimeoutError: If the method does not complete within
                 the configured `max_allowed_time` or the request exceeds the configured
                 `timeout`.
-
-        # TODO (ohmayr): Investigate if this is required.
-        # I think it is reasonable to agree on a strict type for headers and
-        # let the caller handle any translation.
-            if headers:
-                for key in headers.keys():
-                    if type(headers[key]) is bytes:
-                        headers[key] = headers[key].decode("utf-8")
-
-        # Headers come in as bytes which isn't expected behavior, the resumable
-        # media libraries in some cases expect a str type for the header values,
-        # but sometimes the operations return these in bytes types.
         """
 
         retries = _exponential_backoff.AsyncExponentialBackoff(
             total_attempts=transport.DEFAULT_MAX_REFRESH_ATTEMPTS
         )
-        response = None
-        try:
-            async with timeout_guard(max_allowed_time) as with_timeout:
-                await with_timeout(
-                    # Note: before_request will attempt to refresh the credentials if expired.
-                    self._credentials.before_request(
-                        self._auth_request, method, url, headers
-                    )
+        async with timeout_guard(max_allowed_time) as with_timeout:
+            await with_timeout(
+                # Note: before_request will attempt to refresh credentials if expired.
+                self._credentials.before_request(
+                    self._auth_request, method, url, headers
                 )
-                async for _ in retries:
-                    response = await with_timeout(
-                        self._auth_request(
-                            url, method, data, headers, timeout, **kwargs
-                        )
-                    )
-                    if (
-                        response.status_code
-                        not in transport.DEFAULT_RETRYABLE_STATUS_CODES
-                    ):
-                        return response
-        except TimeoutError as exc:
-            raise exc
+            )
+            async for _ in retries:
+                response = await with_timeout(
+                    self._auth_request(url, method, data, headers, timeout, **kwargs)
+                )
+                if response.status_code not in transport.DEFAULT_RETRYABLE_STATUS_CODES:
+                    break
         return response
 
+    @functools.wraps(request)
     async def get(
         self,
         url: str,
-        data: bytes = None,
-        headers: Mapping[str, str] = None,
-        max_allowed_time: Optional[float] = transport._DEFAULT_TIMEOUT_SECONDS,
+        data: Optional[bytes] = None,
+        headers: Optional[Mapping[str, str]] = None,
+        max_allowed_time: float = transport._DEFAULT_TIMEOUT_SECONDS,
         timeout: float = transport._DEFAULT_TIMEOUT_SECONDS,
         **kwargs,
     ) -> transport.Response:
@@ -224,12 +203,13 @@ class AuthorizedSession:
             "GET", url, data, headers, max_allowed_time, timeout, **kwargs
         )
 
+    @functools.wraps(request)
     async def post(
         self,
         url: str,
-        data: bytes = None,
-        headers: Mapping[str, str] = None,
-        max_allowed_time: Optional[float] = transport._DEFAULT_TIMEOUT_SECONDS,
+        data: Optional[bytes] = None,
+        headers: Optional[Mapping[str, str]] = None,
+        max_allowed_time: float = transport._DEFAULT_TIMEOUT_SECONDS,
         timeout: float = transport._DEFAULT_TIMEOUT_SECONDS,
         **kwargs,
     ) -> transport.Response:
@@ -237,12 +217,13 @@ class AuthorizedSession:
             "POST", url, data, headers, max_allowed_time, timeout, **kwargs
         )
 
+    @functools.wraps(request)
     async def put(
         self,
         url: str,
-        data: bytes = None,
-        headers: Mapping[str, str] = None,
-        max_allowed_time: Optional[float] = transport._DEFAULT_TIMEOUT_SECONDS,
+        data: Optional[bytes] = None,
+        headers: Optional[Mapping[str, str]] = None,
+        max_allowed_time: float = transport._DEFAULT_TIMEOUT_SECONDS,
         timeout: float = transport._DEFAULT_TIMEOUT_SECONDS,
         **kwargs,
     ) -> transport.Response:
@@ -250,12 +231,13 @@ class AuthorizedSession:
             "PUT", url, data, headers, max_allowed_time, timeout, **kwargs
         )
 
+    @functools.wraps(request)
     async def patch(
         self,
         url: str,
-        data: bytes = None,
-        headers: Mapping[str, str] = None,
-        max_allowed_time: Optional[float] = transport._DEFAULT_TIMEOUT_SECONDS,
+        data: Optional[bytes] = None,
+        headers: Optional[Mapping[str, str]] = None,
+        max_allowed_time: float = transport._DEFAULT_TIMEOUT_SECONDS,
         timeout: float = transport._DEFAULT_TIMEOUT_SECONDS,
         **kwargs,
     ) -> transport.Response:
@@ -263,12 +245,13 @@ class AuthorizedSession:
             "PATCH", url, data, headers, max_allowed_time, timeout, **kwargs
         )
 
+    @functools.wraps(request)
     async def delete(
         self,
         url: str,
-        data: bytes = None,
-        headers: Mapping[str, str] = None,
-        max_allowed_time: Optional[float] = transport._DEFAULT_TIMEOUT_SECONDS,
+        data: Optional[bytes] = None,
+        headers: Optional[Mapping[str, str]] = None,
+        max_allowed_time: float = transport._DEFAULT_TIMEOUT_SECONDS,
         timeout: float = transport._DEFAULT_TIMEOUT_SECONDS,
         **kwargs,
     ) -> transport.Response:

@@ -25,7 +25,7 @@ for the return value of :class:`Request`.
 """
 
 import abc
-from typing import AsyncGenerator, Dict, Mapping, Optional
+from typing import AsyncGenerator, Mapping, Optional
 
 import google.auth.transport
 
@@ -52,7 +52,7 @@ class Response(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def status_code(self) -> int:
         """
-        The HTTP response status code..
+        The HTTP response status code.
 
         Returns:
             int: The HTTP response status code.
@@ -62,11 +62,11 @@ class Response(metaclass=abc.ABCMeta):
 
     @property
     @abc.abstractmethod
-    def headers(self) -> Dict[str, str]:
+    def headers(self) -> Mapping[str, str]:
         """The HTTP response headers.
 
         Returns:
-            Dict[str, str]: The HTTP response headers.
+            Mapping[str, str]: The HTTP response headers.
         """
         raise NotImplementedError("headers must be implemented.")
 
@@ -112,7 +112,7 @@ class Request(metaclass=abc.ABCMeta):
         self,
         url: str,
         method: str,
-        body: bytes,
+        body: Optional[bytes],
         headers: Optional[Mapping[str, str]],
         timeout: float,
         **kwargs
@@ -123,7 +123,7 @@ class Request(metaclass=abc.ABCMeta):
             url (str): The URI to be requested.
             method (str): The HTTP method to use for the request. Defaults
                 to 'GET'.
-            body (bytes): The payload / body in HTTP request.
+            body (Optional[bytes]): The payload / body in HTTP request.
             headers (Mapping[str, str]): Request headers.
             timeout (float): The number of seconds to wait for a
                 response from the server. If not specified or if None, the

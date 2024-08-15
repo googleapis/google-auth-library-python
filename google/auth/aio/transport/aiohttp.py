@@ -16,10 +16,10 @@
 """
 
 import asyncio
-from typing import AsyncGenerator, Dict, Mapping, Optional
+from typing import AsyncGenerator, Mapping, Optional
 
 try:
-    import aiohttp
+    import aiohttp  # type: ignore
 except ImportError as caught_exc:  # pragma: NO COVER
     raise ImportError(
         "The aiohttp library is not installed from please install the aiohttp package to use the aiohttp transport."
@@ -39,7 +39,7 @@ class Response(transport.Response):
 
     Attributes:
         status_code (int): The HTTP status code of the response.
-        headers (Dict[str, str]): A case-insensitive multidict proxy wiht HTTP headers of response.
+        headers (Mapping[str, str]): The HTTP headers of the response.
     """
 
     def __init__(self, response: aiohttp.ClientResponse):
@@ -52,7 +52,7 @@ class Response(transport.Response):
 
     @property
     @_helpers.copy_docstring(transport.Response)
-    def headers(self) -> Dict[str, str]:
+    def headers(self) -> Mapping[str, str]:
         return {key: value for key, value in self._response.headers.items()}
 
     @_helpers.copy_docstring(transport.Response)
@@ -149,14 +149,14 @@ class Request(transport.Request):
             return Response(response)
 
         except aiohttp.ClientError as caught_exc:
-            new_exc = exceptions.TransportError(f"Failed to send request to {url}.")
-            raise new_exc from caught_exc
+            client_exc = exceptions.TransportError(f"Failed to send request to {url}.")
+            raise client_exc from caught_exc
 
         except asyncio.TimeoutError as caught_exc:
-            new_exc = exceptions.TimeoutError(
+            timeout_exc = exceptions.TimeoutError(
                 f"Request timed out after {timeout} seconds."
             )
-            raise new_exc from caught_exc
+            raise timeout_exc from caught_exc
 
     async def close(self) -> None:
         """

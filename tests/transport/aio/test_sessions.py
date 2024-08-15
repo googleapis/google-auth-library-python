@@ -15,7 +15,7 @@
 import asyncio
 from typing import AsyncGenerator
 
-from aioresponses import aioresponses
+from aioresponses import aioresponses  # type: ignore
 from mock import Mock, patch
 import pytest  # type: ignore
 
@@ -23,6 +23,7 @@ from google.auth.aio.credentials import AnonymousCredentials
 from google.auth.aio.transport import (
     _DEFAULT_TIMEOUT_SECONDS,
     DEFAULT_MAX_REFRESH_ATTEMPTS,
+    DEFAULT_RETRYABLE_STATUS_CODES,
     Request,
     Response,
     sessions,
@@ -79,7 +80,7 @@ class MockResponse(Response):
     async def read(self) -> bytes:
         return b"".join([chunk async for chunk in self._content])
 
-    async def content(self) -> AsyncGenerator:
+    async def content(self, chunk_size=None) -> AsyncGenerator:
         return self._content
 
     async def close(self) -> None:
@@ -244,9 +245,10 @@ class TestAuthorizedSession(object):
             with pytest.raises(TimeoutError):
                 await authed_session.request("GET", self.TEST_URL, max_allowed_time=1)
 
+    @pytest.mark.parametrize("retry_status", DEFAULT_RETRYABLE_STATUS_CODES)
     @pytest.mark.asyncio
-    async def test_request_max_retries(self):
-        mocked_response = MockResponse(status_code=500)
+    async def test_request_max_retries(self, retry_status):
+        mocked_response = MockResponse(status_code=retry_status)
         auth_request = MockRequest(mocked_response)
         with patch("asyncio.sleep", return_value=None):
             authed_session = sessions.AuthorizedSession(self.credentials, auth_request)

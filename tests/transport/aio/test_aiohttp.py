@@ -14,17 +14,17 @@
 
 import asyncio
 
-from aioresponses import aioresponses
+from aioresponses import aioresponses  # type: ignore
 from mock import AsyncMock, Mock
 import pytest  # type: ignore
-import pytest_asyncio
+import pytest_asyncio  # type: ignore
 
 from google.auth import exceptions
 import google.auth.aio.transport.aiohttp as auth_aiohttp
 
 
 try:
-    import aiohttp
+    import aiohttp  # type: ignore
 except ImportError as caught_exc:  # pragma: NO COVER
     raise ImportError(
         "The aiohttp library is not installed from please install the aiohttp package to use the aiohttp transport."
