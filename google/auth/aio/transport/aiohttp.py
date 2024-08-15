@@ -16,12 +16,10 @@
 """
 
 import asyncio
-from contextlib import asynccontextmanager
-import time
-from typing import AsyncGenerator, Dict, Mapping, Optional
+from typing import AsyncGenerator, Mapping, Optional
 
 try:
-    import aiohttp
+    import aiohttp  # type: ignore
 except ImportError as caught_exc:  # pragma: NO COVER
     raise ImportError(
         "The aiohttp library is not installed from please install the aiohttp package to use the aiohttp transport."
@@ -30,54 +28,6 @@ except ImportError as caught_exc:  # pragma: NO COVER
 from google.auth import _helpers
 from google.auth import exceptions
 from google.auth.aio import transport
-from google.auth.exceptions import TimeoutError
-
-
-_DEFAULT_TIMEOUT_SECONDS = 180
-
-
-@asynccontextmanager
-async def timeout_guard(timeout):
-    """
-    timeout_guard is an asynchronous context manager to apply a timeout to an asynchronous block of code.
-
-    Args:
-        timeout (float): The time in seconds before the context manager times out.
-
-    Raises:
-        google.auth.exceptions.TimeoutError: If the code within the context exceeds the provided timeout.
-
-    Usage:
-        async with timeout_guard(10) as with_timeout:
-            await with_timeout(async_function())
-    """
-    start = time.monotonic()
-    total_timeout = timeout
-
-    def _remaining_time():
-        elapsed = time.monotonic() - start
-        remaining = total_timeout - elapsed
-        if remaining <= 0:
-            raise TimeoutError(
-                f"Context manager exceeded the configured timeout of {total_timeout}s."
-            )
-        return remaining
-
-    async def with_timeout(coro):
-        try:
-            remaining = _remaining_time()
-            response = await asyncio.wait_for(coro, remaining)
-            return response
-        except (asyncio.TimeoutError, TimeoutError) as e:
-            raise TimeoutError(
-                f"The operation {coro} exceeded the configured timeout of {total_timeout}s."
-            ) from e
-
-    try:
-        yield with_timeout
-
-    finally:
-        _remaining_time()
 
 
 class Response(transport.Response):
@@ -89,7 +39,7 @@ class Response(transport.Response):
 
     Attributes:
         status_code (int): The HTTP status code of the response.
-        headers (Dict[str, str]): A case-insensitive multidict proxy wiht HTTP headers of response.
+        headers (Mapping[str, str]): The HTTP headers of the response.
     """
 
     def __init__(self, response: aiohttp.ClientResponse):
@@ -102,7 +52,7 @@ class Response(transport.Response):
 
     @property
     @_helpers.copy_docstring(transport.Response)
-    def headers(self) -> Dict[str, str]:
+    def headers(self) -> Mapping[str, str]:
         return {key: value for key, value in self._response.headers.items()}
 
     @_helpers.copy_docstring(transport.Response)
@@ -158,7 +108,7 @@ class Request(transport.Request):
         method: str = "GET",
         body: Optional[bytes] = None,
         headers: Optional[Mapping[str, str]] = None,
-        timeout: float = _DEFAULT_TIMEOUT_SECONDS,
+        timeout: float = transport._DEFAULT_TIMEOUT_SECONDS,
         **kwargs,
     ) -> transport.Response:
         """
@@ -199,14 +149,14 @@ class Request(transport.Request):
             return Response(response)
 
         except aiohttp.ClientError as caught_exc:
-            new_exc = exceptions.TransportError(f"Failed to send request to {url}.")
-            raise new_exc from caught_exc
+            client_exc = exceptions.TransportError(f"Failed to send request to {url}.")
+            raise client_exc from caught_exc
 
         except asyncio.TimeoutError as caught_exc:
-            new_exc = exceptions.TimeoutError(
+            timeout_exc = exceptions.TimeoutError(
                 f"Request timed out after {timeout} seconds."
             )
-            raise new_exc from caught_exc
+            raise timeout_exc from caught_exc
 
     async def close(self) -> None:
         """

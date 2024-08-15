@@ -25,7 +25,24 @@ for the return value of :class:`Request`.
 """
 
 import abc
-from typing import AsyncGenerator, Dict, Mapping, Optional
+from typing import AsyncGenerator, Mapping, Optional
+
+import google.auth.transport
+
+
+_DEFAULT_TIMEOUT_SECONDS = 180
+
+DEFAULT_RETRYABLE_STATUS_CODES = google.auth.transport.DEFAULT_RETRYABLE_STATUS_CODES
+"""Sequence[int]:  HTTP status codes indicating a request can be retried.
+"""
+
+DEFAULT_REFRESH_STATUS_CODES = google.auth.transport.DEFAULT_REFRESH_STATUS_CODES
+"""Sequence[int]:  Which HTTP status code indicate that credentials should be
+refreshed.
+"""
+
+DEFAULT_MAX_REFRESH_ATTEMPTS = 3
+"""int: How many times to refresh the credentials and retry a request."""
 
 
 class Response(metaclass=abc.ABCMeta):
@@ -35,7 +52,7 @@ class Response(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def status_code(self) -> int:
         """
-        The HTTP response status code..
+        The HTTP response status code.
 
         Returns:
             int: The HTTP response status code.
@@ -45,11 +62,11 @@ class Response(metaclass=abc.ABCMeta):
 
     @property
     @abc.abstractmethod
-    def headers(self) -> Dict[str, str]:
+    def headers(self) -> Mapping[str, str]:
         """The HTTP response headers.
 
         Returns:
-            Dict[str, str]: The HTTP response headers.
+            Mapping[str, str]: The HTTP response headers.
         """
         raise NotImplementedError("headers must be implemented.")
 
@@ -95,7 +112,7 @@ class Request(metaclass=abc.ABCMeta):
         self,
         url: str,
         method: str,
-        body: bytes,
+        body: Optional[bytes],
         headers: Optional[Mapping[str, str]],
         timeout: float,
         **kwargs
@@ -106,7 +123,7 @@ class Request(metaclass=abc.ABCMeta):
             url (str): The URI to be requested.
             method (str): The HTTP method to use for the request. Defaults
                 to 'GET'.
-            body (bytes): The payload / body in HTTP request.
+            body (Optional[bytes]): The payload / body in HTTP request.
             headers (Mapping[str, str]): Request headers.
             timeout (float): The number of seconds to wait for a
                 response from the server. If not specified or if None, the
