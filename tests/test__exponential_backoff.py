@@ -63,7 +63,9 @@ async def test_exponential_backoff_async(mock_time_async):
     curr_wait = eb._current_wait_in_seconds
     iteration_count = 0
 
-    async for attempt in eb:
+    # Workaround issue in python 3.9 related to code coverage by adding `# pragma: no branch`
+    # See https://github.com/googleapis/gapic-generator-python/pull/1174#issuecomment-1025132372
+    async for attempt in eb:  # pragma: no branch
         if attempt == 1:
             assert mock_time_async.call_count == 0
         else:

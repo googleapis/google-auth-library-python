@@ -78,7 +78,8 @@ class MockResponse(Response):
         return self._headers
 
     async def read(self) -> bytes:
-        return b"".join([chunk async for chunk in self._content])
+        content = await self.content(1024)
+        return b"".join([chunk async for chunk in content])
 
     async def content(self, chunk_size=None) -> AsyncGenerator:
         return self._content
@@ -99,7 +100,7 @@ class TestTimeoutGuard(object):
     ):
         task = False
         with patch("time.monotonic", side_effect=[0, 0.25, 0.75]):
-            with patch("asyncio.wait_for", lambda coro, timeout: coro):
+            with patch("asyncio.wait_for", lambda coro, _: coro):
                 async with self.make_timeout_guard(
                     timeout=self.default_timeout
                 ) as with_timeout:
@@ -114,12 +115,11 @@ class TestTimeoutGuard(object):
     ):
         task = False
         with patch("time.monotonic", side_effect=[0, 1, 1]):
-            with patch("asyncio.wait_for", lambda coro, timeout: coro):
-                with pytest.raises(TimeoutError) as exc:
-                    async with self.make_timeout_guard(
-                        timeout=self.default_timeout
-                    ) as with_timeout:
-                        task = await with_timeout(simple_async_task)
+            with pytest.raises(TimeoutError) as exc:
+                async with self.make_timeout_guard(
+                    timeout=self.default_timeout
+                ) as with_timeout:
+                    task = await with_timeout(simple_async_task)
 
         # Task does not succeed and the context manager times out i.e. no remaining time left.
         assert task is False
@@ -204,6 +204,7 @@ class TestAuthorizedSession(object):
             assert response.status_code == 200
             assert response.headers == {"Content-Type": "application/json"}
             assert await response.read() == b"Cavefish have no sight."
+            await response.close()
 
         await authed_session.close()
 
@@ -220,6 +221,8 @@ class TestAuthorizedSession(object):
         assert response.status_code == 200
         assert response.headers == {"Content-Type": "application/json"}
         assert await response.read() == b"Cavefish have no sight."
+        await response.close()
+        assert response._close
 
         await authed_session.close()
 

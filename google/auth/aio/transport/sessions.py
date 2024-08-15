@@ -27,7 +27,7 @@ try:
     from google.auth.aio.transport.aiohttp import Request as AiohttpRequest
 
     AIOHTTP_INSTALLED = True
-except ImportError:
+except ImportError:  # pragma: NO COVER
     AIOHTTP_INSTALLED = False
 
 
@@ -181,7 +181,9 @@ class AuthorizedSession:
                     self._auth_request, method, url, headers
                 )
             )
-            async for _ in retries:
+            # Workaround issue in python 3.9 related to code coverage by adding `# pragma: no branch`
+            # See https://github.com/googleapis/gapic-generator-python/pull/1174#issuecomment-1025132372
+            async for _ in retries:  # pragma: no branch
                 response = await with_timeout(
                     self._auth_request(url, method, data, headers, timeout, **kwargs)
                 )
