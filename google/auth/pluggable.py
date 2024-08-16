@@ -34,7 +34,7 @@ try:
     from collections.abc import Mapping
 # Python 2.7 compatibility
 except ImportError:  # pragma: NO COVER
-    from collections import Mapping
+    from collections import Mapping  # type: ignore
 import json
 import os
 import subprocess
@@ -193,7 +193,7 @@ class Credentials(external_account.Credentials):
 
         if not _helpers.is_python_3():
             raise exceptions.RefreshError(
-                "Pluggable auth is only supported for python 3.6+"
+                "Pluggable auth is only supported for python 3.7+"
             )
 
         # Inject env vars.
@@ -255,7 +255,7 @@ class Credentials(external_account.Credentials):
 
         if not _helpers.is_python_3():
             raise exceptions.RefreshError(
-                "Pluggable auth is only supported for python 3.6+"
+                "Pluggable auth is only supported for python 3.7+"
             )
 
         # Inject variables

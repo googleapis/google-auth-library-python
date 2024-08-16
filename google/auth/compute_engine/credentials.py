@@ -31,7 +31,11 @@ from google.auth.compute_engine import _metadata
 from google.oauth2 import _client
 
 
-class Credentials(credentials.Scoped, credentials.CredentialsWithQuotaProject):
+class Credentials(
+    credentials.Scoped,
+    credentials.CredentialsWithQuotaProject,
+    credentials.CredentialsWithUniverseDomain,
+):
     """Compute Engine Credentials.
 
     These credentials use the Google Compute Engine metadata server to obtain
@@ -56,6 +60,7 @@ class Credentials(credentials.Scoped, credentials.CredentialsWithQuotaProject):
         quota_project_id=None,
         scopes=None,
         default_scopes=None,
+        universe_domain=None,
     ):
         """
         Args:
@@ -67,12 +72,20 @@ class Credentials(credentials.Scoped, credentials.CredentialsWithQuotaProject):
             scopes (Optional[Sequence[str]]): The list of scopes for the credentials.
             default_scopes (Optional[Sequence[str]]): Default scopes passed by a
                 Google client library. Use 'scopes' for user-defined scopes.
+            universe_domain (Optional[str]): The universe domain. If not
+                provided or None, credential will attempt to fetch the value
+                from metadata server. If metadata server doesn't have universe
+                domain endpoint, then the default googleapis.com will be used.
         """
         super(Credentials, self).__init__()
         self._service_account_email = service_account_email
         self._quota_project_id = quota_project_id
         self._scopes = scopes
         self._default_scopes = default_scopes
+        self._universe_domain_cached = False
+        if universe_domain:
+            self._universe_domain = universe_domain
+            self._universe_domain_cached = True
 
     def _retrieve_info(self, request):
         """Retrieve information about the service account.
@@ -131,24 +144,54 @@ class Credentials(credentials.Scoped, credentials.CredentialsWithQuotaProject):
     def requires_scopes(self):
         return not self._scopes
 
+    @property
+    def universe_domain(self):
+        if self._universe_domain_cached:
+            return self._universe_domain
+
+        from google.auth.transport import requests as google_auth_requests
+
+        self._universe_domain = _metadata.get_universe_domain(
+            google_auth_requests.Request()
+        )
+        self._universe_domain_cached = True
+        return self._universe_domain
+
     @_helpers.copy_docstring(credentials.CredentialsWithQuotaProject)
     def with_quota_project(self, quota_project_id):
-        return self.__class__(
+        creds = self.__class__(
             service_account_email=self._service_account_email,
             quota_project_id=quota_project_id,
             scopes=self._scopes,
+            default_scopes=self._default_scopes,
         )
+        creds._universe_domain = self._universe_domain
+        creds._universe_domain_cached = self._universe_domain_cached
+        return creds
 
     @_helpers.copy_docstring(credentials.Scoped)
     def with_scopes(self, scopes, default_scopes=None):
         # Compute Engine credentials can not be scoped (the metadata service
         # ignores the scopes parameter). App Engine, Cloud Run and Flex support
         # requesting scopes.
-        return self.__class__(
+        creds = self.__class__(
             scopes=scopes,
             default_scopes=default_scopes,
             service_account_email=self._service_account_email,
             quota_project_id=self._quota_project_id,
+        )
+        creds._universe_domain = self._universe_domain
+        creds._universe_domain_cached = self._universe_domain_cached
+        return creds
+
+    @_helpers.copy_docstring(credentials.CredentialsWithUniverseDomain)
+    def with_universe_domain(self, universe_domain):
+        return self.__class__(
+            scopes=self._scopes,
+            default_scopes=self._default_scopes,
+            service_account_email=self._service_account_email,
+            quota_project_id=self._quota_project_id,
+            universe_domain=universe_domain,
         )
 
 

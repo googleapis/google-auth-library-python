@@ -25,8 +25,6 @@ DEPENDENCIES = (
     # rsa==4.5 is the last version to support 2.7
     # https://github.com/sybrenstuvel/python-rsa/issues/152#issuecomment-643470233
     "rsa>=3.1.4,<5",
-    # install enum34 to support 2.7. enum34 only works up to python version 3.3.
-    "urllib3<2.0",
 )
 
 extras = {
@@ -34,9 +32,7 @@ extras = {
     "pyopenssl": ["pyopenssl>=20.0.0", "cryptography>=38.0.3"],
     "requests": "requests >= 2.20.0, < 3.0.0.dev0",
     "reauth": "pyu2f>=0.1.5",
-    # Enterprise cert only works for OpenSSL 1.1.1. Newer versions of these
-    # dependencies are built with OpenSSL 3.0 so we need to fix the version.
-    "enterprise_cert": ["cryptography==36.0.2", "pyopenssl==22.0.0"],
+    "enterprise_cert": ["cryptography", "pyopenssl"],
 }
 
 with io.open("README.rst", "r") as fh:
@@ -60,19 +56,20 @@ setup(
     packages=find_namespace_packages(
         exclude=("tests*", "system_tests*", "docs*", "samples*")
     ),
+    package_data={"google.auth": ["py.typed"], "google.oauth2": ["py.typed"]},
     install_requires=DEPENDENCIES,
     extras_require=extras,
-    python_requires=">=3.6",
+    python_requires=">=3.7",
     license="Apache 2.0",
     keywords="google auth oauth client",
     classifiers=[
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
+        "Programming Language :: Python :: 3.12",
         "Development Status :: 5 - Production/Stable",
         "Intended Audience :: Developers",
         "License :: OSI Approved :: Apache Software License",

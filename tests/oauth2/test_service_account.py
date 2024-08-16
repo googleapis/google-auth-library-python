@@ -22,8 +22,10 @@ import pytest  # type: ignore
 from google.auth import _helpers
 from google.auth import crypt
 from google.auth import exceptions
+from google.auth import iam
 from google.auth import jwt
 from google.auth import transport
+from google.auth.credentials import DEFAULT_UNIVERSE_DOMAIN
 from google.oauth2 import service_account
 
 
@@ -58,7 +60,7 @@ class TestCredentials(object):
     TOKEN_URI = "https://example.com/oauth2/token"
 
     @classmethod
-    def make_credentials(cls, universe_domain=service_account._DEFAULT_UNIVERSE_DOMAIN):
+    def make_credentials(cls, universe_domain=DEFAULT_UNIVERSE_DOMAIN):
         return service_account.Credentials(
             SIGNER,
             cls.SERVICE_ACCOUNT_EMAIL,
@@ -70,7 +72,7 @@ class TestCredentials(object):
         credentials = service_account.Credentials(
             SIGNER, self.SERVICE_ACCOUNT_EMAIL, self.TOKEN_URI, universe_domain=None
         )
-        assert credentials._universe_domain == service_account._DEFAULT_UNIVERSE_DOMAIN
+        assert credentials.universe_domain == DEFAULT_UNIVERSE_DOMAIN
 
     def test_from_service_account_info(self):
         credentials = service_account.Credentials.from_service_account_info(
@@ -80,7 +82,7 @@ class TestCredentials(object):
         assert credentials._signer.key_id == SERVICE_ACCOUNT_INFO["private_key_id"]
         assert credentials.service_account_email == SERVICE_ACCOUNT_INFO["client_email"]
         assert credentials._token_uri == SERVICE_ACCOUNT_INFO["token_uri"]
-        assert credentials._universe_domain == service_account._DEFAULT_UNIVERSE_DOMAIN
+        assert credentials._universe_domain == DEFAULT_UNIVERSE_DOMAIN
         assert not credentials._always_use_jwt_access
 
     def test_from_service_account_info_non_gdu(self):
@@ -88,7 +90,7 @@ class TestCredentials(object):
             SERVICE_ACCOUNT_INFO_NON_GDU
         )
 
-        assert credentials._universe_domain == FAKE_UNIVERSE_DOMAIN
+        assert credentials.universe_domain == FAKE_UNIVERSE_DOMAIN
         assert credentials._always_use_jwt_access
 
     def test_from_service_account_info_args(self):
@@ -204,6 +206,17 @@ class TestCredentials(object):
         assert credentials._token_uri == self.TOKEN_URI
         creds_with_new_token_uri = credentials.with_token_uri(new_token_uri)
         assert creds_with_new_token_uri._token_uri == new_token_uri
+
+    def test_with_universe_domain(self):
+        credentials = self.make_credentials()
+
+        new_credentials = credentials.with_universe_domain("dummy_universe.com")
+        assert new_credentials.universe_domain == "dummy_universe.com"
+        assert new_credentials._always_use_jwt_access
+
+        new_credentials = credentials.with_universe_domain("googleapis.com")
+        assert new_credentials.universe_domain == "googleapis.com"
+        assert not new_credentials._always_use_jwt_access
 
     def test__with_always_use_jwt_access(self):
         credentials = self.make_credentials()
@@ -557,12 +570,16 @@ class TestCredentials(object):
         assert jwt_grant.called
         assert not self_signed_jwt_refresh.called
 
-    def test_refresh_non_gdu_missing_jwt_credentials(self):
-        credentials = self.make_credentials(universe_domain="foo")
+    def test_refresh_missing_jwt_credentials(self):
+        credentials = self.make_credentials()
+        credentials = credentials.with_scopes(["foo", "bar"])
+        credentials = credentials.with_always_use_jwt_access(True)
+        assert not credentials._jwt_credentials
 
-        with pytest.raises(exceptions.RefreshError) as excinfo:
-            credentials.refresh(None)
-        assert excinfo.match("self._jwt_credentials is missing")
+        credentials.refresh(mock.Mock())
+
+        # jwt credentials should have been automatically created with scopes
+        assert credentials._jwt_credentials is not None
 
     def test_refresh_non_gdu_domain_wide_delegation_not_supported(self):
         credentials = self.make_credentials(universe_domain="foo")
@@ -580,7 +597,7 @@ class TestIDTokenCredentials(object):
     TARGET_AUDIENCE = "https://example.com"
 
     @classmethod
-    def make_credentials(cls, universe_domain=service_account._DEFAULT_UNIVERSE_DOMAIN):
+    def make_credentials(cls, universe_domain=DEFAULT_UNIVERSE_DOMAIN):
         return service_account.IDTokenCredentials(
             SIGNER,
             cls.SERVICE_ACCOUNT_EMAIL,
@@ -597,7 +614,7 @@ class TestIDTokenCredentials(object):
             self.TARGET_AUDIENCE,
             universe_domain=None,
         )
-        assert credentials._universe_domain == service_account._DEFAULT_UNIVERSE_DOMAIN
+        assert credentials._universe_domain == DEFAULT_UNIVERSE_DOMAIN
 
     def test_from_service_account_info(self):
         credentials = service_account.IDTokenCredentials.from_service_account_info(
@@ -755,10 +772,36 @@ class TestIDTokenCredentials(object):
         )
         request = mock.Mock()
         credentials.refresh(request)
-        req, signer_email, target_audience, access_token = call_iam_generate_id_token_endpoint.call_args[
+        req, iam_endpoint, signer_email, target_audience, access_token = call_iam_generate_id_token_endpoint.call_args[
             0
         ]
         assert req == request
+        assert iam_endpoint == iam._IAM_IDTOKEN_ENDPOINT
+        assert signer_email == "service-account@example.com"
+        assert target_audience == "https://example.com"
+        decoded_access_token = jwt.decode(access_token, verify=False)
+        assert decoded_access_token["scope"] == "https://www.googleapis.com/auth/iam"
+
+    @mock.patch(
+        "google.oauth2._client.call_iam_generate_id_token_endpoint", autospec=True
+    )
+    def test_refresh_iam_flow_non_gdu(self, call_iam_generate_id_token_endpoint):
+        credentials = self.make_credentials(universe_domain="fake-universe")
+        token = "id_token"
+        call_iam_generate_id_token_endpoint.return_value = (
+            token,
+            _helpers.utcnow() + datetime.timedelta(seconds=500),
+        )
+        request = mock.Mock()
+        credentials.refresh(request)
+        req, iam_endpoint, signer_email, target_audience, access_token = call_iam_generate_id_token_endpoint.call_args[
+            0
+        ]
+        assert req == request
+        assert (
+            iam_endpoint
+            == "https://iamcredentials.fake-universe/v1/projects/-/serviceAccounts/{}:generateIdToken"
+        )
         assert signer_email == "service-account@example.com"
         assert target_audience == "https://example.com"
         decoded_access_token = jwt.decode(access_token, verify=False)

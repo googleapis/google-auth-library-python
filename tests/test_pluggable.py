@@ -21,6 +21,7 @@ import pytest  # type: ignore
 
 from google.auth import exceptions
 from google.auth import pluggable
+from google.auth.credentials import DEFAULT_UNIVERSE_DOMAIN
 from tests.test__default import WORKFORCE_AUDIENCE
 
 CLIENT_ID = "username"
@@ -45,7 +46,6 @@ TOKEN_URL = "https://sts.googleapis.com/v1/token"
 TOKEN_INFO_URL = "https://sts.googleapis.com/v1/introspect"
 SUBJECT_TOKEN_TYPE = "urn:ietf:params:oauth:token-type:jwt"
 AUDIENCE = "//iam.googleapis.com/projects/123456/locations/global/workloadIdentityPools/POOL_ID/providers/PROVIDER_ID"
-DEFAULT_UNIVERSE_DOMAIN = "googleapis.com"
 
 VALID_TOKEN_URLS = [
     "https://sts.googleapis.com",
@@ -1233,7 +1233,7 @@ class TestCredentials(object):
             with pytest.raises(exceptions.RefreshError) as excinfo:
                 _ = credentials.retrieve_subject_token(None)
 
-            assert excinfo.match(r"Pluggable auth is only supported for python 3.6+")
+            assert excinfo.match(r"Pluggable auth is only supported for python 3.7+")
 
     @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
     def test_revoke_subject_token_python_2(self):
@@ -1247,4 +1247,4 @@ class TestCredentials(object):
             with pytest.raises(exceptions.RefreshError) as excinfo:
                 _ = credentials.revoke(None)
 
-            assert excinfo.match(r"Pluggable auth is only supported for python 3.6+")
+            assert excinfo.match(r"Pluggable auth is only supported for python 3.7+")
