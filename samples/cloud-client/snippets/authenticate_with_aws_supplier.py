@@ -20,6 +20,7 @@ from google.auth import aws
 from google.auth import exceptions
 import boto3
 
+
 class CustomAwsSecurityCredentialsSupplier(aws.AwsSecurityCredentialsSupplier):
 
     def __init__(self, region):
@@ -36,6 +37,7 @@ class CustomAwsSecurityCredentialsSupplier(aws.AwsSecurityCredentialsSupplier):
     def get_aws_region(self, context, request):
         return self._region
 
+
 def authenticate_with_aws_supplier(project_id="your-google-cloud-project-id", aws_region="your_aws_region", audience="your_federation_audience"):
     """
     List storage buckets by authenticating with a custom AWS supplier.
@@ -44,7 +46,6 @@ def authenticate_with_aws_supplier(project_id="your-google-cloud-project-id", aw
     //  1. Replace the project, region, and audience variables.
     //  2. Make sure you have the necessary permission to list storage buckets: "storage.buckets.list"
     """
-
 
     credentials = aws.Credentials(
         audience,
