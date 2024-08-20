@@ -62,6 +62,9 @@ import os
 from google.auth import environment_vars
 from google.auth import exceptions
 from google.auth import jwt
+from google.auth import transport
+
+from typing import Any, Mapping, Union
 
 
 # The URL that provides public certificates for verifying ID tokens issued
@@ -105,12 +108,12 @@ def _fetch_certs(request, certs_url):
 
 
 def verify_token(
-    id_token,
-    request,
-    audience=None,
-    certs_url=_GOOGLE_OAUTH2_CERTS_URL,
-    clock_skew_in_seconds=0,
-):
+    id_token: Union[str, bytes],
+    request: transport.Request,
+    audience: str | list[str] | None = None,
+    certs_url: str = _GOOGLE_OAUTH2_CERTS_URL,
+    clock_skew_in_seconds: int = 0,
+) -> Mapping[str, Any]:
     """Verifies an ID token and returns the decoded token.
 
     Args:
