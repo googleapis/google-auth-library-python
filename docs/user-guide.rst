@@ -520,7 +520,7 @@ can be used to make HTTP requests.::
 
     credentials = identity_pool.Credentials(
         AUDIENCE, # Set GCP Audience.
-        "urn:ietf:params:aws:token-type:jwt", # Set subject token type.
+        "urn:ietf:params:oauth:token-type:jwt", # Set subject token type.
         subject_token_supplier=supplier, # Set supplier.
         scopes=SCOPES # Set desired scopes.
     )
@@ -552,8 +552,9 @@ whether the credential retrieval is retryable.
 Any call to the supplier from the Identity Pool credential will send a :class:`google.auth.external_account.SupplierContext`
 object, which contains the requested audience and subject type. Additionally, the credential will
 send the :class:`google.auth.transport.requests.Request` passed in the credential refresh call which
-can be used to make HTTP requests. Using a custom supplier allows workload or workforce identity federation to be used
-with other AWS credential sources such as EKS or ECS in addition to the EC2 metadata endpoint which is already natively supported by ADC.::
+can be used to make HTTP requests. Currently, using ADC with your AWS workloads is only supported with EC2.
+An example of a good use case for using a custom credential suppliers is when your workloads are running
+in other AWS environments, such as ECS, EKS, Fargate, etc.::
 
     import boto3
     from google.auth import aws
