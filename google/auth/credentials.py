@@ -128,6 +128,10 @@ class Credentials(_BaseCredentials):
         """The universe domain value."""
         return self._universe_domain
 
+    def get_cred_info(self):
+        """The credential information JSON."""
+        return None
+
     @abc.abstractmethod
     def refresh(self, request):
         """Refreshes the access token.
