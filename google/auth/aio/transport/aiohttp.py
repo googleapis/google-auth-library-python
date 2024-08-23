@@ -100,7 +100,8 @@ class Request(transport.Request):
     """
 
     def __init__(self, session: aiohttp.ClientSession = None):
-        self.session = session or aiohttp.ClientSession()
+        self._session = session
+        self._closed = False
 
     async def __call__(
         self,
@@ -132,13 +133,19 @@ class Request(transport.Request):
             google.auth.aio.transport.Response: The HTTP response.
 
         Raises:
-            - google.auth.exceptions.TransportError: If the request fails.
+            - google.auth.exceptions.TransportError: If the request fails or if the session is closed.
             - google.auth.exceptions.TimeoutError: If the request times out.
         """
 
         try:
+            if self._closed:
+                raise exceptions.TransportError("session is closed.")
+
+            if not self._session:
+                self._session = aiohttp.ClientSession()
+
             client_timeout = aiohttp.ClientTimeout(total=timeout)
-            response = await self.session.request(
+            response = await self._session.request(
                 method,
                 url,
                 data=body,
@@ -162,4 +169,6 @@ class Request(transport.Request):
         """
         Close the underlying aiohttp session to release the acquired resources.
         """
-        await self.session.close()
+        if not self._closed and self._session:
+            await self._session.close()
+        self._closed = True

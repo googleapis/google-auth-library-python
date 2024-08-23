@@ -121,3 +121,13 @@ class TestRequest:
                 await aiohttp_request("http://example.com")
 
             exc.match("Request timed out after 180 seconds.")
+    
+    async def test_request_call_raises_transport_error_for_closed_session(self, aiohttp_request):
+        with aioresponses() as m:
+            m.get("http://example.com", exception=asyncio.TimeoutError)
+            aiohttp_request._closed = True
+            with pytest.raises(exceptions.TransportError) as exc:
+                await aiohttp_request("http://example.com")
+
+            exc.match("session is closed.")
+            aiohttp_request._closed = False
