@@ -125,6 +125,19 @@ class TestRequest:
             assert response.headers == {"Content-Type": "application/json"}
             content = b"".join([chunk async for chunk in response.content()])
             assert content == b"Cavefish have no sight."
+    
+    async def test_request_call_success_with_provided_session(self):
+        mock_session = aiohttp.ClientSession()
+        request = auth_aiohttp.Request(mock_session)
+        with aioresponses() as m:
+            mocked_chunks = [b"Cavefish ", b"have ", b"no ", b"sight."]
+            mocked_response = b"".join(mocked_chunks)
+            m.get("http://example.com", status=200, body=mocked_response)
+            response = await request("http://example.com")
+            assert response.status_code == 200
+            assert response.headers == {"Content-Type": "application/json"}
+            content = b"".join([chunk async for chunk in response.content()])
+            assert content == b"Cavefish have no sight."
 
     async def test_request_call_raises_client_error(self, aiohttp_request):
         with aioresponses() as m:

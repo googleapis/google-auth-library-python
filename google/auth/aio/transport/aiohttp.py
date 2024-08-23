@@ -58,7 +58,7 @@ class Response(transport.Response):
     @_helpers.copy_docstring(transport.Response)
     async def content(self, chunk_size: int = 1024) -> AsyncGenerator[bytes, None]:
         try:
-            async for chunk in self._response.content.iter_chunked(chunk_size):
+            async for chunk in self._response.content.iter_chunked(chunk_size): # pragma: no branch
                 yield chunk
         except aiohttp.ClientPayloadError as exc:
             raise exceptions.ResponseError(
