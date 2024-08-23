@@ -75,7 +75,7 @@ async def timeout_guard(timeout):
         _remaining_time()
 
 
-class AuthorizedSession:
+class AsyncAuthorizedSession:
     """This is an asynchronous implementation of :class:`google.auth.requests.AuthorizedSession` class.
     We utilize an instance of a class that implements :class:`google.auth.aio.transport.Request` configured
     by the caller or otherwise default to `google.auth.aio.transport.aiohttp.Request` if the external aiohttp
@@ -89,7 +89,7 @@ class AuthorizedSession:
         import aiohttp
         from google.auth.aio.transport import sessions
 
-        async with sessions.AuthorizedSession(credentials) as authed_session:
+        async with sessions.AsyncAuthorizedSession(credentials) as authed_session:
             response = await authed_session.request(
                 'GET', 'https://www.googleapis.com/storage/v1/b')
 
@@ -172,7 +172,7 @@ class AuthorizedSession:
         """
 
         retries = _exponential_backoff.AsyncExponentialBackoff(
-            total_attempts=transport.DEFAULT_MAX_REFRESH_ATTEMPTS
+            total_attempts=transport.DEFAULT_MAX_RETRY_ATTEMPTS
         )
         async with timeout_guard(max_allowed_time) as with_timeout:
             await with_timeout(

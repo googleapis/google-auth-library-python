@@ -36,13 +36,9 @@ DEFAULT_RETRYABLE_STATUS_CODES = google.auth.transport.DEFAULT_RETRYABLE_STATUS_
 """Sequence[int]:  HTTP status codes indicating a request can be retried.
 """
 
-DEFAULT_REFRESH_STATUS_CODES = google.auth.transport.DEFAULT_REFRESH_STATUS_CODES
-"""Sequence[int]:  Which HTTP status code indicate that credentials should be
-refreshed.
-"""
 
-DEFAULT_MAX_REFRESH_ATTEMPTS = 3
-"""int: How many times to refresh the credentials and retry a request."""
+DEFAULT_MAX_RETRY_ATTEMPTS = 3
+"""int: How many times to retry a request."""
 
 
 class Response(metaclass=abc.ABCMeta):

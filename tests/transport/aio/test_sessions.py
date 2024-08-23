@@ -22,7 +22,7 @@ import pytest  # type: ignore
 from google.auth.aio.credentials import AnonymousCredentials
 from google.auth.aio.transport import (
     _DEFAULT_TIMEOUT_SECONDS,
-    DEFAULT_MAX_REFRESH_ATTEMPTS,
+    DEFAULT_MAX_RETRY_ATTEMPTS,
     DEFAULT_RETRYABLE_STATUS_CODES,
     Request,
     Response,
@@ -146,7 +146,7 @@ class TestTimeoutGuard(object):
         )
 
 
-class TestAuthorizedSession(object):
+class TestAsyncAuthorizedSession(object):
     TEST_URL = "http://example.com/"
     credentials = AnonymousCredentials()
 
@@ -159,14 +159,14 @@ class TestAuthorizedSession(object):
     @pytest.mark.asyncio
     async def test_constructor_with_default_auth_request(self):
         with patch("google.auth.aio.transport.sessions.AIOHTTP_INSTALLED", True):
-            authed_session = sessions.AuthorizedSession(self.credentials)
+            authed_session = sessions.AsyncAuthorizedSession(self.credentials)
         assert authed_session._credentials == self.credentials
         await authed_session.close()
 
     @pytest.mark.asyncio
     async def test_constructor_with_provided_auth_request(self):
         auth_request = MockRequest()
-        authed_session = sessions.AuthorizedSession(
+        authed_session = sessions.AsyncAuthorizedSession(
             self.credentials, auth_request=auth_request
         )
 
@@ -177,7 +177,7 @@ class TestAuthorizedSession(object):
     async def test_constructor_raises_no_auth_request_error(self):
         with patch("google.auth.aio.transport.sessions.AIOHTTP_INSTALLED", False):
             with pytest.raises(TransportError) as exc:
-                sessions.AuthorizedSession(self.credentials)
+                sessions.AsyncAuthorizedSession(self.credentials)
 
         exc.match(
             "`auth_request` must either be configured or the external package `aiohttp` must be installed to use the default value."
@@ -187,7 +187,7 @@ class TestAuthorizedSession(object):
     async def test_constructor_raises_incorrect_credentials_error(self):
         credentials = Mock()
         with pytest.raises(InvalidType) as exc:
-            sessions.AuthorizedSession(credentials)
+            sessions.AsyncAuthorizedSession(credentials)
 
         exc.match(
             f"The configured credentials of type {type(credentials)} are invalid and must be of type `google.auth.aio.credentials.Credentials`"
@@ -199,7 +199,7 @@ class TestAuthorizedSession(object):
             mocked_chunks = [b"Cavefish ", b"have ", b"no ", b"sight."]
             mocked_response = b"".join(mocked_chunks)
             m.get(self.TEST_URL, status=200, body=mocked_response)
-            authed_session = sessions.AuthorizedSession(self.credentials)
+            authed_session = sessions.AsyncAuthorizedSession(self.credentials)
             response = await authed_session.request("GET", self.TEST_URL)
             assert response.status_code == 200
             assert response.headers == {"Content-Type": "application/json"}
@@ -216,7 +216,7 @@ class TestAuthorizedSession(object):
             content=mocked_content,
         )
         auth_request = MockRequest(mocked_response)
-        authed_session = sessions.AuthorizedSession(self.credentials, auth_request)
+        authed_session = sessions.AsyncAuthorizedSession(self.credentials, auth_request)
         response = await authed_session.request("GET", self.TEST_URL)
         assert response.status_code == 200
         assert response.headers == {"Content-Type": "application/json"}
@@ -229,21 +229,21 @@ class TestAuthorizedSession(object):
     @pytest.mark.asyncio
     async def test_request_raises_timeout_error(self):
         auth_request = MockRequest(side_effect=asyncio.TimeoutError)
-        authed_session = sessions.AuthorizedSession(self.credentials, auth_request)
+        authed_session = sessions.AsyncAuthorizedSession(self.credentials, auth_request)
         with pytest.raises(TimeoutError):
             await authed_session.request("GET", self.TEST_URL)
 
     @pytest.mark.asyncio
     async def test_request_raises_transport_error(self):
         auth_request = MockRequest(side_effect=TransportError)
-        authed_session = sessions.AuthorizedSession(self.credentials, auth_request)
+        authed_session = sessions.AsyncAuthorizedSession(self.credentials, auth_request)
         with pytest.raises(TransportError):
             await authed_session.request("GET", self.TEST_URL)
 
     @pytest.mark.asyncio
     async def test_request_max_allowed_time_exceeded_error(self):
         auth_request = MockRequest(side_effect=TransportError)
-        authed_session = sessions.AuthorizedSession(self.credentials, auth_request)
+        authed_session = sessions.AsyncAuthorizedSession(self.credentials, auth_request)
         with patch("time.monotonic", side_effect=[0, 1, 1]):
             with pytest.raises(TimeoutError):
                 await authed_session.request("GET", self.TEST_URL, max_allowed_time=1)
@@ -254,14 +254,14 @@ class TestAuthorizedSession(object):
         mocked_response = MockResponse(status_code=retry_status)
         auth_request = MockRequest(mocked_response)
         with patch("asyncio.sleep", return_value=None):
-            authed_session = sessions.AuthorizedSession(self.credentials, auth_request)
+            authed_session = sessions.AsyncAuthorizedSession(self.credentials, auth_request)
             await authed_session.request("GET", self.TEST_URL)
-            assert auth_request.call_count == DEFAULT_MAX_REFRESH_ATTEMPTS
+            assert auth_request.call_count == DEFAULT_MAX_RETRY_ATTEMPTS
 
     @pytest.mark.asyncio
     async def test_http_get_method_success(self):
         expected_payload = b"content is retrieved."
-        authed_session = sessions.AuthorizedSession(self.credentials)
+        authed_session = sessions.AsyncAuthorizedSession(self.credentials)
         with aioresponses() as m:
             m.get(self.TEST_URL, status=200, body=expected_payload)
             response = await authed_session.get(self.TEST_URL)
@@ -271,7 +271,7 @@ class TestAuthorizedSession(object):
     @pytest.mark.asyncio
     async def test_http_post_method_success(self):
         expected_payload = b"content is posted."
-        authed_session = sessions.AuthorizedSession(self.credentials)
+        authed_session = sessions.AsyncAuthorizedSession(self.credentials)
         with aioresponses() as m:
             m.post(self.TEST_URL, status=200, body=expected_payload)
             response = await authed_session.post(self.TEST_URL)
@@ -281,7 +281,7 @@ class TestAuthorizedSession(object):
     @pytest.mark.asyncio
     async def test_http_put_method_success(self):
         expected_payload = b"content is retrieved."
-        authed_session = sessions.AuthorizedSession(self.credentials)
+        authed_session = sessions.AsyncAuthorizedSession(self.credentials)
         with aioresponses() as m:
             m.put(self.TEST_URL, status=200, body=expected_payload)
             response = await authed_session.put(self.TEST_URL)
@@ -291,7 +291,7 @@ class TestAuthorizedSession(object):
     @pytest.mark.asyncio
     async def test_http_patch_method_success(self):
         expected_payload = b"content is retrieved."
-        authed_session = sessions.AuthorizedSession(self.credentials)
+        authed_session = sessions.AsyncAuthorizedSession(self.credentials)
         with aioresponses() as m:
             m.patch(self.TEST_URL, status=200, body=expected_payload)
             response = await authed_session.patch(self.TEST_URL)
@@ -301,7 +301,7 @@ class TestAuthorizedSession(object):
     @pytest.mark.asyncio
     async def test_http_delete_method_success(self):
         expected_payload = b"content is deleted."
-        authed_session = sessions.AuthorizedSession(self.credentials)
+        authed_session = sessions.AsyncAuthorizedSession(self.credentials)
         with aioresponses() as m:
             m.delete(self.TEST_URL, status=200, body=expected_payload)
             response = await authed_session.delete(self.TEST_URL)

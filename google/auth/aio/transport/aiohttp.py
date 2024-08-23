@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Transport adapter for AIOHTTP Requests.
+"""Transport adapter for Asynchronous HTTP Requests based on aiohttp.
 """
 
 import asyncio
@@ -32,7 +32,7 @@ from google.auth.aio import transport
 
 class Response(transport.Response):
     """
-    Represents an HTTP response and its data. It is returned by ``google.auth.aio.transport.sessions.AuthorizedSession``.
+    Represents an HTTP response and its data. It is returned by ``google.auth.aio.transport.sessions.AsyncAuthorizedSession``.
 
     Args:
         response (aiohttp.ClientResponse): An instance of aiohttp.ClientResponse.
@@ -81,8 +81,8 @@ class Request(transport.Request):
     """Asynchronous Requests request adapter.
 
     This class is used internally for making requests using aiohttp
-    in a consistent way. If you use :class:`AuthorizedSession` you do not need
-    to construct or use this class directly.
+    in a consistent way. If you use :class:`google.auth.aio.transport.sessions.AsyncAuthorizedSession`
+    you do not need to construct or use this class directly.
 
     This class can be useful if you want to configure a Request callable
     with a custom ``aiohttp.ClientSession`` in :class:`AuthorizedSession` or if
@@ -98,7 +98,7 @@ class Request(transport.Request):
         # Custom aiohttp Session Example:
         session = session=aiohttp.ClientSession(auto_decompress=False)
         request = google.auth.aio.transport.aiohttp.Request(session=session)
-        auth_sesion = google.auth.aio.transport.sessions.AuthorizedSession(auth_request=request)
+        auth_sesion = google.auth.aio.transport.sessions.AsyncAuthorizedSession(auth_request=request)
 
     Args:
         session (aiohttp.ClientSession): An instance :class:`aiohttp.ClientSession` used
