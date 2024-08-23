@@ -57,12 +57,20 @@ class Response(transport.Response):
 
     @_helpers.copy_docstring(transport.Response)
     async def content(self, chunk_size: int = 1024) -> AsyncGenerator[bytes, None]:
-        async for chunk in self._response.content.iter_chunked(chunk_size):
-            yield chunk
+        try:
+            async for chunk in self._response.content.iter_chunked(chunk_size):
+                yield chunk
+        except aiohttp.ClientPayloadError as exc:
+            raise exceptions.ResponseError(
+                "Failed to read from the payload stream."
+            ) from exc
 
     @_helpers.copy_docstring(transport.Response)
     async def read(self) -> bytes:
-        return await self._response.read()
+        try:
+            return await self._response.read()
+        except aiohttp.ClientResponseError as exc:
+            raise exceptions.ResponseError("Failed to read the response body.") from exc
 
     @_helpers.copy_docstring(transport.Response)
     async def close(self):

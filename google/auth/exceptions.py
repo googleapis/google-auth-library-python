@@ -102,3 +102,7 @@ class OSError(DefaultCredentialsError, EnvironmentError):
 
 class TimeoutError(GoogleAuthError):
     """Used to indicate a timeout error occurred during an HTTP request."""
+
+
+class ResponseError(GoogleAuthError):
+    """Used to indicate an error occurred when reading an HTTP response."""

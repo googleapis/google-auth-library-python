@@ -15,7 +15,7 @@
 import asyncio
 
 from aioresponses import aioresponses  # type: ignore
-from mock import AsyncMock, Mock
+from mock import AsyncMock, Mock, patch
 import pytest  # type: ignore
 import pytest_asyncio  # type: ignore
 
@@ -63,9 +63,31 @@ class TestResponse(object):
         assert content == b"Cavefish have no sight."
 
     @pytest.mark.asyncio
+    async def test_response_content_raises_error(self, mock_response):
+        with patch.object(
+            mock_response._response.content,
+            "iter_chunked",
+            side_effect=aiohttp.ClientPayloadError,
+        ):
+            with pytest.raises(exceptions.ResponseError) as exc:
+                [chunk async for chunk in mock_response.content()]
+            exc.match("Failed to read from the payload stream")
+
+    @pytest.mark.asyncio
     async def test_response_read(self, mock_response):
         content = await mock_response.read()
         assert content == b"Cavefish have no sight."
+
+    @pytest.mark.asyncio
+    async def test_response_read_raises_error(self, mock_response):
+        with patch.object(
+            mock_response._response,
+            "read",
+            side_effect=aiohttp.ClientResponseError(None, None),
+        ):
+            with pytest.raises(exceptions.ResponseError) as exc:
+                await mock_response.read()
+            exc.match("Failed to read the response body.")
 
     @pytest.mark.asyncio
     async def test_response_close(self, mock_response):
@@ -121,8 +143,10 @@ class TestRequest:
                 await aiohttp_request("http://example.com")
 
             exc.match("Request timed out after 180 seconds.")
-    
-    async def test_request_call_raises_transport_error_for_closed_session(self, aiohttp_request):
+
+    async def test_request_call_raises_transport_error_for_closed_session(
+        self, aiohttp_request
+    ):
         with aioresponses() as m:
             m.get("http://example.com", exception=asyncio.TimeoutError)
             aiohttp_request._closed = True
