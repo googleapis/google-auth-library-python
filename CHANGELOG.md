@@ -4,6 +4,36 @@
 
 [1]: https://pypi.org/project/google-auth/#history
 
+## [2.34.0](https://github.com/googleapis/google-auth-library-python/compare/v2.33.0...v2.34.0) (2024-08-13)
+
+
+### Features
+
+* **auth:** Update get_client_ssl_credentials to support X.509 workload certs ([#1558](https://github.com/googleapis/google-auth-library-python/issues/1558)) ([18c2ec1](https://github.com/googleapis/google-auth-library-python/commit/18c2ec1b571d506c0dbcffc483aa5e7b95e1b246))
+
+
+### Bug Fixes
+
+* Retry token request on retryable status code ([#1563](https://github.com/googleapis/google-auth-library-python/issues/1563)) ([f858a15](https://github.com/googleapis/google-auth-library-python/commit/f858a151cb7e29d34578e03c9e3fd4110c6bc258))
+
+## [2.33.0](https://github.com/googleapis/google-auth-library-python/compare/v2.32.0...v2.33.0) (2024-08-06)
+
+
+### Features
+
+* Implement async `StaticCredentials` using access tokens ([#1559](https://github.com/googleapis/google-auth-library-python/issues/1559)) ([dc17dfc](https://github.com/googleapis/google-auth-library-python/commit/dc17dfc3fb65c87f2912300f0d11f79781240e78))
+* Implement base classes for credentials and request sessions ([#1551](https://github.com/googleapis/google-auth-library-python/issues/1551)) ([036dac4](https://github.com/googleapis/google-auth-library-python/commit/036dac43018b8cc26b5608e1bb21d6e3ee62a282))
+
+
+### Bug Fixes
+
+* **metadata:** Enhance retry logic for metadata server access in _metadata.py ([#1545](https://github.com/googleapis/google-auth-library-python/issues/1545)) ([61c2432](https://github.com/googleapis/google-auth-library-python/commit/61c24321e52f6e017eecee211e11260d621c909b))
+
+
+### Documentation
+
+* Update argument for Credentials initialization ([#1557](https://github.com/googleapis/google-auth-library-python/issues/1557)) ([40b9ed9](https://github.com/googleapis/google-auth-library-python/commit/40b9ed91a6b01948561cfc71edaaabdd7f362f17))
+
 ## [2.32.0](https://github.com/googleapis/google-auth-library-python/compare/v2.31.0...v2.32.0) (2024-07-08)
 
 
