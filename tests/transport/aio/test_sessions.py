@@ -254,7 +254,9 @@ class TestAsyncAuthorizedSession(object):
         mocked_response = MockResponse(status_code=retry_status)
         auth_request = MockRequest(mocked_response)
         with patch("asyncio.sleep", return_value=None):
-            authed_session = sessions.AsyncAuthorizedSession(self.credentials, auth_request)
+            authed_session = sessions.AsyncAuthorizedSession(
+                self.credentials, auth_request
+            )
             await authed_session.request("GET", self.TEST_URL)
             assert auth_request.call_count == DEFAULT_MAX_RETRY_ATTEMPTS
 
