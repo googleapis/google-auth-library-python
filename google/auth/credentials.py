@@ -129,7 +129,14 @@ class Credentials(_BaseCredentials):
         return self._universe_domain
 
     def get_cred_info(self):
-        """The credential information JSON."""
+        """The credential information JSON.
+
+        The credential information will be added to auth related error messages
+        by client library.
+
+        Returns:
+            Mapping[str, str]: The credential information JSON.
+        """
         return None
 
     @abc.abstractmethod
