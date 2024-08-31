@@ -32,6 +32,7 @@ Authorization Code grant flow.
 """
 
 from datetime import datetime
+import http.client as http_client
 import io
 import json
 import logging
@@ -49,6 +50,9 @@ _LOGGER = logging.getLogger(__name__)
 
 # The Google OAuth 2.0 token endpoint. Used for authorized user credentials.
 _GOOGLE_OAUTH2_TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token"
+
+# The Google OAuth 2.0 token info endpoint. Used for getting token info JSON from access tokens.
+_GOOGLE_OAUTH2_TOKEN_INFO_ENDPOINT = "https://oauth2.googleapis.com/tokeninfo"
 
 
 class Credentials(credentials.ReadOnlyScoped, credentials.CredentialsWithQuotaProject):
@@ -304,10 +308,13 @@ class Credentials(credentials.ReadOnlyScoped, credentials.CredentialsWithQuotaPr
     @_helpers.copy_docstring(credentials.Credentials)
     def get_cred_info(self):
         if self._cred_file_path:
-            return {
+            cred_info = {
                 "credential_source": self._cred_file_path,
                 "credential_type": "user credentials",
             }
+            if self.account:
+                cred_info["principal"] = self.account
+            return cred_info
         return None
 
     @_helpers.copy_docstring(credentials.CredentialsWithQuotaProject)
@@ -343,6 +350,33 @@ class Credentials(credentials.ReadOnlyScoped, credentials.CredentialsWithQuotaPr
 
     def _metric_header_for_usage(self):
         return metrics.CRED_TYPE_USER
+
+    def _set_account_from_access_token(self, request):
+        """Obtain the account from token info endpoint and set the account field.
+
+        Args:
+            request (google.auth.transport.Request): A callable used to make
+                HTTP requests.
+        """
+        # We only set the account if it's not yet set.
+        if self._account:
+            return
+
+        if not self.token:
+            return
+
+        # Make request to token info endpoint with the access token.
+        # If the token is invalid, it returns 400 error code.
+        # If the token is valid, it returns 200 status with a JSON. The account
+        # is the "email" field of the JSON.
+        token_info_url = "{}?access_token={}".format(
+            _GOOGLE_OAUTH2_TOKEN_INFO_ENDPOINT, self.token
+        )
+        response = request(method="GET", url=token_info_url)
+
+        if response.status == http_client.OK:
+            response_data = json.loads(response.data.decode("utf-8"))
+            self._account = response_data.get("email")
 
     @_helpers.copy_docstring(credentials.Credentials)
     def refresh(self, request):
@@ -380,6 +414,7 @@ class Credentials(credentials.ReadOnlyScoped, credentials.CredentialsWithQuotaPr
                 )
             self.token = token
             self.expiry = expiry
+            self._set_account_from_access_token(request)
             return
 
         if (
@@ -416,6 +451,7 @@ class Credentials(credentials.ReadOnlyScoped, credentials.CredentialsWithQuotaPr
         self._refresh_token = refresh_token
         self._id_token = grant_response.get("id_token")
         self._rapt_token = rapt_token
+        self._set_account_from_access_token(request)
 
         if scopes and "scope" in grant_response:
             requested_scopes = frozenset(scopes)
