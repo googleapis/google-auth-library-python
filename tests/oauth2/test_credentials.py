@@ -290,9 +290,7 @@ class TestCredentials(object):
         refresh_handler.assert_not_called()
 
     @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
-    def test_refresh_with_refresh_handler_success_scopes(
-        self, unused_utcnow
-    ):
+    def test_refresh_with_refresh_handler_success_scopes(self, unused_utcnow):
         expected_expiry = datetime.datetime.min + datetime.timedelta(seconds=2800)
         refresh_handler = mock.Mock(return_value=("ACCESS_TOKEN", expected_expiry))
         scopes = ["email", "profile"]
@@ -320,9 +318,7 @@ class TestCredentials(object):
         refresh_handler.assert_called_with(request, scopes=scopes)
 
     @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
-    def test_refresh_with_refresh_handler_success_default_scopes(
-        self, unused_utcnow
-    ):
+    def test_refresh_with_refresh_handler_success_default_scopes(self, unused_utcnow):
         expected_expiry = datetime.datetime.min + datetime.timedelta(seconds=2800)
         original_refresh_handler = mock.Mock(
             return_value=("UNUSED_TOKEN", expected_expiry)
