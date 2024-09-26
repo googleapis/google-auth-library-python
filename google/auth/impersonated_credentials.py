@@ -306,7 +306,6 @@ class Credentials(
             authed_session.close()
         raise exceptions.TransportError("exhausted signBlob endpoint retries")
 
-
     @property
     def signer_email(self):
         return self._target_principal

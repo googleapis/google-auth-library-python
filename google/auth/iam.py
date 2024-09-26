@@ -113,7 +113,6 @@ class Signer(crypt.Signer):
             return json.loads(response.data.decode("utf-8"))
         raise exceptions.TransportError("exhausted signBlob endpoint retries")
 
-
     @property
     def key_id(self):
         """Optional[str]: The key ID used to identify this private key.
