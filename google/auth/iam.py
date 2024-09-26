@@ -23,10 +23,10 @@ import base64
 import http.client as http_client
 import json
 
+from google.auth import _exponential_backoff
 from google.auth import _helpers
 from google.auth import crypt
 from google.auth import exceptions
-from google.auth import _exponential_backoff
 
 IAM_RETRY_CODES = {
     http_client.INTERNAL_SERVER_ERROR,

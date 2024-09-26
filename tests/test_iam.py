@@ -110,6 +110,6 @@ class TestSigner(object):
 
         signer = iam.Signer(request, credentials, mock.sentinel.service_account_email)
 
-        with pytest.raises(exceptions.TransportError) as exc:
+        with pytest.raises(exceptions.TransportError):
             signer.sign("123")
         request.call_count == 3

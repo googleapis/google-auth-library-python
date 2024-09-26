@@ -31,10 +31,10 @@ from datetime import datetime
 import http.client as http_client
 import json
 
+from google.auth import _exponential_backoff
 from google.auth import _helpers
 from google.auth import credentials
 from google.auth import exceptions
-from google.auth import _exponential_backoff
 from google.auth import iam
 from google.auth import jwt
 from google.auth import metrics
