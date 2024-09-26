@@ -34,6 +34,7 @@ import json
 from google.auth import _helpers
 from google.auth import credentials
 from google.auth import exceptions
+from google.auth import _exponential_backoff
 from google.auth import iam
 from google.auth import jwt
 from google.auth import metrics
@@ -288,18 +289,23 @@ class Credentials(
         authed_session = AuthorizedSession(self._source_credentials)
 
         try:
-            response = authed_session.post(
-                url=iam_sign_endpoint, headers=headers, json=body
-            )
+            retries = _exponential_backoff.ExponentialBackoff()
+            for _ in retries:
+                response = authed_session.post(
+                    url=iam_sign_endpoint, headers=headers, json=body
+                )
+                if response.status_code in iam.IAM_RETRY_CODES:
+                    continue
+                if response.status_code != http_client.OK:
+                    raise exceptions.TransportError(
+                        "Error calling sign_bytes: {}".format(response.json())
+                    )
+
+                return base64.b64decode(response.json()["signedBlob"])
         finally:
             authed_session.close()
+        raise exceptions.TransportError("exhausted signBlob endpoint retries")
 
-        if response.status_code != http_client.OK:
-            raise exceptions.TransportError(
-                "Error calling sign_bytes: {}".format(response.json())
-            )
-
-        return base64.b64decode(response.json()["signedBlob"])
 
     @property
     def signer_email(self):
