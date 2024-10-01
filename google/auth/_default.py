@@ -30,6 +30,7 @@ import google.auth.transport._http_client
 _LOGGER = logging.getLogger(__name__)
 
 # Valid types accepted for file-based credentials.
+_ANONYMOUS_TYPE = "anonymous"
 _AUTHORIZED_USER_TYPE = "authorized_user"
 _SERVICE_ACCOUNT_TYPE = "service_account"
 _EXTERNAL_ACCOUNT_TYPE = "external_account"
@@ -37,6 +38,7 @@ _EXTERNAL_ACCOUNT_AUTHORIZED_USER_TYPE = "external_account_authorized_user"
 _IMPERSONATED_SERVICE_ACCOUNT_TYPE = "impersonated_service_account"
 _GDCH_SERVICE_ACCOUNT_TYPE = "gdch_service_account"
 _VALID_TYPES = (
+    _ANONYMOUS_TYPE,
     _AUTHORIZED_USER_TYPE,
     _SERVICE_ACCOUNT_TYPE,
     _EXTERNAL_ACCOUNT_TYPE,
@@ -209,6 +211,8 @@ def _load_credentials_from_info(
         )
     elif credential_type == _GDCH_SERVICE_ACCOUNT_TYPE:
         credentials, project_id = _get_gdch_service_account_credentials(filename, info)
+    elif credential_type == _ANONYMOUS_TYPE:
+        credentials, project_id = _get_anonymous_credentials()
     else:
         raise exceptions.DefaultCredentialsError(
             "The file {file} does not have a valid type. "
@@ -426,6 +430,14 @@ def _get_external_account_authorized_user_credentials(
                 filename
             )
         )
+
+    return credentials, None
+
+
+def _get_anonymous_credentials():
+    from google.auth import credentials
+
+    credentials = credentials.AnonymousCredentials()
 
     return credentials, None
 
