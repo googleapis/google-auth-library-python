@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import grpc
+from google.auth import credentials
 import re
 import pytest
 from google import showcase
@@ -21,7 +23,13 @@ UUID4_RE = r"[a-f0-9]{8}-?[a-f0-9]{4}-?4[a-f0-9]{3}-?[89ab][a-f0-9]{3}-?[a-f0-9]
 @pytest.fixture
 def echo():
     # Create an instance of the Showcase Echo client
-    echo_client = showcase.EchoClient()
+    transport_cls = showcase.EchoClient.get_transport_class("grpc")
+    transport = transport_cls(
+        credentials=credentials.AnonymousCredentials(),
+        channel=grpc.insecure_channel("localhost:7469"),
+        host="localhost:7469",
+    )
+    echo_client = showcase.EchoClient(transport=transport)
     yield echo_client
     # Optional: Clean up resources if needed after the test
     # e.g., echo_client.close()

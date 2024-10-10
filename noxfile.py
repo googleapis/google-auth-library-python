@@ -185,9 +185,10 @@ def showcase_library(
         # Download the Showcase descriptor.
         session.run(
             "curl",
-            "https://github.com/googleapis/gapic-showcase/releases/"
-            f"download/v{showcase_version}/"
-            f"gapic-showcase-{showcase_version}.desc",
+            "https://github.com/googleapis/gapic-showcase/blob/507a4cbdc45c8380aff29308ff2a1144ead9a7dc/test_gapic_showcase.desc"
+            # "https://github.com/googleapis/gapic-showcase/releases/"
+            # f"download/v{showcase_version}/"
+            # f"gapic-showcase-{showcase_version}.desc",
             "-L",
             "--output",
             os.path.join(tmp_dir, "showcase.desc"),
@@ -197,9 +198,10 @@ def showcase_library(
         if include_service_yaml:
             session.run(
                 "curl",
-                "https://github.com/googleapis/gapic-showcase/releases/"
-                f"download/v{showcase_version}/"
-                f"showcase_v1beta1.yaml",
+                "https://github.com/googleapis/gapic-showcase/blob/507a4cbdc45c8380aff29308ff2a1144ead9a7dc/schema/google/showcase/v1beta1/showcase_v1beta1.yaml",
+                # "https://github.com/googleapis/gapic-showcase/releases/"
+                # f"download/v{showcase_version}/"
+                # f"showcase_v1beta1.yaml",
                 "-L",
                 "--output",
                 os.path.join(tmp_dir, "showcase_v1beta1.yaml"),
@@ -228,9 +230,10 @@ def showcase_library(
         if retry_config:
             session.run(
                 "curl",
-                "https://github.com/googleapis/gapic-showcase/releases/"
-                f"download/v{showcase_version}/"
-                f"showcase_grpc_service_config.json",
+                "https://github.com/googleapis/gapic-showcase/blob/507a4cbdc45c8380aff29308ff2a1144ead9a7dc/schema/google/showcase/v1beta1/showcase_grpc_service_config.json",
+                # "https://github.com/googleapis/gapic-showcase/releases/"
+                # f"download/v{showcase_version}/"
+                # f"showcase_grpc_service_config.json",
                 "-L",
                 "--output",
                 os.path.join(tmp_dir, "showcase_grpc_service_config.json"),
@@ -241,7 +244,7 @@ def showcase_library(
         template_opt = f"python-gapic-templates={templates}"
         opts = "--python_gapic_opt="
         if include_service_yaml and retry_config:
-            opts += ",".join(other_opts + (f"{template_opt}", "transport=grpc+rest", f"service-yaml={tmp_dir}/showcase_v1beta1.yaml", f"retry-config={tmp_dir}/showcase_grpc_service_config.json"))
+            opts += ",".join(other_opts + (f"{template_opt}", "transport=grpc+rest", f"service-yaml=/usr/local/google/home/saisunder/data/playground/TestingStrategy/gapic-showcase/schema/google/showcase/v1beta1/showcase_v1beta1.yaml", f"retry-config=/usr/local/google/home/saisunder/data/playground/TestingStrategy/gapic-showcase/schema/google/showcase/v1beta1/showcase_grpc_service_config.json"))
         else:
             opts += ",".join(other_opts + (f"{template_opt}", "transport=grpc+rest",))            
         cmd_tup = (
@@ -249,7 +252,7 @@ def showcase_library(
             "-m",
             "grpc_tools.protoc",
             f"--experimental_allow_proto3_optional",
-            f"--descriptor_set_in={tmp_dir}{os.sep}showcase.desc",
+            f"--descriptor_set_in=/usr/local/google/home/saisunder/data/playground/TestingStrategy/gapic-showcase/test_gapic_showcase.desc",
             opts,
             f"--python_gapic_out={tmp_dir}",
             f"google/showcase/v1beta1/echo.proto",
@@ -317,7 +320,7 @@ def _add_python_settings(tmp_dir, python_settings):
     return f"""
 import yaml
 from pathlib import Path
-temp_file_path = Path(f"{tmp_dir}/showcase_v1beta1.yaml")
+temp_file_path = Path(f"/usr/local/google/home/saisunder/data/playground/TestingStrategy/gapic-showcase/schema/google/showcase/v1beta1/showcase_v1beta1.yaml")
 with temp_file_path.open('r') as file:
     data = yaml.safe_load(file)
     data['publishing']['library_settings'] = {python_settings}
