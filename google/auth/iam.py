@@ -35,11 +35,14 @@ IAM_RETRY_CODES = {
     http_client.GATEWAY_TIMEOUT,
 }
 
+_DEFAULT_UNIVERSE_DOMAIN = ["googleapis.com"]
+
+_IAM_SCOPE = ["https://www.googleapis.com/auth/iam"]
 
 _IAM_SCOPE = ["https://www.googleapis.com/auth/iam"]
 
 _IAM_ENDPOINT = (
-    "https://iamcredentials.googleapis.com/v1/projects/-"
+    "https://iamcredentials.{}/v1/projects/-"
     + "/serviceAccounts/{}:generateAccessToken"
 )
 

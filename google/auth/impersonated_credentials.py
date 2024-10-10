@@ -219,6 +219,8 @@ class Credentials(
                 and self._source_credentials._always_use_jwt_access
             ):
                 self._source_credentials._create_self_signed_jwt(None)
+        if (self.universe_domain != self._source_credentials.universe_domain):
+            self._universe_domain = source_credentials.universe_domain
         self._target_principal = target_principal
         self._target_scopes = target_scopes
         self._delegates = delegates
@@ -227,6 +229,9 @@ class Credentials(
         self.expiry = _helpers.utcnow()
         self._quota_project_id = quota_project_id
         self._iam_endpoint_override = iam_endpoint_override
+        
+        if (self._iam_endpoint_override == None):
+            self._iam_endpoint_override = iam._IAM_ENDPOINT.format(self.universe_domain, self._target_principal)
         self._cred_file_path = None
 
     def _metric_header_for_usage(self):
