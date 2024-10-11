@@ -18,12 +18,15 @@
 import abc
 from enum import Enum
 import os
+from typing import Mapping, Optional, Sequence
 
 from google.auth import _helpers, environment_vars
 from google.auth import exceptions
 from google.auth import metrics
 from google.auth._credentials_base import _BaseCredentials
 from google.auth._refresh_worker import RefreshThreadManager
+from google.auth.transport import Request
+from google.auth.credentials import Credentials
 
 DEFAULT_UNIVERSE_DOMAIN = "googleapis.com"
 
@@ -67,7 +70,7 @@ class Credentials(_BaseCredentials):
         self._refresh_worker = RefreshThreadManager()
 
     @property
-    def expired(self):
+    def expired(self) -> bool:
         """Checks if the credentials are expired.
 
         Note that credentials can be invalid but not expired because
@@ -85,7 +88,7 @@ class Credentials(_BaseCredentials):
         return _helpers.utcnow() >= skewed_expiry
 
     @property
-    def valid(self):
+    def valid(self) -> bool:
         """Checks the validity of the credentials.
 
         This is True if the credentials have a :attr:`token` and the token
@@ -140,7 +143,7 @@ class Credentials(_BaseCredentials):
         return None
 
     @abc.abstractmethod
-    def refresh(self, request):
+    def refresh(self, request: Request):
         """Refreshes the access token.
 
         Args:
@@ -216,7 +219,7 @@ class Credentials(_BaseCredentials):
             # background thread.
             self._refresh_worker.clear_error()
 
-    def before_request(self, request, method, url, headers):
+    def before_request(self, request: Request, method: str, url: str, headers: Mapping):
         """Performs credential-specific before request logic.
 
         Refreshes the credentials if necessary, then calls :meth:`apply` to
@@ -307,12 +310,12 @@ class AnonymousCredentials(Credentials):
     """
 
     @property
-    def expired(self):
+    def expired(self) -> bool:
         """Returns `False`, anonymous credentials never expire."""
         return False
 
     @property
-    def valid(self):
+    def valid(self) -> bool:
         """Returns `True`, anonymous credentials are always valid."""
         return True
 
@@ -380,10 +383,10 @@ class ReadOnlyScoped(metaclass=abc.ABCMeta):
         """Sequence[str]: the credentials' current set of default scopes."""
         return self._default_scopes
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def requires_scopes(self):
-        """True if these credentials require scopes to obtain an access token.
-        """
+        """True if these credentials require scopes to obtain an access token."""
         return False
 
     def has_scopes(self, scopes):
@@ -434,7 +437,9 @@ class Scoped(ReadOnlyScoped):
     """
 
     @abc.abstractmethod
-    def with_scopes(self, scopes, default_scopes=None):
+    def with_scopes(
+        self, scopes: Sequence[str], default_scopes: Optional[: Sequence[str]] = None
+    ):
         """Create a copy of these credentials with the specified scopes.
 
         Args:
@@ -449,7 +454,11 @@ class Scoped(ReadOnlyScoped):
         raise NotImplementedError("This class does not require scoping.")
 
 
-def with_scopes_if_required(credentials, scopes, default_scopes=None):
+def with_scopes_if_required(
+    credentials: Credentials,
+    scopes: Sequence[str],
+    default_scopes: Optional[Sequence[str]] = None,
+) -> Credentials:
     """Creates a copy of the credentials with scopes if scoping is required.
 
     This helper function is useful when you do not know (or care to know) the
@@ -481,7 +490,7 @@ class Signing(metaclass=abc.ABCMeta):
     """Interface for credentials that can cryptographically sign messages."""
 
     @abc.abstractmethod
-    def sign_bytes(self, message):
+    def sign_bytes(self, message: bytes) -> bytes:
         """Signs the given message.
 
         Args:
@@ -494,14 +503,16 @@ class Signing(metaclass=abc.ABCMeta):
         # (pylint doesn't recognize that this is abstract)
         raise NotImplementedError("Sign bytes must be implemented.")
 
-    @abc.abstractproperty
-    def signer_email(self):
+    @property
+    @abc.abstractmethod
+    def signer_email(self) -> Optional[str]:
         """Optional[str]: An email address that identifies the signer."""
         # pylint: disable=missing-raises-doc
         # (pylint doesn't recognize that this is abstract)
         raise NotImplementedError("Signer email must be implemented.")
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def signer(self):
         """google.auth.crypt.Signer: The signer used to sign bytes."""
         # pylint: disable=missing-raises-doc
