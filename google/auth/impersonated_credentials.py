@@ -278,11 +278,14 @@ class Credentials(
             body=body,
             iam_endpoint_override=self._iam_endpoint_override,
         )
+        
+    def get_iam_sign_endpoint(self):
+        return iam._IAM_SIGN_ENDPOINT.format(self.universe_domain, self._target_principal)
 
     def sign_bytes(self, message):
         from google.auth.transport.requests import AuthorizedSession
 
-        iam_sign_endpoint = iam._IAM_SIGN_ENDPOINT.format(self._target_principal)
+        iam_sign_endpoint = get_iam_sign_endpoint(self)
 
         body = {
             "payload": base64.b64encode(message).decode("utf-8"),
@@ -433,6 +436,7 @@ class IDTokenCredentials(credentials.CredentialsWithQuotaProject):
         from google.auth.transport.requests import AuthorizedSession
 
         iam_sign_endpoint = iam._IAM_IDTOKEN_ENDPOINT.format(
+            self._target_credentials.universe_domain,
             self._target_credentials.signer_email
         )
 

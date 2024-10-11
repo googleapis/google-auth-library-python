@@ -124,6 +124,7 @@ class TestImpersonatedCredentials(object):
         lifetime=LIFETIME,
         target_principal=TARGET_PRINCIPAL,
         iam_endpoint_override=None,
+        universe_domain=credentials.DEFAULT_UNIVERSE_DOMAIN
     ):
 
         return Credentials(
@@ -133,6 +134,7 @@ class TestImpersonatedCredentials(object):
             delegates=self.DELEGATES,
             lifetime=lifetime,
             iam_endpoint_override=iam_endpoint_override,
+            universe_domain=universe_domain,
         )
 
     def test_get_cred_info(self):
@@ -144,6 +146,21 @@ class TestImpersonatedCredentials(object):
             "credential_source": "/path/to/file",
             "credential_type": "impersonated credentials",
             "principal": "impersonated@project.iam.gserviceaccount.com",
+            "iam_endpoint_override": None,
+        }
+    
+    def test_get_cred_info_universe_domain(self):
+        credentials = self.make_credentials(universe_domain="foo.bar")
+        assert not credentials.get_cred_info()
+
+        credentials._cred_file_path = "/path/to/file"
+        assert credentials.get_cred_info() == {
+            "credential_source": "/path/to/file",
+            "credential_type": "impersonated credentials",
+            "principal": "impersonated@project.iam.gserviceaccount.com",
+            "universe_domain": "foo.bar",
+            "iam_endpoint_override": "https://iamcredentials.foo.bar/v1/projects/-"
+        + "/serviceAccounts/impersonated@project.iam.gserviceaccount.com:generateAccessToken"
         }
 
     def test__make_copy_get_cred_info(self):
@@ -390,6 +407,11 @@ class TestImpersonatedCredentials(object):
     def test_signer_email(self):
         credentials = self.make_credentials(target_principal=self.TARGET_PRINCIPAL)
         assert credentials.signer_email == self.TARGET_PRINCIPAL
+        
+    def test_sign_endpoint(self):
+        credentials = self.make_credentials(universe_domain="foo.bar")
+        assert credentials.get_iam_sign_endpoint ==  "https://iamcredentials.foo.bar/v1/projects/-"
+    + "/serviceAccounts/impersonated@project.iam.gserviceaccount.com:signBlob"
 
     def test_service_account_email(self):
         credentials = self.make_credentials(target_principal=self.TARGET_PRINCIPAL)
