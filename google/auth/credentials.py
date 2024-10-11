@@ -18,12 +18,12 @@
 import abc
 from enum import Enum
 import os
-from typing import Mapping, Optional, Self, Sequence
+from typing import Optional, Self, Sequence
 
 from google.auth import _helpers, environment_vars
 from google.auth import exceptions
 from google.auth import metrics
-from google.auth._credentials_base import _BaseCredentials
+from google.auth._credentials_base import BaseCredentials
 from google.auth._refresh_worker import RefreshThreadManager
 from google.auth.credentials import Credentials
 from google.auth.crypt import Signer
@@ -32,7 +32,7 @@ from google.auth.transport import Request
 DEFAULT_UNIVERSE_DOMAIN = "googleapis.com"
 
 
-class Credentials(_BaseCredentials):
+class Credentials(BaseCredentials):
     """Base class for all credentials.
 
     All credentials have a :attr:`token` that is used for authentication and
@@ -144,7 +144,7 @@ class Credentials(_BaseCredentials):
         return None
 
     @abc.abstractmethod
-    def refresh(self, request: Request):
+    def refresh(self, request: Request) -> None:
         """Refreshes the access token.
 
         Args:
@@ -174,7 +174,7 @@ class Credentials(_BaseCredentials):
         """
         return None
 
-    def apply(self, headers: Mapping, token: Optional[str] = None):
+    def apply(self, headers: dict[str, str], token: Optional[str] = None):
         """Apply the token to the authentication header.
 
         Args:
@@ -220,7 +220,9 @@ class Credentials(_BaseCredentials):
             # background thread.
             self._refresh_worker.clear_error()
 
-    def before_request(self, request: Request, method: str, url: str, headers: Mapping):
+    def before_request(
+        self, request: Request, method: str, url: str, headers: dict[str, str]
+    ):
         """Performs credential-specific before request logic.
 
         Refreshes the credentials if necessary, then calls :meth:`apply` to
@@ -325,7 +327,7 @@ class AnonymousCredentials(Credentials):
         refreshed."""
         raise exceptions.InvalidOperation("Anonymous credentials cannot be refreshed.")
 
-    def apply(self, headers: Mapping, token: Optional[str] = None):
+    def apply(self, headers: dict[str, str], token: Optional[str] = None):
         """Anonymous credentials do nothing to the request.
 
         The optional ``token`` argument is not supported.
@@ -336,7 +338,9 @@ class AnonymousCredentials(Credentials):
         if token is not None:
             raise exceptions.InvalidValue("Anonymous credentials don't support tokens.")
 
-    def before_request(self, request: Request, method: str, url: str, headers: Mapping):
+    def before_request(
+        self, request: Request, method: str, url: str, headers: dict[str, str]
+    ):
         """Anonymous credentials do nothing to the request."""
 
 
@@ -439,7 +443,7 @@ class Scoped(ReadOnlyScoped):
 
     @abc.abstractmethod
     def with_scopes(
-        self, scopes: Sequence[str], default_scopes: Optional[: Sequence[str]] = None
+        self, scopes: Sequence[str], default_scopes: Optional[Sequence[str]] = None
     ) -> Self:
         """Create a copy of these credentials with the specified scopes.
 
