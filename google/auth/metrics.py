@@ -12,11 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-""" We use x-goog-api-client header to report metrics. This module provides
+"""We use x-goog-api-client header to report metrics. This module provides
 the constants and helper methods to construct x-goog-api-client header.
 """
 
 import platform
+from typing import Mapping, Optional
 
 from google.auth import version
 
@@ -47,6 +48,7 @@ def python_and_auth_lib_version():
 
 
 # Token request metric header values
+
 
 # x-goog-api-client header value for access token request via metadata server.
 # Example: "gl-python/3.7 auth/1.1 auth-request-type/at cred-type/mds"
@@ -108,6 +110,7 @@ def token_request_user():
 
 # Miscellenous metrics
 
+
 # x-goog-api-client header value for metadata server ping.
 # Example: "gl-python/3.7 auth/1.1 auth-request-type/mds"
 def mds_ping():
@@ -135,7 +138,7 @@ def byoid_metrics_header(metrics_options):
     return header
 
 
-def add_metric_header(headers, metric_header_value):
+def add_metric_header(headers: Mapping[str, str], metric_header_value: Optional[str]):
     """Add x-goog-api-client header with the given value.
 
     Args:
