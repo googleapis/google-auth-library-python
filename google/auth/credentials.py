@@ -18,15 +18,16 @@
 import abc
 from enum import Enum
 import os
-from typing import Mapping, Optional, Sequence
+from typing import Mapping, Optional, Self, Sequence
 
 from google.auth import _helpers, environment_vars
 from google.auth import exceptions
 from google.auth import metrics
 from google.auth._credentials_base import _BaseCredentials
 from google.auth._refresh_worker import RefreshThreadManager
-from google.auth.transport import Request
 from google.auth.credentials import Credentials
+from google.auth.crypt import Signer
+from google.auth.transport import Request
 
 DEFAULT_UNIVERSE_DOMAIN = "googleapis.com"
 
@@ -173,7 +174,7 @@ class Credentials(_BaseCredentials):
         """
         return None
 
-    def apply(self, headers, token=None):
+    def apply(self, headers: Mapping, token: Optional[str] = None):
         """Apply the token to the authentication header.
 
         Args:
@@ -200,11 +201,11 @@ class Credentials(_BaseCredentials):
         if self.quota_project_id:
             headers["x-goog-user-project"] = self.quota_project_id
 
-    def _blocking_refresh(self, request):
+    def _blocking_refresh(self, request: Request):
         if not self.valid:
             self.refresh(request)
 
-    def _non_blocking_refresh(self, request):
+    def _non_blocking_refresh(self, request: Request):
         use_blocking_refresh_fallback = False
 
         if self.token_state == TokenState.STALE:
@@ -251,7 +252,7 @@ class Credentials(_BaseCredentials):
 class CredentialsWithQuotaProject(Credentials):
     """Abstract base for credentials supporting ``with_quota_project`` factory"""
 
-    def with_quota_project(self, quota_project_id):
+    def with_quota_project(self, quota_project_id: str) -> Self:
         """Returns a copy of these credentials with a modified quota project.
 
         Args:
@@ -263,7 +264,7 @@ class CredentialsWithQuotaProject(Credentials):
         """
         raise NotImplementedError("This credential does not support quota project.")
 
-    def with_quota_project_from_environment(self):
+    def with_quota_project_from_environment(self) -> Self:
         quota_from_env = os.environ.get(environment_vars.GOOGLE_CLOUD_QUOTA_PROJECT)
         if quota_from_env:
             return self.with_quota_project(quota_from_env)
@@ -273,7 +274,7 @@ class CredentialsWithQuotaProject(Credentials):
 class CredentialsWithTokenUri(Credentials):
     """Abstract base for credentials supporting ``with_token_uri`` factory"""
 
-    def with_token_uri(self, token_uri):
+    def with_token_uri(self, token_uri: str) -> Self:
         """Returns a copy of these credentials with a modified token uri.
 
         Args:
@@ -288,7 +289,7 @@ class CredentialsWithTokenUri(Credentials):
 class CredentialsWithUniverseDomain(Credentials):
     """Abstract base for credentials supporting ``with_universe_domain`` factory"""
 
-    def with_universe_domain(self, universe_domain):
+    def with_universe_domain(self, universe_domain: str) -> Self:
         """Returns a copy of these credentials with a modified universe domain.
 
         Args:
@@ -319,12 +320,12 @@ class AnonymousCredentials(Credentials):
         """Returns `True`, anonymous credentials are always valid."""
         return True
 
-    def refresh(self, request):
+    def refresh(self, request: Request):
         """Raises :class:``InvalidOperation``, anonymous credentials cannot be
         refreshed."""
         raise exceptions.InvalidOperation("Anonymous credentials cannot be refreshed.")
 
-    def apply(self, headers, token=None):
+    def apply(self, headers: Mapping, token: Optional[str] = None):
         """Anonymous credentials do nothing to the request.
 
         The optional ``token`` argument is not supported.
@@ -335,7 +336,7 @@ class AnonymousCredentials(Credentials):
         if token is not None:
             raise exceptions.InvalidValue("Anonymous credentials don't support tokens.")
 
-    def before_request(self, request, method, url, headers):
+    def before_request(self, request: Request, method: str, url: str, headers: Mapping):
         """Anonymous credentials do nothing to the request."""
 
 
@@ -389,7 +390,7 @@ class ReadOnlyScoped(metaclass=abc.ABCMeta):
         """True if these credentials require scopes to obtain an access token."""
         return False
 
-    def has_scopes(self, scopes):
+    def has_scopes(self, scopes: Sequence[str]) -> bool:
         """Checks if the credentials have the given scopes.
 
         .. warning: This method is not guaranteed to be accurate if the
@@ -439,7 +440,7 @@ class Scoped(ReadOnlyScoped):
     @abc.abstractmethod
     def with_scopes(
         self, scopes: Sequence[str], default_scopes: Optional[: Sequence[str]] = None
-    ):
+    ) -> Self:
         """Create a copy of these credentials with the specified scopes.
 
         Args:
@@ -513,7 +514,7 @@ class Signing(metaclass=abc.ABCMeta):
 
     @property
     @abc.abstractmethod
-    def signer(self):
+    def signer(self) -> Signer:
         """google.auth.crypt.Signer: The signer used to sign bytes."""
         # pylint: disable=missing-raises-doc
         # (pylint doesn't recognize that this is abstract)
