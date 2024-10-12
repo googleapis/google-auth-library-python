@@ -34,7 +34,7 @@ class RefreshThreadManager:
         self._worker = None
         self._lock = threading.Lock()  # protects access to worker threads.
 
-    def start_refresh(self, cred: Credentials, request: Request):
+    def start_refresh(self, cred: Credentials, request: Request) -> bool:
         """Starts a refresh thread for the given credentials.
         The credentials are refreshed using the request parameter.
         request and cred MUST not be None
@@ -61,7 +61,7 @@ class RefreshThreadManager:
                 self._worker.start()
         return True
 
-    def clear_error(self):
+    def clear_error(self) -> None:
         """
         Removes any errors that were stored from previous background refreshes.
         """
