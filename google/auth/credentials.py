@@ -25,7 +25,6 @@ from google.auth import exceptions
 from google.auth import metrics
 from google.auth._credentials_base import BaseCredentials
 from google.auth._refresh_worker import RefreshThreadManager
-from google.auth.credentials import Credentials
 from google.auth.crypt import Signer
 from google.auth.transport import Request
 
