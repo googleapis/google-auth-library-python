@@ -46,7 +46,7 @@ _DEFAULT_TOKEN_LIFETIME_SECS = 3600  # 1 hour in seconds
 
 
 def _make_iam_token_request(
-    request, principal, headers, body, iam_endpoint_override=None
+    request, principal, headers, body, universe_domain, iam_endpoint_override=None
 ):
     """Makes a request to the Google Cloud IAM service for an access token.
     Args:
@@ -67,7 +67,7 @@ def _make_iam_token_request(
             `iamcredentials.googleapis.com` is not enabled or the
             `Service Account Token Creator` is not assigned
     """
-    iam_endpoint = iam_endpoint_override or iam._IAM_ENDPOINT.format(principal)
+    iam_endpoint = iam_endpoint_override or iam._IAM_ENDPOINT.format(universe_domain, principal)
 
     body = json.dumps(body).encode("utf-8")
 
@@ -229,9 +229,6 @@ class Credentials(
         self.expiry = _helpers.utcnow()
         self._quota_project_id = quota_project_id
         self._iam_endpoint_override = iam_endpoint_override
-        
-        if (self._iam_endpoint_override == None):
-            self._iam_endpoint_override = iam._IAM_ENDPOINT.format(self.universe_domain, self._target_principal)
         self._cred_file_path = None
 
     def _metric_header_for_usage(self):
@@ -276,6 +273,7 @@ class Credentials(
             principal=self._target_principal,
             headers=headers,
             body=body,
+            universe_domain=self.universe_domain,
             iam_endpoint_override=self._iam_endpoint_override,
         )
         
@@ -285,7 +283,7 @@ class Credentials(
     def sign_bytes(self, message):
         from google.auth.transport.requests import AuthorizedSession
 
-        iam_sign_endpoint = get_iam_sign_endpoint(self)
+        iam_sign_endpoint = self.get_iam_sign_endpoint(self)
 
         body = {
             "payload": base64.b64encode(message).decode("utf-8"),
