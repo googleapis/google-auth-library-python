@@ -38,6 +38,10 @@ dependencies = [
 ]
 dynamic = ["version"]
 
+[project.urls]
+Documentation = "https://googleapis.dev/python/google-auth/latest/"
+Repository = "https://github.com/googleapis/google-auth-library-python"
+
 [project.optional-dependencies]
 aiohttp = ["aiohttp >= 3.6.2, < 4.0.0.dev0", "requests >= 2.20.0, < 3.0.0.dev0"]
 pyopenssl = ["pyopenssl>=20.0.0", "cryptography>=38.0.3"]

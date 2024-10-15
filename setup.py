@@ -21,7 +21,6 @@ from setuptools import setup
 package_root = os.path.abspath(os.path.dirname(__file__))
 
 setup(
-    url="https://github.com/googleapis/google-auth-library-python",
     packages=find_namespace_packages(
         exclude=("tests*", "system_tests*", "docs*", "samples*")
     ),
