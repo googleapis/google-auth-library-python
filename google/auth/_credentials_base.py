@@ -19,6 +19,7 @@ import abc
 from typing import Optional
 
 from google.auth import _helpers
+from google.auth.transport.requests import Request
 
 
 class BaseCredentials(metaclass=abc.ABCMeta):
@@ -48,7 +49,7 @@ class BaseCredentials(metaclass=abc.ABCMeta):
         self.token: Optional[str] = None
 
     @abc.abstractmethod
-    def refresh(self, request):
+    def refresh(self, request: Request) -> None:
         """Refreshes the access token.
 
         Args:
