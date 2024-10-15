@@ -1,10 +1,9 @@
 [build-system]
-requires = ["setuptools", "setuptools-scm"]
+requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "google-auth"
-version = "2.35.0"
 authors = [
   { name = "Google Cloud Platform", email = "googleapis-packages@google.com" },
 ]
@@ -37,6 +36,7 @@ dependencies = [
   # https://github.com/sybrenstuvel/python-rsa/issues/152#issuecomment-643470233
   "rsa>=3.1.4,<5",
 ]
+dynamic = ["version"]
 
 [project.optional-dependencies]
 aiohttp = ["aiohttp >= 3.6.2, < 4.0.0.dev0", "requests >= 2.20.0, < 3.0.0.dev0"]
@@ -44,3 +44,6 @@ pyopenssl = ["pyopenssl>=20.0.0", "cryptography>=38.0.3"]
 requests = ["requests >= 2.20.0, < 3.0.0.dev0"]
 reauth = ["pyu2f>=0.1.5"]
 enterprise_cert = ["cryptography", "pyopenssl"]
+
+[tool.setuptools.dynamic]
+version = { attr = "google.auth.version.__version__" }
