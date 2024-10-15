@@ -12,17 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
-
-from setuptools import find_namespace_packages
 from setuptools import setup
 
 
-package_root = os.path.abspath(os.path.dirname(__file__))
-
 setup(
-    packages=find_namespace_packages(
-        exclude=("tests*", "system_tests*", "docs*", "samples*")
-    ),
     package_data={"google.auth": ["py.typed"], "google.oauth2": ["py.typed"]},
 )

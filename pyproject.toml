@@ -51,3 +51,6 @@ enterprise_cert = ["cryptography", "pyopenssl"]
 
 [tool.setuptools.dynamic]
 version = { attr = "google.auth.version.__version__" }
+
+[tool.setuptools.packages.find]
+exclude = ["tests*", "system_tests*", "docs*", "samples*"]
