@@ -472,6 +472,10 @@ def _get_impersonated_service_account_credentials(filename, info, scopes):
             source_credentials, _ = _get_service_account_credentials(
                 filename, source_credentials_info
             )
+        elif source_credentials_type == _EXTERNAL_ACCOUNT_AUTHORIZED_USER_TYPE:
+            source_credentials, _ = _get_external_account_authorized_user_credentials(
+                filename, source_credentials_info
+            )
         else:
             raise exceptions.InvalidType(
                 "source credential of type {} is not supported.".format(
@@ -493,7 +497,7 @@ def _get_impersonated_service_account_credentials(filename, info, scopes):
             target_principal,
             scopes,
             delegates,
-            quota_project_id=quota_project_id,
+            quota_project_id=quota_project_id
         )
     except ValueError as caught_exc:
         msg = "Failed to load impersonated service account credentials from {}".format(
