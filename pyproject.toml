@@ -5,11 +5,14 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "google-auth"
 version = "2.35.0"
-authors = [{ name = "Google Cloud Platform", email = "googleapis-packages@google.com" }]
+authors = [
+  { name = "Google Cloud Platform", email = "googleapis-packages@google.com" },
+]
 license = { text = "Apache 2.0" }
 requires-python = ">=3.7"
 description = "Google Authentication Library"
 readme = "README.rst"
+keywords = ["google auth oauth client"]
 classifiers = [
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3.7",

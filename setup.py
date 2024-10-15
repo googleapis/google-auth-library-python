@@ -26,5 +26,4 @@ setup(
         exclude=("tests*", "system_tests*", "docs*", "samples*")
     ),
     package_data={"google.auth": ["py.typed"], "google.oauth2": ["py.typed"]},
-    keywords="google auth oauth client",
 )
