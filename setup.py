@@ -15,6 +15,4 @@
 from setuptools import setup
 
 
-setup(
-    package_data={"google.auth": ["py.typed"], "google.oauth2": ["py.typed"]},
-)
+setup()

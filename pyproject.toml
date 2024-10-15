@@ -54,3 +54,7 @@ version = { attr = "google.auth.version.__version__" }
 
 [tool.setuptools.packages.find]
 exclude = ["tests*", "system_tests*", "docs*", "samples*"]
+
+[tool.setuptools.package-data]
+"google.auth" = ["py.typed"]
+"google.oauth2" = ["py.typed"]
