@@ -68,10 +68,14 @@ class BaseCredentials(metaclass=abc.ABCMeta):
         """Apply the token to the authentication header.
 
         Args:
-            headers (Mapping): The HTTP request headers.
+            headers (dict[str, str]): The HTTP request headers.
             token (Optional[str]): If specified, overrides the current access
                 token.
         """
-        headers["authorization"] = "Bearer {}".format(
-            _helpers.from_bytes(token or self.token)
-        )
+        if token is not None:
+            value = token
+        elif self.token is not None:
+            value = self.token
+        else:
+            assert False, "token must be set"
+        headers["authorization"] = "Bearer {}".format(_helpers.from_bytes(value))
