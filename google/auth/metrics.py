@@ -138,11 +138,11 @@ def byoid_metrics_header(metrics_options):
     return header
 
 
-def add_metric_header(headers: Mapping[str, str], metric_header_value: Optional[str]):
+def add_metric_header(headers: dict[str, str], metric_header_value: Optional[str]):
     """Add x-goog-api-client header with the given value.
 
     Args:
-        headers (Mapping[str, str]): The headers to which we will add the
+        headers (dict[str, str]): The headers to which we will add the
             metric header.
         metric_header_value (Optional[str]): If value is None, do nothing;
             if headers already has a x-goog-api-client header, append the value
