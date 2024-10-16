@@ -72,7 +72,7 @@ class Credentials(BaseCredentials):
         If this is None, the token is assumed to never expire."""
         self._quota_project_id: Optional[str] = None
         """Optional[str]: Project to use for quota and billing purposes."""
-        self._trust_boundary: Optional[dict[str, str]] = None
+        self._trust_boundary: Optional[dict[str, object]] = None
         """Optional[dict]: Cache of a trust boundary response which has a list
         of allowed regions and an encoded string representation of credentials
         trust boundary."""
