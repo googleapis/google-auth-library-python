@@ -12,7 +12,7 @@ mechanisms to access Google APIs.
 Installing
 ----------
 
-You can install using `pip`_::
+You can install using `pip`_:: shell
 
     $ pip install google-auth
 
@@ -25,7 +25,7 @@ For more information on setting up your Python development environment, please r
 Extras
 ------
 
-google-auth has few extras that you can install. For example::
+google-auth has few extras that you can install. For example:: shell
 
     $ pip install google-auth[pyopenssl]
 
