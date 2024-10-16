@@ -75,6 +75,9 @@ def is_on_gce(request):
     Returns:
         bool: True if the code runs on Google Compute Engine, False otherwise.
     """
+    if os.getenv(environment_vars.NO_GCE_CHECK) != "true":
+        return False
+
     if ping(request):
         return True
 
