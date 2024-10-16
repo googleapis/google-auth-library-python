@@ -23,12 +23,20 @@ UUID4_RE = r"[a-f0-9]{8}-?[a-f0-9]{4}-?4[a-f0-9]{3}-?[89ab][a-f0-9]{3}-?[a-f0-9]
 @pytest.fixture
 def echo():
     # Create an instance of the Showcase Echo client
-    transport_cls = showcase.EchoClient.get_transport_class("grpc")
+    # transport_cls = showcase.EchoClient.get_transport_class("grpc")
+    # transport = transport_cls(
+    #     credentials=default()[0],
+    #     channel=grpc.insecure_channel("localhost:7469"),
+    #     host="localhost:7469",
+    # )
+
+    transport_cls = showcase.EchoClient.get_transport_class("rest")
     transport = transport_cls(
         credentials=default()[0],
-        channel=grpc.insecure_channel("localhost:7469"),
         host="localhost:7469",
+        url_scheme="http",
     )
+
     echo_client = showcase.EchoClient(transport=transport)
     yield echo_client
     # Optional: Clean up resources if needed after the test
