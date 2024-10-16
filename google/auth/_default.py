@@ -497,7 +497,7 @@ def _get_impersonated_service_account_credentials(filename, info, scopes):
             target_principal,
             scopes,
             delegates,
-            quota_project_id=quota_project_id
+            quota_project_id=quota_project_id,
         )
     except ValueError as caught_exc:
         msg = "Failed to load impersonated service account credentials from {}".format(

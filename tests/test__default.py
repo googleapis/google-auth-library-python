@@ -154,7 +154,8 @@ IMPERSONATED_SERVICE_ACCOUNT_SERVICE_ACCOUNT_SOURCE_FILE = os.path.join(
 )
 
 IMPERSONATED_SERVICE_ACCOUNT_EXTERNAL_ACCOUNT_AUTHORIZED_USER_SOURCE_FILE = os.path.join(
-    DATA_DIR, "impersonated_service_account_external_account_authorized_user_source.json"
+    DATA_DIR,
+    "impersonated_service_account_external_account_authorized_user_source.json",
 )
 
 EXTERNAL_ACCOUNT_AUTHORIZED_USER_FILE = os.path.join(
@@ -374,7 +375,9 @@ def test_load_credentials_from_file_impersonated_with_external_account_authorize
         IMPERSONATED_SERVICE_ACCOUNT_EXTERNAL_ACCOUNT_AUTHORIZED_USER_SOURCE_FILE
     )
     assert isinstance(credentials, impersonated_credentials.Credentials)
-    assert isinstance(credentials._source_credentials, external_account_authorized_user.Credentials)
+    assert isinstance(
+        credentials._source_credentials, external_account_authorized_user.Credentials
+    )
     assert not credentials._quota_project_id
 
 
