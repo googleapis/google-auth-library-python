@@ -16,11 +16,13 @@
 """Interface for base credentials."""
 
 import abc
+from typing import Optional
 
 from google.auth import _helpers
+from google.auth.transport.requests import Request
 
 
-class _BaseCredentials(metaclass=abc.ABCMeta):
+class BaseCredentials(metaclass=abc.ABCMeta):
     """Base class for all credentials.
 
     All credentials have a :attr:`token` that is used for authentication and
@@ -44,10 +46,10 @@ class _BaseCredentials(metaclass=abc.ABCMeta):
     """
 
     def __init__(self):
-        self.token = None
+        self.token: Optional[str] = None
 
     @abc.abstractmethod
-    def refresh(self, request):
+    def refresh(self, request: Request) -> None:
         """Refreshes the access token.
 
         Args:
@@ -62,14 +64,18 @@ class _BaseCredentials(metaclass=abc.ABCMeta):
         # (pylint doesn't recognize that this is abstract)
         raise NotImplementedError("Refresh must be implemented")
 
-    def _apply(self, headers, token=None):
+    def _apply(self, headers: dict[str, str], token: Optional[str] = None):
         """Apply the token to the authentication header.
 
         Args:
-            headers (Mapping): The HTTP request headers.
+            headers (dict[str, str]): The HTTP request headers.
             token (Optional[str]): If specified, overrides the current access
                 token.
         """
-        headers["authorization"] = "Bearer {}".format(
-            _helpers.from_bytes(token or self.token)
-        )
+        if token is not None:
+            value = token
+        elif self.token is not None:
+            value = self.token
+        else:
+            assert False, "token must be set"
+        headers["authorization"] = "Bearer {}".format(_helpers.from_bytes(value))

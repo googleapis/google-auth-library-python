@@ -72,6 +72,7 @@ specific subject using :meth:`~Credentials.with_subject`.
 
 import copy
 import datetime
+from typing import Mapping, Optional, Self, Sequence
 
 from google.auth import _helpers
 from google.auth import _service_account_info
@@ -80,6 +81,7 @@ from google.auth import exceptions
 from google.auth import iam
 from google.auth import jwt
 from google.auth import metrics
+from google.auth.crypt import Signer
 from google.oauth2 import _client
 
 _DEFAULT_TOKEN_LIFETIME_SECS = 3600  # 1 hour in seconds
@@ -129,18 +131,18 @@ class Credentials(
 
     def __init__(
         self,
-        signer,
-        service_account_email,
-        token_uri,
-        scopes=None,
-        default_scopes=None,
-        subject=None,
-        project_id=None,
-        quota_project_id=None,
-        additional_claims=None,
-        always_use_jwt_access=False,
-        universe_domain=credentials.DEFAULT_UNIVERSE_DOMAIN,
-        trust_boundary=None,
+        signer: Signer,
+        service_account_email: str,
+        token_uri: str,
+        scopes: Optional[Sequence[str]] = None,
+        default_scopes: Optional[Sequence[str]] = None,
+        subject: Optional[str] = None,
+        project_id: Optional[str] = None,
+        quota_project_id: Optional[str] = None,
+        additional_claims: Optional[dict[str, str]] = None,
+        always_use_jwt_access: bool = False,
+        universe_domain: Optional[str] = credentials.DEFAULT_UNIVERSE_DOMAIN,
+        trust_boundary: Optional[str] = None,
     ):
         """
         Args:
@@ -225,7 +227,7 @@ class Credentials(
         )
 
     @classmethod
-    def from_service_account_info(cls, info, **kwargs):
+    def from_service_account_info(cls, info: Mapping[str, str], **kwargs) -> Self:
         """Creates a Credentials instance from parsed service account info.
 
         Args:
@@ -281,7 +283,7 @@ class Credentials(
         """
         return True if not self._scopes else False
 
-    def _make_copy(self):
+    def _make_copy(self) -> Self:
         cred = self.__class__(
             self._signer,
             service_account_email=self._service_account_email,
@@ -440,8 +442,10 @@ class Credentials(
             )
 
         if self._use_self_signed_jwt():
+            assert self._jwt_credentials is not None
             self._jwt_credentials.refresh(request)
-            self.token = self._jwt_credentials.token.decode()
+            assert self._jwt_credentials.token is not None
+            self.token = self._jwt_credentials.token
             self.expiry = self._jwt_credentials.expiry
         else:
             assertion = self._make_authorization_grant_assertion()
@@ -473,7 +477,6 @@ class Credentials(
                     self._jwt_credentials is None
                     or self._jwt_credentials._audience != audience
                 ):
-
                     self._jwt_credentials = jwt.Credentials.from_signing_credentials(
                         self, audience
                     )
@@ -567,13 +570,13 @@ class IDTokenCredentials(
 
     def __init__(
         self,
-        signer,
-        service_account_email,
-        token_uri,
-        target_audience,
-        additional_claims=None,
-        quota_project_id=None,
-        universe_domain=credentials.DEFAULT_UNIVERSE_DOMAIN,
+        signer: Signer,
+        service_account_email: str,
+        token_uri: str,
+        target_audience: str,
+        additional_claims: Optional[dict[str, str]] = None,
+        quota_project_id: Optional[str] = None,
+        universe_domain: Optional[str] = credentials.DEFAULT_UNIVERSE_DOMAIN,
     ):
         """
         Args:
@@ -583,7 +586,7 @@ class IDTokenCredentials(
             target_audience (str): The intended audience for these credentials,
                 used when requesting the ID Token. The ID Token's ``aud`` claim
                 will be set to this string.
-            additional_claims (Mapping[str, str]): Any additional claims for
+            additional_claims (dict[str, str]): Any additional claims for
                 the JWT assertion used in the authorization grant.
             quota_project_id (Optional[str]): The project ID used for quota and billing.
             universe_domain (str): The universe domain. The default
@@ -811,7 +814,7 @@ class IDTokenCredentials(
             self._iam_id_token_endpoint,
             self.signer_email,
             self._target_audience,
-            jwt_credentials.token.decode(),
+            jwt_credentials.token,
         )
 
     @_helpers.copy_docstring(credentials.Credentials)
