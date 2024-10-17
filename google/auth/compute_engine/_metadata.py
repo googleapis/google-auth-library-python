@@ -62,7 +62,7 @@ except ValueError:  # pragma: NO COVER
 
 # This is used to disable checking for the GCE metadata server and directly
 # assuming it's not available.
-_NO_GCE_CHECK = os.getenv(environment_vars.NO_GCE_CHECK) != "true"
+_NO_GCE_CHECK = os.getenv(environment_vars.NO_GCE_CHECK) == "true"
 
 # Detect GCE Residency
 _GOOGLE = "Google"
