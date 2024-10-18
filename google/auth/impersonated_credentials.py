@@ -41,11 +41,6 @@ from google.auth import metrics
 
 
 _REFRESH_ERROR = "Unable to acquire impersonated credentials"
-_UNIVERSE_DOMAIN_MATCH_SOURCE_ERROR = (
-    "The universe_domain "
-    "is not supported for impersonated credentials. The "
-    "credential uses the value from source_credentials."
-)
 
 _DEFAULT_TOKEN_LIFETIME_SECS = 3600  # 1 hour in seconds
 
@@ -180,7 +175,6 @@ class Credentials(
         lifetime=_DEFAULT_TOKEN_LIFETIME_SECS,
         quota_project_id=None,
         iam_endpoint_override=None,
-        universe_domain=None,
     ):
         """
         Args:
@@ -227,11 +221,14 @@ class Credentials(
                 and self._source_credentials._always_use_jwt_access
             ):
                 self._source_credentials._create_self_signed_jwt(None)
+<<<<<<< HEAD
         if (
             universe_domain is not None
             and universe_domain != self._source_credentials.universe_domain
         ):
             raise exceptions.InvalidOperation(_UNIVERSE_DOMAIN_MATCH_SOURCE_ERROR)
+=======
+>>>>>>> 273a733 (fix: test updates)
         self._universe_domain = source_credentials.universe_domain
         self._target_principal = target_principal
         self._target_scopes = target_scopes
@@ -289,15 +286,12 @@ class Credentials(
             iam_endpoint_override=self._iam_endpoint_override,
         )
 
-    def get_iam_sign_endpoint(self):
-        return iam._IAM_SIGN_ENDPOINT.format(
-            self.universe_domain, self._target_principal
-        )
-
     def sign_bytes(self, message):
         from google.auth.transport.requests import AuthorizedSession
 
-        iam_sign_endpoint = self.get_iam_sign_endpoint()
+        iam_sign_endpoint = iam._IAM_SIGN_ENDPOINT.format(
+            self.universe_domain, self._target_principal
+        )
 
         body = {
             "payload": base64.b64encode(message).decode("utf-8"),
