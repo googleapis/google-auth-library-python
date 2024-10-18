@@ -496,7 +496,7 @@ class TestIDTokenCredentials(object):
             content_type="application/json",
             json={},
         )
-        
+
         # mock token for credentials
         responses.add(
             responses.GET,

@@ -221,7 +221,7 @@ class Credentials(
                 and self._source_credentials._always_use_jwt_access
             ):
                 self._source_credentials._create_self_signed_jwt(None)
-                
+
         self._universe_domain = source_credentials.universe_domain
         self._target_principal = target_principal
         self._target_scopes = target_scopes
