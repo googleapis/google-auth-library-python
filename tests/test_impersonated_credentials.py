@@ -124,7 +124,7 @@ class TestImpersonatedCredentials(object):
         lifetime=LIFETIME,
         target_principal=TARGET_PRINCIPAL,
         iam_endpoint_override=None,
-        universe_domain=None
+        universe_domain=None,
     ):
 
         return Credentials(
@@ -147,26 +147,30 @@ class TestImpersonatedCredentials(object):
             "credential_type": "impersonated credentials",
             "principal": "impersonated@project.iam.gserviceaccount.com",
         }
-    
+
     def test_explicit_universe_domain_matching_source(self):
         source_credentials = service_account.Credentials(
             SIGNER, "some@email.com", TOKEN_URI, universe_domain="foo.bar"
         )
-        credentials = self.make_credentials(universe_domain="foo.bar", source_credentials=source_credentials)
+        credentials = self.make_credentials(
+            universe_domain="foo.bar", source_credentials=source_credentials
+        )
         assert credentials.universe_domain == "foo.bar"
-    
+
     def test_universe_domain_from_source(self):
         source_credentials = service_account.Credentials(
             SIGNER, "some@email.com", TOKEN_URI, universe_domain="foo.bar"
         )
         credentials = self.make_credentials(source_credentials=source_credentials)
         assert credentials.universe_domain == "foo.bar"
-        
+
     def test_explicit_universe_domain_not_matching_source(self):
         with pytest.raises(exceptions.InvalidOperation) as excinfo:
             self.make_credentials(universe_domain="foo.bar")
-            
-        assert  excinfo.match(impersonated_credentials._UNIVERSE_DOMAIN_MATCH_SOURCE_ERROR)  
+
+        assert excinfo.match(
+            impersonated_credentials._UNIVERSE_DOMAIN_MATCH_SOURCE_ERROR
+        )
 
     def test__make_copy_get_cred_info(self):
         credentials = self.make_credentials()
@@ -412,20 +416,28 @@ class TestImpersonatedCredentials(object):
     def test_signer_email(self):
         credentials = self.make_credentials(target_principal=self.TARGET_PRINCIPAL)
         assert credentials.signer_email == self.TARGET_PRINCIPAL
-        
+
     def test_sign_endpoint(self):
         source_credentials = service_account.Credentials(
             SIGNER, "some@email.com", TOKEN_URI, universe_domain="foo.bar"
         )
         credentials = self.make_credentials(source_credentials=source_credentials)
-        assert credentials.get_iam_sign_endpoint() == "https://iamcredentials.foo.bar/v1/projects/-/serviceAccounts/impersonated@project.iam.gserviceaccount.com:signBlob"
-    
+        assert (
+            credentials.get_iam_sign_endpoint()
+            == "https://iamcredentials.foo.bar/v1/projects/-/serviceAccounts/impersonated@project.iam.gserviceaccount.com:signBlob"
+        )
+
     def test_sign_endpoint_explicit_universe_domain(self):
         source_credentials = service_account.Credentials(
             SIGNER, "some@email.com", TOKEN_URI, universe_domain="foo.bar"
         )
-        credentials = self.make_credentials(universe_domain="foo.bar", source_credentials=source_credentials)
-        assert credentials.get_iam_sign_endpoint() == "https://iamcredentials.foo.bar/v1/projects/-/serviceAccounts/impersonated@project.iam.gserviceaccount.com:signBlob"
+        credentials = self.make_credentials(
+            universe_domain="foo.bar", source_credentials=source_credentials
+        )
+        assert (
+            credentials.get_iam_sign_endpoint()
+            == "https://iamcredentials.foo.bar/v1/projects/-/serviceAccounts/impersonated@project.iam.gserviceaccount.com:signBlob"
+        )
 
     def test_service_account_email(self):
         credentials = self.make_credentials(target_principal=self.TARGET_PRINCIPAL)

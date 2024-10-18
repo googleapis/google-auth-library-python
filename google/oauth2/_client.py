@@ -319,7 +319,12 @@ def jwt_grant(request, token_uri, assertion, can_retry=True):
 
 
 def call_iam_generate_id_token_endpoint(
-request, iam_id_token_endpoint, signer_email, audience, access_token, universe_domain
+    request,
+    iam_id_token_endpoint,
+    signer_email,
+    audience,
+    access_token,
+    universe_domain,
 ):
     """Call iam.generateIdToken endpoint to get ID token.
 
