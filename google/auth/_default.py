@@ -21,10 +21,12 @@ import io
 import json
 import logging
 import os
+from typing import Optional, Sequence
 import warnings
 
 from google.auth import environment_vars
 from google.auth import exceptions
+from google.auth.credentials import Credentials
 import google.auth.transport._http_client
 
 _LOGGER = logging.getLogger(__name__)
@@ -77,8 +79,12 @@ def _warn_about_problematic_credentials(credentials):
 
 
 def load_credentials_from_file(
-    filename, scopes=None, default_scopes=None, quota_project_id=None, request=None
-):
+    filename: str,
+    scopes: Optional[Sequence[str]] = None,
+    default_scopes: Optional[Sequence[str]] = None,
+    quota_project_id: Optional[str] = None,
+    request: Optional[google.auth.transport.Request] = None,
+) -> tuple[Credentials, Optional[str]]:
     """Loads Google credentials from a file.
 
     The credentials file must be a service account key, stored authorized
@@ -173,7 +179,12 @@ def load_credentials_from_dict(
 
 
 def _load_credentials_from_info(
-    filename, info, scopes, default_scopes, quota_project_id, request
+    filename: str,
+    info,
+    scopes: Optional[Sequence[str]],
+    default_scopes: Optional[Sequence[str]],
+    quota_project_id: Optional[str],
+    request: Optional[google.auth.transport.Request],
 ):
     from google.auth.credentials import CredentialsWithQuotaProject
 
@@ -512,8 +523,8 @@ def _get_gdch_service_account_credentials(filename, info):
     from google.oauth2 import gdch_credentials
 
     try:
-        credentials = gdch_credentials.ServiceAccountCredentials.from_service_account_info(
-            info
+        credentials = (
+            gdch_credentials.ServiceAccountCredentials.from_service_account_info(info)
         )
     except ValueError as caught_exc:
         msg = "Failed to load GDCH service account credentials from {}".format(filename)
@@ -544,7 +555,12 @@ def _apply_quota_project_id(credentials, quota_project_id):
     return credentials
 
 
-def default(scopes=None, request=None, quota_project_id=None, default_scopes=None):
+def default(
+    scopes: Optional[Sequence[str]] = None,
+    request: Optional[google.auth.transport.Request] = None,
+    quota_project_id: Optional[str] = None,
+    default_scopes: Optional[Sequence[str]] = None,
+) -> tuple[Credentials, Optional[str]]:
     """Gets the default credentials for the current environment.
 
     `Application Default Credentials`_ provides an easy way to obtain

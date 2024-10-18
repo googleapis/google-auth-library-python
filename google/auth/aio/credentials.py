@@ -15,13 +15,12 @@
 
 """Interfaces for asynchronous credentials."""
 
-
 from google.auth import _helpers
 from google.auth import exceptions
-from google.auth._credentials_base import _BaseCredentials
+from google.auth._credentials_base import BaseCredentials
 
 
-class Credentials(_BaseCredentials):
+class Credentials(BaseCredentials):
     """Base class for all asynchronous credentials.
 
     All credentials have a :attr:`token` that is used for authentication and
