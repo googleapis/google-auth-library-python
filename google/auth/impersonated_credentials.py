@@ -221,14 +221,7 @@ class Credentials(
                 and self._source_credentials._always_use_jwt_access
             ):
                 self._source_credentials._create_self_signed_jwt(None)
-<<<<<<< HEAD
-        if (
-            universe_domain is not None
-            and universe_domain != self._source_credentials.universe_domain
-        ):
-            raise exceptions.InvalidOperation(_UNIVERSE_DOMAIN_MATCH_SOURCE_ERROR)
-=======
->>>>>>> 273a733 (fix: test updates)
+                
         self._universe_domain = source_credentials.universe_domain
         self._target_principal = target_principal
         self._target_scopes = target_scopes
