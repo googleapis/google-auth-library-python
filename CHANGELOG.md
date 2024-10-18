@@ -4,6 +4,19 @@
 
 [1]: https://pypi.org/project/google-auth/#history
 
+## [2.36.0](https://github.com/googleapis/google-auth-library-python/compare/v2.35.0...v2.36.0) (2024-10-18)
+
+
+### Features
+
+* IAM signblob retries ([#1600](https://github.com/googleapis/google-auth-library-python/issues/1600)) ([484c8db](https://github.com/googleapis/google-auth-library-python/commit/484c8db151690a4ae7b6b0ae38db0a8ede88df69))
+* Support External Account Authorized User as a Source Credential for impersonated credentials in ADC ([#1608](https://github.com/googleapis/google-auth-library-python/issues/1608)) ([875796c](https://github.com/googleapis/google-auth-library-python/commit/875796cbace847797898bc506eac188edbaa3192))
+
+
+### Bug Fixes
+
+* Update secret ([#1611](https://github.com/googleapis/google-auth-library-python/issues/1611)) ([f070de0](https://github.com/googleapis/google-auth-library-python/commit/f070de06492a5eed3fab54313272acb5f603193a))
+
 ## [2.35.0](https://github.com/googleapis/google-auth-library-python/compare/v2.34.0...v2.35.0) (2024-09-17)
 
 
