@@ -146,6 +146,13 @@ class TestImpersonatedCredentials(object):
             "principal": "impersonated@project.iam.gserviceaccount.com",
         }
 
+    def test_universe_domain_matching_source(self):
+        source_credentials = service_account.Credentials(
+            SIGNER, "some@email.com", TOKEN_URI, universe_domain="foo.bar"
+        )
+        credentials = self.make_credentials(source_credentials=source_credentials)
+        assert credentials.universe_domain == "foo.bar"
+
     def test__make_copy_get_cred_info(self):
         credentials = self.make_credentials()
         credentials._cred_file_path = "/path/to/file"
@@ -412,11 +419,19 @@ class TestImpersonatedCredentials(object):
         request.return_value = response
 
         credentials.refresh(request)
-
         assert credentials.valid
         assert not credentials.expired
 
         signature = credentials.sign_bytes(b"signed bytes")
+        mock_authorizedsession_sign.assert_called_with(
+            mock.ANY,
+            "POST",
+            "https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/impersonated@project.iam.gserviceaccount.com:signBlob",
+            None,
+            json={"payload": "c2lnbmVkIGJ5dGVz", "delegates": []},
+            headers={"Content-Type": "application/json"},
+        )
+
         assert signature == b"signature"
 
     def test_sign_bytes_failure(self):
