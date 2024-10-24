@@ -4,6 +4,23 @@
 
 [1]: https://pypi.org/project/google-auth/#history
 
+## [2.36.0](https://github.com/googleapis/google-auth-library-python/compare/v2.35.0...v2.36.0) (2024-10-24)
+
+
+### Features
+
+* IAM signblob retries ([#1600](https://github.com/googleapis/google-auth-library-python/issues/1600)) ([484c8db](https://github.com/googleapis/google-auth-library-python/commit/484c8db151690a4ae7b6b0ae38db0a8ede88df69))
+* Making iam endpoint universe-aware ([#1604](https://github.com/googleapis/google-auth-library-python/issues/1604)) ([16c728d](https://github.com/googleapis/google-auth-library-python/commit/16c728d30adb36e19aabe34f0ed5a95152d9a135))
+* Support External Account Authorized User as a Source Credential for impersonated credentials in ADC ([#1608](https://github.com/googleapis/google-auth-library-python/issues/1608)) ([875796c](https://github.com/googleapis/google-auth-library-python/commit/875796cbace847797898bc506eac188edbaa3192))
+
+
+### Bug Fixes
+
+* Change universe_domain to universe-domain ([#1613](https://github.com/googleapis/google-auth-library-python/issues/1613)) ([168fcc6](https://github.com/googleapis/google-auth-library-python/commit/168fcc63593cb1da018b86070e20a576d5b93b7b))
+* Revert templates for iam endpoints ([#1614](https://github.com/googleapis/google-auth-library-python/issues/1614)) ([0a4363a](https://github.com/googleapis/google-auth-library-python/commit/0a4363a556455a29ececc1339385826e26459c65))
+* Update secret ([#1611](https://github.com/googleapis/google-auth-library-python/issues/1611)) ([f070de0](https://github.com/googleapis/google-auth-library-python/commit/f070de06492a5eed3fab54313272acb5f603193a))
+* Update secret ([#1617](https://github.com/googleapis/google-auth-library-python/issues/1617)) ([10f42a7](https://github.com/googleapis/google-auth-library-python/commit/10f42a70e6089f1eecd060893632dd0ef40423f7))
+
 ## [2.35.0](https://github.com/googleapis/google-auth-library-python/compare/v2.34.0...v2.35.0) (2024-09-17)
 
 
