@@ -137,9 +137,10 @@ class Request(transport.Request):
     .. automethod:: __call__
     """
 
-    def __init__(self, session=None):
+    def __init__(self, session=None, timeout=_DEFAULT_TIMEOUT):
         if not session:
             session = requests.Session()
+        self.timeout = timeout
 
         self.session = session
 
@@ -184,6 +185,7 @@ class Request(transport.Request):
         """
         try:
             _LOGGER.debug("Making request: %s %s", method, url)
+            timeout = timeout if timeout != _DEFAULT_TIMEOUT else self.timeout
             response = self.session.request(
                 method, url, data=body, headers=headers, timeout=timeout, **kwargs
             )
