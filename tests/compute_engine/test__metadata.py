@@ -125,13 +125,15 @@ def test_ping_success_retry(mock_metrics_header_value):
     assert request.call_count == 2
 
 
-def test_ping_failure_bad_flavor():
+@mock.patch("time.sleep", return_value=None)
+def test_ping_failure_bad_flavor(mock_sleep):
     request = make_request("", headers={_metadata._METADATA_FLAVOR_HEADER: "meep"})
 
     assert not _metadata.ping(request)
 
 
-def test_ping_failure_connection_failed():
+@mock.patch("time.sleep", return_value=None)
+def test_ping_failure_connection_failed(mock_sleep):
     request = make_request("")
     request.side_effect = exceptions.TransportError()
 
@@ -194,7 +196,8 @@ def test_get_success_json_content_type_charset():
     assert result[key] == value
 
 
-def test_get_success_retry():
+@mock.patch("time.sleep", return_value=None)
+def test_get_success_retry(mock_sleep):
     key, value = "foo", "bar"
 
     data = json.dumps({key: value})
@@ -310,7 +313,8 @@ def test_get_success_custom_root_old_variable():
     )
 
 
-def test_get_failure():
+@mock.patch("time.sleep", return_value=None)
+def test_get_failure(mock_sleep):
     request = make_request("Metadata error", status=http_client.NOT_FOUND)
 
     with pytest.raises(exceptions.TransportError) as excinfo:
@@ -337,7 +341,8 @@ def test_get_return_none_for_not_found_error():
     )
 
 
-def test_get_failure_connection_failed():
+@mock.patch("time.sleep", return_value=None)
+def test_get_failure_connection_failed(mock_sleep):
     request = make_request("")
     request.side_effect = exceptions.TransportError()
 
@@ -392,7 +397,7 @@ def test_get_universe_domain_success():
 
     request.assert_called_once_with(
         method="GET",
-        url=_metadata._METADATA_ROOT + "universe/universe_domain",
+        url=_metadata._METADATA_ROOT + "universe/universe-domain",
         headers=_metadata._METADATA_HEADERS,
     )
     assert universe_domain == "fake_universe_domain"
@@ -405,7 +410,7 @@ def test_get_universe_domain_success_empty_response():
 
     request.assert_called_once_with(
         method="GET",
-        url=_metadata._METADATA_ROOT + "universe/universe_domain",
+        url=_metadata._METADATA_ROOT + "universe/universe-domain",
         headers=_metadata._METADATA_HEADERS,
     )
     assert universe_domain == "googleapis.com"
@@ -420,10 +425,78 @@ def test_get_universe_domain_not_found():
 
     request.assert_called_once_with(
         method="GET",
-        url=_metadata._METADATA_ROOT + "universe/universe_domain",
+        url=_metadata._METADATA_ROOT + "universe/universe-domain",
         headers=_metadata._METADATA_HEADERS,
     )
     assert universe_domain == "googleapis.com"
+
+
+def test_get_universe_domain_retryable_error_failure():
+    # Test that if the universe domain endpoint returns a retryable error
+    # we should retry.
+    #
+    # In this case, the error persists, and we still fail after retrying.
+    request = make_request("too many requests", status=http_client.TOO_MANY_REQUESTS)
+
+    with pytest.raises(exceptions.TransportError) as excinfo:
+        _metadata.get_universe_domain(request)
+
+    assert excinfo.match(r"Compute Engine Metadata server unavailable")
+
+    request.assert_called_with(
+        method="GET",
+        url=_metadata._METADATA_ROOT + "universe/universe-domain",
+        headers=_metadata._METADATA_HEADERS,
+    )
+    assert request.call_count == 5
+
+
+def test_get_universe_domain_retryable_error_success():
+    # Test that if the universe domain endpoint returns a retryable error
+    # we should retry.
+    #
+    # In this case, the error is temporary, and we succeed after retrying.
+    request_error = make_request(
+        "too many requests", status=http_client.TOO_MANY_REQUESTS
+    )
+    request_ok = make_request(
+        "fake_universe_domain", headers={"content-type": "text/plain"}
+    )
+
+    class _RequestErrorOnce:
+        """This class forwards the request parameters to `request_error` once.
+
+        All subsequent calls are forwarded to `request_ok`.
+        """
+
+        def __init__(self, request_error, request_ok):
+            self._request_error = request_error
+            self._request_ok = request_ok
+            self._call_index = 0
+
+        def request(self, *args, **kwargs):
+            if self._call_index == 0:
+                self._call_index += 1
+                return self._request_error(*args, **kwargs)
+
+            return self._request_ok(*args, **kwargs)
+
+    request = _RequestErrorOnce(request_error, request_ok).request
+
+    universe_domain = _metadata.get_universe_domain(request)
+
+    request_error.assert_called_once_with(
+        method="GET",
+        url=_metadata._METADATA_ROOT + "universe/universe-domain",
+        headers=_metadata._METADATA_HEADERS,
+    )
+    request_ok.assert_called_once_with(
+        method="GET",
+        url=_metadata._METADATA_ROOT + "universe/universe-domain",
+        headers=_metadata._METADATA_HEADERS,
+    )
+
+    assert universe_domain == "fake_universe_domain"
 
 
 def test_get_universe_domain_other_error():
@@ -438,7 +511,7 @@ def test_get_universe_domain_other_error():
 
     request.assert_called_once_with(
         method="GET",
-        url=_metadata._METADATA_ROOT + "universe/universe_domain",
+        url=_metadata._METADATA_ROOT + "universe/universe-domain",
         headers=_metadata._METADATA_HEADERS,
     )
 
