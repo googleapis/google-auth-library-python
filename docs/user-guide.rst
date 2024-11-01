@@ -66,7 +66,14 @@ Service account private key files
 +++++++++++++++++++++++++++++++++
 
 A service account private key file can be used to obtain credentials for a
-service account. You can create a private key using the `Credentials page of the
+service account. But it is **not recommended** to download a service account key. If you do need 
+to use service accounts, you can do this instead:
+
+* **local development**: Use :ref:`Impersonated Credentials<impersonation>` with source credential as User Account
+* **google cloud production environment**: Use :ref:`Attached Service Account<MDS>`.
+* **non-google cloud production environment**: Use :ref:`Workload Identity Federation<wlif>`.
+
+If none of the above alternatives work for you, wou can create a private key using the `Credentials page of the
 Google Cloud Console`_. Once you have a private key you can either obtain
 credentials one of three ways:
 
@@ -112,6 +119,8 @@ credentials one of three ways:
 
 .. _Credentials page of the Google Cloud Console:
     https://console.cloud.google.com/apis/credentials
+
+.. _MDS:
 
 Compute Engine, Container Engine, and the App Engine flexible environment
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -230,6 +239,8 @@ You can also use :class:`google_auth_oauthlib.flow.Flow` to perform the OAuth
     https://pypi.python.org/pypi/google-auth-oauthlib
 .. _requests-oauthlib:
     https://requests-oauthlib.readthedocs.io/en/latest/
+
+.. _wlif:
 
 External credentials (Workload identity federation)
 +++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -976,12 +987,14 @@ configuration. It is not recommended to use a credential configuration that you
 did not generate with the gcloud CLI unless you verify that the URL fields point
 to a googleapis.com domain.
 
+.. _impersonation:
 
 Impersonated credentials
 ++++++++++++++++++++++++
 
 Impersonated Credentials allows one set of credentials issued to a user or service account
-to impersonate another. The source credentials must be granted
+to impersonate a service account. Impersonation is the preferred way of using service account for
+local development over downloading the service account key. The source credentials must be granted
 the "Service Account Token Creator" IAM role. ::
 
     from google.auth import impersonated_credentials
@@ -1005,6 +1018,11 @@ the "Service Account Token Creator" IAM role. ::
 In the example above `source_credentials` does not have direct access to list buckets
 in the target project. Using `ImpersonatedCredentials` will allow the source_credentials
 to assume the identity of a target_principal that does have access.
+
+It is possible to provide a delegation chain through `delegates` paramter while
+initializing the impersonated credential. Refer `create short lived credentials delegated`_ for more details on delegation chain.
+
+.. _create short lived credentials delegated: https://cloud.google.com/iam/docs/create-short-lived-credentials-delegated
 
 
 Downscoped credentials
