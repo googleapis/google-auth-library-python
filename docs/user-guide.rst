@@ -62,66 +62,6 @@ store service account private keys locally.
 .. _Google Cloud SDK: https://cloud.google.com/sdk
 
 
-Service account private key files
-+++++++++++++++++++++++++++++++++
-
-A service account private key file can be used to obtain credentials for a
-service account. But it is **not recommended** to download a service account key. If you do need 
-to use service accounts, you can do this instead:
-
-* **local development**: Use :ref:`Impersonated Credentials<impersonation>` with source credential as User Account
-* **google cloud production environment**: Use :ref:`Attached Service Account<MDS>`.
-* **non-google cloud production environment**: Use :ref:`Workload Identity Federation<wlif>`.
-
-If none of the above alternatives work for you, wou can create a private key using the `Credentials page of the
-Google Cloud Console`_. Once you have a private key you can either obtain
-credentials one of three ways:
-
-1. Set the ``GOOGLE_APPLICATION_CREDENTIALS`` environment variable to the full
-   path to your service account private key file
-
-   .. code-block:: bash
-
-        $ export GOOGLE_APPLICATION_CREDENTIALS=/path/to/key.json
-
-   Then, use :ref:`application default credentials <application-default>`.
-   :func:`default` checks for the ``GOOGLE_APPLICATION_CREDENTIALS``
-   environment variable before all other checks, so this will always use the
-   credentials you explicitly specify.
-
-2. Use :meth:`service_account.Credentials.from_service_account_file
-   <google.oauth2.service_account.Credentials.from_service_account_file>`::
-
-        from google.oauth2 import service_account
-
-        credentials = service_account.Credentials.from_service_account_file(
-            '/path/to/key.json')
-
-        scoped_credentials = credentials.with_scopes(
-            ['https://www.googleapis.com/auth/cloud-platform'])
-
-3. Use :meth:`service_account.Credentials.from_service_account_info
-   <google.oauth2.service_account.Credentials.from_service_account_info>`::
-
-        import json
-
-        from google.oauth2 import service_account
-
-        json_acct_info = json.loads(function_to_get_json_creds())
-        credentials = service_account.Credentials.from_service_account_info(
-            json_acct_info)
-
-        scoped_credentials = credentials.with_scopes(
-            ['https://www.googleapis.com/auth/cloud-platform'])
-
-.. warning:: Private keys must be kept secret. If you expose your private key it
-    is recommended to revoke it immediately from the Google Cloud Console.
-
-.. _Credentials page of the Google Cloud Console:
-    https://console.cloud.google.com/apis/credentials
-
-.. _MDS:
-
 Compute Engine, Container Engine, and the App Engine flexible environment
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -240,7 +180,6 @@ You can also use :class:`google_auth_oauthlib.flow.Flow` to perform the OAuth
 .. _requests-oauthlib:
     https://requests-oauthlib.readthedocs.io/en/latest/
 
-.. _wlif:
 
 External credentials (Workload identity federation)
 +++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -987,7 +926,6 @@ configuration. It is not recommended to use a credential configuration that you
 did not generate with the gcloud CLI unless you verify that the URL fields point
 to a googleapis.com domain.
 
-.. _impersonation:
 
 Impersonated credentials
 ++++++++++++++++++++++++
@@ -1023,6 +961,58 @@ It is possible to provide a delegation chain through `delegates` paramter while
 initializing the impersonated credential. Refer `create short lived credentials delegated`_ for more details on delegation chain.
 
 .. _create short lived credentials delegated: https://cloud.google.com/iam/docs/create-short-lived-credentials-delegated
+
+
+Service account private key files
++++++++++++++++++++++++++++++++++
+
+A service account private key file can be used to obtain credentials for a service account. If you are not
+able to use any of the authentication methods listed above, you can create a private key using `Credentials page of the
+Google Cloud Console`_. Once you have a private key you can obtain
+credentials one of three ways:
+
+1. Set the ``GOOGLE_APPLICATION_CREDENTIALS`` environment variable to the full
+   path to your service account private key file
+
+   .. code-block:: bash
+
+        $ export GOOGLE_APPLICATION_CREDENTIALS=/path/to/key.json
+
+   Then, use :ref:`application default credentials <application-default>`.
+   :func:`default` checks for the ``GOOGLE_APPLICATION_CREDENTIALS``
+   environment variable before all other checks, so this will always use the
+   credentials you explicitly specify.
+
+2. Use :meth:`service_account.Credentials.from_service_account_file
+   <google.oauth2.service_account.Credentials.from_service_account_file>`::
+
+        from google.oauth2 import service_account
+
+        credentials = service_account.Credentials.from_service_account_file(
+            '/path/to/key.json')
+
+        scoped_credentials = credentials.with_scopes(
+            ['https://www.googleapis.com/auth/cloud-platform'])
+
+3. Use :meth:`service_account.Credentials.from_service_account_info
+   <google.oauth2.service_account.Credentials.from_service_account_info>`::
+
+        import json
+
+        from google.oauth2 import service_account
+
+        json_acct_info = json.loads(function_to_get_json_creds())
+        credentials = service_account.Credentials.from_service_account_info(
+            json_acct_info)
+
+        scoped_credentials = credentials.with_scopes(
+            ['https://www.googleapis.com/auth/cloud-platform'])
+
+.. warning:: Private keys must be kept secret. If you expose your private key it
+    is recommended to revoke it immediately from the Google Cloud Console.
+
+.. _Credentials page of the Google Cloud Console:
+    https://console.cloud.google.com/apis/credentials
 
 
 Downscoped credentials
