@@ -30,6 +30,7 @@ import urllib
 
 from google.auth import _exponential_backoff
 from google.auth import _helpers
+from google.auth import credentials
 from google.auth import exceptions
 from google.auth import jwt
 from google.auth import metrics
@@ -324,7 +325,7 @@ def call_iam_generate_id_token_endpoint(
     signer_email,
     audience,
     access_token,
-    universe_domain,
+    universe_domain=credentials.DEFAULT_UNIVERSE_DOMAIN,
 ):
     """Call iam.generateIdToken endpoint to get ID token.
 
@@ -344,7 +345,9 @@ def call_iam_generate_id_token_endpoint(
 
     response_data = _token_endpoint_request(
         request,
-        iam_id_token_endpoint.format(universe_domain, signer_email),
+        iam_id_token_endpoint.replace(
+            credentials.DEFAULT_UNIVERSE_DOMAIN, universe_domain
+        ).format(signer_email),
         body,
         access_token=access_token,
         use_json=True,
