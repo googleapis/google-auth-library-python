@@ -49,7 +49,12 @@ _GOOGLE_OAUTH2_TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token"
 
 
 def _make_iam_token_request(
-    request, principal, headers, body, universe_domain, iam_endpoint_override=None
+    request,
+    principal,
+    headers,
+    body,
+    universe_domain=credentials.DEFAULT_UNIVERSE_DOMAIN,
+    iam_endpoint_override=None,
 ):
     """Makes a request to the Google Cloud IAM service for an access token.
     Args:
@@ -275,18 +280,6 @@ class Credentials(
             metrics.API_CLIENT_HEADER: metrics.token_request_access_token_impersonate(),
         }
 
-        # Apply the source credentials authentication info.
-        self._source_credentials.apply(headers)
-
-        self.token, self.expiry = _make_iam_token_request(
-            request=request,
-            principal=self._target_principal,
-            headers=headers,
-            body=body,
-            universe_domain=self.universe_domain,
-            iam_endpoint_override=self._iam_endpoint_override,
-        )
-
         #  If a subject is specified a domain-wide delegation auth-flow is initiated 
         #  to impersonate as the provided subject (user).
         if self._subject:
@@ -317,6 +310,20 @@ class Credentials(
             self.token, self.expiry, _ = _client.jwt_grant(
                 request, _GOOGLE_OAUTH2_TOKEN_ENDPOINT, assertion
             )
+            
+            return
+
+        # Apply the source credentials authentication info.
+        self._source_credentials.apply(headers)
+
+        self.token, self.expiry = _make_iam_token_request(
+            request=request,
+            principal=self._target_principal,
+            headers=headers,
+            body=body,
+            universe_domain=self.universe_domain,
+            iam_endpoint_override=self._iam_endpoint_override,
+        )
 
     def sign_bytes(self, message):
         from google.auth.transport.requests import AuthorizedSession
