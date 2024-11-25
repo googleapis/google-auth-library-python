@@ -58,6 +58,7 @@ library like `CacheControl`_ to create a cache-aware
 import http.client as http_client
 import json
 import os
+import jwt as jwt_lib
 
 from google.auth import environment_vars
 from google.auth import exceptions
@@ -109,6 +110,7 @@ def verify_token(
     audience=None,
     certs_url=_GOOGLE_OAUTH2_CERTS_URL,
     clock_skew_in_seconds=0,
+    is_jwk_key=False,
 ):
     """Verifies an ID token and returns the decoded token.
 
@@ -127,14 +129,18 @@ def verify_token(
     Returns:
         Mapping[str, Any]: The decoded token.
     """
-    certs = _fetch_certs(request, certs_url)
-
-    return jwt.decode(
-        id_token,
-        certs=certs,
-        audience=audience,
-        clock_skew_in_seconds=clock_skew_in_seconds,
-    )
+    if is_jwk_key:
+        jwks_client = jwt_lib.PyJWKClient(certs_url)
+        signing_key = jwks_client.get_signing_key_from_jwt(id_token)
+        return jwt_lib.decode(id_token, signing_key.key, algorithms=[signing_key.algorithm_name], audience=audience)
+    else:
+        certs = _fetch_certs(request, certs_url)
+        return jwt.decode(
+            id_token,
+            certs=certs,
+            audience=audience,
+            clock_skew_in_seconds=clock_skew_in_seconds,
+        )
 
 
 def verify_oauth2_token(id_token, request, audience=None, clock_skew_in_seconds=0):

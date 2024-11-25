@@ -48,6 +48,7 @@ except ImportError:  # pragma: NO COVER
 import copy
 import datetime
 import json
+import jwt as jwt_lib
 import urllib
 
 import cachetools
