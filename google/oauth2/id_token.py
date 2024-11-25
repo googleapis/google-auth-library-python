@@ -91,8 +91,7 @@ def _fetch_certs(request, certs_url):
         certs_url (str): The certificate endpoint URL.
 
     Returns:
-        Mapping[str, str] | Mapping[str, list]: A mapping of public key ID to x.509 certificate
-            data.
+        Mapping[str, str] | Mapping[str, list]: A mapping of public keys in x.509 or JWK spec.
     """
     response = request(certs_url, method="GET")
 
