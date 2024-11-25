@@ -58,7 +58,12 @@ library like `CacheControl`_ to create a cache-aware
 import http.client as http_client
 import json
 import os
-import jwt as jwt_lib
+try:
+    import jwt as jwt_lib
+except ImportError as caught_exc:  # pragma: NO COVER
+    raise ImportError(
+        "The pyjwt library is not installed from please install the pyjwt package to use the jwk certs format."
+    ) from caught_exc
 
 from google.auth import environment_vars
 from google.auth import exceptions
