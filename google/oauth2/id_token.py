@@ -58,8 +58,9 @@ library like `CacheControl`_ to create a cache-aware
 import http.client as http_client
 import json
 import os
+
 try:
-    import jwt as jwt_lib
+    import jwt as jwt_lib  # type: ignore
 except ImportError as caught_exc:  # pragma: NO COVER
     raise ImportError(
         "The pyjwt library is not installed from please install the pyjwt package to use the jwk certs format."
@@ -136,7 +137,12 @@ def verify_token(
     if "keys" in certs:
         jwks_client = jwt_lib.PyJWKClient(certs_url)
         signing_key = jwks_client.get_signing_key_from_jwt(id_token)
-        return jwt_lib.decode(id_token, signing_key.key, algorithms=[signing_key.algorithm_name], audience=audience)
+        return jwt_lib.decode(
+            id_token,
+            signing_key.key,
+            algorithms=[signing_key.algorithm_name],
+            audience=audience,
+        )
     else:
         return jwt.decode(
             id_token,

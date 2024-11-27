@@ -77,31 +77,21 @@ def test_verify_token(_fetch_certs, decode):
         clock_skew_in_seconds=0,
     )
 
+
 @mock.patch("google.oauth2.id_token._fetch_certs", autospec=True)
 @mock.patch("jwt.PyJWKClient", autospec=True)
 @mock.patch("jwt.decode", autospec=True)
 def test_verify_token_jwk(decode, py_jwk, _fetch_certs):
-    certs_url="abc123"
-    data = {
-        "keys": [
-            {
-        "n": "o",
-        "e": "AQAB",
-        "alg": "RS256",
-        "kid": "d",
-        "kty": "RSA",
-        "use": "sig"
-            },
-        ]
-    }
+    certs_url = "abc123"
+    data = {"keys": [{"alg": "RS256"}]}
     _fetch_certs.return_value = data
-    result = id_token.verify_token(mock.sentinel.token, mock.sentinel.request, certs_url=certs_url)
+    result = id_token.verify_token(
+        mock.sentinel.token, mock.sentinel.request, certs_url=certs_url
+    )
     assert result == decode.return_value
     py_jwk.assert_called_once_with(certs_url)
     signing_key = py_jwk.return_value.get_signing_key_from_jwt
-    _fetch_certs.assert_called_once_with(
-        mock.sentinel.request, certs_url,
-    )
+    _fetch_certs.assert_called_once_with(mock.sentinel.request, certs_url)
     signing_key.assert_called_once_with(mock.sentinel.token)
     decode.assert_called_once_with(
         mock.sentinel.token,
