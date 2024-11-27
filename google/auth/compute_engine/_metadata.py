@@ -208,8 +208,9 @@ def get(
             response = request(url=url, method="GET", headers=headers_to_use)
             if response.status in transport.DEFAULT_RETRYABLE_STATUS_CODES:
                 raise exceptions.TransportError(
-                    f"Compute Engine Metadata server unavailable. "
-                    f"Response status: {response.status}",
+                    "Compute Engine Metadata server unavailable. "
+                    "Response status: {}; Response:\n{}".format(
+                         response.status, response.data),
                     response,
                     retryable=True,
                 )
