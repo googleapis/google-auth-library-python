@@ -210,7 +210,8 @@ def get(
                 raise exceptions.TransportError(
                     "Compute Engine Metadata server unavailable. "
                     "Response status: {}; Response:\n{}".format(
-                         response.status, response.data),
+                         response.status, response.data
+                    ),
                     response,
                     retryable=True,
                 )
