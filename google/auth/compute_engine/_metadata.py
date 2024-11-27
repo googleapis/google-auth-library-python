@@ -207,14 +207,12 @@ def get(
         try:
             response = request(url=url, method="GET", headers=headers_to_use)
             if response.status in transport.DEFAULT_RETRYABLE_STATUS_CODES:
-                _LOGGER.warning(
-                    "Compute Engine Metadata server unavailable on "
-                    "attempt %s of %s. Response status: %s",
-                    attempt,
-                    retry_count,
-                    response.status,
+                raise exceptions.TransportError(
+                    f"Compute Engine Metadata server unavailable. "
+                    f"Response status: {response.status}",
+                    response,
+                    retryable=True,
                 )
-                continue
             else:
                 break
 
