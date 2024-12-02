@@ -534,6 +534,7 @@ class AuthorizedSession(requests.Session):
         remaining_time = guard.remaining_timeout
 
         with TimeoutGuard(remaining_time) as guard:
+            _LOGGER.debug(f"Sending {method} request to {url} with payload {data} and headers {headers}")
             response = super(AuthorizedSession, self).request(
                 method,
                 url,

@@ -41,6 +41,8 @@ _JSON_CONTENT_TYPE = "application/json"
 _JWT_GRANT_TYPE = "urn:ietf:params:oauth:grant-type:jwt-bearer"
 _REFRESH_GRANT_TYPE = "refresh_token"
 
+import logging
+_LOGGER = logging.getLogger(__name__)
 
 def _handle_error_response(response_data, retryable_error):
     """Translates an error response into an exception.
@@ -189,6 +191,7 @@ def _token_endpoint_request_no_throw(
 
     retries = _exponential_backoff.ExponentialBackoff()
     for _ in retries:
+        _LOGGER.debug(f"Requesting access token via {token_uri}. Request {retries.backoff_count} of {retries.total_attempts}.")
         response = request(
             method="POST", url=token_uri, headers=headers_to_use, body=body, **kwargs
         )
@@ -205,8 +208,10 @@ def _token_endpoint_request_no_throw(
             response_data = response_body
 
         if response.status == http_client.OK:
+            _LOGGER.debug(f"Token received for scope: {response_data['scope']}")
             return True, response_data, None
 
+        _LOGGER.debug(f"Failed to receive token. HTTP Status: {str(response.status)} Data: {response_data}")
         retryable_error = _can_retry(
             status_code=response.status, response_data=response_data
         )

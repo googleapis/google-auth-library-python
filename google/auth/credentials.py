@@ -27,6 +27,9 @@ from google.auth._refresh_worker import RefreshThreadManager
 
 DEFAULT_UNIVERSE_DOMAIN = "googleapis.com"
 
+import logging
+_LOGGER = logging.getLogger(__name__)
+
 
 class Credentials(_BaseCredentials):
     """Base class for all credentials.
