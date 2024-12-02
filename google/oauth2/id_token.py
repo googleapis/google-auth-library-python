@@ -59,13 +59,6 @@ import http.client as http_client
 import json
 import os
 
-try:
-    import jwt as jwt_lib  # type: ignore
-except ImportError as caught_exc:  # pragma: NO COVER
-    raise ImportError(
-        "The pyjwt library is not installed from please install the pyjwt package to use the jwk certs format."
-    ) from caught_exc
-
 from google.auth import environment_vars
 from google.auth import exceptions
 from google.auth import jwt
@@ -135,6 +128,12 @@ def verify_token(
     """
     certs = _fetch_certs(request, certs_url)
     if "keys" in certs:
+        try:
+            import jwt as jwt_lib  # type: ignore
+        except ImportError as caught_exc:  # pragma: NO COVER
+            raise ImportError(
+            "The pyjwt library is not installed, please install the pyjwt package to use the jwk certs format."
+            ) from caught_exc
         jwks_client = jwt_lib.PyJWKClient(certs_url)
         signing_key = jwks_client.get_signing_key_from_jwt(id_token)
         return jwt_lib.decode(
