@@ -132,7 +132,7 @@ def verify_token(
             import jwt as jwt_lib  # type: ignore
         except ImportError as caught_exc:  # pragma: NO COVER
             raise ImportError(
-            "The pyjwt library is not installed, please install the pyjwt package to use the jwk certs format."
+                "The pyjwt library is not installed, please install the pyjwt package to use the jwk certs format."
             ) from caught_exc
         jwks_client = jwt_lib.PyJWKClient(certs_url)
         signing_key = jwks_client.get_signing_key_from_jwt(id_token)
