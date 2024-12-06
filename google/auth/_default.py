@@ -279,6 +279,30 @@ def _get_explicit_environ_credentials(quota_project_id=None):
         return None, None
 
 
+def _get_temporary_access_token_environ():
+    """Gets credentials from the GOOGLE_TEMPORARY_ACCESS_TOKEN environment
+    variable."""
+
+    from google.oauth2 import credentials
+
+    token = os.environ.get(environment_vars.TEMPORARY_ACCESS_TOKEN)
+
+    _LOGGER.debug("Checking %s for temporary access token as part of auth process...")
+
+    if token is not None:
+        try:
+            credentials = credentials.Credentials.from_temporary_access_token(token)
+        except ValueError as caught_exc:
+            msg = "Failed to load valid temporary access token"
+            new_exc = exceptions.DefaultCredentialsError(msg, caught_exc)
+            raise new_exc from caught_exc
+
+        return credentials, None
+
+    else:
+        return None, None
+
+
 def _get_gae_credentials():
     """Gets Google App Engine App Identity credentials and project ID."""
     # If not GAE gen1, prefer the metadata service even if the GAE APIs are
@@ -653,6 +677,7 @@ def default(scopes=None, request=None, quota_project_id=None, default_scopes=Non
         # with_scopes_if_required() below will ensure scopes/default scopes are
         # safely set on the returned credentials since requires_scopes will
         # guard against setting scopes on user credentials.
+        lambda: _get_temporary_access_token_environ(),
         lambda: _get_explicit_environ_credentials(quota_project_id=quota_project_id),
         lambda: _get_gcloud_sdk_credentials(quota_project_id=quota_project_id),
         _get_gae_credentials,
