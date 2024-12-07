@@ -202,22 +202,24 @@ def get(
 
     backoff = ExponentialBackoff(total_attempts=retry_count)
 
+    last_exception = None
     for attempt in backoff:
         try:
             response = request(url=url, method="GET", headers=headers_to_use)
             if response.status in transport.DEFAULT_RETRYABLE_STATUS_CODES:
-                _LOGGER.warning(
-                    "Compute Engine Metadata server unavailable on "
-                    "attempt %s of %s. Response status: %s",
-                    attempt,
-                    retry_count,
-                    response.status,
+                raise exceptions.TransportError(
+                    "Compute Engine Metadata server unavailable. "
+                    "Response status: {}; Response:\n{}".format(
+                         response.status, response.data
+                    ),
+                    response,
+                    retryable=True,
                 )
-                continue
             else:
                 break
 
         except exceptions.TransportError as e:
+            last_exception = e
             _LOGGER.warning(
                 "Compute Engine Metadata server unavailable on "
                 "attempt %s of %s. Reason: %s",
@@ -229,7 +231,7 @@ def get(
         raise exceptions.TransportError(
             "Failed to retrieve {} from the Google Compute Engine "
             "metadata service. Compute Engine Metadata server unavailable".format(url)
-        )
+        ) from last_exception
 
     content = _helpers.from_bytes(response.data)
 
