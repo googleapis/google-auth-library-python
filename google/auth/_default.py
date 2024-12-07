@@ -75,6 +75,8 @@ def _warn_about_problematic_credentials(credentials):
     if credentials.client_id == _cloud_sdk.CLOUD_SDK_CLIENT_ID:
         warnings.warn(_CLOUD_SDK_CREDENTIALS_WARNING)
 
+def _test():
+    print("test")
 
 def load_credentials_from_file(
     filename, scopes=None, default_scopes=None, quota_project_id=None, request=None
