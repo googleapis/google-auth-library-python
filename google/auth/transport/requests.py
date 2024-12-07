@@ -136,7 +136,7 @@ class Request(transport.Request):
     .. automethod:: __call__
     """
 
-    def __init__(self, session=None):
+    def __init__(self, session: requests.Session | None = None) -> None:
         if not session:
             session = requests.Session()
 
