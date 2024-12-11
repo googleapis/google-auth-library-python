@@ -140,6 +140,7 @@ IMPERSONATED_IDENTITY_POOL_WORKFORCE_DATA = {
     "service_account_impersonation_url": SERVICE_ACCOUNT_IMPERSONATION_URL,
     "workforce_pool_user_project": WORKFORCE_POOL_USER_PROJECT,
 }
+ANONYMOUS_DATA = {"type": "anonymous"}
 
 IMPERSONATED_SERVICE_ACCOUNT_AUTHORIZED_USER_SOURCE_FILE = os.path.join(
     DATA_DIR, "impersonated_service_account_authorized_user_source.json"
@@ -165,6 +166,7 @@ EXTERNAL_ACCOUNT_AUTHORIZED_USER_FILE = os.path.join(
 EXTERNAL_ACCOUNT_AUTHORIZED_USER_NON_GDU_FILE = os.path.join(
     DATA_DIR, "external_account_authorized_user_non_gdu.json"
 )
+ANONYMOUS_FILE = os.path.join(DATA_DIR, "anonymous.json")
 
 MOCK_CREDENTIALS = mock.Mock(spec=credentials.CredentialsWithQuotaProject)
 MOCK_CREDENTIALS.with_quota_project.return_value = MOCK_CREDENTIALS
@@ -1410,3 +1412,15 @@ def test_quota_gce_credentials(unused_get, unused_ping):
         quota_project_id=explicit_quota
     )
     assert credentials.quota_project_id == explicit_quota
+
+
+def test_load_credentials_from_file_anonymous():
+    credentials, project_id = _default.load_credentials_from_file(ANONYMOUS_FILE)
+    assert isinstance(credentials, google.auth.credentials.Credentials)
+    assert project_id is None
+
+
+def test_load_credentials_from_dict_anonymous():
+    credentials, project_id = _default.load_credentials_from_dict(ANONYMOUS_DATA)
+    assert isinstance(credentials, google.auth.credentials.Credentials)
+    assert project_id is None
