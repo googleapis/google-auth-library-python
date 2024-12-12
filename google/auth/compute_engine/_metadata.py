@@ -201,7 +201,7 @@ def get(
     url = _helpers.update_query(base_url, query_params)
 
     backoff = ExponentialBackoff(total_attempts=retry_count)
-
+    failure_reason = None
     for attempt in backoff:
         try:
             response = request(url=url, method="GET", headers=headers_to_use)
@@ -213,6 +213,7 @@ def get(
                     retry_count,
                     response.status,
                 )
+                failure_reason = response.status
                 continue
             else:
                 break
@@ -225,10 +226,11 @@ def get(
                 retry_count,
                 e,
             )
+            failure_reason = e
     else:
         raise exceptions.TransportError(
             "Failed to retrieve {} from the Google Compute Engine "
-            "metadata service. Compute Engine Metadata server unavailable".format(url)
+            "metadata service. Compute Engine Metadata server unavailable due to {}".format(url, failure_reason)
         )
 
     content = _helpers.from_bytes(response.data)
