@@ -470,7 +470,7 @@ can be used to make HTTP requests.::
 
     credentials = identity_pool.Credentials(
         AUDIENCE, # Set GCP Audience.
-        "urn:ietf:params:aws:token-type:jwt", # Set subject token type.
+        "urn:ietf:params:oauth:token-type:jwt", # Set subject token type.
         subject_token_supplier=supplier, # Set supplier.
         scopes=SCOPES # Set desired scopes.
     )
@@ -502,35 +502,45 @@ whether the credential retrieval is retryable.
 Any call to the supplier from the Identity Pool credential will send a :class:`google.auth.external_account.SupplierContext`
 object, which contains the requested audience and subject type. Additionally, the credential will
 send the :class:`google.auth.transport.requests.Request` passed in the credential refresh call which
-can be used to make HTTP requests.::
+can be used to make HTTP requests. Currently, using ADC with your AWS workloads is only supported with EC2.
+An example of a good use case for using a custom credential suppliers is when your workloads are running
+in other AWS environments, such as ECS, EKS, Fargate, etc.::
 
+    import boto3
     from google.auth import aws
     from google.auth import exceptions
+    from google.cloud import storage
 
     class CustomAwsSecurityCredentialsSupplier(aws.AwsSecurityCredentialsSupplier):
 
+        def __init__(self, region):
+            self._region = region
+
         def get_aws_security_credentials(self, context, request):
-            audience = context.audience
+            aws_credentials = boto3.Session(region_name=self._region).get_credentials().get_frozen_credentials()
+
             try:
-                # Return valid AWS security credentials. These credentials are not cached by
-                # the google credential, so caching should be implemented in the supplier.
-                return aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, SESSION_TOKEN)
+                return aws.AwsSecurityCredentials(aws_credentials.access_key, aws_credentials.secret_key, aws_credentials.token)
             except Exception as e:
-                # If credentials retrieval fails, raise a refresh error, setting retryable to true if the client should
-                # attempt to retrieve the subject token again.
                 raise exceptions.RefreshError(e, retryable=True)
 
         def get_aws_region(self, context, request):
-            # Return active AWS region.
+            return self._region
 
-    supplier = CustomAwsSecurityCredentialsSupplier()
+    aws_region = "AWS_REGION" # Set the current AWS region (i.e. us-east-2)
+    supplier = CustomAwsSecurityCredentialsSupplier(aws_region)
 
+    # Create credentials using the custom supplier.
     credentials = aws.Credentials(
         AUDIENCE, # Set GCP Audience.
         "urn:ietf:params:aws:token-type:aws4_request", # Set AWS subject token type.
         aws_security_credentials_supplier=supplier, # Set supplier.
-        scopes=SCOPES # Set desired scopes.
+        scopes=['https://www.googleapis.com/auth/cloud-platform'] # Set scopes.
     )
+
+    # Create service client and use the credentials you just created.
+    # The GCP project id must also be set.
+    storage_client = storage.Client(credentials=credentials, project=GCP_PROJECT_ID)
 
 Where the `audience`_ is: ``///iam.googleapis.com/projects/PROJECT_NUMBER/locations/global/workloadIdentityPools/POOL_ID/providers/PROVIDER_ID``
 Where the following variables need to be substituted:
