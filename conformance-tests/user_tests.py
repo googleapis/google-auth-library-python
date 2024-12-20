@@ -1,40 +1,34 @@
 import pytest
-import requests
-import time
+from google.auth.transport.requests import Request
 import os
-import subprocess
-
-# @pytest.fixture(scope="session", autouse=True)
-# def start_docker_container():
-#     # Check if the container is already running
-#     container_id = os.popen("docker ps -q -f name=conformance_test").read().strip()
-#     if not container_id:  # Start only if not running
-#         docker_image = os.environ.get('DOCKER_IMAGE', 'conformance_test_environment')
-#         command = f"docker run -d -p 5000:5000 --name conformance_test {docker_image}"
-#         subprocess.run(command, shell=True, check=True)  # Use subprocess for better error handling
-#         time.sleep(5)  # Give the container time to start
-
-#     yield  # This is where the tests run
-
-#     # Teardown: Stop the container after all tests have finished (for CI)
-#     subprocess.run("docker stop conformance_test", shell=True, check=True)
-#     subprocess.run("docker rm conformance_test", shell=True, check=True)
-
+import requests
+from google.oauth2 import credentials
 
 def test_valid_token_refresh():
-    url = "http://localhost:5007/oauth2/token200"
-    data = {
-        'grant_type': 'refresh_token',
-        'client_id': 'conformance_client',
-        'client_secret': 'conformance_client_secret',
-        'refresh_token': 'mock_refresh_token'
-    }
-    response = requests.post(url, data=data)
+    port = os.environ.get("PORT", "5000")  # Get port from environment, default to 5000
+    url = f"http://localhost:{port}/oauth2/token200"
+
+    # Create a Credentials object (replace with your actual refresh token)
+    creds = credentials.Credentials(
+        token=None,  # No initial token
+        refresh_token='mock_refresh_token',  # Your refresh token
+        token_uri=url,                       # Token endpoint
+        client_id='conformance_client',     # Your client ID
+        client_secret='conformance_client_secret', # Your client secret
+        scopes=['email', 'profile'],  # Your scopes, if needed (might not be for refresh)
+    )
+
+
+    # Refresh the credentials to get a new access token
+    try:
+        creds.refresh(Request()) # Refresh the token
+    except Exception as e:
+        pytest.fail(f"Token refresh failed: {e}")
+
+    headers = {}
+    creds.apply(headers)
+
+    url = f"http://localhost:{port}/oauth2/validate"  # Make sure your server is running on this address and port
+    response = requests.post(url, headers=headers)
+
     assert response.status_code == 200
-    assert response.json()['access_token'] == 'mock_access_token'
-    assert response.json()['token_type'] == 'bearer'
-    assert response.json()['refresh_token'] == 'mock_refresh_token'
-
-
-
-

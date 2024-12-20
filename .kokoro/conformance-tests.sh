@@ -23,8 +23,9 @@ docker pull "${TEST_IMAGE}" || {  # Pull the docker image. Exit if it fails.
 }
 
 
-# Start the Docker container (detached mode, expose port 5000)
-container_id=$(docker run -d -p 5007:5000 "${TEST_IMAGE}") || { 
+# Start the Docker container (detached mode, expose port)
+PORT=5007  # Set the desired port here
+container_id=$(docker run -d -p "${PORT}":5000 "${TEST_IMAGE}") || { 
     echo "ERROR: Failed to start Docker container. Aborting." >&2
     exit 1
 }
@@ -57,7 +58,7 @@ fi
 # Run your tests (outside the container, against localhost:5000)
 python3 -m pip install --user pytest  # Install pytest if needed
 cd "${PROJECT_ROOT}/${TEST_DIR}"
-python3 -m pytest  user_tests.py  # Or any other test runner
+PORT="${PORT}" python3 -m pytest  user_tests.py  # Or any other test runner
 
 # Capture the exit code of the test run
 exit_code=$?
