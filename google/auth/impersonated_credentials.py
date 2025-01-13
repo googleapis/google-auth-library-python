@@ -49,7 +49,12 @@ _GOOGLE_OAUTH2_TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token"
 
 
 def _make_iam_token_request(
-    request, principal, headers, body, universe_domain, iam_endpoint_override=None
+    request,
+    principal,
+    headers,
+    body,
+    universe_domain=credentials.DEFAULT_UNIVERSE_DOMAIN,
+    iam_endpoint_override=None,
 ):
     """Makes a request to the Google Cloud IAM service for an access token.
     Args:
@@ -206,8 +211,8 @@ class Credentials(
             iam_endpoint_override (Optional[str]): The full IAM endpoint override
                 with the target_principal embedded. This is useful when supporting
                 impersonation with regional endpoints.
-            subject (Optional[str]): sub field of a JWT. This field should only be set 
-                if you wish to impersonate as a user. This feature is useful when 
+            subject (Optional[str]): sub field of a JWT. This field should only be set
+                if you wish to impersonate as a user. This feature is useful when
                 using domain wide delegation.
         """
 
@@ -274,6 +279,39 @@ class Credentials(
             "Content-Type": "application/json",
             metrics.API_CLIENT_HEADER: metrics.token_request_access_token_impersonate(),
         }
+
+        #  If a subject is specified a domain-wide delegation auth-flow is initiated 
+        #  to impersonate as the provided subject (user).
+        if self._subject:
+            if self.universe_domain != credentials.DEFAULT_UNIVERSE_DOMAIN:
+                raise exceptions.GoogleAuthError(
+                    "Domain-wide delegation is not supported in universes other "
+                    + "than googleapis.com"
+                )
+
+            now = _helpers.utcnow()
+            payload = {
+                "iss": self._target_principal,
+                "scope": _helpers.scopes_to_string(self._scopes or ()),
+                "sub": self._subject,
+                "aud": _GOOGLE_OAUTH2_TOKEN_ENDPOINT,
+                "iat": _helpers.datetime_to_secs(now),
+                "exp": _helpers.datetime_to_secs(now) + _DEFAULT_TOKEN_LIFETIME_SECS,
+            }
+
+            assertion = _sign_jwt_request(
+                request=request,
+                principal=self._target_principal,
+                headers=headers,
+                payload=payload,
+                delegates=self._delegates,
+            )
+
+            self.token, self.expiry, _ = _client.jwt_grant(
+                request, _GOOGLE_OAUTH2_TOKEN_ENDPOINT, assertion
+            )
+            
+            return
 
         # Apply the source credentials authentication info.
         self._source_credentials.apply(headers)
