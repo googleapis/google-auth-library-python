@@ -325,37 +325,6 @@ class Credentials(
             iam_endpoint_override=self._iam_endpoint_override,
         )
 
-        #  If a subject is specified a domain-wide delegation auth-flow is initiated 
-        #  to impersonate as the provided subject (user).
-        if self._subject:
-            if self.universe_domain != credentials.DEFAULT_UNIVERSE_DOMAIN:
-                raise exceptions.GoogleAuthError(
-                    "Domain-wide delegation is not supported in universes other " +
-                    "than googleapis.com"
-                )
-            
-            now = _helpers.utcnow()
-            payload = {
-                "iss":   self._target_principal,
-                "scope":  _helpers.scopes_to_string(self._scopes or ()),
-                "sub":   self._subject,
-                "aud":   _GOOGLE_OAUTH2_TOKEN_ENDPOINT,
-                "iat":   _helpers.datetime_to_secs(now),
-                "exp":   _helpers.datetime_to_secs(now)+_DEFAULT_TOKEN_LIFETIME_SECS,
-            }
-            
-            assertion = _sign_jwt_request(
-                request=request,
-                principal=self._target_principal,
-                headers=headers,
-                payload=payload,
-                delegates=self._delegates,
-            )
-            
-            self.token, self.expiry, _ = _client.jwt_grant(
-                request, _GOOGLE_OAUTH2_TOKEN_ENDPOINT, assertion
-            )
-
     def sign_bytes(self, message):
         from google.auth.transport.requests import AuthorizedSession
 
