@@ -43,11 +43,6 @@ _IAM_ENDPOINT = (
     + "/serviceAccounts/{}:generateAccessToken"
 )
 
-_IAM_SIGNJWT_ENDPOINT = (
-    "https://iamcredentials.googleapis.com/v1/projects/-"
-    + "/serviceAccounts/{}:signJwt"
-)
-
 _IAM_SIGN_ENDPOINT = (
     "https://iamcredentials.googleapis.com/v1/projects/-"
     + "/serviceAccounts/{}:signBlob"
