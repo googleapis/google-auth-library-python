@@ -283,7 +283,7 @@ class Credentials(
         # Apply the source credentials authentication info.
         self._source_credentials.apply(headers)
 
-        #  If a subject is specified a domain-wide delegation auth-flow is initiated 
+        #  If a subject is specified a domain-wide delegation auth-flow is initiated
         #  to impersonate as the provided subject (user).
         if self._subject:
             if self.universe_domain != credentials.DEFAULT_UNIVERSE_DOMAIN:
@@ -520,9 +520,8 @@ class IDTokenCredentials(credentials.CredentialsWithQuotaProject):
             jwt.decode(id_token, verify=False)["exp"]
         )
 
-def _sign_jwt_request(
-    request, principal, headers, payload, delegates=[]
-):
+
+def _sign_jwt_request(request, principal, headers, payload, delegates=[]):
     """Makes a request to the Google Cloud IAM service to sign a JWT using a 
     service account's system-managed private key.
     Args:
@@ -553,10 +552,7 @@ def _sign_jwt_request(
     """
     iam_endpoint = iam._IAM_SIGNJWT_ENDPOINT.format(principal)
 
-    body = {
-        "delegates": delegates,
-        "payload": json.dumps(payload),
-    }
+    body = {"delegates": delegates, "payload": json.dumps(payload)}
     body = json.dumps(body).encode("utf-8")
 
     response = request(url=iam_endpoint, method="POST", headers=headers, body=body)
@@ -578,9 +574,6 @@ def _sign_jwt_request(
 
     except (KeyError, ValueError) as caught_exc:
         new_exc = exceptions.RefreshError(
-            "{}: No signed JWT in response.".format(
-                _REFRESH_ERROR
-            ),
-            response_body,
+            "{}: No signed JWT in response.".format(_REFRESH_ERROR), response_body
         )
         raise new_exc from caught_exc
