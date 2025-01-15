@@ -213,7 +213,7 @@ def get(
                     retry_count,
                     response.status,
                 )
-                failure_reason = response.status
+                failure_reason = response
                 continue
             else:
                 break
