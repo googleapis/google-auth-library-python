@@ -280,6 +280,9 @@ class Credentials(
             metrics.API_CLIENT_HEADER: metrics.token_request_access_token_impersonate(),
         }
 
+        # Apply the source credentials authentication info.
+        self._source_credentials.apply(headers)
+
         #  If a subject is specified a domain-wide delegation auth-flow is initiated 
         #  to impersonate as the provided subject (user).
         if self._subject:
@@ -292,7 +295,7 @@ class Credentials(
             now = _helpers.utcnow()
             payload = {
                 "iss": self._target_principal,
-                "scope": _helpers.scopes_to_string(self._scopes or ()),
+                "scope": _helpers.scopes_to_string(self._target_scopes or ()),
                 "sub": self._subject,
                 "aud": _GOOGLE_OAUTH2_TOKEN_ENDPOINT,
                 "iat": _helpers.datetime_to_secs(now),
@@ -310,11 +313,8 @@ class Credentials(
             self.token, self.expiry, _ = _client.jwt_grant(
                 request, _GOOGLE_OAUTH2_TOKEN_ENDPOINT, assertion
             )
-            
-            return
 
-        # Apply the source credentials authentication info.
-        self._source_credentials.apply(headers)
+            return
 
         self.token, self.expiry = _make_iam_token_request(
             request=request,
