@@ -230,7 +230,9 @@ def get(
     else:
         raise exceptions.TransportError(
             "Failed to retrieve {} from the Google Compute Engine "
-            "metadata service. Compute Engine Metadata server unavailable due to {}".format(url, failure_reason)
+            "metadata service. Compute Engine Metadata server unavailable due to {}".format(
+                url, failure_reason
+            )
         )
 
     content = _helpers.from_bytes(response.data)
