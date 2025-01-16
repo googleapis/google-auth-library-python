@@ -365,7 +365,7 @@ def test_get_too_many_requests_retryable_error_failure():
     request = make_request("too many requests", status=http_client.TOO_MANY_REQUESTS)
 
     with pytest.raises(exceptions.TransportError) as excinfo:
-        _metadata.get_universe_domain(request)
+        _metadata.get(request, PATH)
 
     assert excinfo.match(
         r"Compute Engine Metadata server unavailable due to too many requests"
@@ -373,7 +373,7 @@ def test_get_too_many_requests_retryable_error_failure():
 
     request.assert_called_with(
         method="GET",
-        url=_metadata._METADATA_ROOT + "universe/universe-domain",
+        url=_metadata._METADATA_ROOT + PATH,
         headers=_metadata._METADATA_HEADERS,
     )
     assert request.call_count == 5
