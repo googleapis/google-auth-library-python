@@ -1,8 +1,8 @@
 {
-    "client_id": "your_client_id",
-    "client_secret": "your_client_secret",
-    "refresh_token": "your_refresh_token",
-    "token_uri": "http://localhost:{port}/oauth2/token200",
+    "client_id": "conformance_client",
+    "client_secret": "conformance_client_secret",
+    "refresh_token": "mock_refresh_token",
+    "token_uri": "http://localhost:5000/oauth2/token200",
     "scopes": ["email", "profile"]  
 }
   

@@ -4,6 +4,8 @@ import os
 import requests
 from google.oauth2 import credentials
 
+DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
+
 def test_valid_token_refresh():
     port = os.environ.get("PORT", "5000")  # Get port from environment, default to 5000
     url = f"http://localhost:{port}/oauth2/token200"
@@ -18,6 +20,8 @@ def test_valid_token_refresh():
         scopes=['email', 'profile'],  # Your scopes, if needed (might not be for refresh)
     )
 
+    # json_file_path = os.path.join(DATA_DIR, "authorized_user_200.json")
+    # creds = credentials.Credentials.from_authorized_user_file(json_file_path)
 
     # Refresh the credentials to get a new access token
     try:
