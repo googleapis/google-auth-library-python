@@ -85,6 +85,16 @@ def load_credentials_from_file(
     user credentials, external account credentials, or impersonated service
     account credentials.
 
+    Important: If you accept a credential configuration (credential JSON/File/Stream)
+    from an external source for authentication to Google Cloud Platform, you must
+    validate it before providing it to any Google API or client library. Providing an
+    unvalidated credential configuration to Google APIs or libraries can compromise
+    the security of your systems and data. For more information, refer to 
+    `Validate credential configurations from external sources`_
+
+    .. _Validate credential configurations from external sources: https://\
+            cloud.google.com/docs/authentication/external/externally-sourced-credentials
+
     Args:
         filename (str): The full path to the credentials file.
         scopes (Optional[Sequence[str]]): The list of scopes for the credentials. If
@@ -136,6 +146,16 @@ def load_credentials_from_dict(
     The credentials file must be a service account key, stored authorized
     user credentials, external account credentials, or impersonated service
     account credentials.
+
+    Important: If you accept a credential configuration (credential JSON/File/Stream)
+    from an external source for authentication to Google Cloud Platform, you must
+    validate it before providing it to any Google API or client library. Providing an
+    unvalidated credential configuration to Google APIs or libraries can compromise
+    the security of your systems and data. For more information, refer to 
+    `Validate credential configurations from external sources`_
+
+    .. _Validate credential configurations from external sources: https://\
+            cloud.google.com/docs/authentication/external/externally-sourced-credentials
 
     Args:
         info (Dict[str, Any]): A dict object containing the credentials
@@ -593,6 +613,15 @@ def default(scopes=None, request=None, quota_project_id=None, default_scopes=Non
     5. If no credentials are found,
        :class:`~google.auth.exceptions.DefaultCredentialsError` will be raised.
 
+    Important: If you accept a credential configuration (credential JSON/File/Stream)
+    from an external source for authentication to Google Cloud Platform, you must
+    validate it before providing it to any Google API or client library. Providing an
+    unvalidated credential configuration to Google APIs or libraries can compromise
+    the security of your systems and data. For more information, refer to 
+    `Validate credential configurations from external sources`_
+
+    .. _Validate credential configurations from external sources: https://\
+            cloud.google.com/docs/authentication/external/externally-sourced-credentials
     .. _Application Default Credentials: https://developers.google.com\
             /identity/protocols/application-default-credentials
     .. _Google Cloud SDK: https://cloud.google.com/sdk
