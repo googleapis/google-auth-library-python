@@ -90,7 +90,7 @@ def load_credentials_from_file(
     validate it before providing it to any Google API or client library. Providing an
     unvalidated credential configuration to Google APIs or libraries can compromise
     the security of your systems and data. For more information, refer to 
-    `Validate credential configurations from external sources`_
+    `Validate credential configurations from external sources`_.
 
     .. _Validate credential configurations from external sources: 
         https://cloud.google.com/docs/authentication/external/externally-sourced-credentials
@@ -152,7 +152,7 @@ def load_credentials_from_dict(
     validate it before providing it to any Google API or client library. Providing an
     unvalidated credential configuration to Google APIs or libraries can compromise
     the security of your systems and data. For more information, refer to 
-    `Validate credential configurations from external sources`_
+    `Validate credential configurations from external sources`_.
 
     .. _Validate credential configurations from external sources: 
         https://cloud.google.com/docs/authentication/external/externally-sourced-credentials
