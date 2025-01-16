@@ -25,6 +25,7 @@ import warnings
 
 from google.auth import environment_vars
 from google.auth import exceptions
+from google.auth import constraints
 import google.auth.transport._http_client
 
 _LOGGER = logging.getLogger(__name__)
@@ -127,9 +128,13 @@ def load_credentials_from_file(
         filename, info, scopes, default_scopes, quota_project_id, request
     )
 
-
 def load_credentials_from_dict(
     info, scopes=None, default_scopes=None, quota_project_id=None, request=None
+):
+    return load_credentials_from_dict_with_constraints(info, constraints.Constraints(allow_types="all"), scopes, default_scopes, quota_project_id, request)
+
+def load_credentials_from_dict_with_constraints(
+    info, constraints, scopes=None, default_scopes=None, quota_project_id=None, request=None
 ):
     """Loads Google credentials from a dict.
 
@@ -173,11 +178,14 @@ def load_credentials_from_dict(
 
 
 def _load_credentials_from_info(
-    filename, info, scopes, default_scopes, quota_project_id, request
+    filename, info, scopes, default_scopes, quota_project_id, request, constraints
 ):
     from google.auth.credentials import CredentialsWithQuotaProject
 
     credential_type = info.get("type")
+
+    if constraints.isValid(info) is False:
+        raise exceptions.InvalidType(f"{credential_type} is not allowed as per provided constraints or is not a valid credential type") 
 
     if credential_type == _AUTHORIZED_USER_TYPE:
         credentials, project_id = _get_authorized_user_credentials(
