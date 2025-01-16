@@ -36,8 +36,8 @@ unvalidated credential configuration to Google APIs or libraries can compromise
 the security of your systems and data. For more information, refer to 
 `Validate credential configurations from external sources`_
 
-.. _Validate credential configurations from external sources: https://\
-        cloud.google.com/docs/authentication/external/externally-sourced-credentials
+.. _Validate credential configurations from external sources: 
+    https://cloud.google.com/docs/authentication/external/externally-sourced-credentials
 
 .. _application-default:
 

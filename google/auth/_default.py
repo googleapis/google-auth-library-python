@@ -92,8 +92,8 @@ def load_credentials_from_file(
     the security of your systems and data. For more information, refer to 
     `Validate credential configurations from external sources`_
 
-    .. _Validate credential configurations from external sources: https://\
-            cloud.google.com/docs/authentication/external/externally-sourced-credentials
+    .. _Validate credential configurations from external sources: 
+        https://cloud.google.com/docs/authentication/external/externally-sourced-credentials
 
     Args:
         filename (str): The full path to the credentials file.
@@ -154,8 +154,8 @@ def load_credentials_from_dict(
     the security of your systems and data. For more information, refer to 
     `Validate credential configurations from external sources`_
 
-    .. _Validate credential configurations from external sources: https://\
-            cloud.google.com/docs/authentication/external/externally-sourced-credentials
+    .. _Validate credential configurations from external sources: 
+        https://cloud.google.com/docs/authentication/external/externally-sourced-credentials
 
     Args:
         info (Dict[str, Any]): A dict object containing the credentials
