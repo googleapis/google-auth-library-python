@@ -251,44 +251,16 @@ class TestImpersonatedCredentials(object):
             == ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE
         )
 
-    def mocked_requests_side_effect(self, *args, **kwargs):
-        response = mock.create_autospec(transport.Response, instance=False)
-
-        if kwargs[
-            "url"
-        ] == "https://iamcredentials.googleapis.com/v1/projects/" + "-/serviceAccounts/{}:generateAccessToken".format(
-            self.TARGET_PRINCIPAL
-        ):
-            expire_time = (
-                _helpers.utcnow().replace(microsecond=0)
-                + datetime.timedelta(seconds=500)
-            ).isoformat("T") + "Z"
-            data = json.dumps({"accessToken": "token", "expireTime": expire_time})
-            response.status = http_client.OK
-            response.data = _helpers.to_bytes(data)
-            # if use_data_bytes else data
-            return response
-
-        elif kwargs[
-            "url"
-        ] == "https://iamcredentials.googleapis.com/v1/projects/" + "-/serviceAccounts/{}:signJwt".format(
-            self.TARGET_PRINCIPAL
-        ):
-            data = json.dumps({"signedJwt": "jwttoken"})
-            response.status = http_client.OK
-            response.data = _helpers.to_bytes(data)
-            # if use_data_bytes else data
-            print(response)
-            return response
-
     @pytest.mark.parametrize("use_data_bytes", [True, False])
     def test_refresh_with_subject_success(self, use_data_bytes, mock_dwd_credentials):
         credentials = self.make_credentials(subject="test@email.com", lifetime=None)
 
+        response_body = {"signedJwt": "example_signed_jwt"}
+
         request = self.make_request(
-            data="data",
+            data=json.dumps(response_body),
+            status=http_client.OK,
             use_data_bytes=use_data_bytes,
-            side_effect=self.mocked_requests_side_effect,
         )
 
         with mock.patch(

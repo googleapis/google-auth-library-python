@@ -522,13 +522,13 @@ class IDTokenCredentials(credentials.CredentialsWithQuotaProject):
 
 
 def _sign_jwt_request(request, principal, headers, payload, delegates=[]):
-    """Makes a request to the Google Cloud IAM service to sign a JWT using a 
+    """Makes a request to the Google Cloud IAM service to sign a JWT using a
     service account's system-managed private key.
     Args:
         request (Request): The Request object to use.
         principal (str): The principal to request an access token for.
         headers (Mapping[str, str]): Map of headers to transmit.
-        payload (Mapping[str, str]): The JWT payload to sign. Must be a 
+        payload (Mapping[str, str]): The JWT payload to sign. Must be a
             serialized JSON object that contains a JWT Claims Set.
         delegates (Sequence[str]): The chained list of delegates required
             to grant the final access_token.  If set, the sequence of
