@@ -213,7 +213,11 @@ def get(
                     retry_count,
                     response.status,
                 )
-                failure_reason = response
+                failure_reason = (
+                    response.data.decode("utf-8")
+                    if hasattr(response.data, "decode")
+                    else response.data
+                )
                 continue
             else:
                 break
