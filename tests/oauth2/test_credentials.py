@@ -26,6 +26,7 @@ from google.auth import exceptions
 from google.auth import transport
 from google.auth.credentials import TokenState
 from google.oauth2 import credentials
+from google.auth import environment_vars
 
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
@@ -838,6 +839,13 @@ class TestCredentials(object):
         creds_with_new_token_uri = creds.with_token_uri(new_token_uri)
 
         assert creds_with_new_token_uri._token_uri == new_token_uri
+
+    def test_with_temporary_access_token(self):
+        token = os.environ[environment_vars.TEMPORARY_ACCESS_TOKEN]
+
+        creds = credentials.Credentials.from_temporary_access_token(token)
+
+        assert creds.expiry is not None
 
     def test_from_authorized_user_info(self):
         info = AUTH_USER_INFO.copy()
