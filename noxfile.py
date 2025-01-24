@@ -154,6 +154,7 @@ def docs(session):
         os.path.join("docs", "_build", "html", ""),
     )
 
+
 @nox.session(python="3.10")
 def docfx(session):
     """Build the docfx yaml files for this library."""
