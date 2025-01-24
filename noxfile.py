@@ -138,6 +138,7 @@ def docs(session):
         "sphinx==4.5.0",
         "alabaster",
         "recommonmark",
+        "sphinx_docstring_typing",
     )
 
     shutil.rmtree(os.path.join("docs", "_build"), ignore_errors=True)
