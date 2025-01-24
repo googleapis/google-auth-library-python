@@ -138,7 +138,7 @@ def docs(session):
         "sphinx==4.5.0",
         "alabaster",
         "recommonmark",
-        "sphinx_docstring_typing",
+        "sphinx-docstring-typing",
     )
 
     shutil.rmtree(os.path.join("docs", "_build"), ignore_errors=True)
@@ -154,7 +154,6 @@ def docs(session):
         os.path.join("docs", ""),
         os.path.join("docs", "_build", "html", ""),
     )
-
 
 @nox.session(python="3.10")
 def docfx(session):
