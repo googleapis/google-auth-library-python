@@ -175,6 +175,31 @@ def docfx(session):
         "recommonmark",
     )
 
+    shutil.rmtree(os.path.join("docs", "_build"), ignore_errors=True)
+    session.run(
+        "sphinx-build",
+        "-T",  # show full traceback on exception
+        "-N",  # no colors
+        "-D",
+        (
+            "extensions=sphinx.ext.autodoc,"
+            "sphinx.ext.autosummary,"
+            "docfx_yaml.extension,"
+            "sphinx.ext.intersphinx,"
+            "sphinx.ext.coverage,"
+            "sphinx.ext.napoleon,"
+            "sphinx.ext.todo,"
+            "sphinx.ext.viewcode,"
+            "recommonmark"
+        ),
+        "-b",
+        "html",
+        "-d",
+        os.path.join("docs", "_build", "doctrees", ""),
+        os.path.join("docs", ""),
+        os.path.join("docs", "_build", "html", ""),
+    )
+
 
 @nox.session(python="pypy")
 def pypy(session):
