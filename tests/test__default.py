@@ -33,6 +33,7 @@ from google.auth import impersonated_credentials
 from google.auth import pluggable
 from google.oauth2 import gdch_credentials
 from google.oauth2 import service_account
+from google.auth.constraints import Constraints, SERVICE_ACCOUNT, AUTHORIZED_USER
 import google.oauth2.credentials
 
 
@@ -217,6 +218,47 @@ def test_load_credentials_from_dict_authorized_user():
     )
     assert isinstance(credentials, google.oauth2.credentials.Credentials)
     assert project_id is None
+
+
+def test_load_credentials_from_dict_constrained():
+    service_account_json = SERVICE_ACCOUNT_FILE_DATA
+
+    # Most people are going to use this way
+    credentials, _ = _default.load_credentials_from_dict_constrained(
+        service_account_json, Constraints.allow_everything_secure()
+    )
+    assert isinstance(credentials, google.oauth2.service_account.Credentials)
+
+    credentials, _ = _default.load_credentials_from_dict_constrained(
+        service_account_json,
+        Constraints.from_allowed_types(allow_types=[SERVICE_ACCOUNT, AUTHORIZED_USER]),
+    )
+    assert isinstance(credentials, google.oauth2.service_account.Credentials)
+
+    service_account_json["token_uri"] = "someuri"
+    with pytest.raises(exceptions.DefaultCredentialsError) as excinfo: 
+        _default.load_credentials_from_dict_constrained(
+            service_account_json, Constraints.allow_everything_secure()
+        )
+
+    _default.load_credentials_from_dict_constrained(
+        service_account_json, Constraints.allow_everything_insecure()
+    )
+    
+    service_account_validator = google.auth.constraints.ServiceAccountValidator.from_token_uris(
+        ["someuri", "someotheruri", "somethirduri"]
+    )
+
+    _default.load_credentials_from_dict_constrained(
+        service_account_json,
+        Constraints.from_validators([
+            service_account_validator,
+            google.auth.constraints.UserAccountValidator()
+            ]
+        )
+    )
+
+    #TODO: Add tests with universe domain
 
 
 def test_load_credentials_from_file_invalid_json(tmpdir):

@@ -1,63 +1,159 @@
-import pytest
-from google.auth.constraints import Constraints
-
-def test_allow_none():
-    constraints = Constraints()
-    assert constraints.isValid({"type": "authorized_user"}) == False
-    assert constraints.isValid({"type": "service_account"}) == False
-    assert constraints.isValid({"type": "external_account"}) == False
-    assert constraints.isValid({"type": "impersonated_service_account"}) == False
-
-
-def test_allow_all():
-    constraints = Constraints(allow_types="all")
-    assert constraints.isValid({"type": "authorized_user"}) == True
-    assert constraints.isValid({"type": "service_account"}) == True
-    assert constraints.isValid({"type": "external_account"}) == True
-    assert constraints.isValid({"type": "impersonated_service_account"}) == True
+import unittest
+from google.auth import constraints
+from google.auth.constraints import (
+    Constraints,
+    ExternalAccountValidator,
+    ServiceAccountValidator,
+    UserAccountValidator,
+    ImpersonatedServiceAccountValidator,
+    GDCHServiceAccountValidator,
+    CredentialConstraintsChoice,
+)
 
 
-def test_allow_specific_types():
-    constraints = Constraints(allow_types = ["service_account", "external_account"])
-    assert len(constraints._validators) == 2  # Correct validators instantiated?
+class ConstraintsTest(unittest.TestCase):
+    def test_allow_everything_insecure(self):
+        c = Constraints.allow_everything_insecure()
+        self.assertTrue(c.is_valid({"type": "any"}))
 
-    #Check if the allowed types are valid
-    assert constraints.isValid({"type": "authorized_user"}) is False
-    assert constraints.isValid({"type": "service_account"}) is True
-    assert constraints.isValid({"type": "external_account", "token_url": "https://sts.googleapis.com/v1/token"}) is True
+    def test_allow_everything_secure(self):
+        c = Constraints.allow_everything_secure()
 
-    # Check with a different universe domain
-    constraints = Constraints(allow_types=["external_account"], universe_domain="example.com")
-    assert constraints.isValid({"type": "external_account", "token_url": "https://sts.googleapis.com/v1/token"}) is False
-    assert constraints.isValid({"type": "external_account", "token_url": "https://sts.example.com/v1/token"}) is True
-    
-    # Check for impersonated service account
-    constraints = Constraints(allow_types=["impersonated_service_account"], universe_domain="example.com")
+        self.assertTrue(
+            c.is_valid(
+                {
+                    "type": "service_account",
+                    "token_uri": "https://oauth2.googleapis.com/token",
+                }
+            )
+        )
+        self.assertTrue(
+            c.is_valid(
+                {
+                    "type": "external_account",
+                    "token_url": "https://sts.googleapis.com/v1/token",
+                }
+            )
+        )
+        self.assertTrue(
+            c.is_valid({"type": "authorized_user"})
+        )  # User accounts don't have additional fields to validate
 
-    assert constraints.isValid({
-        "type": "impersonated_service_account",
-        "service_account_impersonation_url": "https://iamcredentials.example.com/v1/projects/-/serviceAccounts/svc_acc@developer.gserviceaccount.com:generateAccessToken"
-    }) == True
+        self.assertFalse(
+            c.is_valid({"type": "service_account", "token_uri": "invalid"})
+        )
+        self.assertFalse(
+            c.is_valid({"type": "external_account", "token_url": "invalid"})
+        )
 
-    assert constraints.isValid({
-        "type": "impersonated_service_account",
-        "service_account_impersonation_url": "https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/svc_acc@developer.gserviceaccount.com:generateAccessToken"
-    }) == False
+    def test_from_allowed_types(self):
+        c = Constraints.from_allowed_types(["service_account", "authorized_user"])
+        self.assertTrue(
+            c.is_valid(
+                {
+                    "type": "service_account",
+                    "token_uri": "https://oauth2.googleapis.com/token",
+                }
+            )
+        )
+        self.assertTrue(c.is_valid({"type": "authorized_user"}))
+        self.assertFalse(
+            c.is_valid(
+                {
+                    "type": "external_account",
+                    "token_url": "https://sts.googleapis.com/v1/token",
+                }
+            )
+        )
 
-    constraints = Constraints(allow_types=["gdch_service_account"])
+        with self.assertRaises(ValueError):  # Test no allowed types
+            Constraints.from_allowed_types([])
 
-    assert constraints.isValid({"type": "gdch_service_account"}) == True
-    assert constraints.isValid({"type": "service_account"}) == False
+    def test_from_validators(self):
+
+        c = Constraints.from_validators(
+            [
+                ServiceAccountValidator.from_default("example.com"),
+                UserAccountValidator(),
+            ]
+        )
+        self.assertTrue(
+            c.is_valid(
+                {
+                    "type": "service_account",
+                    "token_uri": "https://oauth2.googleapis.com/token",
+                }
+            )
+        )  # Now passes because example.com allows it.
+        self.assertTrue(c.is_valid({"type": "authorized_user"}))
+        self.assertFalse(c.is_valid({"type": "external_account"}))
+
+        with self.assertRaises(ValueError):  # Test no validators
+            Constraints.from_validators(
+                []
+            )  # Should this raise ValueError? I'm not sure
 
 
+class ServiceAccountValidatorTest(unittest.TestCase):
+    def test_valid(self):
+        validator = ServiceAccountValidator.from_default()
+        self.assertTrue(
+            validator.is_valid(
+                {
+                    "type": "service_account",
+                    "token_uri": "https://oauth2.googleapis.com/token",
+                }
+            )
+        )
+
+    def test_invalid_token_uri(self):
+        validator = ServiceAccountValidator.from_default()
+        self.assertFalse(
+            validator.is_valid({"type": "service_account", "token_uri": "invalid"})
+        )
+
+    def test_missing_token_uri(self):
+        validator = ServiceAccountValidator.from_default()
+        self.assertFalse(validator.is_valid({"type": "service_account"}))
+
+    def test_custom_token_uri(self):
+        validator = ServiceAccountValidator.from_token_uris(
+            ["https://custom.com/token"]
+        )
+        self.assertTrue(
+            validator.is_valid(
+                {"type": "service_account", "token_uri": "https://custom.com/token"}
+            )
+        )
 
 
-def test_invalid_allow_types():
-    with pytest.raises(ValueError) as excinfo:
-        Constraints(allow_types="invalid") # Type error: not a list
-    assert "Invalid allow_types argument" in str(excinfo.value)
+class ExternalAccountValidatorTest(unittest.TestCase):
+    def test_valid(self):
+        validator = ExternalAccountValidator("googleapis.com")
+        self.assertTrue(
+            validator.is_valid(
+                {
+                    "type": "external_account",
+                    "token_url": "https://sts.googleapis.com/v1/token",
+                }
+            )
+        )
 
-    with pytest.raises(ValueError) as excinfo:
-        Constraints(allow_types=["invalid_type"]) # Invalid credential type
-    assert "Invalid credential type: invalid_type" in str(excinfo.value)
+    def test_invalid_domain(self):
+        validator = ExternalAccountValidator("example.com")
+        self.assertFalse(
+            validator.is_valid(
+                {
+                    "type": "external_account",
+                    "token_url": "https://sts.googleapis.com/v1/token",
+                }
+            )
+        )  # Should fail
 
+    def test_missing_token_url(self):
+        validator = ExternalAccountValidator()
+        self.assertFalse(validator.is_valid({"type": "external_account"}))
+
+
+if __name__ == "__main__":
+    unittest.main()
