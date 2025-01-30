@@ -178,7 +178,11 @@ class ServiceAccountValidator(Validator):
 
     def is_valid(self, json_data):
         actual_token_uri = json_data.get("token_uri")
-        return actual_token_uri in self._allowed_token_uris
+        actual_universe_domain = json_data.get("universe_domain")
+        return actual_token_uri in self._allowed_token_uris and (
+            actual_universe_domain is None
+            or actual_universe_domain == self._universe_domain
+        )
 
 
 # TODO: All other validators are WIP

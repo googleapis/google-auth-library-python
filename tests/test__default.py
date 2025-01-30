@@ -53,12 +53,17 @@ AUTHORIZED_USER_CLOUD_SDK_WITH_QUOTA_PROJECT_ID_FILE = os.path.join(
 
 SERVICE_ACCOUNT_FILE = os.path.join(DATA_DIR, "service_account.json")
 
+SERVICE_ACCOUNT_NON_GDU_FILE = os.path.join(DATA_DIR, "service_account_non_gdu.json")
+
 CLIENT_SECRETS_FILE = os.path.join(DATA_DIR, "client_secrets.json")
 
 GDCH_SERVICE_ACCOUNT_FILE = os.path.join(DATA_DIR, "gdch_service_account.json")
 
 with open(SERVICE_ACCOUNT_FILE) as fh:
     SERVICE_ACCOUNT_FILE_DATA = json.load(fh)
+
+with open(SERVICE_ACCOUNT_NON_GDU_FILE) as fh:
+    SERVICE_ACCOUNT_NON_GDU_FILE_DATA = json.load(fh)
 
 SUBJECT_TOKEN_TEXT_FILE = os.path.join(DATA_DIR, "external_subject_token.txt")
 TOKEN_URL = "https://sts.googleapis.com/v1/token"
@@ -236,7 +241,7 @@ def test_load_credentials_from_dict_constrained():
     assert isinstance(credentials, google.oauth2.service_account.Credentials)
 
     service_account_json["token_uri"] = "someuri"
-    with pytest.raises(exceptions.DefaultCredentialsError) as excinfo: 
+    with pytest.raises(exceptions.DefaultCredentialsError) as excinfo:
         _default.load_credentials_from_dict_constrained(
             service_account_json, Constraints.allow_everything_secure()
         )
@@ -244,21 +249,28 @@ def test_load_credentials_from_dict_constrained():
     _default.load_credentials_from_dict_constrained(
         service_account_json, Constraints.allow_everything_insecure()
     )
-    
+
     service_account_validator = google.auth.constraints.ServiceAccountValidator.from_token_uris(
         ["someuri", "someotheruri", "somethirduri"]
     )
 
     _default.load_credentials_from_dict_constrained(
         service_account_json,
-        Constraints.from_validators([
-            service_account_validator,
-            google.auth.constraints.UserAccountValidator()
-            ]
-        )
+        Constraints.from_validators(
+            [service_account_validator, google.auth.constraints.UserAccountValidator()]
+        ),
     )
 
-    #TODO: Add tests with universe domain
+    service_account_json = SERVICE_ACCOUNT_NON_GDU_FILE_DATA
+    with pytest.raises(exceptions.DefaultCredentialsError) as excinfo:
+        _default.load_credentials_from_dict_constrained(
+            service_account_json, Constraints.allow_everything_secure()
+        )
+
+    credentials, _ = _default.load_credentials_from_dict_constrained(
+        service_account_json, Constraints.allow_everything_secure(universe_domain="universe.foo")
+    )
+    assert isinstance(credentials, google.oauth2.service_account.Credentials)
 
 
 def test_load_credentials_from_file_invalid_json(tmpdir):
