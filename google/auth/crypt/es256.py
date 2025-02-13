@@ -64,14 +64,14 @@ class EsVerifier(base.Verifier):
         if len(sig_bytes) != self._r_s_size * 2:
             return False
         r = (
-            int.from_bytes(sig_bytes[:self._r_s_size], byteorder="big")
+            int.from_bytes(sig_bytes[: self._r_s_size], byteorder="big")
             if _helpers.is_python_3()
-            else utils.int_from_bytes(sig_bytes[:self._r_s_size], byteorder="big")
+            else utils.int_from_bytes(sig_bytes[: self._r_s_size], byteorder="big")
         )
         s = (
-            int.from_bytes(sig_bytes[self._r_s_size:], byteorder="big")
+            int.from_bytes(sig_bytes[self._r_s_size :], byteorder="big")
             if _helpers.is_python_3()
-            else utils.int_from_bytes(sig_bytes[self._r_s_size:], byteorder="big")
+            else utils.int_from_bytes(sig_bytes[self._r_s_size :], byteorder="big")
         )
         asn1_sig = encode_dss_signature(r, s)
 
@@ -154,9 +154,15 @@ class EsSigner(base.Signer, base.FromServiceAccountMixin):
         # Convert ASN1 encoded signature to (r||s) raw signature.
         (r, s) = decode_dss_signature(asn1_signature)
         return (
-            (r.to_bytes(self._r_s_size, byteorder="big") + s.to_bytes(self._r_s_size, byteorder="big"))
+            (
+                r.to_bytes(self._r_s_size, byteorder="big")
+                + s.to_bytes(self._r_s_size, byteorder="big")
+            )
             if _helpers.is_python_3()
-            else (utils.int_to_bytes(r, self._r_s_size) + utils.int_to_bytes(s, self._r_s_size))
+            else (
+                utils.int_to_bytes(r, self._r_s_size)
+                + utils.int_to_bytes(s, self._r_s_size)
+            )
         )
 
     @classmethod
