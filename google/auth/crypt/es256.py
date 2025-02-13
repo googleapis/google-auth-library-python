@@ -35,7 +35,7 @@ _BACKEND = backends.default_backend()
 _PADDING = padding.PKCS1v15()
 
 
-class ES256Verifier(base.Verifier):
+class EsVerifier(base.Verifier):
     """Verifies ECDSA cryptographic signatures using public keys.
 
     Args:
@@ -46,28 +46,38 @@ class ES256Verifier(base.Verifier):
 
     def __init__(self, public_key):
         self._pubkey = public_key
+        # ECDSA raw signature has (r||s) format where r,s are two
+        # integers of size 32 bytes for P-256 curve and 48 bytes
+        # for P-384 curve. For P-256 curve, we use SHA256 hash algo,
+        # and for P-384 curve we use SHA384 algo.
+        if isinstance(public_key.curve, ec.SECP384R1):
+            self._r_s_size = 48
+            self._sha_algo = hashes.SHA384()
+        else:
+            self._r_s_size = 32
+            self._sha_algo = hashes.SHA256()
 
     @_helpers.copy_docstring(base.Verifier)
     def verify(self, message, signature):
         # First convert (r||s) raw signature to ASN1 encoded signature.
         sig_bytes = _helpers.to_bytes(signature)
-        if len(sig_bytes) != 64:
+        if len(sig_bytes) != self._r_s_size * 2:
             return False
         r = (
-            int.from_bytes(sig_bytes[:32], byteorder="big")
+            int.from_bytes(sig_bytes[:self._r_s_size], byteorder="big")
             if _helpers.is_python_3()
-            else utils.int_from_bytes(sig_bytes[:32], byteorder="big")
+            else utils.int_from_bytes(sig_bytes[:self._r_s_size], byteorder="big")
         )
         s = (
-            int.from_bytes(sig_bytes[32:], byteorder="big")
+            int.from_bytes(sig_bytes[self._r_s_size:], byteorder="big")
             if _helpers.is_python_3()
-            else utils.int_from_bytes(sig_bytes[32:], byteorder="big")
+            else utils.int_from_bytes(sig_bytes[self._r_s_size:], byteorder="big")
         )
         asn1_sig = encode_dss_signature(r, s)
 
         message = _helpers.to_bytes(message)
         try:
-            self._pubkey.verify(asn1_sig, message, ec.ECDSA(hashes.SHA256()))
+            self._pubkey.verify(asn1_sig, message, ec.ECDSA(self._sha_algo))
             return True
         except (ValueError, cryptography.exceptions.InvalidSignature):
             return False
@@ -101,7 +111,11 @@ class ES256Verifier(base.Verifier):
         return cls(pubkey)
 
 
-class ES256Signer(base.Signer, base.FromServiceAccountMixin):
+class ES256Verifier(EsVerifier):
+    pass
+
+
+class EsSigner(base.Signer, base.FromServiceAccountMixin):
     """Signs messages with an ECDSA private key.
 
     Args:
@@ -116,6 +130,16 @@ class ES256Signer(base.Signer, base.FromServiceAccountMixin):
     def __init__(self, private_key, key_id=None):
         self._key = private_key
         self._key_id = key_id
+        # ECDSA raw signature has (r||s) format where r,s are two
+        # integers of size 32 bytes for P-256 curve and 48 bytes
+        # for P-384 curve. For P-256 curve, we use SHA256 hash algo,
+        # and for P-384 curve we use SHA384 algo.
+        if isinstance(private_key.curve, ec.SECP384R1):
+            self._r_s_size = 48
+            self._sha_algo = hashes.SHA384()
+        else:
+            self._r_s_size = 32
+            self._sha_algo = hashes.SHA256()
 
     @property  # type: ignore
     @_helpers.copy_docstring(base.Signer)
@@ -125,14 +149,14 @@ class ES256Signer(base.Signer, base.FromServiceAccountMixin):
     @_helpers.copy_docstring(base.Signer)
     def sign(self, message):
         message = _helpers.to_bytes(message)
-        asn1_signature = self._key.sign(message, ec.ECDSA(hashes.SHA256()))
+        asn1_signature = self._key.sign(message, ec.ECDSA(self._sha_algo))
 
         # Convert ASN1 encoded signature to (r||s) raw signature.
         (r, s) = decode_dss_signature(asn1_signature)
         return (
-            (r.to_bytes(32, byteorder="big") + s.to_bytes(32, byteorder="big"))
+            (r.to_bytes(self._r_s_size, byteorder="big") + s.to_bytes(self._r_s_size, byteorder="big"))
             if _helpers.is_python_3()
-            else (utils.int_to_bytes(r, 32) + utils.int_to_bytes(s, 32))
+            else (utils.int_to_bytes(r, self._r_s_size) + utils.int_to_bytes(s, self._r_s_size))
         )
 
     @classmethod
@@ -173,3 +197,7 @@ class ES256Signer(base.Signer, base.FromServiceAccountMixin):
         """Pickle helper that deserializes the _key attribute."""
         state["_key"] = serialization.load_pem_private_key(state["_key"], None)
         self.__dict__.update(state)
+
+
+class ES256Signer(EsSigner):
+    pass
