@@ -25,6 +25,7 @@ from google.auth import crypt
 from google.auth import exceptions
 from google.auth import impersonated_credentials
 from google.auth import transport
+from google.auth import credentials as auth_credentials
 from google.auth.impersonated_credentials import Credentials
 from google.oauth2 import credentials
 from google.oauth2 import service_account
@@ -120,8 +121,12 @@ class TestImpersonatedCredentials(object):
     # Because Python 2.7:
     DELEGATES = []  # type: ignore
     LIFETIME = 3600
+    NO_OP_TRUST_BOUNDARY = {
+        "locations": auth_credentials.NO_OP_TRUST_BOUNDARY_LOCATIONS,
+        "encodedLocations": auth_credentials.NO_OP_TRUST_BOUNDARY_ENCODED_LOCATIONS,
+    }
     SOURCE_CREDENTIALS = service_account.Credentials(
-        SIGNER, SERVICE_ACCOUNT_EMAIL, TOKEN_URI
+        SIGNER, SERVICE_ACCOUNT_EMAIL, TOKEN_URI, trust_boundary=NO_OP_TRUST_BOUNDARY
     )
     USER_SOURCE_CREDENTIALS = credentials.Credentials(token="ABCDE")
     IAM_ENDPOINT_OVERRIDE = (
@@ -136,6 +141,7 @@ class TestImpersonatedCredentials(object):
         target_principal=TARGET_PRINCIPAL,
         subject=None,
         iam_endpoint_override=None,
+        trust_boundary=NO_OP_TRUST_BOUNDARY,
     ):
 
         return Credentials(
@@ -146,6 +152,7 @@ class TestImpersonatedCredentials(object):
             lifetime=lifetime,
             subject=subject,
             iam_endpoint_override=iam_endpoint_override,
+            trust_boundary=trust_boundary,
         )
 
     def test_get_cred_info(self):
