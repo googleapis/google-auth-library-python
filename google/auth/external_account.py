@@ -81,6 +81,7 @@ class Credentials(
     credentials.Scoped,
     credentials.CredentialsWithQuotaProject,
     credentials.CredentialsWithTokenUri,
+    credentials.CredentialsWithTrustBoundary,
     metaclass=abc.ABCMeta,
 ):
     """Base class for all external account credentials.
@@ -133,14 +134,14 @@ class Credentials(
                 authorization grant.
             default_scopes (Optional[Sequence[str]]): Default scopes passed by a
                 Google client library. Use 'scopes' for user-defined scopes.
-            workforce_pool_user_project (Optona[str]): The optional workforce pool user
+            workforce_pool_user_project (Optonal[str]): The optional workforce pool user
                 project number when the credential corresponds to a workforce pool and not
                 a workload identity pool. The underlying principal must still have
                 serviceusage.services.use IAM permission to use the project for
                 billing/quota.
             universe_domain (str): The universe domain. The default universe
                 domain is googleapis.com.
-            trust_boundary (str): String representation of trust boundary meta.
+            trust_boundary (str): String representation of trust boundary metadata.
         Raises:
             google.auth.exceptions.RefreshError: If the generateAccessToken
                 endpoint returned an error.
@@ -167,9 +168,9 @@ class Credentials(
         self._default_scopes = default_scopes
         self._workforce_pool_user_project = workforce_pool_user_project
         self._trust_boundary = {
-            "locations": [],
-            "encoded_locations": "0x0",
-        }  # expose a placeholder trust boundary value.
+            "locations": credentials.NO_OP_TRUST_BOUNDARY_LOCATIONS,
+            "encodedLocations": credentials.NO_OP_TRUST_BOUNDARY_ENCODED_LOCATIONS,
+        }  # Sets a no-op trust boundary value.
 
         if self._client_id:
             self._client_auth = utils.ClientAuthentication(
@@ -455,6 +456,12 @@ class Credentials(
             lifetime = datetime.timedelta(seconds=expires_in)
 
             self.expiry = now + lifetime
+
+    def _lookup_trust_boundary(self, request):
+        """Trust boundary lookup for external account. Currently a no-op because the lookup
+            endpoint does not support external account lookup.
+        """
+        return
 
     def _make_copy(self):
         kwargs = self._constructor_args()

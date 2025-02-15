@@ -84,6 +84,9 @@ from google.oauth2 import _client
 
 _DEFAULT_TOKEN_LIFETIME_SECS = 3600  # 1 hour in seconds
 _GOOGLE_OAUTH2_TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token"
+_TRUST_BOUNDARY_LOOKUP_ENDPOINT = (
+    "https://iamcredentials.{}/v1/projects/-/serviceAccounts/{}/allowedLocations"
+)
 
 
 class Credentials(
@@ -91,6 +94,7 @@ class Credentials(
     credentials.Scoped,
     credentials.CredentialsWithQuotaProject,
     credentials.CredentialsWithTokenUri,
+    credentials.CredentialsWithTrustBoundary,
 ):
     """Service account credentials
 
@@ -164,7 +168,7 @@ class Credentials(
             universe_domain (str): The universe domain. The default
                 universe domain is googleapis.com. For default value self
                 signed jwt is used for token refresh.
-            trust_boundary (str): String representation of trust boundary meta.
+            trust_boundary (Mapping[str,str]): A credential trust boundary.
 
         .. note:: Typically one of the helper constructors
             :meth:`from_service_account_file` or
@@ -194,7 +198,7 @@ class Credentials(
             self._additional_claims = additional_claims
         else:
             self._additional_claims = {}
-        self._trust_boundary = {"locations": [], "encoded_locations": "0x0"}
+        self._trust_boundary = trust_boundary
 
     @classmethod
     def _from_signer_and_info(cls, signer, info, **kwargs):
@@ -294,6 +298,7 @@ class Credentials(
             additional_claims=self._additional_claims.copy(),
             always_use_jwt_access=self._always_use_jwt_access,
             universe_domain=self._universe_domain,
+            trust_boundary=self._trust_boundary,
         )
         cred._cred_file_path = self._cred_file_path
         return cred
@@ -450,6 +455,7 @@ class Credentials(
             )
             self.token = access_token
             self.expiry = expiry
+        self._refresh_trust_boundary(request)
 
     def _create_self_signed_jwt(self, audience):
         """Create a self-signed JWT from the credentials if requirements are met.
@@ -490,6 +496,19 @@ class Credentials(
             self._jwt_credentials = jwt.Credentials.from_signing_credentials(
                 self, audience
             )
+
+    def _lookup_trust_boundary(self, request):
+        """Trust boundary lookup for service account using endpoint:
+            iamcredentials.{universe_domain}/v1/projects/-/serviceAccounts/{service_account_email}/allowedLocations
+            And we are using a fresh access token as basic auth.
+        """
+        # Skip trust boundary flow for non-gdu universe domain.
+        if self._universe_domain == credentials.DEFAULT_UNIVERSE_DOMAIN:
+            return
+        url = _TRUST_BOUNDARY_LOOKUP_ENDPOINT.format(
+            self._universe_domain, self._service_account_email
+        )
+        return _client.lookup_trust_boundary(request, url, self.token)
 
     @_helpers.copy_docstring(credentials.Signing)
     def sign_bytes(self, message):
