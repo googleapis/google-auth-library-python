@@ -21,6 +21,7 @@ import logging
 import numbers
 import os
 import time
+import json
 
 try:
     import requests
@@ -182,10 +183,18 @@ class Request(transport.Request):
             google.auth.exceptions.TransportError: If any exception occurred.
         """
         try:
-            _LOGGER.debug("Making request: %s %s", method, url)
+            _LOGGER.debug("Making request...", extra={"httpRequest": {"method": method, "url": url, "body": body.decode("utf-8"), "headers": headers}})
             response = self.session.request(
                 method, url, data=body, headers=headers, timeout=timeout, **kwargs
             )
+            _SENSITIVE_LOG_FIELDS = ["access_token", "id_token"]
+            
+            test = response.json()
+            for field in _SENSITIVE_LOG_FIELDS:
+                if field in test:
+                    test[field] = " --TOKEN REDACTED --"
+
+            _LOGGER.debug("Response received...", extra={"httpResponse": test})
             return _Response(response)
         except requests.exceptions.RequestException as caught_exc:
             new_exc = exceptions.TransportError(caught_exc)
