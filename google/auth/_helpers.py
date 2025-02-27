@@ -18,6 +18,7 @@ import base64
 import calendar
 import datetime
 from email.message import Message
+import hashlib
 import sys
 import urllib
 
@@ -27,6 +28,7 @@ from google.auth import exceptions
 # expiry.
 REFRESH_THRESHOLD = datetime.timedelta(minutes=3, seconds=45)
 
+SENSITIVE_FIELDS = {"accessToken", "access_token", "id_token", "client_id", "refresh_token", "client_secret"}
 
 def copy_docstring(source_class):
     """Decorator that copies a method's docstring from another class.
@@ -271,3 +273,33 @@ def is_python_3():
         bool: True if the Python interpreter is Python 3 and False otherwise.
     """
     return sys.version_info > (3, 0)
+
+
+def hash_sensitive_info(data: dict) -> dict:
+    """
+    Hashes sensitive information within a dictionary.
+
+    Args:
+        data: The dictionary containing data to be processed.
+
+    Returns:
+        A new dictionary with sensitive values replaced by their SHA256 hashes.
+    """
+    hashed_data = {}
+    for key, value in data.items():
+        if key in SENSITIVE_FIELDS:
+            hashed_data[key] = _hash_value(value, key)
+        else:
+            hashed_data[key] = value
+    return hashed_data
+
+
+def _hash_value(value, field_name: str) -> str:
+    """Hashes a value and returns a formatted hash string."""
+    if value is None:
+        return None
+    encoded_value = str(value).encode("utf-8")
+    hash_object = hashlib.sha256()
+    hash_object.update(encoded_value)
+    hex_digest = hash_object.hexdigest()
+    return f"hashed_{field_name}-{hex_digest}"
