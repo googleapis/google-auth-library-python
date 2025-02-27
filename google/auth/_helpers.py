@@ -28,7 +28,7 @@ from google.auth import exceptions
 # expiry.
 REFRESH_THRESHOLD = datetime.timedelta(minutes=3, seconds=45)
 
-SENSITIVE_FIELDS = {"accessToken", "access_token", "id_token", "client_id", "refresh_token", "client_secret"}
+_SENSITIVE_FIELDS = {"accessToken", "access_token", "id_token", "client_id", "refresh_token", "client_secret"}
 
 def copy_docstring(source_class):
     """Decorator that copies a method's docstring from another class.
@@ -287,7 +287,7 @@ def hash_sensitive_info(data: dict) -> dict:
     """
     hashed_data = {}
     for key, value in data.items():
-        if key in SENSITIVE_FIELDS:
+        if key in _SENSITIVE_FIELDS:
             hashed_data[key] = _hash_value(value, key)
         else:
             hashed_data[key] = value
