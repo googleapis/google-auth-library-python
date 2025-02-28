@@ -28,7 +28,15 @@ from google.auth import exceptions
 # expiry.
 REFRESH_THRESHOLD = datetime.timedelta(minutes=3, seconds=45)
 
-_SENSITIVE_FIELDS = {"accessToken", "access_token", "id_token", "client_id", "refresh_token", "client_secret"}
+_SENSITIVE_FIELDS = {
+    "accessToken",
+    "access_token",
+    "id_token",
+    "client_id",
+    "refresh_token",
+    "client_secret",
+}
+
 
 def copy_docstring(source_class):
     """Decorator that copies a method's docstring from another class.

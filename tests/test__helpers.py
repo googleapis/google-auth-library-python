@@ -195,6 +195,7 @@ def test_unpadded_urlsafe_b64encode():
     for case, expected in cases:
         assert _helpers.unpadded_urlsafe_b64encode(case) == expected
 
+
 def test_hash_sensitive_info_basic():
     test_data = {
         "expires_in": 3599,
@@ -207,6 +208,7 @@ def test_hash_sensitive_info_basic():
     assert hashed_data["scope"] == "https://www.googleapis.com/auth/test-api"
     assert hashed_data["access_token"].startswith("hashed_access_token-")
     assert hashed_data["token_type"] == "Bearer"
+
 
 def test_hash_sensitive_info_multiple_sensitive():
     test_data = {
@@ -235,10 +237,12 @@ def test_hash_sensitive_info_non_string_value():
     assert hashed_data["access_token"].startswith("hashed_access_token-")
     assert hashed_data["normal_data"] == "def"
 
+
 def test_hash_sensitive_info_empty_dict():
     test_data = {}
     hashed_data = _helpers.hash_sensitive_info(test_data)
     assert hashed_data == {}
+
 
 def test_hash_value_consistent_hashing():
     value = "test_value"
@@ -247,6 +251,7 @@ def test_hash_value_consistent_hashing():
     hash2 = _helpers._hash_value(value, field_name)
     assert hash1 == hash2
 
+
 def test_hash_value_different_hashing():
     value1 = "test_value1"
     value2 = "test_value2"
@@ -254,6 +259,7 @@ def test_hash_value_different_hashing():
     hash1 = _helpers._hash_value(value1, field_name)
     hash2 = _helpers._hash_value(value2, field_name)
     assert hash1 != hash2
+
 
 def test_hash_value_none():
     assert _helpers._hash_value(None, "test") is None
