@@ -283,7 +283,7 @@ def hash_sensitive_info(data: dict) -> dict:
         data: The dictionary containing data to be processed.
 
     Returns:
-        A new dictionary with sensitive values replaced by their SHA256 hashes.
+        A new dictionary with sensitive values replaced by their SHA512 hashes.
     """
     hashed_data = {}
     for key, value in data.items():
