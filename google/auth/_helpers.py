@@ -19,7 +19,9 @@ import calendar
 import datetime
 from email.message import Message
 import hashlib
+import logging
 import sys
+from typing import Optional, Dict, Any
 import urllib
 
 from google.auth import exceptions
@@ -28,15 +30,8 @@ from google.auth import exceptions
 # expiry.
 REFRESH_THRESHOLD = datetime.timedelta(minutes=3, seconds=45)
 
-_SENSITIVE_FIELDS = {
-    "accessToken",
-    "access_token",
-    "id_token",
-    "client_id",
-    "refresh_token",
-    "client_secret",
-}
-
+# TODO(https://github.com/googleapis/google-auth-library-python/issues/1684): Audit and update the list below.
+_SENSITIVE_FIELDS = {"accessToken", "access_token", "id_token", "client_id", "refresh_token", "client_secret"}
 
 def copy_docstring(source_class):
     """Decorator that copies a method's docstring from another class.
@@ -311,3 +306,34 @@ def _hash_value(value, field_name: str) -> str:
     hash_object.update(encoded_value)
     hex_digest = hash_object.hexdigest()
     return f"hashed_{field_name}-{hex_digest}"
+
+
+def request_log(logger: logging.Logger, method: str, url: str, body: Optional[Any], headers: Optional[Dict[str, str]]) -> None:
+    """
+    Logs an HTTP request at the DEBUG level.
+
+    Args:
+        logger: The logging.Logger instance to use.
+        method: The HTTP method (e.g., "GET", "POST").
+        url: The URL of the request.
+        body: The request body (can be None).
+        headers: The request headers (can be None).
+    """
+    # TODO(https://github.com/googleapis/google-auth-library-python/issues/1680): Log only if enabled.
+    # TODO(https://github.com/googleapis/google-auth-library-python/issues/1682): Add httpRequest extra to log event.
+    # TODO(https://github.com/googleapis/google-auth-library-python/issues/1681): Hash sensitive information.
+    logger.debug("Making request: %s %s", method, url)
+
+
+def response_log(logger: logging.Logger, response: Any) -> None:
+    """
+    Logs an HTTP response at the DEBUG level.
+
+    Args:
+        logger: The logging.Logger instance to use.
+        response: The HTTP response object to log.
+    """
+    # TODO(https://github.com/googleapis/google-auth-library-python/issues/1680): Log only if enabled.
+    # TODO(https://github.com/googleapis/google-auth-library-python/issues/1683): Add httpResponse extra to log event.
+    # TODO(https://github.com/googleapis/google-auth-library-python/issues/1681): Hash sensitive information.
+    logger.debug("Response received...")
