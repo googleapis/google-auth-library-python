@@ -30,8 +30,6 @@ from google.auth import _helpers
 from google.auth import exceptions
 from google.auth.aio import transport
 
-from _helpers import request_log, response_log
-
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -160,7 +158,7 @@ class Request(transport.Request):
                 self._session = aiohttp.ClientSession()
 
             client_timeout = aiohttp.ClientTimeout(total=timeout)
-            request_log(_LOGGER, method, url, body, headers)
+            _helpers.request_log(_LOGGER, method, url, body, headers)
             response = await self._session.request(
                 method,
                 url,
@@ -169,7 +167,7 @@ class Request(transport.Request):
                 timeout=client_timeout,
                 **kwargs,
             )
-            response_log(_LOGGER, response)
+            _helpers.response_log(_LOGGER, response)
             return Response(response)
 
         except aiohttp.ClientError as caught_exc:

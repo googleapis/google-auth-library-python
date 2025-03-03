@@ -21,8 +21,7 @@ import urllib
 
 from google.auth import exceptions
 from google.auth import transport
-
-from _helpers import request_log, response_log
+from google.auth import _helpers
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -102,10 +101,10 @@ class Request(transport.Request):
 
         try:
 
-            request_log(_LOGGER, method, url, body, headers)
+            _helpers.request_log(_LOGGER, method, url, body, headers)
             connection.request(method, path, body=body, headers=headers, **kwargs)
             response = connection.getresponse()
-            response_log(_LOGGER, response)
+            _helpers.response_log(_LOGGER, response)
             return Response(response)
 
         except (http_client.HTTPException, socket.error) as caught_exc:

@@ -37,10 +37,9 @@ from requests.packages.urllib3.util.ssl_ import (  # type: ignore
 from google.auth import environment_vars
 from google.auth import exceptions
 from google.auth import transport
+from google.auth import _helpers
 import google.auth.transport._mtls_helper
 from google.oauth2 import service_account
-
-from _helpers import request_log, response_log
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -184,11 +183,11 @@ class Request(transport.Request):
             google.auth.exceptions.TransportError: If any exception occurred.
         """
         try:
-            request_log(_LOGGER, method, url, body, headers)
+            _helpers.request_log(_LOGGER, method, url, body, headers)
             response = self.session.request(
                 method, url, data=body, headers=headers, timeout=timeout, **kwargs
             )
-            response_log(_LOGGER, response)
+            _helpers.response_log(_LOGGER, response)
             return _Response(response)
         except requests.exceptions.RequestException as caught_exc:
             new_exc = exceptions.TransportError(caught_exc)

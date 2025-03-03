@@ -29,9 +29,9 @@ import urllib3  # type: ignore
 
 from google.auth import exceptions
 from google.auth import transport
+from google.auth import _helpers
 from google.auth.transport import requests
 
-from _helpers import request_log, response_log
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -187,11 +187,11 @@ class Request(transport.Request):
                 self.session = aiohttp.ClientSession(
                     auto_decompress=False
                 )  # pragma: NO COVER
-            request_log(_LOGGER, method, url, body, headers)
+            _helpers.request_log(_LOGGER, method, url, body, headers)
             response = await self.session.request(
                 method, url, data=body, headers=headers, timeout=timeout, **kwargs
             )
-            response_log(_LOGGER, response)
+            _helpers.response_log(_LOGGER, response)
             return _CombinedResponse(response)
 
         except aiohttp.ClientError as caught_exc:

@@ -45,14 +45,13 @@ from packaging import version  # type: ignore
 from google.auth import environment_vars
 from google.auth import exceptions
 from google.auth import transport
+from google.auth import _helpers
 from google.oauth2 import service_account
 
 if version.parse(urllib3.__version__) >= version.parse("2.0.0"):  # pragma: NO COVER
     RequestMethods = urllib3._request_methods.RequestMethods  # type: ignore
 else:  # pragma: NO COVER
     RequestMethods = urllib3.request.RequestMethods  # type: ignore
-
-from _helpers import request_log, response_log
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -138,11 +137,11 @@ class Request(transport.Request):
             kwargs["timeout"] = timeout
 
         try:
-            request_log(_LOGGER, method, url, body, headers)
+            _helpers.request_log(_LOGGER, method, url, body, headers)
             response = self.http.request(
                 method, url, body=body, headers=headers, **kwargs
             )
-            response_log(_LOGGER, response)
+            _helpers.response_log(_LOGGER, response)
             return _Response(response)
         except urllib3.exceptions.HTTPError as caught_exc:
             new_exc = exceptions.TransportError(caught_exc)
