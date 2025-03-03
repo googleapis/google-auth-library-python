@@ -31,7 +31,15 @@ from google.auth import exceptions
 REFRESH_THRESHOLD = datetime.timedelta(minutes=3, seconds=45)
 
 # TODO(https://github.com/googleapis/google-auth-library-python/issues/1684): Audit and update the list below.
-_SENSITIVE_FIELDS = {"accessToken", "access_token", "id_token", "client_id", "refresh_token", "client_secret"}
+_SENSITIVE_FIELDS = {
+    "accessToken",
+    "access_token",
+    "id_token",
+    "client_id",
+    "refresh_token",
+    "client_secret",
+}
+
 
 def copy_docstring(source_class):
     """Decorator that copies a method's docstring from another class.
@@ -308,7 +316,13 @@ def _hash_value(value, field_name: str) -> str:
     return f"hashed_{field_name}-{hex_digest}"
 
 
-def request_log(logger: logging.Logger, method: str, url: str, body: Optional[Any], headers: Optional[Dict[str, str]]) -> None:
+def request_log(
+    logger: logging.Logger,
+    method: str,
+    url: str,
+    body: Optional[Any],
+    headers: Optional[Dict[str, str]],
+) -> None:
     """
     Logs an HTTP request at the DEBUG level.
 
