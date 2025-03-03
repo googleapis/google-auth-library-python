@@ -52,6 +52,8 @@ if version.parse(urllib3.__version__) >= version.parse("2.0.0"):  # pragma: NO C
 else:  # pragma: NO COVER
     RequestMethods = urllib3.request.RequestMethods  # type: ignore
 
+from _helpers import request_log, response_log
+
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -136,10 +138,11 @@ class Request(transport.Request):
             kwargs["timeout"] = timeout
 
         try:
-            _LOGGER.debug("Making request: %s %s", method, url)
+            request_log(_LOGGER, method, url, body, headers)
             response = self.http.request(
                 method, url, body=body, headers=headers, **kwargs
             )
+            response_log(_LOGGER, response)
             return _Response(response)
         except urllib3.exceptions.HTTPError as caught_exc:
             new_exc = exceptions.TransportError(caught_exc)

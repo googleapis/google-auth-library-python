@@ -40,6 +40,8 @@ from google.auth import transport
 import google.auth.transport._mtls_helper
 from google.oauth2 import service_account
 
+from _helpers import request_log, response_log
+
 _LOGGER = logging.getLogger(__name__)
 
 _DEFAULT_TIMEOUT = 120  # in seconds
@@ -182,10 +184,11 @@ class Request(transport.Request):
             google.auth.exceptions.TransportError: If any exception occurred.
         """
         try:
-            _LOGGER.debug("Making request: %s %s", method, url)
+            request_log(_LOGGER, method, url, body, headers)
             response = self.session.request(
                 method, url, data=body, headers=headers, timeout=timeout, **kwargs
             )
+            response_log(_LOGGER, response)
             return _Response(response)
         except requests.exceptions.RequestException as caught_exc:
             new_exc = exceptions.TransportError(caught_exc)
