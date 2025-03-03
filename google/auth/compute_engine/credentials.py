@@ -100,8 +100,6 @@ class Credentials(
             request, service_account=self._service_account_email
         )
 
-        self._service_account_email = info["email"]
-
         # Don't override scopes requested by the user.
         if self._scopes is None:
             self._scopes = info["scopes"]
