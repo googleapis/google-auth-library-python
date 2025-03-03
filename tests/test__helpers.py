@@ -14,10 +14,18 @@
 
 import datetime
 import urllib
+import logging
+from unittest import mock
 
 import pytest  # type: ignore
 
 from google.auth import _helpers
+
+
+@pytest.fixture
+def logger():
+    """Provides a basic logger instance for testing."""
+    return logging.getLogger(__name__)
 
 
 class SourceClass(object):
@@ -263,3 +271,29 @@ def test_hash_value_different_hashing():
 
 def test_hash_value_none():
     assert _helpers._hash_value(None, "test") is None
+
+
+def test_is_logging_enabled_with_no_level_set(logger):
+    
+    with mock.patch("google.auth._helpers.CLIENT_LOGGING_SUPPORTED", True):
+        assert _helpers.is_logging_enabled(logger) is False
+
+
+def test_is_logging_enabled_with_client_logging_not_supported(caplog, logger):
+    
+    with mock.patch("google.auth._helpers.CLIENT_LOGGING_SUPPORTED", False):
+        caplog.set_level(logging.DEBUG, logger=__name__)
+        assert _helpers.is_logging_enabled(logger) is False
+
+
+def test_is_logging_enabled_with_debug_disabled(caplog, logger):
+    
+    with mock.patch("google.auth._helpers.CLIENT_LOGGING_SUPPORTED", True):
+        caplog.set_level(logging.INFO, logger=__name__)
+        assert _helpers.is_logging_enabled(logger) is False
+
+
+def test_is_logging_enabled_with_debug_enabled(caplog, logger):
+    with mock.patch("google.auth._helpers.CLIENT_LOGGING_SUPPORTED", True):
+        caplog.set_level(logging.DEBUG, logger=__name__)
+        assert _helpers.is_logging_enabled(logger)

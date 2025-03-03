@@ -26,6 +26,12 @@ import urllib
 
 from google.auth import exceptions
 
+try:
+    from google.api_core import client_logging
+    CLIENT_LOGGING_SUPPORTED = True
+except ImportError:
+    CLIENT_LOGGING_SUPPORTED = False
+
 # The smallest MDS cache used by this library stores tokens until 4 minutes from
 # expiry.
 REFRESH_THRESHOLD = datetime.timedelta(minutes=3, seconds=45)
@@ -316,15 +322,22 @@ def _hash_value(value, field_name: str) -> str:
     return f"hashed_{field_name}-{hex_digest}"
 
 
-def request_log(
-    logger: logging.Logger,
-    method: str,
-    url: str,
-    body: Optional[Any],
-    headers: Optional[Dict[str, str]],
-) -> None:
+def is_logging_enabled(logger: logging.Logger) -> bool:
     """
-    Logs an HTTP request at the DEBUG level.
+    Checks if debug logging is enabled for the given logger.
+
+    Args:
+        logger: The logging.Logger instance to check.
+
+    Returns:
+        True if debug logging is enabled, False otherwise.
+    """
+    return CLIENT_LOGGING_SUPPORTED and logger.isEnabledFor(logging.DEBUG)
+
+
+def request_log(logger: logging.Logger, method: str, url: str, body: Optional[Any], headers: Optional[Dict[str, str]]) -> None:
+    """
+    Logs an HTTP request at the DEBUG level if logging is enabled.
 
     Args:
         logger: The logging.Logger instance to use.
@@ -333,21 +346,21 @@ def request_log(
         body: The request body (can be None).
         headers: The request headers (can be None).
     """
-    # TODO(https://github.com/googleapis/google-auth-library-python/issues/1680): Log only if enabled.
     # TODO(https://github.com/googleapis/google-auth-library-python/issues/1682): Add httpRequest extra to log event.
     # TODO(https://github.com/googleapis/google-auth-library-python/issues/1681): Hash sensitive information.
-    logger.debug("Making request: %s %s", method, url)
+    if is_logging_enabled(logger):
+        logger.debug("Making request: %s %s", method, url)
 
 
 def response_log(logger: logging.Logger, response: Any) -> None:
     """
-    Logs an HTTP response at the DEBUG level.
+    Logs an HTTP response at the DEBUG level if logging is enabled.
 
     Args:
         logger: The logging.Logger instance to use.
         response: The HTTP response object to log.
     """
-    # TODO(https://github.com/googleapis/google-auth-library-python/issues/1680): Log only if enabled.
     # TODO(https://github.com/googleapis/google-auth-library-python/issues/1683): Add httpResponse extra to log event.
     # TODO(https://github.com/googleapis/google-auth-library-python/issues/1681): Hash sensitive information.
-    logger.debug("Response received...")
+    if is_logging_enabled(logger):
+        logger.debug("Response received...")
