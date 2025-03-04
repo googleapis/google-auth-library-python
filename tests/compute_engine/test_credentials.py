@@ -120,7 +120,7 @@ class TestCredentials(object):
         assert self.credentials.expiry == (utcnow() + datetime.timedelta(seconds=500))
 
         # Check the credential info
-        assert self.credentials.service_account_email == "service-account@example.com"
+        assert self.credentials.service_account_email == "default"
         assert self.credentials._scopes == ["one", "two"]
 
         # Check that the credentials are valid (have a token and are not
@@ -160,7 +160,7 @@ class TestCredentials(object):
         assert self.credentials.expiry == (utcnow() + datetime.timedelta(seconds=500))
 
         # Check the credential info
-        assert self.credentials.service_account_email == "service-account@example.com"
+        assert self.credentials.service_account_email == "default"
         assert self.credentials._scopes == scopes
 
         # Check that the credentials are valid (have a token and are not
@@ -501,7 +501,7 @@ class TestIDTokenCredentials(object):
         responses.add(
             responses.GET,
             "http://metadata.google.internal/computeMetadata/v1/instance/"
-            "service-accounts/service-account@example.com/token",
+            "service-accounts/default/token",
             status=200,
             content_type="application/json",
             json={
@@ -659,7 +659,7 @@ class TestIDTokenCredentials(object):
         responses.add(
             responses.GET,
             "http://metadata.google.internal/computeMetadata/v1/instance/"
-            "service-accounts/service-account@example.com/token",
+            "service-accounts/default/token",
             status=200,
             content_type="application/json",
             json={
