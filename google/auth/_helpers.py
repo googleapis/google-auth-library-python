@@ -29,7 +29,9 @@ from google.auth import exceptions
 try:
     from google.api_core import client_logging
     CLIENT_LOGGING_SUPPORTED = True
-except ImportError:
+# TODO(https://github.com/googleapis/google-auth-library-python/issues/1690): Remove `pragma: NO COVER` once
+# logging is supported in minimum version of google-api-core.
+except ImportError:  # pragma: NO COVER
     CLIENT_LOGGING_SUPPORTED = False
 
 # The smallest MDS cache used by this library stores tokens until 4 minutes from
