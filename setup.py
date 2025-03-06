@@ -28,9 +28,9 @@ DEPENDENCIES = (
 )
 
 extras = {
-    "aiohttp": ["aiohttp >= 3.6.2, < 4.0.0.dev0", "requests >= 2.20.0, < 3.0.0.dev0"],
+    "aiohttp": ["aiohttp >= 3.6.2, < 4.0.0", "requests >= 2.20.0, < 3.0.0"],
     "pyopenssl": ["pyopenssl>=20.0.0", "cryptography>=38.0.3"],
-    "requests": "requests >= 2.20.0, < 3.0.0.dev0",
+    "requests": "requests >= 2.20.0, < 3.0.0",
     "reauth": "pyu2f>=0.1.5",
     "enterprise_cert": ["cryptography", "pyopenssl"],
     "pyjwt": ["pyjwt>=2.0", "cryptography>=38.0.3"],
