@@ -14,10 +14,18 @@
 
 import datetime
 import urllib
+import logging
+from unittest import mock
 
 import pytest  # type: ignore
 
 from google.auth import _helpers
+
+
+@pytest.fixture
+def logger():
+    """Provides a basic logger instance for testing."""
+    return logging.getLogger(__name__)
 
 
 class SourceClass(object):
@@ -263,3 +271,54 @@ def test_hash_value_different_hashing():
 
 def test_hash_value_none():
     assert _helpers._hash_value(None, "test") is None
+
+
+def test_is_logging_enabled_with_no_level_set(logger):
+    
+    with mock.patch("google.auth._helpers.CLIENT_LOGGING_SUPPORTED", True):
+        assert _helpers.is_logging_enabled(logger) is False
+
+
+def test_is_logging_enabled_with_client_logging_not_supported(caplog, logger):
+    
+    with mock.patch("google.auth._helpers.CLIENT_LOGGING_SUPPORTED", False):
+        caplog.set_level(logging.DEBUG, logger=__name__)
+        assert _helpers.is_logging_enabled(logger) is False
+
+
+def test_is_logging_enabled_with_debug_disabled(caplog, logger):
+    
+    with mock.patch("google.auth._helpers.CLIENT_LOGGING_SUPPORTED", True):
+        caplog.set_level(logging.INFO, logger=__name__)
+        assert _helpers.is_logging_enabled(logger) is False
+
+
+def test_is_logging_enabled_with_debug_enabled(caplog, logger):
+    with mock.patch("google.auth._helpers.CLIENT_LOGGING_SUPPORTED", True):
+        caplog.set_level(logging.DEBUG, logger=__name__)
+        assert _helpers.is_logging_enabled(logger)
+
+
+def test_request_log_debug_enabled(logger, caplog):
+    logger.setLevel(logging.DEBUG)
+    with mock.patch("google.auth._helpers.CLIENT_LOGGING_SUPPORTED", True):
+        _helpers.request_log(logger, "GET", "http://example.com", {"key": "value"}, {"Authorization": "Bearer token"})
+    assert "Making request: GET http://example.com" in caplog.text
+
+def test_request_log_debug_disabled(logger, caplog):
+    logger.setLevel(logging.INFO)
+    with mock.patch("google.auth._helpers.CLIENT_LOGGING_SUPPORTED", True):
+        _helpers.request_log(logger, "POST", "https://api.example.com", "data", {"Content-Type": "application/json"})
+    assert "Making request: POST https://api.example.com" not in caplog.text
+
+def test_response_log_debug_enabled(logger, caplog):
+    logger.setLevel(logging.DEBUG)
+    with mock.patch("google.auth._helpers.CLIENT_LOGGING_SUPPORTED", True):
+        _helpers.response_log(logger, "response_object")
+    assert "Response received..." in caplog.text
+
+def test_response_log_debug_disabled(logger, caplog):
+    logger.setLevel(logging.INFO)
+    with mock.patch("google.auth._helpers.CLIENT_LOGGING_SUPPORTED", True):
+        _helpers.response_log(logger, "another_response")
+    assert "Response received..." not in caplog.text
