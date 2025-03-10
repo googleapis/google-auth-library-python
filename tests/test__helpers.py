@@ -301,20 +301,24 @@ def test_is_logging_enabled_with_debug_enabled(caplog, logger):
 
 def test_request_log_debug_enabled(logger, caplog):
     logger.setLevel(logging.DEBUG)
-    _helpers.request_log(logger, "GET", "http://example.com", {"key": "value"}, {"Authorization": "Bearer token"})
+    with mock.patch("google.auth._helpers.CLIENT_LOGGING_SUPPORTED", True):
+        _helpers.request_log(logger, "GET", "http://example.com", {"key": "value"}, {"Authorization": "Bearer token"})
     assert "Making request: GET http://example.com" in caplog.text
 
 def test_request_log_debug_disabled(logger, caplog):
     logger.setLevel(logging.INFO)
-    _helpers.request_log(logger, "POST", "https://api.example.com", "data", {"Content-Type": "application/json"})
+    with mock.patch("google.auth._helpers.CLIENT_LOGGING_SUPPORTED", True):
+        _helpers.request_log(logger, "POST", "https://api.example.com", "data", {"Content-Type": "application/json"})
     assert "Making request: POST https://api.example.com" not in caplog.text
 
 def test_response_log_debug_enabled(logger, caplog):
     logger.setLevel(logging.DEBUG)
-    _helpers.response_log(logger, "response_object")
+    with mock.patch("google.auth._helpers.CLIENT_LOGGING_SUPPORTED", True):
+        _helpers.response_log(logger, "response_object")
     assert "Response received..." in caplog.text
 
 def test_response_log_debug_disabled(logger, caplog):
     logger.setLevel(logging.INFO)
-    _helpers.response_log(logger, "another_response")
+    with mock.patch("google.auth._helpers.CLIENT_LOGGING_SUPPORTED", True):
+        _helpers.response_log(logger, "another_response")
     assert "Response received..." not in caplog.text
