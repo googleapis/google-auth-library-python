@@ -28,6 +28,7 @@ from google.auth import exceptions
 
 try:
     from google.api_core import client_logging
+
     CLIENT_LOGGING_SUPPORTED = True  # pragma: NO COVER
 # TODO(https://github.com/googleapis/google-auth-library-python/issues/1690): Remove `pragma: NO COVER` once
 # logging is supported in minimum version of google-api-core.
@@ -337,7 +338,13 @@ def is_logging_enabled(logger: logging.Logger) -> bool:
     return CLIENT_LOGGING_SUPPORTED and logger.isEnabledFor(logging.DEBUG)
 
 
-def request_log(logger: logging.Logger, method: str, url: str, body: Optional[Any], headers: Optional[Dict[str, str]]) -> None:
+def request_log(
+    logger: logging.Logger,
+    method: str,
+    url: str,
+    body: Optional[Any],
+    headers: Optional[Dict[str, str]],
+) -> None:
     """
     Logs an HTTP request at the DEBUG level if logging is enabled.
 
