@@ -41,9 +41,12 @@ try:
 except ImportError:  # pragma: NO COVER
     from collections import Mapping  # type: ignore
 import abc
+import base64
 import json
 import os
 from typing import NamedTuple
+
+from OpenSSL import crypto
 
 from google.auth import _helpers
 from google.auth import exceptions
@@ -145,9 +148,65 @@ class _UrlSupplier(SubjectTokenSupplier):
 class _X509Supplier(SubjectTokenSupplier):
     """Internal supplier for X509 workload credentials. This class is used internally and always returns an empty string as the subject token."""
 
+    def __init__(self, trust_chain_path, leaf_cert_callback):
+        self._trust_chain_path = trust_chain_path
+        self._leaf_cert_callback = leaf_cert_callback
+
     @_helpers.copy_docstring(SubjectTokenSupplier)
     def get_subject_token(self, context, request):
-        return ""
+        leaf_cert = crypto.load_certificate(
+            crypto.FILETYPE_PEM, self._leaf_cert_callback()
+        )
+        trust_chain = self._read_trust_chain()
+        cert_chain = []
+
+        cert_chain.append(_X509Supplier._encode_cert(leaf_cert))
+        for i, cert in enumerate(trust_chain):
+            encoded = _X509Supplier._encode_cert(cert)
+            if i != 0 and cert_chain[0] == encoded:
+                raise exceptions.RefreshError(
+                    "The leaf certificate must be at the top of the trust chain file."
+                )
+        return json.dumps(cert_chain)
+
+    def _read_trust_chain(self):
+        certificate_trust_chain = []
+        # If no trust chain path was provided, return an empty list.
+        if self._trust_chain_path is None or self._trust_chain_path == "":
+            return certificate_trust_chain
+        try:
+            # Open the trust chain file.
+            with open(self._trust_chain_path, "rb") as f:
+                trust_chain_data = f.read()
+
+            # Split PEM data into individual certificates.
+            cert_blocks = trust_chain_data.split(b"-----BEGIN CERTIFICATE-----")
+            for cert_block in cert_blocks:
+                cert_data = b"-----BEGIN CERTIFICATE-----" + cert_block
+                try:
+                    # Load each certificate and add it to the trust chain.
+                    cert = crypto.load_certificate(crypto.FILETYPE_PEM, cert_data)
+                    certificate_trust_chain.append(cert)
+                except Exception as e:
+                    raise exceptions.RefreshError(
+                        "Error loading PEM certificates from the trust chain file '{}'".format(
+                            self._trust_chain_path
+                        )
+                    ) from e
+            return certificate_trust_chain
+        except FileNotFoundError:
+            raise exceptions.RefreshError(
+                "Trust chain file '{}' was not found.".format(self._trust_chain_path)
+            )
+        except Exception as e:
+            raise exceptions.RefreshError(
+                "Error reading trust chain file '{}'".format(self._trust_chain_path)
+            ) from e
+
+    def _encode_cert(cert):
+        return base64.b64encode(
+            crypto.dump_certificate(crypto.FILETYPE_ASN1, cert)
+        ).decode("utf-8")
 
 
 def _parse_token_data(token_content, format_type="text", subject_token_field_name=None):
@@ -296,7 +355,9 @@ class Credentials(external_account.Credentials):
                     self._credential_source_headers,
                 )
             else:  # self._credential_source_certificate
-                self._subject_token_supplier = _X509Supplier()
+                self._subject_token_supplier = _X509Supplier(
+                    self._trust_chain_path, self._get_cert_bytes
+                )
 
     @_helpers.copy_docstring(external_account.Credentials)
     def retrieve_subject_token(self, request):
@@ -313,6 +374,10 @@ class Credentials(external_account.Credentials):
             return _mtls_helper._get_workload_cert_and_key_paths(
                 self._certificate_config_location
             )
+
+    def _get_cert_bytes(self):
+        cert_path, _ = self._get_mtls_cert_and_key_paths()
+        return _mtls_helper._read_cert_file(cert_path)
 
     def _mtls_required(self):
         return self._credential_source_certificate is not None
@@ -349,6 +414,9 @@ class Credentials(external_account.Credentials):
         )
         use_default = self._credential_source_certificate.get(
             "use_default_certificate_config"
+        )
+        self._trust_chain_path = self._credential_source_certificate.get(
+            "trust_chain_path"
         )
         if self._certificate_config_location and use_default:
             raise exceptions.MalformedError(

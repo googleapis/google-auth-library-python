@@ -17,9 +17,11 @@ import http.client as http_client
 import json
 import os
 import urllib
+import base64
 
 import mock
 import pytest  # type: ignore
+from OpenSSL import crypto
 
 from google.auth import _helpers, external_account
 from google.auth import exceptions
@@ -48,6 +50,9 @@ SCOPES = ["scope1", "scope2"]
 DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
 SUBJECT_TOKEN_TEXT_FILE = os.path.join(DATA_DIR, "external_subject_token.txt")
 SUBJECT_TOKEN_JSON_FILE = os.path.join(DATA_DIR, "external_subject_token.json")
+CERT_FILE = os.path.join(DATA_DIR, "public_cert.pem")
+KEY_FILE = os.path.join(DATA_DIR, "privatekey.pem")
+
 SUBJECT_TOKEN_FIELD_NAME = "access_token"
 
 with open(SUBJECT_TOKEN_TEXT_FILE) as fh:
@@ -56,6 +61,14 @@ with open(SUBJECT_TOKEN_TEXT_FILE) as fh:
 with open(SUBJECT_TOKEN_JSON_FILE) as fh:
     JSON_FILE_CONTENT = json.load(fh)
     JSON_FILE_SUBJECT_TOKEN = JSON_FILE_CONTENT.get(SUBJECT_TOKEN_FIELD_NAME)
+
+with open(CERT_FILE, "rb") as fh:
+    CERT_FILE_CONTENT = base64.b64encode(
+        crypto.dump_certificate(
+            crypto.FILETYPE_ASN1,
+            crypto.load_certificate(crypto.FILETYPE_PEM, fh.read()),
+        )
+    ).decode("utf-8")
 
 TOKEN_URL = "https://sts.googleapis.com/v1/token"
 TOKEN_INFO_URL = "https://sts.googleapis.com/v1/introspect"
@@ -936,14 +949,20 @@ class TestCredentials(object):
 
         assert subject_token == JSON_FILE_SUBJECT_TOKEN
 
-    def test_retrieve_subject_token_certificate(self):
+    @mock.patch(
+        "google.auth.transport._mtls_helper._get_workload_cert_and_key_paths",
+        return_value=(CERT_FILE, KEY_FILE),
+    )
+    def test_retrieve_subject_token_certificate_default(
+        self, mock_get_workload_cert_and_key_paths
+    ):
         credentials = self.make_credentials(
             credential_source=self.CREDENTIAL_SOURCE_CERTIFICATE
         )
 
         subject_token = credentials.retrieve_subject_token(None)
 
-        assert subject_token == ""
+        assert subject_token == json.dumps([CERT_FILE_CONTENT])
 
     def test_retrieve_subject_token_json_file_invalid_field_name(self):
         credential_source = {
