@@ -340,6 +340,18 @@ def test_response_log_debug_disabled(logger, caplog):
         _helpers.response_log(logger, "another_response")
     assert "Response received..." not in caplog.text
 
+def test_response_log_debug_enabled_response_list(logger, caplog):
+    class MockResponse:
+        def json(self):
+            return ["item1", "item2", "item3"]
+    response = MockResponse()
+    logger.setLevel(logging.DEBUG)
+    with mock.patch("google.auth._helpers.CLIENT_LOGGING_SUPPORTED", True):
+        _helpers.response_log(logger, response)
+    assert len(caplog.records) == 1
+    record = caplog.records[0]
+    assert record.message == "Response received..."
+    assert record.httpResponse == ['item1', 'item2', 'item3']
 
 def test_parse_request_body_bytes_valid():
     body = b"key1=value1&key2=value2"
