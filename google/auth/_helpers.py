@@ -19,9 +19,10 @@ import calendar
 import datetime
 from email.message import Message
 import hashlib
+import json
 import logging
 import sys
-from typing import Any, Mapping, Optional
+from typing import Any, Mapping, Optional, Union
 import urllib
 
 from google.auth import exceptions
@@ -357,11 +358,47 @@ def request_log(
         body: The request body (can be None).
         headers: The request headers (can be None).
     """
-    # TODO(https://github.com/googleapis/google-auth-library-python/issues/1682): Add httpRequest extra to log event.
     # TODO(https://github.com/googleapis/google-auth-library-python/issues/1681): Hash sensitive information.
     if is_logging_enabled(logger):
-        logger.debug("Making request: %s %s", method, url)
+        content_type = headers["Content-type"] if "Content-Type" in headers else None
+        json_body = _parse_request_body(body, content_type=content_type)
+        logger.debug("Making request...", extra={"httpRequest": {"method": method, "url": url, "body": json_body, "headers": headers}})
 
+
+def _parse_request_body(body: Union[bytes, str], content_type: str = None) -> Any:
+    """Parses a request body, handling bytes and dict types."""
+    try:
+        body_str = body.decode('utf-8') if isinstance(body, bytes) else body
+    except UnicodeDecodeError:
+        return None
+    if not content_type:
+        try:
+            return json.loads(body_str)
+        except (json.JSONDecodeError, TypeError):
+            return body_str
+    content_type = content_type.lower()
+    if "application/json" in content_type:
+        try: 
+            return json.loads(body_str)
+        except json.JSONDecodeError:
+            return body_str
+    if "application/x-www-form-urlencoded" in content_type:
+            parsed_query = urllib.parse.parse_qs(body_str)
+            result = {k: v[0] for k, v in parsed_query.items()}
+            return result
+    if "text/plain" in content_type:
+        return body_str    
+
+
+def _parse_response(response: Any) -> Any:
+    """Parses a response, attempting to decode JSON."""
+    try:
+        json_response = response.json()
+        return json_response
+    except AttributeError:
+        return response
+    except json.JSONDecodeError:
+        return response
 
 def response_log(logger: logging.Logger, response: Any) -> None:
     """
@@ -371,7 +408,7 @@ def response_log(logger: logging.Logger, response: Any) -> None:
         logger: The logging.Logger instance to use.
         response: The HTTP response object to log.
     """
-    # TODO(https://github.com/googleapis/google-auth-library-python/issues/1683): Add httpResponse extra to log event.
     # TODO(https://github.com/googleapis/google-auth-library-python/issues/1681): Hash sensitive information.
     if is_logging_enabled(logger):
-        logger.debug("Response received...")
+        json_response = _parse_response(response)
+        logger.debug("Response received...", extra={"httpResponse": json_response})
