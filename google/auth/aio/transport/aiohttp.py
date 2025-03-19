@@ -167,7 +167,7 @@ class Request(transport.Request):
                 timeout=client_timeout,
                 **kwargs,
             )
-            _helpers.response_log(_LOGGER, response)
+            # TODO(https://github.com/googleapis/google-auth-library-python/issues/1697): Add response log.
             return Response(response)
 
         except aiohttp.ClientError as caught_exc:
