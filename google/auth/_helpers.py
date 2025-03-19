@@ -21,7 +21,7 @@ from email.message import Message
 import hashlib
 import logging
 import sys
-from typing import Optional, Dict, Any
+from typing import Optional, Mapping, Any
 import urllib
 
 from google.auth import exceptions
@@ -343,7 +343,7 @@ def request_log(
     method: str,
     url: str,
     body: Optional[Any],
-    headers: Optional[Dict[str, str]],
+    headers: Optional[Mapping[str, str]],
 ) -> None:
     """
     Logs an HTTP request at the DEBUG level if logging is enabled.
