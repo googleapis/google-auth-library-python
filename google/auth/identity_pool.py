@@ -206,10 +206,6 @@ class _X509Supplier(SubjectTokenSupplier):
             raise exceptions.RefreshError(
                 "Trust chain file '{}' was not found.".format(self._trust_chain_path)
             )
-        # except Exception as e:
-        #    raise exceptions.RefreshError(
-        #        "Error reading trust chain file '{}'".format(self._trust_chain_path)
-        #    ) from e
 
     def _encode_cert(cert):
         return base64.b64encode(
