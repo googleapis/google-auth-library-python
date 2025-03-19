@@ -163,10 +163,15 @@ class _X509Supplier(SubjectTokenSupplier):
         cert_chain.append(_X509Supplier._encode_cert(leaf_cert))
         for i, cert in enumerate(trust_chain):
             encoded = _X509Supplier._encode_cert(cert)
-            if i != 0 and cert_chain[0] == encoded:
-                raise exceptions.RefreshError(
-                    "The leaf certificate must be at the top of the trust chain file."
-                )
+            # Check if the current cert is the leaf cert and raise an exception if it is not the first
+            # cert in the chain.
+            if encoded == cert_chain[0]:
+                if i != 0:
+                    raise exceptions.RefreshError(
+                        "The leaf certificate must be at the top of the trust chain file"
+                    )
+            else:
+                cert_chain.append(encoded)
         return json.dumps(cert_chain)
 
     def _read_trust_chain(self):
@@ -178,30 +183,33 @@ class _X509Supplier(SubjectTokenSupplier):
             # Open the trust chain file.
             with open(self._trust_chain_path, "rb") as f:
                 trust_chain_data = f.read()
-
-            # Split PEM data into individual certificates.
-            cert_blocks = trust_chain_data.split(b"-----BEGIN CERTIFICATE-----")
-            for cert_block in cert_blocks:
-                cert_data = b"-----BEGIN CERTIFICATE-----" + cert_block
-                try:
-                    # Load each certificate and add it to the trust chain.
-                    cert = crypto.load_certificate(crypto.FILETYPE_PEM, cert_data)
-                    certificate_trust_chain.append(cert)
-                except Exception as e:
-                    raise exceptions.RefreshError(
-                        "Error loading PEM certificates from the trust chain file '{}'".format(
-                            self._trust_chain_path
-                        )
-                    ) from e
-            return certificate_trust_chain
+                # Split PEM data into individual certificates.
+                cert_blocks = trust_chain_data.split(b"-----BEGIN CERTIFICATE-----")
+                for cert_block in cert_blocks:
+                    # Skip empty blocks.
+                    if cert_block.strip():
+                        cert_data = b"-----BEGIN CERTIFICATE-----" + cert_block
+                        try:
+                            # Load each certificate and add it to the trust chain.
+                            cert = crypto.load_certificate(
+                                crypto.FILETYPE_PEM, cert_data
+                            )
+                            certificate_trust_chain.append(cert)
+                        except Exception as e:
+                            raise exceptions.RefreshError(
+                                "Error loading PEM certificates from the trust chain file '{}'".format(
+                                    self._trust_chain_path
+                                )
+                            ) from e
+                return certificate_trust_chain
         except FileNotFoundError:
             raise exceptions.RefreshError(
                 "Trust chain file '{}' was not found.".format(self._trust_chain_path)
             )
-        except Exception as e:
-            raise exceptions.RefreshError(
-                "Error reading trust chain file '{}'".format(self._trust_chain_path)
-            ) from e
+        # except Exception as e:
+        #    raise exceptions.RefreshError(
+        #        "Error reading trust chain file '{}'".format(self._trust_chain_path)
+        #    ) from e
 
     def _encode_cert(cert):
         return base64.b64encode(
