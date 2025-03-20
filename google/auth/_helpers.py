@@ -21,13 +21,13 @@ from email.message import Message
 import hashlib
 import logging
 import sys
-from typing import Optional, Mapping, Any
+from typing import Any, Mapping, Optional
 import urllib
 
 from google.auth import exceptions
 
 try:
-    from google.api_core import client_logging
+    from google.api_core import client_logging  # noqa: F401
 
     CLIENT_LOGGING_SUPPORTED = True  # pragma: NO COVER
 # TODO(https://github.com/googleapis/google-auth-library-python/issues/1690): Remove `pragma: NO COVER` once
@@ -314,7 +314,7 @@ def hash_sensitive_info(data: dict) -> dict:
     return hashed_data
 
 
-def _hash_value(value, field_name: str) -> str:
+def _hash_value(value, field_name: str) -> Optional[str]:
     """Hashes a value and returns a formatted hash string."""
     if value is None:
         return None

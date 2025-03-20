@@ -13,9 +13,9 @@
 # limitations under the License.
 
 import datetime
-import urllib
 import logging
 from unittest import mock
+import urllib
 
 import pytest  # type: ignore
 
