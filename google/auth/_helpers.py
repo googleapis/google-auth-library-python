@@ -27,6 +27,8 @@ import urllib
 from google.auth import exceptions
 
 try:
+    # TODO(https://github.com/googleapis/python-api-core/issues/813): Remove `# type: ignore` when
+    # `google-api-core` type hints issue is resolved.
     from google.api_core import client_logging  # type: ignore # noqa: F401
 
     CLIENT_LOGGING_SUPPORTED = True  # pragma: NO COVER
