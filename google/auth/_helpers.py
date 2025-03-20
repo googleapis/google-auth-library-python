@@ -27,7 +27,7 @@ import urllib
 from google.auth import exceptions
 
 try:
-    from google.api_core import client_logging  # noqa: F401
+    from google.api_core import client_logging  # type: ignore # noqa: F401
 
     CLIENT_LOGGING_SUPPORTED = True  # pragma: NO COVER
 # TODO(https://github.com/googleapis/google-auth-library-python/issues/1690): Remove `pragma: NO COVER` once
