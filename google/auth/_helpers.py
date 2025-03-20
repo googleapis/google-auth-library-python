@@ -366,7 +366,29 @@ def request_log(
 
 
 def _parse_request_body(body: Union[bytes, str], content_type: str = None) -> Any:
-    """Parses a request body, handling bytes and dict types."""
+    """
+    Parses a request body, handling bytes and string types, and different content types.
+
+    Args:
+        body (Union[str|bytes]): The request body.
+        content_type (str): The content type of the request body, e.g., "application/json",
+            "application/x-www-form-urlencoded", or "text/plain". If None, attempts
+            to parse as JSON.
+
+    Returns:
+        The parsed request body.
+        - If the body is bytes and can be decoded to UTF-8, or if it's already a string,
+          the function proceeds to parse it based on the content type.
+        - If the content type is "application/json", the function attempts to parse the
+          body as JSON. If successful, the decoded JSON object is returned. If parsing
+          fails, the body string is returned.
+        - If the content type is "application/x-www-form-urlencoded", the function parses
+          the body as a URL-encoded query string and returns a dictionary.
+        - If the content type is "text/plain", the body string is returned.
+        - If no content type is provided, an attempt to parse json is made, and if that fails, the body string is returned.
+        - If the body is bytes and cannot be decoded to UTF-8, None is returned.
+        - If no content type is matched, None is returned.
+    """
     try:
         body_str = body.decode('utf-8') if isinstance(body, bytes) else body
     except UnicodeDecodeError:
@@ -387,11 +409,24 @@ def _parse_request_body(body: Union[bytes, str], content_type: str = None) -> An
             result = {k: v[0] for k, v in parsed_query.items()}
             return result
     if "text/plain" in content_type:
-        return body_str    
+        return body_str
+    return None
 
 
 def _parse_response(response: Any) -> Any:
-    """Parses a response, attempting to decode JSON."""
+    """
+    Parses a response, attempting to decode JSON.
+
+    Args:
+        response: The response object to parse. This can be any type, but
+            it is expected to have a `json()` method if it contains JSON.
+
+    Returns:
+        The parsed response. If the response contains valid JSON, the
+        decoded JSON object (e.g., a dictionary or list) is returned.
+        If the response does not have a `json()` method or if the JSON
+        decoding fails, the original response object is returned.
+    """
     try:
         json_response = response.json()
         return json_response

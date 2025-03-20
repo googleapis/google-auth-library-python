@@ -341,6 +341,8 @@ def test_response_log_debug_disabled(logger, caplog):
     assert "Response received..." not in caplog.text
 
 def test_response_log_debug_enabled_response_list(logger, caplog):
+    # NOTE: test the response log when response.json() returns a list as per
+    #  https://requests.readthedocs.io/en/latest/api/#requests.Response.json.
     class MockResponse:
         def json(self):
             return ["item1", "item2", "item3"]
