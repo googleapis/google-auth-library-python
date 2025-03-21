@@ -361,7 +361,7 @@ def request_log(
     # TODO(https://github.com/googleapis/google-auth-library-python/issues/1681): Hash sensitive information.
     if is_logging_enabled(logger):
         content_type = (
-            headers["Content-type"] if headers and "Content-Type" in headers else ""
+            headers["Content-Type"] if headers and "Content-Type" in headers else ""
         )
         json_body = _parse_request_body(body, content_type=content_type)
         logger.debug(
