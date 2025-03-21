@@ -321,6 +321,27 @@ def test_request_log_debug_enabled(logger, caplog):
     }
 
 
+def test_request_log_plain_text_debug_enabled(logger, caplog):
+    logger.setLevel(logging.DEBUG)
+    with mock.patch("google.auth._helpers.CLIENT_LOGGING_SUPPORTED", True):
+        _helpers.request_log(
+            logger,
+            "GET",
+            "http://example.com",
+            b"This is plain text.",
+            {"Authorization": "Bearer token", "Content-Type": "text/plain"},
+        )
+    assert len(caplog.records) == 1
+    record = caplog.records[0]
+    assert record.message == "Making request..."
+    assert record.httpRequest == {
+        "method": "GET",
+        "url": "http://example.com",
+        "body": "This is plain text.",
+        "headers": {"Authorization": "Bearer token", "Content-Type": "text/plain"},
+    }
+
+
 def test_request_log_debug_disabled(logger, caplog):
     logger.setLevel(logging.INFO)
     with mock.patch("google.auth._helpers.CLIENT_LOGGING_SUPPORTED", True):
