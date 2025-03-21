@@ -19,6 +19,7 @@ import calendar
 import datetime
 from email.message import Message
 import hashlib
+import json
 import logging
 import sys
 from typing import Any, Mapping, Optional
@@ -344,7 +345,7 @@ def request_log(
     logger: logging.Logger,
     method: str,
     url: str,
-    body: Optional[Any],
+    body: Optional[bytes],
     headers: Optional[Mapping[str, str]],
 ) -> None:
     """
@@ -357,10 +358,84 @@ def request_log(
         body: The request body (can be None).
         headers: The request headers (can be None).
     """
-    # TODO(https://github.com/googleapis/google-auth-library-python/issues/1682): Add httpRequest extra to log event.
     # TODO(https://github.com/googleapis/google-auth-library-python/issues/1681): Hash sensitive information.
     if is_logging_enabled(logger):
-        logger.debug("Making request: %s %s", method, url)
+        content_type = (
+            headers["Content-Type"] if headers and "Content-Type" in headers else ""
+        )
+        json_body = _parse_request_body(body, content_type=content_type)
+        logger.debug(
+            "Making request...",
+            extra={
+                "httpRequest": {
+                    "method": method,
+                    "url": url,
+                    "body": json_body,
+                    "headers": headers,
+                }
+            },
+        )
+
+
+def _parse_request_body(body: Optional[bytes], content_type: str = "") -> Any:
+    """
+    Parses a request body, handling bytes and string types, and different content types.
+
+    Args:
+        body (Optional[bytes]): The request body.
+        content_type (str): The content type of the request body, e.g., "application/json",
+            "application/x-www-form-urlencoded", or "text/plain". If empty, attempts
+            to parse as JSON.
+
+    Returns:
+        Parsed body (dict, str, or None).
+        - JSON: Decodes if content_type is "application/json" or None (fallback).
+        - URL-encoded: Parses if content_type is "application/x-www-form-urlencoded".
+        - Plain text: Returns string if content_type is "text/plain".
+        - None: Returns if body is None, UTF-8 decode fails, or content_type is unknown.
+    """
+    if body is None:
+        return None
+    try:
+        body_str = body.decode("utf-8")
+    except (UnicodeDecodeError, AttributeError):
+        return None
+    content_type = content_type.lower()
+    if not content_type or "application/json" in content_type:
+        try:
+            return json.loads(body_str)
+        except (json.JSONDecodeError, TypeError):
+            return body_str
+    if "application/x-www-form-urlencoded" in content_type:
+        parsed_query = urllib.parse.parse_qs(body_str)
+        result = {k: v[0] for k, v in parsed_query.items()}
+        return result
+    if "text/plain" in content_type:
+        return body_str
+    return None
+
+
+def _parse_response(response: Any) -> Any:
+    """
+    Parses a response, attempting to decode JSON.
+
+    Args:
+        response: The response object to parse. This can be any type, but
+            it is expected to have a `json()` method if it contains JSON.
+
+    Returns:
+        The parsed response. If the response contains valid JSON, the
+        decoded JSON object (e.g., a dictionary or list) is returned.
+        If the response does not have a `json()` method or if the JSON
+        decoding fails, the original response object is returned.
+    """
+    try:
+        json_response = response.json()
+        return json_response
+    except AttributeError:
+        return response
+    except json.JSONDecodeError:
+        return response
 
 
 def response_log(logger: logging.Logger, response: Any) -> None:
@@ -371,7 +446,7 @@ def response_log(logger: logging.Logger, response: Any) -> None:
         logger: The logging.Logger instance to use.
         response: The HTTP response object to log.
     """
-    # TODO(https://github.com/googleapis/google-auth-library-python/issues/1683): Add httpResponse extra to log event.
     # TODO(https://github.com/googleapis/google-auth-library-python/issues/1681): Hash sensitive information.
     if is_logging_enabled(logger):
-        logger.debug("Response received...")
+        json_response = _parse_response(response)
+        logger.debug("Response received...", extra={"httpResponse": json_response})

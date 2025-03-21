@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import datetime
+import json
 import logging
 from unittest import mock
 import urllib
@@ -100,7 +101,7 @@ def test_to_bytes_with_bytes():
 
 
 def test_to_bytes_with_unicode():
-    value = u"string-val"
+    value = "string-val"
     encoded_value = b"string-val"
     assert _helpers.to_bytes(value) == encoded_value
 
@@ -111,13 +112,13 @@ def test_to_bytes_with_nonstring_type():
 
 
 def test_from_bytes_with_unicode():
-    value = u"bytes-val"
+    value = "bytes-val"
     assert _helpers.from_bytes(value) == value
 
 
 def test_from_bytes_with_bytes():
     value = b"string-val"
-    decoded_value = u"string-val"
+    decoded_value = "string-val"
     assert _helpers.from_bytes(value) == decoded_value
 
 
@@ -306,10 +307,18 @@ def test_request_log_debug_enabled(logger, caplog):
             logger,
             "GET",
             "http://example.com",
-            {"key": "value"},
+            b'{"key": "value"}',
             {"Authorization": "Bearer token"},
         )
-    assert "Making request: GET http://example.com" in caplog.text
+    assert len(caplog.records) == 1
+    record = caplog.records[0]
+    assert record.message == "Making request..."
+    assert record.httpRequest == {
+        "method": "GET",
+        "url": "http://example.com",
+        "body": {"key": "value"},
+        "headers": {"Authorization": "Bearer token"},
+    }
 
 
 def test_request_log_debug_disabled(logger, caplog):
@@ -328,8 +337,11 @@ def test_request_log_debug_disabled(logger, caplog):
 def test_response_log_debug_enabled(logger, caplog):
     logger.setLevel(logging.DEBUG)
     with mock.patch("google.auth._helpers.CLIENT_LOGGING_SUPPORTED", True):
-        _helpers.response_log(logger, "response_object")
-    assert "Response received..." in caplog.text
+        _helpers.response_log(logger, {"payload": None})
+    assert len(caplog.records) == 1
+    record = caplog.records[0]
+    assert record.message == "Response received..."
+    assert record.httpResponse == {"payload": None}
 
 
 def test_response_log_debug_disabled(logger, caplog):
@@ -337,3 +349,125 @@ def test_response_log_debug_disabled(logger, caplog):
     with mock.patch("google.auth._helpers.CLIENT_LOGGING_SUPPORTED", True):
         _helpers.response_log(logger, "another_response")
     assert "Response received..." not in caplog.text
+
+
+def test_response_log_debug_enabled_response_list(logger, caplog):
+    # NOTE: test the response log when response.json() returns a list as per
+    #  https://requests.readthedocs.io/en/latest/api/#requests.Response.json.
+    class MockResponse:
+        def json(self):
+            return ["item1", "item2", "item3"]
+
+    response = MockResponse()
+    logger.setLevel(logging.DEBUG)
+    with mock.patch("google.auth._helpers.CLIENT_LOGGING_SUPPORTED", True):
+        _helpers.response_log(logger, response)
+    assert len(caplog.records) == 1
+    record = caplog.records[0]
+    assert record.message == "Response received..."
+    assert record.httpResponse == ["item1", "item2", "item3"]
+
+
+def test_parse_request_body_bytes_valid():
+    body = b"key1=value1&key2=value2"
+    expected = {"key1": "value1", "key2": "value2"}
+    assert (
+        _helpers._parse_request_body(
+            body, content_type="application/x-www-form-urlencoded"
+        )
+        == expected
+    )
+
+
+def test_parse_request_body_bytes_empty():
+    body = b""
+    assert _helpers._parse_request_body(body) == ""
+
+
+def test_parse_request_body_bytes_invalid_encoding():
+    body = b"\xff\xfe\xfd"  # Invalid UTF-8 sequence
+    assert _helpers._parse_request_body(body) is None
+
+
+def test_parse_request_body_bytes_malformed_query():
+    body = b"key1=value1&key2=value2"  # missing equals
+    expected = {"key1": "value1", "key2": "value2"}
+    assert (
+        _helpers._parse_request_body(
+            body, content_type="application/x-www-form-urlencoded"
+        )
+        == expected
+    )
+
+
+def test_parse_request_body_none():
+    assert _helpers._parse_request_body(None) is None
+
+
+def test_parse_request_body_bytes_no_content_type():
+    body = b'{"key": "value"}'
+    expected = {"key": "value"}
+    assert _helpers._parse_request_body(body) == expected
+
+
+def test_parse_request_body_bytes_content_type_json():
+    body = b'{"key": "value"}'
+    expected = {"key": "value"}
+    assert (
+        _helpers._parse_request_body(body, content_type="application/json") == expected
+    )
+
+
+def test_parse_request_body_content_type_urlencoded():
+    body = b"key=value"
+    expected = {"key": "value"}
+    assert (
+        _helpers._parse_request_body(
+            body, content_type="application/x-www-form-urlencoded"
+        )
+        == expected
+    )
+
+
+def test_parse_request_body_bytes_content_type_text():
+    body = b"This is plain text."
+    expected = "This is plain text."
+    assert _helpers._parse_request_body(body, content_type="text/plain") == expected
+
+
+def test_parse_request_body_content_type_invalid():
+    body = b'{"key": "value"}'
+    assert _helpers._parse_request_body(body, content_type="invalid") is None
+
+
+def test_parse_request_body_other_type():
+    assert _helpers._parse_request_body(123) is None
+    assert _helpers._parse_request_body("string") is None
+
+
+def test_parse_response_json_valid():
+    class MockResponse:
+        def json(self):
+            return {"data": "test"}
+
+    response = MockResponse()
+    expected = {"data": "test"}
+    assert _helpers._parse_response(response) == expected
+
+
+def test_parse_response_json_invalid():
+    class MockResponse:
+        def json(self):
+            raise json.JSONDecodeError("msg", "doc", 0)
+
+    response = MockResponse()
+    assert _helpers._parse_response(response) == response
+
+
+def test_parse_response_no_json_method():
+    response = "plain text"
+    assert _helpers._parse_response(response) == "plain text"
+
+
+def test_parse_response_none():
+    assert _helpers._parse_response(None) is None
