@@ -307,7 +307,7 @@ def test_request_log_debug_enabled(logger, caplog):
             logger,
             "GET",
             "http://example.com",
-            {"key": "value"},
+            b'{"key": "value"}',
             {"Authorization": "Bearer token"},
         )
     assert len(caplog.records) == 1
@@ -400,19 +400,43 @@ def test_parse_request_body_bytes_malformed_query():
     )
 
 
-def test_parse_request_body_dict():
-    body = {"key": "value"}
-    expected = {"key": "value"}
-    assert _helpers._parse_request_body(body) == expected
-
-
 def test_parse_request_body_none():
     assert _helpers._parse_request_body(None) is None
 
 
+def test_parse_request_body_bytes_no_content_type():
+    body = b'{"key": "value"}'
+    expected = {"key": "value"}
+    assert _helpers._parse_request_body(body) == expected
+
+
+def test_parse_request_body_bytes_content_type_json():
+    body = b'{"key": "value"}'
+    expected = {"key": "value"}
+    assert (
+        _helpers._parse_request_body(body, content_type="application/json") == expected
+    )
+
+
+def test_parse_request_body_content_type_urlencoded():
+    body = b"key=value"
+    expected = {"key": "value"}
+    assert (
+        _helpers._parse_request_body(
+            body, content_type="application/x-www-form-urlencoded"
+        )
+        == expected
+    )
+
+
+def test_parse_request_body_content_type_invalid():
+    body = b'{"key": "value"}'
+    assert _helpers._parse_request_body(body, content_type="invalid") is None
+
+
 def test_parse_request_body_other_type():
-    assert _helpers._parse_request_body(123) == 123
-    assert _helpers._parse_request_body("string") == "string"
+    assert _helpers._parse_request_body(123) is None
+    assert _helpers._parse_request_body("string") is None
 
 
 def test_parse_response_json_valid():

@@ -377,7 +377,7 @@ def request_log(
         )
 
 
-def _parse_request_body(body: Optional[bytes], content_type: str) -> Any:
+def _parse_request_body(body: Optional[bytes], content_type: str = "") -> Any:
     """
     Parses a request body, handling bytes and string types, and different content types.
 
@@ -394,11 +394,11 @@ def _parse_request_body(body: Optional[bytes], content_type: str) -> Any:
         - Plain text: Returns string if content_type is "text/plain".
         - None: Returns if body is None, UTF-8 decode fails, or content_type is unknown.
     """
-    if not body:
+    if body is None:
         return None
     try:
         body_str = body.decode("utf-8")
-    except UnicodeDecodeError:
+    except (UnicodeDecodeError, AttributeError):
         return None
     content_type = content_type.lower()
     if not content_type or "application/json" in content_type:
