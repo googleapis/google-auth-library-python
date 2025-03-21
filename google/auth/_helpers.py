@@ -358,19 +358,22 @@ def request_log(
         body: The request body (can be None).
         headers: The request headers (can be None).
     """
-    # TODO(https://github.com/googleapis/google-auth-library-python/issues/1681): Hash sensitive information.
     if is_logging_enabled(logger):
         content_type = (
             headers["Content-Type"] if headers and "Content-Type" in headers else ""
         )
         json_body = _parse_request_body(body, content_type=content_type)
+        if isinstance(json_body, dict):
+            logged_body = hash_sensitive_info(json_body)
+        else:
+            logged_body = json_body
         logger.debug(
             "Making request...",
             extra={
                 "httpRequest": {
                     "method": method,
                     "url": url,
-                    "body": json_body,
+                    "body": logged_body,
                     "headers": headers,
                 }
             },
@@ -446,7 +449,10 @@ def response_log(logger: logging.Logger, response: Any) -> None:
         logger: The logging.Logger instance to use.
         response: The HTTP response object to log.
     """
-    # TODO(https://github.com/googleapis/google-auth-library-python/issues/1681): Hash sensitive information.
     if is_logging_enabled(logger):
         json_response = _parse_response(response)
-        logger.debug("Response received...", extra={"httpResponse": json_response})
+        if isinstance(json_response, dict):
+            logged_response = hash_sensitive_info(json_response)
+        else:
+            logged_response = json_response
+        logger.debug("Response received...", extra={"httpResponse": logged_response})
