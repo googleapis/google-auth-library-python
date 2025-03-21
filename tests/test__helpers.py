@@ -212,7 +212,7 @@ def test_hash_sensitive_info_basic():
         "scope": "https://www.googleapis.com/auth/test-api",
         "token_type": "Bearer",
     }
-    hashed_data = _helpers.hash_sensitive_info(test_data)
+    hashed_data = _helpers._hash_sensitive_info(test_data)
     assert hashed_data["expires_in"] == 3599
     assert hashed_data["scope"] == "https://www.googleapis.com/auth/test-api"
     assert hashed_data["access_token"].startswith("hashed_access_token-")
@@ -226,7 +226,7 @@ def test_hash_sensitive_info_multiple_sensitive():
         "expires_in": 3599,
         "token_type": "Bearer",
     }
-    hashed_data = _helpers.hash_sensitive_info(test_data)
+    hashed_data = _helpers._hash_sensitive_info(test_data)
     assert hashed_data["expires_in"] == 3599
     assert hashed_data["token_type"] == "Bearer"
     assert hashed_data["access_token"].startswith("hashed_access_token-")
@@ -235,21 +235,21 @@ def test_hash_sensitive_info_multiple_sensitive():
 
 def test_hash_sensitive_info_none_value():
     test_data = {"username": "user3", "secret": None, "normal_data": "abc"}
-    hashed_data = _helpers.hash_sensitive_info(test_data)
+    hashed_data = _helpers._hash_sensitive_info(test_data)
     assert hashed_data["secret"] is None
     assert hashed_data["normal_data"] == "abc"
 
 
 def test_hash_sensitive_info_non_string_value():
     test_data = {"username": "user4", "access_token": 12345, "normal_data": "def"}
-    hashed_data = _helpers.hash_sensitive_info(test_data)
+    hashed_data = _helpers._hash_sensitive_info(test_data)
     assert hashed_data["access_token"].startswith("hashed_access_token-")
     assert hashed_data["normal_data"] == "def"
 
 
 def test_hash_sensitive_info_empty_dict():
     test_data = {}
-    hashed_data = _helpers.hash_sensitive_info(test_data)
+    hashed_data = _helpers._hash_sensitive_info(test_data)
     assert hashed_data == {}
 
 

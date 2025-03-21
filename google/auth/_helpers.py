@@ -298,7 +298,7 @@ def is_python_3():
     return sys.version_info > (3, 0)
 
 
-def hash_sensitive_info(data: dict) -> dict:
+def _hash_sensitive_info(data: dict) -> dict:
     """
     Hashes sensitive information within a dictionary.
 
@@ -364,8 +364,11 @@ def request_log(
         )
         json_body = _parse_request_body(body, content_type=content_type)
         if isinstance(json_body, dict):
-            logged_body = hash_sensitive_info(json_body)
+            logged_body = _hash_sensitive_info(json_body)
         else:
+            # TODO(https://github.com/googleapis/google-auth-library-python/issues/1701):
+            # Investigate what the request body looks like and if
+            # there is any sensitive information that needs to be hashed.
             logged_body = json_body
         logger.debug(
             "Making request...",
@@ -452,7 +455,10 @@ def response_log(logger: logging.Logger, response: Any) -> None:
     if is_logging_enabled(logger):
         json_response = _parse_response(response)
         if isinstance(json_response, dict):
-            logged_response = hash_sensitive_info(json_response)
+            logged_response = _hash_sensitive_info(json_response)
         else:
+            # TODO(https://github.com/googleapis/google-auth-library-python/issues/1701):
+            # Investigate what the return type of `response.json()` looks like and if
+            # there is any sensitive information that needs to be hashed.
             logged_response = json_response
         logger.debug("Response received...", extra={"httpResponse": logged_response})
