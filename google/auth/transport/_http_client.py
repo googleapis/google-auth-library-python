@@ -19,9 +19,9 @@ import logging
 import socket
 import urllib
 
+from google.auth import _helpers
 from google.auth import exceptions
 from google.auth import transport
-from google.auth import _helpers
 
 _LOGGER = logging.getLogger(__name__)
 

@@ -34,10 +34,10 @@ from requests.packages.urllib3.util.ssl_ import (  # type: ignore
     create_urllib3_context,
 )  # pylint: disable=ungrouped-imports
 
+from google.auth import _helpers
 from google.auth import environment_vars
 from google.auth import exceptions
 from google.auth import transport
-from google.auth import _helpers
 import google.auth.transport._mtls_helper
 from google.oauth2 import service_account
 
