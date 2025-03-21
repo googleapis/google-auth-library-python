@@ -429,6 +429,12 @@ def test_parse_request_body_content_type_urlencoded():
     )
 
 
+def test_parse_request_body_bytes_content_type_text():
+    body = b"This is plain text."
+    expected = "This is plain text."
+    assert _helpers._parse_request_body(body, content_type="text/plain") == expected
+
+
 def test_parse_request_body_content_type_invalid():
     body = b'{"key": "value"}'
     assert _helpers._parse_request_body(body, content_type="invalid") is None
