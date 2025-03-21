@@ -22,7 +22,7 @@ import hashlib
 import json
 import logging
 import sys
-from typing import Any, Mapping, Optional, Union
+from typing import Any, Mapping, Optional
 import urllib
 
 from google.auth import exceptions
@@ -345,7 +345,7 @@ def request_log(
     logger: logging.Logger,
     method: str,
     url: str,
-    body: Optional[Any],
+    body: Optional[bytes],
     headers: Optional[Mapping[str, str]],
 ) -> None:
     """
@@ -360,54 +360,56 @@ def request_log(
     """
     # TODO(https://github.com/googleapis/google-auth-library-python/issues/1681): Hash sensitive information.
     if is_logging_enabled(logger):
-        content_type = headers["Content-type"] if "Content-Type" in headers else None
+        content_type = (
+            headers["Content-type"] if headers and "Content-Type" in headers else ""
+        )
         json_body = _parse_request_body(body, content_type=content_type)
-        logger.debug("Making request...", extra={"httpRequest": {"method": method, "url": url, "body": json_body, "headers": headers}})
+        logger.debug(
+            "Making request...",
+            extra={
+                "httpRequest": {
+                    "method": method,
+                    "url": url,
+                    "body": json_body,
+                    "headers": headers,
+                }
+            },
+        )
 
 
-def _parse_request_body(body: Union[bytes, str], content_type: str = None) -> Any:
+def _parse_request_body(body: Optional[bytes], content_type: str) -> Any:
     """
     Parses a request body, handling bytes and string types, and different content types.
 
     Args:
-        body (Union[str|bytes]): The request body.
+        body (Optional[bytes]): The request body.
         content_type (str): The content type of the request body, e.g., "application/json",
-            "application/x-www-form-urlencoded", or "text/plain". If None, attempts
+            "application/x-www-form-urlencoded", or "text/plain". If empty, attempts
             to parse as JSON.
 
     Returns:
-        The parsed request body.
-        - If the body is bytes and can be decoded to UTF-8, or if it's already a string,
-          the function proceeds to parse it based on the content type.
-        - If the content type is "application/json", the function attempts to parse the
-          body as JSON. If successful, the decoded JSON object is returned. If parsing
-          fails, the body string is returned.
-        - If the content type is "application/x-www-form-urlencoded", the function parses
-          the body as a URL-encoded query string and returns a dictionary.
-        - If the content type is "text/plain", the body string is returned.
-        - If no content type is provided, an attempt to parse json is made, and if that fails, the body string is returned.
-        - If the body is bytes and cannot be decoded to UTF-8, None is returned.
-        - If no content type is matched, None is returned.
+        Parsed body (dict, str, or None).
+        - JSON: Decodes if content_type is "application/json" or None (fallback).
+        - URL-encoded: Parses if content_type is "application/x-www-form-urlencoded".
+        - Plain text: Returns string if content_type is "text/plain".
+        - None: Returns if body is None, UTF-8 decode fails, or content_type is unknown.
     """
+    if not body:
+        return None
     try:
-        body_str = body.decode('utf-8') if isinstance(body, bytes) else body
+        body_str = body.decode("utf-8")
     except UnicodeDecodeError:
         return None
-    if not content_type:
+    content_type = content_type.lower()
+    if not content_type or "application/json" in content_type:
         try:
             return json.loads(body_str)
         except (json.JSONDecodeError, TypeError):
             return body_str
-    content_type = content_type.lower()
-    if "application/json" in content_type:
-        try: 
-            return json.loads(body_str)
-        except json.JSONDecodeError:
-            return body_str
     if "application/x-www-form-urlencoded" in content_type:
-            parsed_query = urllib.parse.parse_qs(body_str)
-            result = {k: v[0] for k, v in parsed_query.items()}
-            return result
+        parsed_query = urllib.parse.parse_qs(body_str)
+        result = {k: v[0] for k, v in parsed_query.items()}
+        return result
     if "text/plain" in content_type:
         return body_str
     return None
@@ -434,6 +436,7 @@ def _parse_response(response: Any) -> Any:
         return response
     except json.JSONDecodeError:
         return response
+
 
 def response_log(logger: logging.Logger, response: Any) -> None:
     """
