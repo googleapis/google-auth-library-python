@@ -312,7 +312,7 @@ def _hash_sensitive_info(data: Union[dict, list]) -> Union[dict, list, str]:
 
     """
     if isinstance(data, dict):
-        hashed_data : Dict[Any, Union[Optional[str], dict, list]] = {}
+        hashed_data: Dict[Any, Union[Optional[str], dict, list]] = {}
         for key, value in data.items():
             if key in _SENSITIVE_FIELDS and not isinstance(value, (dict, list)):
                 hashed_data[key] = _hash_value(value, key)
