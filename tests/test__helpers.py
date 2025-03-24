@@ -247,6 +247,42 @@ def test_hash_sensitive_info_non_string_value():
     assert hashed_data["normal_data"] == "def"
 
 
+def test_hash_sensitive_info_list_value():
+    test_data = [
+        {"name": "Alice", "access_token": "12345"},
+        {"name": "Bob", "client_id": "1141"},
+    ]
+    hashed_data = _helpers._hash_sensitive_info(test_data)
+    assert hashed_data[0]["access_token"].startswith("hashed_access_token-")
+    assert hashed_data[1]["client_id"].startswith("hashed_client_id-")
+
+
+def test_hash_sensitive_info_nested_list_value():
+    test_data = [{"names": ["Alice", "Bob"], "tokens": [{"access_token": "1234"}]}]
+    hashed_data = _helpers._hash_sensitive_info(test_data)
+    assert hashed_data[0]["tokens"][0]["access_token"].startswith(
+        "hashed_access_token-"
+    )
+
+
+def test_hash_sensitive_info_int_value():
+    test_data = 123
+    hashed_data = _helpers._hash_sensitive_info(test_data)
+    assert hashed_data == "<class 'int'>"
+
+
+def test_hash_sensitive_info_bool_value():
+    test_data = True
+    hashed_data = _helpers._hash_sensitive_info(test_data)
+    assert hashed_data == "<class 'bool'>"
+
+
+def test_hash_sensitive_info_byte_value():
+    test_data = b"1243"
+    hashed_data = _helpers._hash_sensitive_info(test_data)
+    assert hashed_data == "<class 'bytes'>"
+
+
 def test_hash_sensitive_info_empty_dict():
     test_data = {}
     hashed_data = _helpers._hash_sensitive_info(test_data)
@@ -337,7 +373,7 @@ def test_request_log_plain_text_debug_enabled(logger, caplog):
     assert record.httpRequest == {
         "method": "GET",
         "url": "http://example.com",
-        "body": "This is plain text.",
+        "body": "<class 'str'>",
         "headers": {"Authorization": "Bearer token", "Content-Type": "text/plain"},
     }
 
@@ -386,7 +422,7 @@ def test_response_log_debug_enabled_response_list(logger, caplog):
     assert len(caplog.records) == 1
     record = caplog.records[0]
     assert record.message == "Response received..."
-    assert record.httpResponse == ["item1", "item2", "item3"]
+    assert record.httpResponse == ["<class 'str'>", "<class 'str'>", "<class 'str'>"]
 
 
 def test_parse_request_body_bytes_valid():

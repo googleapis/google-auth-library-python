@@ -22,7 +22,7 @@ import hashlib
 import json
 import logging
 import sys
-from typing import Any, Mapping, Optional
+from typing import Any, Mapping, Optional, Union
 import urllib
 
 from google.auth import exceptions
@@ -298,7 +298,7 @@ def is_python_3():
     return sys.version_info > (3, 0)
 
 
-def _hash_sensitive_info(data: dict) -> dict:
+def _hash_sensitive_info(data: Union[dict, list]) -> Union[dict, list, str]:
     """
     Hashes sensitive information within a dictionary.
 
@@ -307,14 +307,30 @@ def _hash_sensitive_info(data: dict) -> dict:
 
     Returns:
         A new dictionary with sensitive values replaced by their SHA512 hashes.
+        If the input is a list, returns a list with each element recursively processed.
+        If the input is neither a dict nor a list, returns the type of the input as a string.
+
     """
-    hashed_data = {}
-    for key, value in data.items():
-        if key in _SENSITIVE_FIELDS:
-            hashed_data[key] = _hash_value(value, key)
-        else:
-            hashed_data[key] = value
-    return hashed_data
+    if isinstance(data, dict):
+        hashed_data = {}
+        for key, value in data.items():
+            if key in _SENSITIVE_FIELDS and not isinstance(value, (dict, list)):
+                hashed_data[key] = _hash_value(value, key)
+            elif isinstance(value, (dict, list)):
+                hashed_data[key] = _hash_sensitive_info(value)
+            else:
+                hashed_data[key] = value
+        return hashed_data
+    elif isinstance(data, list):
+        hashed_list = []
+        for val in data:
+            hashed_list.append(_hash_sensitive_info(val))
+        return hashed_list
+    else:
+        # TODO(https://github.com/googleapis/google-auth-library-python/issues/1701):
+        # Investigate and hash sensitive info before logging when the data type is
+        # not a dict or a list.
+        return str(type(data))
 
 
 def _hash_value(value, field_name: str) -> Optional[str]:
@@ -363,13 +379,7 @@ def request_log(
             headers["Content-Type"] if headers and "Content-Type" in headers else ""
         )
         json_body = _parse_request_body(body, content_type=content_type)
-        if isinstance(json_body, dict):
-            logged_body = _hash_sensitive_info(json_body)
-        else:
-            # TODO(https://github.com/googleapis/google-auth-library-python/issues/1701):
-            # Investigate what the request body looks like and if
-            # there is any sensitive information that needs to be hashed.
-            logged_body = json_body
+        logged_body = _hash_sensitive_info(json_body)
         logger.debug(
             "Making request...",
             extra={
@@ -454,11 +464,5 @@ def response_log(logger: logging.Logger, response: Any) -> None:
     """
     if is_logging_enabled(logger):
         json_response = _parse_response(response)
-        if isinstance(json_response, dict):
-            logged_response = _hash_sensitive_info(json_response)
-        else:
-            # TODO(https://github.com/googleapis/google-auth-library-python/issues/1701):
-            # Investigate what the return type of `response.json()` looks like and if
-            # there is any sensitive information that needs to be hashed.
-            logged_response = json_response
+        logged_response = _hash_sensitive_info(json_response)
         logger.debug("Response received...", extra={"httpResponse": logged_response})
