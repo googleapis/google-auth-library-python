@@ -4,6 +4,13 @@
 
 [1]: https://pypi.org/project/google-auth/#history
 
+## [2.38.1](https://github.com/googleapis/google-auth-library-python/compare/v2.38.0...v2.38.1) (2025-03-25)
+
+
+### Bug Fixes
+
+* Fix systest failure ([#1703](https://github.com/googleapis/google-auth-library-python/issues/1703)) ([55585ff](https://github.com/googleapis/google-auth-library-python/commit/55585ff8324316f7f267d1d2bcab597af5f030d4))
+
 ## [2.38.0](https://github.com/googleapis/google-auth-library-python/compare/v2.37.0...v2.38.0) (2025-01-23)
 
 
