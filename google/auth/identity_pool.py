@@ -46,8 +46,6 @@ import json
 import os
 from typing import NamedTuple
 
-from OpenSSL import crypto
-
 from google.auth import _helpers
 from google.auth import exceptions
 from google.auth import external_account
@@ -154,6 +152,9 @@ class _X509Supplier(SubjectTokenSupplier):
 
     @_helpers.copy_docstring(SubjectTokenSupplier)
     def get_subject_token(self, context, request):
+        from OpenSSL import crypto
+        import urllib3.contrib.pyopenssl  # type: ignore
+
         leaf_cert = crypto.load_certificate(
             crypto.FILETYPE_PEM, self._leaf_cert_callback()
         )
@@ -175,6 +176,9 @@ class _X509Supplier(SubjectTokenSupplier):
         return json.dumps(cert_chain)
 
     def _read_trust_chain(self):
+        from OpenSSL import crypto
+        import urllib3.contrib.pyopenssl  # type: ignore
+
         certificate_trust_chain = []
         # If no trust chain path was provided, return an empty list.
         if self._trust_chain_path is None or self._trust_chain_path == "":
@@ -208,6 +212,9 @@ class _X509Supplier(SubjectTokenSupplier):
             )
 
     def _encode_cert(cert):
+        from OpenSSL import crypto
+        import urllib3.contrib.pyopenssl  # type: ignore
+
         return base64.b64encode(
             crypto.dump_certificate(crypto.FILETYPE_ASN1, cert)
         ).decode("utf-8")
