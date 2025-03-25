@@ -12,16 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import base64
 import datetime
 import http.client as http_client
 import json
 import os
 import urllib
-import base64
 
 import mock
-import pytest  # type: ignore
 from OpenSSL import crypto
+import pytest  # type: ignore
 
 from google.auth import _helpers, external_account
 from google.auth import exceptions

@@ -152,8 +152,9 @@ class _X509Supplier(SubjectTokenSupplier):
 
     @_helpers.copy_docstring(SubjectTokenSupplier)
     def get_subject_token(self, context, request):
+        # Import OpennSSL inline because it is an extra import only required by customers
+        # using mTLS.
         from OpenSSL import crypto
-        import urllib3.contrib.pyopenssl  # type: ignore
 
         leaf_cert = crypto.load_certificate(
             crypto.FILETYPE_PEM, self._leaf_cert_callback()
@@ -162,22 +163,30 @@ class _X509Supplier(SubjectTokenSupplier):
         cert_chain = []
 
         cert_chain.append(_X509Supplier._encode_cert(leaf_cert))
-        for i, cert in enumerate(trust_chain):
-            encoded = _X509Supplier._encode_cert(cert)
-            # Check if the current cert is the leaf cert and raise an exception if it is not the first
-            # cert in the chain.
+
+        if trust_chain is None or len(trust_chain) == 0:
+            return json.dumps(cert_chain)
+
+        # Append the first cert if it is not the leaf cert.
+        first_cert = _X509Supplier._encode_cert(trust_chain[0])
+        if first_cert != cert_chain[0]:
+            cert_chain.append(first_cert)
+
+        for i in range(1, len(trust_chain)):
+            encoded = _X509Supplier._encode_cert(trust_chain[i])
+            # Check if the current cert is the leaf cert and raise an exception if it is.
             if encoded == cert_chain[0]:
-                if i != 0:
-                    raise exceptions.RefreshError(
-                        "The leaf certificate must be at the top of the trust chain file"
-                    )
+                raise exceptions.RefreshError(
+                    "The leaf certificate must be at the top of the trust chain file"
+                )
             else:
                 cert_chain.append(encoded)
         return json.dumps(cert_chain)
 
     def _read_trust_chain(self):
+        # Import OpennSSL inline because it is an extra import only required by customers
+        # using mTLS.
         from OpenSSL import crypto
-        import urllib3.contrib.pyopenssl  # type: ignore
 
         certificate_trust_chain = []
         # If no trust chain path was provided, return an empty list.
@@ -212,8 +221,9 @@ class _X509Supplier(SubjectTokenSupplier):
             )
 
     def _encode_cert(cert):
+        # Import OpennSSL inline because it is an extra import only required by customers
+        # using mTLS.
         from OpenSSL import crypto
-        import urllib3.contrib.pyopenssl  # type: ignore
 
         return base64.b64encode(
             crypto.dump_certificate(crypto.FILETYPE_ASN1, cert)
