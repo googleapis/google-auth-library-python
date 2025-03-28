@@ -27,6 +27,30 @@ DEPENDENCIES = (
     "rsa>=3.1.4,<5",
 )
 
+# Unit test requirements.
+testing_extra_require = [
+    "flask",
+    "freezegun",
+    "mock",
+    "oauth2client",
+    "pyopenssl",
+    "pytest",
+    "pytest-cov",
+    "pytest-localserver",
+    "pyu2f",
+    "pyjwt",
+    "requests",
+    "urllib3",
+    "cryptography < 39.0.0",
+    "responses",
+    "grpcio",
+    # Async Dependencies
+    "pytest-asyncio; python_version > '3.0'",
+    "aioresponses; python_version > '3.0'",
+    "asynctest; python_version > '3.0'",
+    "aiohttp < 3.10.0; python_version > '3.0'",
+]
+
 extras = {
     "aiohttp": ["aiohttp >= 3.6.2, < 4.0.0.dev0", "requests >= 2.20.0, < 3.0.0.dev0"],
     "pyopenssl": ["pyopenssl>=20.0.0", "cryptography>=38.0.3"],
@@ -35,6 +59,7 @@ extras = {
     "enterprise_cert": ["cryptography", "pyopenssl"],
     "pyjwt": ["pyjwt>=2.0", "cryptography>=38.0.3"],
     "urllib3": ["urllib3", "packaging"],
+    "testing_extra_require": testing_extra_require,
 }
 
 with io.open("README.rst", "r") as fh:
