@@ -47,7 +47,9 @@ except ImportError:  # pragma: NO COVER
 
 if es256 is not None:  # pragma: NO COVER
     __all__ = [
+        "EsSigner",
         "ES256Signer",
+        "EsVerifier",
         "ES256Verifier",
         "RSASigner",
         "RSAVerifier",
@@ -68,6 +70,8 @@ RSAVerifier = rsa.RSAVerifier
 if es256 is not None:  # pragma: NO COVER
     ES256Signer = es256.ES256Signer
     ES256Verifier = es256.ES256Verifier
+    EsSigner = es256.EsSigner
+    EsVerifier = es256.EsVerifier
 
 
 def verify_signature(message, signature, certs, verifier_cls=rsa.RSAVerifier):
