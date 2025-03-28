@@ -97,8 +97,8 @@ class Request(transport.Request):
         credentials.refresh(request)
 
     Args:
-        http (urllib3.request.RequestMethods): An instance of any urllib3
-            class that implements :class:`~urllib3.request.RequestMethods`,
+        http (urllib3._request_methods.RequestMethods): An instance of any urllib3
+            class that implements :class:`~urllib3._request_methods.RequestMethods`,
             usually :class:`urllib3.PoolManager`.
 
     .. automethod:: __call__
@@ -199,8 +199,9 @@ class AuthorizedHttp(RequestMethods):  # type: ignore
         response = authed_http.request(
             'GET', 'https://www.googleapis.com/storage/v1/b')
 
-    This class implements :class:`urllib3.request.RequestMethods` and can be
-    used just like any other :class:`urllib3.PoolManager`.
+    This class implements
+    :class:`urllib3._request_methods.RequestMethods` and can be used
+    just like any other :class:`urllib3.PoolManager`.
 
     The underlying :meth:`urlopen` implementation handles adding the
     credentials' headers to the request and refreshing credentials as needed.
