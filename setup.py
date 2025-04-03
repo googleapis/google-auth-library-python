@@ -38,22 +38,20 @@ testing_extra_require = [
     "flask",
     "freezegun",
     "mock",
-    "oauth2client",
+    "cryptography < 39.0.0",
     "pyopenssl",
     "pytest",
     "pytest-cov",
     "pytest-localserver",
     "pyu2f",
     "pyjwt",
-    "urllib3",
-    "cryptography < 39.0.0",
     "responses",
-    "grpcio",
     # Async Dependencies
+    # TODO(https://github.com/googleapis/google-auth-library-python/issues/1722): Remove the pinned aiohttp version and use `aiohttp_extra_require`.
+    "aiohttp < 3.10.0",
     "pytest-asyncio; python_version > '3.0'",
     "aioresponses; python_version > '3.0'",
-    "asynctest; python_version > '3.0'",
-] + aiohttp_extra_require
+]
 
 extras = {
     "aiohttp": aiohttp_extra_require,
