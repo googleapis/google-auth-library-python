@@ -1,26 +1,31 @@
+# Copyright 2016 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from dataclasses import dataclass
 import json
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 from google.auth import exceptions
 
 
 @dataclass(frozen=True)
 class PublicKeyCredentialDescriptor:
-    """Descriptor for a security key based credential.
-
-    https://www.w3.org/TR/webauthn-3/#dictionary-credential-descriptor
-
-    Args:
-        id: <url-safe base64-encoded> credential id (key handle).
-        transports: <'usb'|'nfc'|'ble'|'internal'> List of supported transports.
-    """
-
     id: str
     transports: Optional[List[str]] = None
 
-    def to_dict(self):
-        cred = {"type": "public-key", "id": self.id}
+    def to_dict(self) -> Dict[str, Union[str, List[str]]]:
+        cred: Dict[str, Union[str, List[str]]] = {"type": "public-key", "id": self.id}
         if self.transports:
             cred["transports"] = self.transports
         return cred
@@ -28,17 +33,10 @@ class PublicKeyCredentialDescriptor:
 
 @dataclass
 class AuthenticationExtensionsClientInputs:
-    """Client extensions inputs for WebAuthn extensions.
-
-    Args:
-        appid: app id that can be asserted with in addition to rpid.
-            https://www.w3.org/TR/webauthn-3/#sctn-appid-extension
-    """
-
     appid: Optional[str] = None
 
-    def to_dict(self):
-        extensions = {}
+    def to_dict(self) -> Dict[str, str]:
+        extensions: Dict[str, str] = {}
         if self.appid:
             extensions["appid"] = self.appid
         return extensions
@@ -46,18 +44,6 @@ class AuthenticationExtensionsClientInputs:
 
 @dataclass
 class GetRequest:
-    """WebAuthn get request
-
-    Args:
-        origin: Origin where the WebAuthn get assertion takes place.
-        rpid: Relying Party ID.
-        challenge: <url-safe base64-encoded> raw challenge.
-        timeout_ms: Timeout number in millisecond.
-        allow_credentials: List of allowed credentials.
-        user_verification: <'required'|'preferred'|'discouraged'> User verification requirement.
-        extensions: WebAuthn authentication extensions inputs.
-    """
-
     origin: str
     rpid: str
     challenge: str
@@ -67,8 +53,11 @@ class GetRequest:
     extensions: Optional[AuthenticationExtensionsClientInputs] = None
 
     def to_json(self) -> str:
-        req_options: Dict[str, Any] = {"rpid": self.rpid, "challenge": self.challenge}
-        if self.timeout_ms:
+        req_options: Dict[str, Any] = {
+            "rpid": self.rpid,
+            "challenge": self.challenge,
+        }
+        if self.timeout_ms is not None:
             req_options["timeout"] = self.timeout_ms
         if self.allow_credentials:
             req_options["allowCredentials"] = [
@@ -85,17 +74,6 @@ class GetRequest:
 
 @dataclass(frozen=True)
 class AuthenticatorAssertionResponse:
-    """Authenticator response to a WebAuthn get (assertion) request.
-
-    https://www.w3.org/TR/webauthn-3/#authenticatorassertionresponse
-
-    Args:
-        client_data_json: <url-safe base64-encoded> client data JSON.
-        authenticator_data: <url-safe base64-encoded> authenticator data.
-        signature: <url-safe base64-encoded> signature.
-        user_handle: <url-safe base64-encoded> user handle.
-    """
-
     client_data_json: str
     authenticator_data: str
     signature: str
@@ -104,50 +82,44 @@ class AuthenticatorAssertionResponse:
 
 @dataclass(frozen=True)
 class GetResponse:
-    """WebAuthn get (assertion) response.
-
-    Args:
-        id: <url-safe base64-encoded> credential id (key handle).
-        response: The authenticator assertion response.
-        authenticator_attachment: <'cross-platform'|'platform'> The attachment status of the authenticator.
-        client_extension_results: WebAuthn authentication extensions output results in a dictionary.
-    """
-
     id: str
     response: AuthenticatorAssertionResponse
     authenticator_attachment: Optional[str]
-    client_extension_results: Optional[Dict]
+    client_extension_results: Optional[Dict[str, Any]]
 
     @staticmethod
-    def from_json(json_str: str):
-        """Verify and construct GetResponse from a JSON string."""
+    def from_json(json_str: str) -> "GetResponse":
         try:
-            resp_json = json.loads(json_str)
-        except ValueError:
-            raise exceptions.MalformedError("Invalid Get JSON response")
+            resp_json: Dict[str, Any] = json.loads(json_str)
+        except ValueError as e:
+            raise exceptions.MalformedError("Invalid Get JSON response") from e
+
         if resp_json.get("type") != "getResponse":
             raise exceptions.MalformedError(
-                "Invalid Get response type: {}".format(resp_json.get("type"))
+                f"Invalid Get response type: {resp_json.get('type')}"
             )
-        pk_cred = resp_json.get("responseData")
+
+        pk_cred: Optional[Dict[str, Any]] = resp_json.get("responseData")
         if pk_cred is None:
             if resp_json.get("error"):
                 raise exceptions.ReauthFailError(
-                    "WebAuthn.get failure: {}".format(resp_json["error"])
+                    f"WebAuthn.get failure: {resp_json['error']}"
                 )
-            else:
-                raise exceptions.MalformedError("Get response is empty")
+            raise exceptions.MalformedError("Get response is empty")
+
         if pk_cred.get("type") != "public-key":
             raise exceptions.MalformedError(
-                "Invalid credential type: {}".format(pk_cred.get("type"))
+                f"Invalid credential type: {pk_cred.get('type')}"
             )
-        assertion_json = pk_cred["response"]
+
+        assertion_json: Dict[str, Any] = pk_cred["response"]
         assertion_resp = AuthenticatorAssertionResponse(
             client_data_json=assertion_json["clientDataJSON"],
             authenticator_data=assertion_json["authenticatorData"],
             signature=assertion_json["signature"],
             user_handle=assertion_json.get("userHandle"),
         )
+
         return GetResponse(
             id=pk_cred["id"],
             response=assertion_resp,
