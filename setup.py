@@ -29,9 +29,7 @@ DEPENDENCIES = (
 
 
 requests_extra_require = ["requests >= 2.20.0, < 3.0.0.dev0"]
-aiohttp_extra_require = [
-    "aiohttp >= 3.6.2, < 4.0.0.dev0",
-] + requests_extra_require
+aiohttp_extra_require = ["aiohttp >= 3.6.2, < 4.0.0.dev0"] + requests_extra_require
 
 # Unit test requirements.
 testing_extra_require = [
