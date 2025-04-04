@@ -27,34 +27,34 @@ MAIN_THREAD_SLEEP_MS = 100 / 1000
 
 class MockCredentialsImpl(credentials.Credentials):
     def __init__(self, sleep_seconds=None):
-        self.refresh_count = 0
-        self.token = None
-        self.sleep_seconds = sleep_seconds if sleep_seconds else None
+    self.refresh_count = 0
+    self.token = None
+    self.sleep_seconds = sleep_seconds if sleep_seconds else None
 
-    def refresh(self, request):
-        if self.sleep_seconds:
-            time.sleep(self.sleep_seconds)
-        self.token = request
-        self.refresh_count += 1
+        def refresh(self, request):
+            if self.sleep_seconds:
+    time.sleep(self.sleep_seconds)
+    self.token = request
+    self.refresh_count += 1
 
 
-@pytest.fixture
-def test_thread_count():
+    @pytest.fixture
+                def test_thread_count():
     return 25
 
 
-def _cred_spinlock(cred):
+                    def _cred_spinlock(cred):
     while cred.token is None:  # pragma: NO COVER
-        time.sleep(MAIN_THREAD_SLEEP_MS)
+    time.sleep(MAIN_THREAD_SLEEP_MS)
 
 
-def test_invalid_start_refresh():
+                        def test_invalid_start_refresh():
     w = _refresh_worker.RefreshThreadManager()
-    with pytest.raises(exceptions.InvalidValue):
-        w.start_refresh(None, None)
+                            with pytest.raises(exceptions.InvalidValue):
+    w.start_refresh(None, None)
 
 
-def test_start_refresh():
+                                def test_start_refresh():
     w = _refresh_worker.RefreshThreadManager()
     cred = MockCredentialsImpl()
     request = mock.MagicMock()
@@ -68,7 +68,7 @@ def test_start_refresh():
     assert cred.refresh_count == 1
 
 
-def test_nonblocking_start_refresh():
+                                    def test_nonblocking_start_refresh():
     w = _refresh_worker.RefreshThreadManager()
     cred = MockCredentialsImpl(sleep_seconds=1)
     request = mock.MagicMock()
@@ -79,20 +79,20 @@ def test_nonblocking_start_refresh():
     assert cred.refresh_count == 0
 
 
-def test_multiple_refreshes_multiple_workers(test_thread_count):
+                                        def test_multiple_refreshes_multiple_workers(test_thread_count):
     w = _refresh_worker.RefreshThreadManager()
     cred = MockCredentialsImpl()
     request = mock.MagicMock()
 
-    def _thread_refresh():
-        time.sleep(random.randrange(0, 5))
-        assert w.start_refresh(cred, request)
+                                            def _thread_refresh():
+    time.sleep(random.randrange(0, 5)
+    assert w.start_refresh(cred, request)
 
     threads = [
-        threading.Thread(target=_thread_refresh) for _ in range(test_thread_count)
+    threading.Thread(target=_thread_refresh) for _ in range(test_thread_count)
     ]
-    for t in threads:
-        t.start()
+                                                for t in threads:
+    t.start()
 
     _cred_spinlock(cred)
 
@@ -102,7 +102,7 @@ def test_multiple_refreshes_multiple_workers(test_thread_count):
     assert cred.refresh_count > 0
 
 
-def test_refresh_error():
+                                                    def test_refresh_error():
     w = _refresh_worker.RefreshThreadManager()
     cred = mock.MagicMock()
     request = mock.MagicMock()
@@ -112,13 +112,13 @@ def test_refresh_error():
     assert w.start_refresh(cred, request)
 
     while w._worker._error_info is None:  # pragma: NO COVER
-        time.sleep(MAIN_THREAD_SLEEP_MS)
+    time.sleep(MAIN_THREAD_SLEEP_MS)
 
     assert w._worker is not None
     assert isinstance(w._worker._error_info, exceptions.RefreshError)
 
 
-def test_refresh_error_call_refresh_again():
+                                                        def test_refresh_error_call_refresh_again():
     w = _refresh_worker.RefreshThreadManager()
     cred = mock.MagicMock()
     request = mock.MagicMock()
@@ -128,12 +128,12 @@ def test_refresh_error_call_refresh_again():
     assert w.start_refresh(cred, request)
 
     while w._worker._error_info is None:  # pragma: NO COVER
-        time.sleep(MAIN_THREAD_SLEEP_MS)
+    time.sleep(MAIN_THREAD_SLEEP_MS)
 
     assert not w.start_refresh(cred, request)
 
 
-def test_refresh_dead_worker():
+                                                            def test_refresh_dead_worker():
     cred = MockCredentialsImpl()
     request = mock.MagicMock()
 
@@ -148,7 +148,7 @@ def test_refresh_dead_worker():
     assert cred.refresh_count == 1
 
 
-def test_pickle():
+                                                                def test_pickle():
     w = _refresh_worker.RefreshThreadManager()
     # For some reason isinstance cannot interpret threading.Lock as a type.
     assert w._lock is not None
@@ -157,3 +157,14 @@ def test_pickle():
     manager = pickle.loads(pickled_manager)
     assert isinstance(manager, _refresh_worker.RefreshThreadManager)
     assert manager._lock is not None
+
+
+
+
+
+
+
+
+
+
+

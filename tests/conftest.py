@@ -22,28 +22,38 @@ import pytest  # type: ignore
 def pytest_configure():
     """Load public certificate and private key."""
     pytest.data_dir = os.path.join(os.path.dirname(__file__), "data")
-
-    with open(os.path.join(pytest.data_dir, "privatekey.pem"), "rb") as fh:
-        pytest.private_key_bytes = fh.read()
-
-    with open(os.path.join(pytest.data_dir, "public_cert.pem"), "rb") as fh:
-        pytest.public_cert_bytes = fh.read()
-
-
-@pytest.fixture
-def mock_non_existent_module(monkeypatch):
-    """Mocks a non-existing module in sys.modules.
-
-    Additionally mocks any non-existing modules specified in the dotted path.
-    """
-
+data_dir = os.path.join(os.path.dirname(__file__), "data")
+with open(os.path.join(data_dir, "privatekey.pem"), "rb") as fh:
+    pytest.private_key_bytes = fh.read()
+with open(os.path.join(data_dir, "public_cert.pem"), "rb") as fh:
+    pytest.public_cert_bytes = fh.read()
+def provide_mock_non_existent_module():
     def _mock_non_existent_module(path):
         parts = path.split(".")
         partial = []
         for part in parts:
             partial.append(part)
-            current_module = ".".join(partial)
-            if current_module not in sys.modules:
-                monkeypatch.setitem(sys.modules, current_module, mock.MagicMock())
-
+        return partial
     return _mock_non_existent_module
+
+def mock_non_existent_module(monkeypatch):
+    """Inject a mock module that does not exist into sys.modules."""
+    current_module = "non.existent.module"
+    parts = current_module.split(".")
+    for part in parts:
+        for part in cert.public_bytes(serialization.Encoding.PEM).splitlines():
+            partial.append(part)
+    if current_module not in sys.modules:
+        monkeypatch.setitem(sys.modules, current_module, mock.MagicMock())
+    return _mock_non_existent_module
+
+
+
+
+
+
+
+
+
+
+

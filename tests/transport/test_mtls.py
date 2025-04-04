@@ -23,17 +23,17 @@ from google.auth.transport import mtls
 @mock.patch("google.auth.transport._mtls_helper._check_config_path", autospec=True)
 def test_has_default_client_cert_source(check_config_path):
     def return_path_for_metadata(path):
-        return mock.Mock() if path == _mtls_helper.CONTEXT_AWARE_METADATA_PATH else None
+    return mock.Mock() if path == _mtls_helper.CONTEXT_AWARE_METADATA_PATH else None
 
     check_config_path.side_effect = return_path_for_metadata
     assert mtls.has_default_client_cert_source()
 
-    def return_path_for_cert_config(path):
-        return (
-            mock.Mock()
-            if path == _mtls_helper.CERTIFICATE_CONFIGURATION_DEFAULT_PATH
-            else None
-        )
+        def return_path_for_cert_config(path):
+    return (
+    mock.Mock()
+    if path == _mtls_helper.CERTIFICATE_CONFIGURATION_DEFAULT_PATH
+    else None
+    )
 
     check_config_path.side_effect = return_path_for_cert_config
     assert mtls.has_default_client_cert_source()
@@ -43,15 +43,15 @@ def test_has_default_client_cert_source(check_config_path):
     assert not mtls.has_default_client_cert_source()
 
 
-@mock.patch("google.auth.transport._mtls_helper.get_client_cert_and_key", autospec=True)
-@mock.patch("google.auth.transport.mtls.has_default_client_cert_source", autospec=True)
+    @mock.patch("google.auth.transport._mtls_helper.get_client_cert_and_key", autospec=True)
+    @mock.patch("google.auth.transport.mtls.has_default_client_cert_source", autospec=True)
 def test_default_client_cert_source(
-    has_default_client_cert_source, get_client_cert_and_key
+has_default_client_cert_source, get_client_cert_and_key
 ):
-    # Test default client cert source doesn't exist.
-    has_default_client_cert_source.return_value = False
-    with pytest.raises(exceptions.MutualTLSChannelError):
-        mtls.default_client_cert_source()
+# Test default client cert source doesn't exist.
+has_default_client_cert_source.return_value = False
+with pytest.raises(exceptions.MutualTLSChannelError):
+    mtls.default_client_cert_source()
 
     # The following tests will assume default client cert source exists.
     has_default_client_cert_source.return_value = True
@@ -65,20 +65,20 @@ def test_default_client_cert_source(
     get_client_cert_and_key.side_effect = ValueError()
     callback = mtls.default_client_cert_source()
     with pytest.raises(exceptions.MutualTLSChannelError):
-        callback()
+    callback()
 
 
-@mock.patch(
+    @mock.patch(
     "google.auth.transport._mtls_helper.get_client_ssl_credentials", autospec=True
-)
-@mock.patch("google.auth.transport.mtls.has_default_client_cert_source", autospec=True)
+    )
+    @mock.patch("google.auth.transport.mtls.has_default_client_cert_source", autospec=True)
 def test_default_client_encrypted_cert_source(
-    has_default_client_cert_source, get_client_ssl_credentials
+has_default_client_cert_source, get_client_ssl_credentials
 ):
-    # Test default client cert source doesn't exist.
-    has_default_client_cert_source.return_value = False
-    with pytest.raises(exceptions.MutualTLSChannelError):
-        mtls.default_client_encrypted_cert_source("cert_path", "key_path")
+# Test default client cert source doesn't exist.
+has_default_client_cert_source.return_value = False
+with pytest.raises(exceptions.MutualTLSChannelError):
+    mtls.default_client_encrypted_cert_source("cert_path", "key_path")
 
     # The following tests will assume default client cert source exists.
     has_default_client_cert_source.return_value = True
@@ -86,11 +86,22 @@ def test_default_client_encrypted_cert_source(
     # Test good callback.
     get_client_ssl_credentials.return_value = (True, b"cert", b"key", b"passphrase")
     callback = mtls.default_client_encrypted_cert_source("cert_path", "key_path")
-    with mock.patch("{}.open".format(__name__), return_value=mock.MagicMock()):
-        assert callback() == ("cert_path", "key_path", b"passphrase")
+    with mock.patch("{}.open".format(__name__), return_value=mock.MagicMock():
+    assert callback() == ("cert_path", "key_path", b"passphrase")
 
     # Test bad callback which throws exception.
     get_client_ssl_credentials.side_effect = exceptions.ClientCertError()
     callback = mtls.default_client_encrypted_cert_source("cert_path", "key_path")
-    with pytest.raises(exceptions.MutualTLSChannelError):
-        callback()
+        with pytest.raises(exceptions.MutualTLSChannelError):
+    callback()
+
+
+
+
+
+
+
+
+
+
+

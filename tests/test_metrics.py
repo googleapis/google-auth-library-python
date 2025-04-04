@@ -34,63 +34,74 @@ def test_add_metric_header():
     assert headers == {"x-goog-api-client": "bar"}
 
 
-@mock.patch.object(platform, "python_version", return_value="3.7")
-def test_versions(mock_python_version):
+    @mock.patch.object(platform, "python_version", return_value="3.7")
+    def test_versions(mock_python_version):
     version_save = version.__version__
     version.__version__ = "1.1"
     assert metrics.python_and_auth_lib_version() == "gl-python/3.7 auth/1.1"
     version.__version__ = version_save
 
 
-@mock.patch(
+    @mock.patch(
     "google.auth.metrics.python_and_auth_lib_version",
     return_value="gl-python/3.7 auth/1.1",
-)
-def test_metric_values(mock_python_and_auth_lib_version):
+    )
+        def test_metric_values(mock_python_and_auth_lib_version):
     assert (
-        metrics.token_request_access_token_mds()
-        == "gl-python/3.7 auth/1.1 auth-request-type/at cred-type/mds"
+    metrics.token_request_access_token_mds()
+    == "gl-python/3.7 auth/1.1 auth-request-type/at cred-type/mds"
     )
     assert (
-        metrics.token_request_id_token_mds()
-        == "gl-python/3.7 auth/1.1 auth-request-type/it cred-type/mds"
+    metrics.token_request_id_token_mds()
+    == "gl-python/3.7 auth/1.1 auth-request-type/it cred-type/mds"
     )
     assert (
-        metrics.token_request_access_token_impersonate()
-        == "gl-python/3.7 auth/1.1 auth-request-type/at cred-type/imp"
+    metrics.token_request_access_token_impersonate()
+    == "gl-python/3.7 auth/1.1 auth-request-type/at cred-type/imp"
     )
     assert (
-        metrics.token_request_id_token_impersonate()
-        == "gl-python/3.7 auth/1.1 auth-request-type/it cred-type/imp"
+    metrics.token_request_id_token_impersonate()
+    == "gl-python/3.7 auth/1.1 auth-request-type/it cred-type/imp"
     )
     assert (
-        metrics.token_request_access_token_sa_assertion()
-        == "gl-python/3.7 auth/1.1 auth-request-type/at cred-type/sa"
+    metrics.token_request_access_token_sa_assertion()
+    == "gl-python/3.7 auth/1.1 auth-request-type/at cred-type/sa"
     )
     assert (
-        metrics.token_request_id_token_sa_assertion()
-        == "gl-python/3.7 auth/1.1 auth-request-type/it cred-type/sa"
+    metrics.token_request_id_token_sa_assertion()
+    == "gl-python/3.7 auth/1.1 auth-request-type/it cred-type/sa"
     )
     assert metrics.token_request_user() == "gl-python/3.7 auth/1.1 cred-type/u"
     assert metrics.mds_ping() == "gl-python/3.7 auth/1.1 auth-request-type/mds"
     assert metrics.reauth_start() == "gl-python/3.7 auth/1.1 auth-request-type/re-start"
     assert (
-        metrics.reauth_continue() == "gl-python/3.7 auth/1.1 auth-request-type/re-cont"
+    metrics.reauth_continue() == "gl-python/3.7 auth/1.1 auth-request-type/re-cont"
     )
 
 
-@mock.patch(
+    @mock.patch(
     "google.auth.metrics.python_and_auth_lib_version",
     return_value="gl-python/3.7 auth/1.1",
-)
-def test_byoid_metric_header(mock_python_and_auth_lib_version):
+    )
+            def test_byoid_metric_header(mock_python_and_auth_lib_version):
     metrics_options = {}
     assert (
-        metrics.byoid_metrics_header(metrics_options)
-        == "gl-python/3.7 auth/1.1 google-byoid-sdk"
+    metrics.byoid_metrics_header(metrics_options)
+    == "gl-python/3.7 auth/1.1 google-byoid-sdk"
     )
     metrics_options["testKey"] = "testValue"
     assert (
-        metrics.byoid_metrics_header(metrics_options)
-        == "gl-python/3.7 auth/1.1 google-byoid-sdk testKey/testValue"
+    metrics.byoid_metrics_header(metrics_options)
+    == "gl-python/3.7 auth/1.1 google-byoid-sdk testKey/testValue"
     )
+
+
+
+
+
+
+
+
+
+
+

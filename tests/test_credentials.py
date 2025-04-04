@@ -23,26 +23,26 @@ from google.auth import credentials
 
 class CredentialsImpl(credentials.Credentials):
     def refresh(self, request):
-        self.token = request
-        self.expiry = (
-            datetime.datetime.utcnow()
-            + _helpers.REFRESH_THRESHOLD
-            + datetime.timedelta(seconds=5)
-        )
+    self.token = request
+    self.expiry = (
+    datetime.datetime.utcnow()
+    + _helpers.REFRESH_THRESHOLD
+    + datetime.timedelta(seconds=5)
+    )
 
-    def with_quota_project(self, quota_project_id):
-        raise NotImplementedError()
-
-
-class CredentialsImplWithMetrics(credentials.Credentials):
-    def refresh(self, request):
-        self.token = request
-
-    def _metric_header_for_usage(self):
-        return "foo"
+        def with_quota_project(self, quota_project_id):
+    raise NotImplementedError()
 
 
-def test_credentials_constructor():
+            class CredentialsImplWithMetrics(credentials.Credentials):
+                def refresh(self, request):
+    self.token = request
+
+                    def _metric_header_for_usage(self):
+    return "foo"
+
+
+                        def test_credentials_constructor():
     credentials = CredentialsImpl()
     assert not credentials.token
     assert not credentials.expiry
@@ -52,18 +52,18 @@ def test_credentials_constructor():
     assert not credentials._use_non_blocking_refresh
 
 
-def test_credentials_get_cred_info():
+                            def test_credentials_get_cred_info():
     credentials = CredentialsImpl()
     assert not credentials.get_cred_info()
 
 
-def test_with_non_blocking_refresh():
+                                def test_with_non_blocking_refresh():
     c = CredentialsImpl()
     c.with_non_blocking_refresh()
     assert c._use_non_blocking_refresh
 
 
-def test_expired_and_valid():
+                                    def test_expired_and_valid():
     credentials = CredentialsImpl()
     credentials.token = "token"
 
@@ -73,7 +73,7 @@ def test_expired_and_valid():
     # Set the expiration to one second more than now plus the clock skew
     # accomodation. These credentials should be valid.
     credentials.expiry = (
-        _helpers.utcnow() + _helpers.REFRESH_THRESHOLD + datetime.timedelta(seconds=1)
+    _helpers.utcnow() + _helpers.REFRESH_THRESHOLD + datetime.timedelta(seconds=1)
     )
 
     assert credentials.valid
@@ -87,7 +87,7 @@ def test_expired_and_valid():
     assert credentials.expired
 
 
-def test_before_request():
+                                        def test_before_request():
     credentials = CredentialsImpl()
     request = "token"
     headers = {}
@@ -110,7 +110,7 @@ def test_before_request():
     assert "x-allowed-locations" not in headers
 
 
-def test_before_request_with_trust_boundary():
+                                            def test_before_request_with_trust_boundary():
     DUMMY_BOUNDARY = "0xA30"
     credentials = CredentialsImpl()
     credentials._trust_boundary = {"locations": [], "encoded_locations": DUMMY_BOUNDARY}
@@ -135,7 +135,7 @@ def test_before_request_with_trust_boundary():
     assert headers["x-allowed-locations"] == DUMMY_BOUNDARY
 
 
-def test_before_request_metrics():
+                                                def test_before_request_metrics():
     credentials = CredentialsImplWithMetrics()
     request = "token"
     headers = {}
@@ -144,7 +144,7 @@ def test_before_request_metrics():
     assert headers["x-goog-api-client"] == "foo"
 
 
-def test_anonymous_credentials_ctor():
+                                                    def test_anonymous_credentials_ctor():
     anon = credentials.AnonymousCredentials()
     assert anon.token is None
     assert anon.expiry is None
@@ -152,23 +152,23 @@ def test_anonymous_credentials_ctor():
     assert anon.valid
 
 
-def test_anonymous_credentials_refresh():
+                                                        def test_anonymous_credentials_refresh():
     anon = credentials.AnonymousCredentials()
     request = object()
-    with pytest.raises(ValueError):
-        anon.refresh(request)
+                                                            with pytest.raises(ValueError):
+    anon.refresh(request)
 
 
-def test_anonymous_credentials_apply_default():
+                                                                def test_anonymous_credentials_apply_default():
     anon = credentials.AnonymousCredentials()
     headers = {}
     anon.apply(headers)
     assert headers == {}
-    with pytest.raises(ValueError):
-        anon.apply(headers, token="TOKEN")
+                                                                    with pytest.raises(ValueError):
+    anon.apply(headers, token="TOKEN")
 
 
-def test_anonymous_credentials_before_request():
+                                                                        def test_anonymous_credentials_before_request():
     anon = credentials.AnonymousCredentials()
     request = object()
     method = "GET"
@@ -178,18 +178,18 @@ def test_anonymous_credentials_before_request():
     assert headers == {}
 
 
-class ReadOnlyScopedCredentialsImpl(credentials.ReadOnlyScoped, CredentialsImpl):
+                                                                            class ReadOnlyScopedCredentialsImpl(credentials.ReadOnlyScoped, CredentialsImpl):
     @property
-    def requires_scopes(self):
-        return super(ReadOnlyScopedCredentialsImpl, self).requires_scopes
+                                                                                def requires_scopes(self):
+    return super(ReadOnlyScopedCredentialsImpl, self).requires_scopes
 
 
-def test_readonly_scoped_credentials_constructor():
+                                                                                    def test_readonly_scoped_credentials_constructor():
     credentials = ReadOnlyScopedCredentialsImpl()
     assert credentials._scopes is None
 
 
-def test_readonly_scoped_credentials_scopes():
+                                                                                        def test_readonly_scoped_credentials_scopes():
     credentials = ReadOnlyScopedCredentialsImpl()
     credentials._scopes = ["one", "two"]
     assert credentials.scopes == ["one", "two"]
@@ -199,31 +199,31 @@ def test_readonly_scoped_credentials_scopes():
     assert not credentials.has_scopes(["three"])
 
 
-def test_readonly_scoped_credentials_requires_scopes():
+                                                                                            def test_readonly_scoped_credentials_requires_scopes():
     credentials = ReadOnlyScopedCredentialsImpl()
     assert not credentials.requires_scopes
 
 
-class RequiresScopedCredentialsImpl(credentials.Scoped, CredentialsImpl):
-    def __init__(self, scopes=None, default_scopes=None):
-        super(RequiresScopedCredentialsImpl, self).__init__()
-        self._scopes = scopes
-        self._default_scopes = default_scopes
+                                                                                                class RequiresScopedCredentialsImpl(credentials.Scoped, CredentialsImpl):
+                                                                                                    def __init__(self, scopes=None, default_scopes=None):
+    super(RequiresScopedCredentialsImpl, self).__init__()
+    self._scopes = scopes
+    self._default_scopes = default_scopes
 
     @property
-    def requires_scopes(self):
-        return not self.scopes
+                                                                                                        def requires_scopes(self):
+    return not self.scopes
 
-    def with_scopes(self, scopes, default_scopes=None):
-        return RequiresScopedCredentialsImpl(
-            scopes=scopes, default_scopes=default_scopes
-        )
+                                                                                                            def with_scopes(self, scopes, default_scopes=None):
+    return RequiresScopedCredentialsImpl(
+    scopes=scopes, default_scopes=default_scopes
+    )
 
 
-def test_create_scoped_if_required_scoped():
+                                                                                                                def test_create_scoped_if_required_scoped():
     unscoped_credentials = RequiresScopedCredentialsImpl()
     scoped_credentials = credentials.with_scopes_if_required(
-        unscoped_credentials, ["one", "two"]
+    unscoped_credentials, ["one", "two"]
     )
 
     assert scoped_credentials is not unscoped_credentials
@@ -231,16 +231,16 @@ def test_create_scoped_if_required_scoped():
     assert scoped_credentials.has_scopes(["one", "two"])
 
 
-def test_create_scoped_if_required_not_scopes():
+                                                                                                                    def test_create_scoped_if_required_not_scopes():
     unscoped_credentials = CredentialsImpl()
     scoped_credentials = credentials.with_scopes_if_required(
-        unscoped_credentials, ["one", "two"]
+    unscoped_credentials, ["one", "two"]
     )
 
     assert scoped_credentials is unscoped_credentials
 
 
-def test_nonblocking_refresh_fresh_credentials():
+                                                                                                                        def test_nonblocking_refresh_fresh_credentials():
     c = CredentialsImpl()
 
     c._refresh_worker = mock.MagicMock()
@@ -254,7 +254,7 @@ def test_nonblocking_refresh_fresh_credentials():
     c.before_request(request, "http://example.com", "GET", {})
 
 
-def test_nonblocking_refresh_invalid_credentials():
+                                                                                                                            def test_nonblocking_refresh_invalid_credentials():
     c = CredentialsImpl()
     c.with_non_blocking_refresh()
 
@@ -271,7 +271,7 @@ def test_nonblocking_refresh_invalid_credentials():
     assert "x-identity-trust-boundary" not in headers
 
 
-def test_nonblocking_refresh_stale_credentials():
+                                                                                                                                def test_nonblocking_refresh_stale_credentials():
     c = CredentialsImpl()
     c.with_non_blocking_refresh()
 
@@ -284,9 +284,9 @@ def test_nonblocking_refresh_stale_credentials():
     assert not c._refresh_worker._worker
 
     c.expiry = (
-        datetime.datetime.utcnow()
-        + _helpers.REFRESH_THRESHOLD
-        - datetime.timedelta(seconds=1)
+    datetime.datetime.utcnow()
+    + _helpers.REFRESH_THRESHOLD
+    - datetime.timedelta(seconds=1)
     )
 
     # STALE credentials SHOULD spawn a non-blocking worker
@@ -301,7 +301,7 @@ def test_nonblocking_refresh_stale_credentials():
     assert "x-identity-trust-boundary" not in headers
 
 
-def test_nonblocking_refresh_failed_credentials():
+                                                                                                                                    def test_nonblocking_refresh_failed_credentials():
     c = CredentialsImpl()
     c.with_non_blocking_refresh()
 
@@ -314,9 +314,9 @@ def test_nonblocking_refresh_failed_credentials():
     assert not c._refresh_worker._worker
 
     c.expiry = (
-        datetime.datetime.utcnow()
-        + _helpers.REFRESH_THRESHOLD
-        - datetime.timedelta(seconds=1)
+    datetime.datetime.utcnow()
+    + _helpers.REFRESH_THRESHOLD
+    - datetime.timedelta(seconds=1)
     )
 
     # STALE credentials SHOULD spawn a non-blocking worker
@@ -333,7 +333,7 @@ def test_nonblocking_refresh_failed_credentials():
     assert "x-identity-trust-boundary" not in headers
 
 
-def test_token_state_no_expiry():
+                                                                                                                                        def test_token_state_no_expiry():
     c = CredentialsImpl()
 
     request = "token"
@@ -343,3 +343,14 @@ def test_token_state_no_expiry():
     assert c.token_state == credentials.TokenState.FRESH
 
     c.before_request(request, "http://example.com", "GET", {})
+
+
+
+
+
+
+
+
+
+
+

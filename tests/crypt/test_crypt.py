@@ -27,17 +27,17 @@ DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
 with open(os.path.join(DATA_DIR, "privatekey.pem"), "rb") as fh:
     PRIVATE_KEY_BYTES = fh.read()
 
-with open(os.path.join(DATA_DIR, "public_cert.pem"), "rb") as fh:
+    with open(os.path.join(DATA_DIR, "public_cert.pem"), "rb") as fh:
     PUBLIC_CERT_BYTES = fh.read()
 
-# To generate other_cert.pem:
-#   $ openssl req -new -newkey rsa:1024 -x509 -nodes -out other_cert.pem
+    # To generate other_cert.pem:
+    #   $ openssl req -new -newkey rsa:1024 -x509 -nodes -out other_cert.pem
 
-with open(os.path.join(DATA_DIR, "other_cert.pem"), "rb") as fh:
+        with open(os.path.join(DATA_DIR, "other_cert.pem"), "rb") as fh:
     OTHER_CERT_BYTES = fh.read()
 
 
-def test_verify_signature():
+            def test_verify_signature():
     to_sign = b"foo"
     signer = crypt.RSASigner.from_string(PRIVATE_KEY_BYTES)
     signature = signer.sign(to_sign)
@@ -46,13 +46,24 @@ def test_verify_signature():
 
     # List of certs
     assert crypt.verify_signature(
-        to_sign, signature, [OTHER_CERT_BYTES, PUBLIC_CERT_BYTES]
+    to_sign, signature, [OTHER_CERT_BYTES, PUBLIC_CERT_BYTES]
     )
 
 
-def test_verify_signature_failure():
+                def test_verify_signature_failure():
     to_sign = b"foo"
     signer = crypt.RSASigner.from_string(PRIVATE_KEY_BYTES)
     signature = signer.sign(to_sign)
 
     assert not crypt.verify_signature(to_sign, signature, OTHER_CERT_BYTES)
+
+
+
+
+
+
+
+
+
+
+
