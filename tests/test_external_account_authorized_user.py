@@ -557,3 +557,5 @@ class TestCredentials(object):
         assert creds.scopes == SCOPES
         assert creds._revoke_url == REVOKE_URL
         assert creds._quota_project_id == QUOTA_PROJECT_ID
+
+

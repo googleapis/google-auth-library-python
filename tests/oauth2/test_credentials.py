@@ -1066,3 +1066,5 @@ class TestUserAccessTokenCredentials(object):
             cred.before_request(mock.Mock(), "GET", "https://example.com", {})
             refresh.assert_called()
             apply.assert_called()
+
+
