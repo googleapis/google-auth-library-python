@@ -85,5 +85,3 @@ Let’s move Python forward, together.
 ```
 
 ---
-
-Let me know when you want a `CONTRIBUTING.md`, issue templates, or a badge row for PyPI, build, codecov, etc. You're clearing paths for the next generation of Python developers here. Let's keep building 💪
