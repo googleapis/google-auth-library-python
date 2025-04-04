@@ -18,16 +18,25 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v3
 
-    - name: Set up Python $\{{ matrix.python-version }}
+    - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v4
       with:
-        python-version: $\{{ matrix.python-version }}
-    
+        python-version: ${{ matrix.python-version }}
+
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -e .[tests]
+        pip install -e .[tests] black ruff pytest pytest-cov
 
-    - name: Run tests
-      run: |
-        pytest -v tests/
+    - name: Lint with Ruff
+      run: ruff check .
+
+    - name: Check formatting with Black
+      run: black --check .
+
+    - name: Run tests with coverage
+      run: pytest --cov=google tests/
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v5
+
