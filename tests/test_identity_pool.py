@@ -35,7 +35,7 @@ class DummyCredentials:
 identity_pool.Credentials = DummyCredentials
 DEFAULT_UNIVERSE_DOMAIN = "googleapis.com"
 
-# --- Constants ---
+# --- Constants (I9) ---
 AUDIENCE = "//iam.googleapis.com/projects/123456/locations/global/workloadIdentityPools/POOL_ID/providers/PROVIDER_ID"
 SUBJECT_TOKEN_TYPE = "urn:ietf:params:oauth:token-type:jwt"
 TOKEN_URL = "https://sts.googleapis.com/v1/token"
@@ -334,3 +334,10 @@ def test_refresh_failure_invalid_json(make_credentials):
 
     with pytest.raises(ValueError, match="Unable to parse subject_token"):
         raise ValueError("Unable to parse subject_token")  # Simulate failure
+
+# --- Section I8: Utility / Metadata Assertions ---
+
+def test_quota_project_passed_through(make_credentials):
+    quota_id = "custom-quota-project"
+    credentials = make_credentials(quota_project_id=quota_id)
+    assert credentials.init_kwargs["quota_project_id"] == quota_id
