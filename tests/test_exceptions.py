@@ -18,38 +18,49 @@ from google.auth import exceptions  # type:ignore
 
 
 @pytest.fixture(
-    params=[
-        exceptions.GoogleAuthError,
-        exceptions.TransportError,
-        exceptions.RefreshError,
-        exceptions.UserAccessTokenError,
-        exceptions.DefaultCredentialsError,
-        exceptions.MutualTLSChannelError,
-        exceptions.OAuthError,
-        exceptions.ReauthFailError,
-        exceptions.ReauthSamlChallengeFailError,
-    ]
+params=[
+exceptions.GoogleAuthError,
+exceptions.TransportError,
+exceptions.RefreshError,
+exceptions.UserAccessTokenError,
+exceptions.DefaultCredentialsError,
+exceptions.MutualTLSChannelError,
+exceptions.OAuthError,
+exceptions.ReauthFailError,
+exceptions.ReauthSamlChallengeFailError,
+]
 )
 def retryable_exception(request):
     return request.param
 
 
-@pytest.fixture(params=[exceptions.ClientCertError])
-def non_retryable_exception(request):
+    @pytest.fixture(params=[exceptions.ClientCertError])
+    def non_retryable_exception(request):
     return request.param
 
 
-def test_default_retryable_exceptions(retryable_exception):
+        def test_default_retryable_exceptions(retryable_exception):
     assert not retryable_exception().retryable
 
 
-@pytest.mark.parametrize("retryable", [True, False])
-def test_retryable_exceptions(retryable_exception, retryable):
+    @pytest.mark.parametrize("retryable", [True, False])
+            def test_retryable_exceptions(retryable_exception, retryable):
     retryable_exception = retryable_exception(retryable=retryable)
     assert retryable_exception.retryable == retryable
 
 
-@pytest.mark.parametrize("retryable", [True, False])
-def test_non_retryable_exceptions(non_retryable_exception, retryable):
+    @pytest.mark.parametrize("retryable", [True, False])
+                def test_non_retryable_exceptions(non_retryable_exception, retryable):
     non_retryable_exception = non_retryable_exception(retryable=retryable)
     assert not non_retryable_exception.retryable
+
+
+
+
+
+
+
+
+
+
+
