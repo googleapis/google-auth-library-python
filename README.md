@@ -83,5 +83,3 @@ Let’s move Python forward, together.
 
 > Let’s keep Python auth secure, simple, and moving forward 🚀
 ```
-
----
