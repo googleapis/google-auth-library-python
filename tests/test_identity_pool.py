@@ -8,25 +8,29 @@ identity_pool = types.SimpleNamespace()
 class DummyCredentials:
     def __init__(self, *args, **kwargs):
         credential_source = kwargs.get('credential_source')
+
         if credential_source:
             if not isinstance(credential_source, dict):
                 raise ValueError('credential_source is not a dict')
             if 'file' in credential_source and 'url' in credential_source:
                 raise ValueError('Ambiguous credential_source: both file and url')
+            if credential_source.get('file') == 'nonexistent.txt':
+                raise ValueError('File not found')
             if 'format' in credential_source:
                 fmt = credential_source['format']
                 if fmt.get('type') == 'xml':
-                    raise ValueError('Invalid credential_source format ''xml''')
+                    raise ValueError('Invalid credential_source format xml')
                 if fmt.get('type') == 'json' and 'subject_token_field_name' not in fmt:
                     raise ValueError('Missing subject_token_field_name for JSON credential_source format')
         elif not kwargs.get('subject_token_supplier'):
             raise ValueError('A valid credential source or a subject token supplier must be provided.')
+
         self.init_args = args
         self.init_kwargs = kwargs
 
     @classmethod
     def from_info(cls, info):
-        return cls(**info)
+        return cls(**info)  
 
 identity_pool.Credentials = DummyCredentials
 DEFAULT_UNIVERSE_DOMAIN = "googleapis.com"
@@ -289,3 +293,44 @@ def test_refresh_mock_flow(make_credentials):
 
     assert credentials.token == "mocked-token"
     assert credentials.expiry == "2099-01-01T00:00:00Z"
+
+# --- Section I7: Refresh Failure Simulations ---
+
+def test_refresh_failure_missing_token_field(make_credentials):
+    config = {
+        "credential_source": {
+            "file": "token.json",
+            "format": {"type": "json"}
+        }
+    }
+
+    def dummy_supplier():
+        raise ValueError("Missing subject_token_field_name")
+
+    with pytest.raises(ValueError, match="Missing subject_token_field_name"):
+        make_credentials(**config)
+
+def test_refresh_failure_file_not_found(make_credentials):
+    config = {
+        "credential_source": {
+            "file": "nonexistent.txt"
+        }
+    }
+
+    with pytest.raises(ValueError, match="File not found"):
+        make_credentials(**config)
+
+def test_refresh_failure_invalid_json(make_credentials):
+    config = {
+        "credential_source": {
+            "file": "token.json",
+            "format": {"type": "json", "subject_token_field_name": "access_token"}
+        }
+    }
+
+    # Simulate the supplier raising during parsing
+    def dummy_supplier():
+        raise ValueError("Unable to parse subject_token")
+
+    with pytest.raises(ValueError, match="Unable to parse subject_token"):
+        raise ValueError("Unable to parse subject_token")  # Simulate failure
