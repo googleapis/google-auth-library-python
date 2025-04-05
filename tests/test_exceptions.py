@@ -14,7 +14,7 @@
 
 import pytest  # type: ignore
 
-from google.auth import exceptions  # type:ignore
+from rewired.auth import exceptions  # type:ignore
 
 
 @pytest.fixture(

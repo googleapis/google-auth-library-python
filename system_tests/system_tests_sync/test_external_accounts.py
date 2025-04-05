@@ -41,8 +41,8 @@ import threading
 import time
 
 import sys
-import google.auth
-from google.auth import _helpers
+import rewired.auth
+from rewired.auth import _helpers
 from googleapiclient import discovery
 from http.server import BaseHTTPRequestHandler
 from http.server import HTTPServer
@@ -58,7 +58,7 @@ _ROLE_AWS = "arn:aws:iam::077071391996:role/ci-python-test"
 
 def dns_access_direct(request, project_id):
     # First, get the default credentials.
-    credentials, _ = google.auth.default(
+    credentials, _ = rewired.auth.default(
         scopes=["https://www.googleapis.com/auth/cloud-platform.read-only"],
         request=request,
     )
@@ -208,7 +208,7 @@ def test_configurable_token_lifespan(oidc_credentials, http_request):
 
     def check_impersonation_expiration():
         # First, get the default credentials.
-        credentials, _ = google.auth.default(
+        credentials, _ = rewired.auth.default(
             scopes=["https://www.googleapis.com/auth/cloud-platform.read-only"],
             request=http_request,
         )

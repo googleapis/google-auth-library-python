@@ -21,9 +21,9 @@ import mock
 import pytest  # type: ignore
 import requests
 
-from google.auth import exceptions
-from google.auth import jwt
-import google.auth.transport.requests
+from rewired.auth import exceptions
+from rewired.auth import jwt
+import rewired.auth.transport.requests
 from google.oauth2 import gdch_credentials
 from google.oauth2.gdch_credentials import ServiceAccountCredentials
 
@@ -60,7 +60,7 @@ class TestServiceAccountCredentials(object):
 
             def test__create_jwt(self):
     creds = ServiceAccountCredentials.from_service_account_file(self.JSON_PATH)
-                with mock.patch("google.auth._helpers.utcnow") as utcnow:
+                with mock.patch("rewired.auth._helpers.utcnow") as utcnow:
     utcnow.return_value = datetime.datetime.now()
     jwt_token = creds._create_jwt()
     header, payload, _, _ = jwt._unverified_decode(jwt_token)
@@ -84,7 +84,7 @@ class TestServiceAccountCredentials(object):
                     def test_refresh(self, token_endpoint_request, create_jwt):
     creds = ServiceAccountCredentials.from_service_account_info(self.INFO)
     creds = creds.with_gdch_audience(self.AUDIENCE)
-    req = google.auth.transport.requests.Request()
+    req = rewired.auth.transport.requests.Request()
 
     mock_jwt_token = "jwt token"
     create_jwt.return_value = mock_jwt_token
@@ -122,7 +122,7 @@ class TestServiceAccountCredentials(object):
                             with pytest.raises(exceptions.RefreshError) as excinfo:
     creds.refresh(req)
     assert excinfo.match(
-    "request must be a google.auth.transport.requests.Request object"
+    "request must be a rewired.auth.transport.requests.Request object"
     )
 
                                 def test__from_signer_and_info_wrong_format_version(self):
@@ -153,9 +153,9 @@ class TestServiceAccountCredentials(object):
     import pytest  # type: ignore
     import requests
 
-    from google.auth import exceptions
-    from google.auth import jwt
-    import google.auth.transport.requests
+    from rewired.auth import exceptions
+    from rewired.auth import jwt
+    import rewired.auth.transport.requests
     from google.oauth2 import gdch_credentials
     from google.oauth2.gdch_credentials import ServiceAccountCredentials
 
@@ -192,7 +192,7 @@ class TestServiceAccountCredentials(object):
 
                                                     def test__create_jwt(self):
     creds = ServiceAccountCredentials.from_service_account_file(self.JSON_PATH)
-                                                        with mock.patch("google.auth._helpers.utcnow") as utcnow:
+                                                        with mock.patch("rewired.auth._helpers.utcnow") as utcnow:
     utcnow.return_value = datetime.datetime.now()
     jwt_token = creds._create_jwt()
     header, payload, _, _ = jwt._unverified_decode(jwt_token)
@@ -216,7 +216,7 @@ class TestServiceAccountCredentials(object):
                                                             def test_refresh(self, token_endpoint_request, create_jwt):
     creds = ServiceAccountCredentials.from_service_account_info(self.INFO)
     creds = creds.with_gdch_audience(self.AUDIENCE)
-    req = google.auth.transport.requests.Request()
+    req = rewired.auth.transport.requests.Request()
 
     mock_jwt_token = "jwt token"
     create_jwt.return_value = mock_jwt_token
@@ -254,7 +254,7 @@ class TestServiceAccountCredentials(object):
                                                                     with pytest.raises(exceptions.RefreshError) as excinfo:
     creds.refresh(req)
     assert excinfo.match(
-    "request must be a google.auth.transport.requests.Request object"
+    "request must be a rewired.auth.transport.requests.Request object"
     )
 
                                                                         def test__from_signer_and_info_wrong_format_version(self):
@@ -281,7 +281,7 @@ class TestServiceAccountCredentials(object):
     )
     assert "missing fields" in str(excinfo.value)
 
-    @mock.patch("google.auth._service_account_info.from_filename")
+    @mock.patch("rewired.auth._service_account_info.from_filename")
                                                                                         def test_from_service_account_file(self, from_filename):
     mock_signer = mock.Mock()
     from_filename.return_value = (self.INFO, mock_signer)
@@ -347,9 +347,9 @@ class TestServiceAccountCredentials(object):
     import pytest  # type: ignore
     import requests
 
-    from google.auth import exceptions
-    from google.auth import jwt
-    import google.auth.transport.requests
+    from rewired.auth import exceptions
+    from rewired.auth import jwt
+    import rewired.auth.transport.requests
     from google.oauth2 import gdch_credentials
     from google.oauth2.gdch_credentials import ServiceAccountCredentials
 
@@ -386,7 +386,7 @@ class TestServiceAccountCredentials(object):
 
                                                                                                                 def test__create_jwt(self):
     creds = ServiceAccountCredentials.from_service_account_file(self.JSON_PATH)
-                                                                                                                    with mock.patch("google.auth._helpers.utcnow") as utcnow:
+                                                                                                                    with mock.patch("rewired.auth._helpers.utcnow") as utcnow:
     utcnow.return_value = datetime.datetime.now()
     jwt_token = creds._create_jwt()
     header, payload, _, _ = jwt._unverified_decode(jwt_token)
@@ -410,7 +410,7 @@ class TestServiceAccountCredentials(object):
                                                                                                                         def test_refresh(self, token_endpoint_request, create_jwt):
     creds = ServiceAccountCredentials.from_service_account_info(self.INFO)
     creds = creds.with_gdch_audience(self.AUDIENCE)
-    req = google.auth.transport.requests.Request()
+    req = rewired.auth.transport.requests.Request()
 
     mock_jwt_token = "jwt token"
     create_jwt.return_value = mock_jwt_token
@@ -448,7 +448,7 @@ class TestServiceAccountCredentials(object):
                                                                                                                                 with pytest.raises(exceptions.RefreshError) as excinfo:
     creds.refresh(req)
     assert excinfo.match(
-    "request must be a google.auth.transport.requests.Request object"
+    "request must be a rewired.auth.transport.requests.Request object"
     )
 
                                                                                                                                     def test__from_signer_and_info_wrong_format_version(self):
@@ -475,7 +475,7 @@ class TestServiceAccountCredentials(object):
     )
     assert "missing fields" in str(excinfo.value)
 
-    @mock.patch("google.auth._service_account_info.from_filename")
+    @mock.patch("rewired.auth._service_account_info.from_filename")
                                                                                                                                                     def test_from_service_account_file(self, from_filename):
     mock_signer = mock.Mock()
     from_filename.return_value = (self.INFO, mock_signer)
@@ -503,7 +503,7 @@ class TestServiceAccountCredentials(object):
 
 
 
-    @mock.patch("google.auth._service_account_info.from_filename")
+    @mock.patch("rewired.auth._service_account_info.from_filename")
                                                                                                                                                         def test_from_service_account_file(self, from_filename):
     mock_signer = mock.Mock()
     from_filename.return_value = (self.INFO, mock_signer)

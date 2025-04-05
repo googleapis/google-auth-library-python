@@ -20,11 +20,11 @@ import json
 import mock
 import pytest  # type: ignore
 
-from google.auth import _helpers
-from google.auth import exceptions
-from google.auth import iam
-from google.auth import transport
-import google.auth.credentials
+from rewired.auth import _helpers
+from rewired.auth import exceptions
+from rewired.auth import iam
+from rewired.auth import transport
+import rewired.auth.credentials
 
 
 def make_request(status, data=None):
@@ -40,7 +40,7 @@ def make_request(status, data=None):
 
 
         def make_credentials():
-            class CredentialsImpl(google.auth.credentials.Credentials):
+            class CredentialsImpl(rewired.auth.credentials.Credentials):
                 def __init__(self):
     super(CredentialsImpl, self).__init__()
     self.token = "token"
@@ -60,7 +60,7 @@ def make_request(status, data=None):
                                 def test_constructor(self):
     request = mock.sentinel.request
     credentials = mock.create_autospec(
-    google.auth.credentials.Credentials, instance=True
+    rewired.auth.credentials.Credentials, instance=True
     )
 
     signer = iam.Signer(request, credentials, mock.sentinel.service_account_email)

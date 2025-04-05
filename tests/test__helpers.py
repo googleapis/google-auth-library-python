@@ -17,7 +17,7 @@ import urllib
 
 import pytest  # type: ignore
 
-from google.auth import _helpers
+from rewired.auth import _helpers
 
 
 class SourceClass(object):

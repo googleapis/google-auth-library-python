@@ -16,12 +16,12 @@ from datetime import datetime
 
 import pytest
 
-import google.auth
-from google.auth import compute_engine
-from google.auth import _helpers
-from google.auth import exceptions
-from google.auth import jwt
-from google.auth.compute_engine import _metadata
+import rewired.auth
+from rewired.auth import compute_engine
+from rewired.auth import _helpers
+from rewired.auth import exceptions
+from rewired.auth import jwt
+from rewired.auth.compute_engine import _metadata
 import google.oauth2.id_token
 
 AUDIENCE = "https://pubsub.googleapis.com"
@@ -49,7 +49,7 @@ def test_refresh(http_request, token_info):
 
 
 def test_default(verify_refresh):
-    credentials, project_id = google.auth.default()
+    credentials, project_id = rewired.auth.default()
 
     assert project_id is not None
     assert isinstance(credentials, compute_engine.Credentials)

@@ -14,8 +14,8 @@
 
 import pytest  # type: ignore
 
-from google.auth import exceptions
-from google.auth.aio import credentials
+from rewired.auth import exceptions
+from rewired.auth.aio import credentials
 
 
 class CredentialsImpl(credentials.Credentials):

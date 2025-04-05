@@ -13,7 +13,7 @@
 # limitations under the License.
 import pytest
 
-from google.auth import jwt
+from rewired.auth import jwt
 import google.oauth2._id_token_async
 
 @pytest.mark.asyncio

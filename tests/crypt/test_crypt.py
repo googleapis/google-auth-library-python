@@ -14,7 +14,7 @@
 
 import os
 
-from google.auth import crypt
+from rewired.auth import crypt
 
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")

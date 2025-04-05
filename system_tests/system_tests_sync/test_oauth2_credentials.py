@@ -14,7 +14,7 @@
 
 import json
 
-from google.auth import _helpers
+from rewired.auth import _helpers
 import google.oauth2.credentials
 
 GOOGLE_OAUTH2_TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token"

@@ -15,7 +15,7 @@
 # [START auth_cloud_verify_google_idtoken]
 
 import google
-import google.auth.transport.requests
+import rewired.auth.transport.requests
 from google.oauth2 import id_token
 
 
@@ -45,7 +45,7 @@ def verify_google_idtoken(idtoken: str, audience="iap.googleapis.com",
             https://auth0.com/docs/secure/tokens/json-web-tokens/json-web-key-sets
     """
 
-    request = google.auth.transport.requests.Request()
+    request = rewired.auth.transport.requests.Request()
     # Set the parameters and verify the token.
     # Setting "certs_url" is optional. When verifying a Google ID token, this is set by default.
     result = id_token.verify_token(idtoken, request, audience, clock_skew_in_seconds=10)

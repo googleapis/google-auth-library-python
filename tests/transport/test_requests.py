@@ -25,12 +25,12 @@ import pytest  # type: ignore
 import requests
 import requests.adapters
 
-from google.auth import environment_vars
-from google.auth import exceptions
-import google.auth.credentials
-import google.auth.transport._custom_tls_signer
-import google.auth.transport._mtls_helper
-import google.auth.transport.requests
+from rewired.auth import environment_vars
+from rewired.auth import exceptions
+import rewired.auth.credentials
+import rewired.auth.transport._custom_tls_signer
+import rewired.auth.transport._mtls_helper
+import rewired.auth.transport.requests
 from google.oauth2 import service_account
 from tests.transport import compliance
 
@@ -43,31 +43,31 @@ def frozen_time():
 
         class TestRequestResponse(compliance.RequestResponseTests):
             def make_request(self):
-    return google.auth.transport.requests.Request()
+    return rewired.auth.transport.requests.Request()
 
                 def test_timeout(self):
     http = mock.create_autospec(requests.Session, instance=True)
-    request = google.auth.transport.requests.Request(http)
+    request = rewired.auth.transport.requests.Request(http)
     request(url="http://example.com", method="GET", timeout=5)
 
     assert http.request.call_args[1]["timeout"] == 5
 
                     def test_session_closed_on_del(self):
     http = mock.create_autospec(requests.Session, instance=True)
-    request = google.auth.transport.requests.Request(http)
+    request = rewired.auth.transport.requests.Request(http)
     request.__del__()
     http.close.assert_called_with()
 
     http = mock.create_autospec(requests.Session, instance=True)
     http.close.side_effect = TypeError("test injected TypeError")
-    request = google.auth.transport.requests.Request(http)
+    request = rewired.auth.transport.requests.Request(http)
     request.__del__()
     http.close.assert_called_with()
 
 
                         class TestTimeoutGuard(object):
                             def make_guard(self, *args, **kwargs):
-    return google.auth.transport.requests.TimeoutGuard(*args, **kwargs)
+    return rewired.auth.transport.requests.TimeoutGuard(*args, **kwargs)
 
                                 def test_tracks_elapsed_time_w_numeric_timeout(self, frozen_time):
                                     with self.make_guard(timeout=10) as guard:
@@ -111,7 +111,7 @@ def frozen_time():
     [1, 2, 3][3]
 
 
-                                                                                                            class CredentialsStub(google.auth.credentials.Credentials):
+                                                                                                            class CredentialsStub(rewired.auth.credentials.Credentials):
                                                                                                                 def __init__(self, token="token"):
     super(CredentialsStub, self).__init__()
     self.token = token
@@ -177,7 +177,7 @@ class TimeTickAdapterStub(AdapterStub):
     @mock.patch.object(requests.adapters.HTTPAdapter, "init_poolmanager")
     @mock.patch.object(requests.adapters.HTTPAdapter, "proxy_manager_for")
                 def test_success(self, mock_proxy_manager_for, mock_init_poolmanager):
-    adapter = google.auth.transport.requests._MutualTlsAdapter(
+    adapter = rewired.auth.transport.requests._MutualTlsAdapter(
     pytest.public_cert_bytes, pytest.private_key_bytes
     )
 
@@ -189,14 +189,14 @@ class TimeTickAdapterStub(AdapterStub):
 
                     def test_invalid_cert_or_key(self):
                         with pytest.raises(OpenSSL.crypto.Error):
-    google.auth.transport.requests._MutualTlsAdapter(
+    rewired.auth.transport.requests._MutualTlsAdapter(
     b"invalid cert", b"invalid key"
     )
 
     @mock.patch.dict("sys.modules", {"OpenSSL.crypto": None})
                             def test_import_error(self):
                                 with pytest.raises(ImportError):
-    google.auth.transport.requests._MutualTlsAdapter(
+    rewired.auth.transport.requests._MutualTlsAdapter(
     pytest.public_cert_bytes, pytest.private_key_bytes
     )
 
@@ -212,7 +212,7 @@ class TimeTickAdapterStub(AdapterStub):
     TEST_URL = "http://example.com/"
 
                                             def test_constructor(self):
-    authed_session = google.auth.transport.requests.AuthorizedSession(
+    authed_session = rewired.auth.transport.requests.AuthorizedSession(
     mock.sentinel.credentials
     )
 
@@ -220,9 +220,9 @@ class TimeTickAdapterStub(AdapterStub):
 
                                                 def test_constructor_with_auth_request(self):
     http = mock.create_autospec(requests.Session)
-    auth_request = google.auth.transport.requests.Request(http)
+    auth_request = rewired.auth.transport.requests.Request(http)
 
-    authed_session = google.auth.transport.requests.AuthorizedSession(
+    authed_session = rewired.auth.transport.requests.AuthorizedSession(
     mock.sentinel.credentials, auth_request=auth_request
     )
 
@@ -233,14 +233,14 @@ class TimeTickAdapterStub(AdapterStub):
     response = make_response()
     adapter = AdapterStub([response])
 
-    authed_session = google.auth.transport.requests.AuthorizedSession(credentials)
+    authed_session = rewired.auth.transport.requests.AuthorizedSession(credentials)
     authed_session.mount(self.TEST_URL, adapter)
 
-    patcher = mock.patch("google.auth.transport.requests.requests.Session.request")
+    patcher = mock.patch("rewired.auth.transport.requests.requests.Session.request")
                                                         with patcher as patched_request:
     authed_session.request("GET", self.TEST_URL)
 
-    expected_timeout = google.auth.transport.requests._DEFAULT_TIMEOUT
+    expected_timeout = rewired.auth.transport.requests._DEFAULT_TIMEOUT
     assert patched_request.call_args[1]["timeout"] == expected_timeout
 
                                                             def test_request_no_refresh(self):
@@ -248,7 +248,7 @@ class TimeTickAdapterStub(AdapterStub):
     response = make_response()
     adapter = AdapterStub([response])
 
-    authed_session = google.auth.transport.requests.AuthorizedSession(credentials)
+    authed_session = rewired.auth.transport.requests.AuthorizedSession(credentials)
     authed_session.mount(self.TEST_URL, adapter)
 
     result = authed_session.request("GET", self.TEST_URL)
@@ -268,7 +268,7 @@ class TimeTickAdapterStub(AdapterStub):
     [make_response(status=http_client.UNAUTHORIZED), final_response]
     )
 
-    authed_session = google.auth.transport.requests.AuthorizedSession(
+    authed_session = rewired.auth.transport.requests.AuthorizedSession(
     credentials, refresh_timeout=60
     )
     authed_session.mount(self.TEST_URL, adapter)
@@ -298,7 +298,7 @@ class TimeTickAdapterStub(AdapterStub):
     time_tick=tick_one_second, responses=[make_response(status=http_client.OK)]
     )
 
-    authed_session = google.auth.transport.requests.AuthorizedSession(credentials)
+    authed_session = rewired.auth.transport.requests.AuthorizedSession(credentials)
     authed_session.mount(self.TEST_URL, adapter)
 
     # Because a request takes a full mocked second, max_allowed_time shorter
@@ -322,7 +322,7 @@ class TimeTickAdapterStub(AdapterStub):
     ],
     )
 
-    authed_session = google.auth.transport.requests.AuthorizedSession(credentials)
+    authed_session = rewired.auth.transport.requests.AuthorizedSession(credentials)
     authed_session.mount(self.TEST_URL, adapter)
 
     # A short configured transport timeout does not affect max_allowed_time.
@@ -346,7 +346,7 @@ class TimeTickAdapterStub(AdapterStub):
     ],
     )
 
-    authed_session = google.auth.transport.requests.AuthorizedSession(
+    authed_session = rewired.auth.transport.requests.AuthorizedSession(
     credentials, refresh_timeout=1.1
     )
     authed_session.mount(self.TEST_URL, adapter)
@@ -373,7 +373,7 @@ class TimeTickAdapterStub(AdapterStub):
     ],
     )
 
-    authed_session = google.auth.transport.requests.AuthorizedSession(
+    authed_session = rewired.auth.transport.requests.AuthorizedSession(
     credentials, refresh_timeout=100
     )
     authed_session.mount(self.TEST_URL, adapter)
@@ -389,7 +389,7 @@ class TimeTickAdapterStub(AdapterStub):
                                                                                             def test_authorized_session_without_default_host(self):
     credentials = mock.create_autospec(service_account.Credentials)
 
-    authed_session = google.auth.transport.requests.AuthorizedSession(credentials)
+    authed_session = rewired.auth.transport.requests.AuthorizedSession(credentials)
 
     authed_session.credentials._create_self_signed_jwt.assert_called_once_with(None)
 
@@ -397,7 +397,7 @@ class TimeTickAdapterStub(AdapterStub):
     default_host = "pubsub.googleapis.com"
     credentials = mock.create_autospec(service_account.Credentials)
 
-    authed_session = google.auth.transport.requests.AuthorizedSession(
+    authed_session = rewired.auth.transport.requests.AuthorizedSession(
     credentials, default_host=default_host
     )
 
@@ -412,7 +412,7 @@ class TimeTickAdapterStub(AdapterStub):
     pytest.private_key_bytes,
     )
 
-    auth_session = google.auth.transport.requests.AuthorizedSession(
+    auth_session = rewired.auth.transport.requests.AuthorizedSession(
     credentials=mock.Mock()
     )
     with mock.patch.dict(
@@ -423,11 +423,11 @@ class TimeTickAdapterStub(AdapterStub):
     assert auth_session.is_mtls
     assert isinstance(
     auth_session.adapters["https://"],
-    google.auth.transport.requests._MutualTlsAdapter,
+    rewired.auth.transport.requests._MutualTlsAdapter,
     )
 
     @mock.patch(
-    "google.auth.transport._mtls_helper.get_client_cert_and_key", autospec=True
+    "rewired.auth.transport._mtls_helper.get_client_cert_and_key", autospec=True
     )
                                                                                                         def test_configure_mtls_channel_with_metadata(self, mock_get_client_cert_and_key):
     mock_get_client_cert_and_key.return_value = (
@@ -436,7 +436,7 @@ class TimeTickAdapterStub(AdapterStub):
     pytest.private_key_bytes,
     )
 
-    auth_session = google.auth.transport.requests.AuthorizedSession(
+    auth_session = rewired.auth.transport.requests.AuthorizedSession(
     credentials=mock.Mock()
     )
     with mock.patch.dict(
@@ -447,19 +447,19 @@ class TimeTickAdapterStub(AdapterStub):
     assert auth_session.is_mtls
     assert isinstance(
     auth_session.adapters["https://"],
-    google.auth.transport.requests._MutualTlsAdapter,
+    rewired.auth.transport.requests._MutualTlsAdapter,
     )
 
-    @mock.patch.object(google.auth.transport.requests._MutualTlsAdapter, "__init__")
+    @mock.patch.object(rewired.auth.transport.requests._MutualTlsAdapter, "__init__")
     @mock.patch(
-    "google.auth.transport._mtls_helper.get_client_cert_and_key", autospec=True
+    "rewired.auth.transport._mtls_helper.get_client_cert_and_key", autospec=True
     )
 def test_configure_mtls_channel_non_mtls(
 self, mock_get_client_cert_and_key, mock_adapter_ctor
 ):
 mock_get_client_cert_and_key.return_value = (False, None, None)
 
-auth_session = google.auth.transport.requests.AuthorizedSession(
+auth_session = rewired.auth.transport.requests.AuthorizedSession(
 credentials=mock.Mock()
 )
 with mock.patch.dict(
@@ -473,12 +473,12 @@ assert not auth_session.is_mtls
 mock_adapter_ctor.assert_not_called()
 
 @mock.patch(
-"google.auth.transport._mtls_helper.get_client_cert_and_key", autospec=True
+"rewired.auth.transport._mtls_helper.get_client_cert_and_key", autospec=True
 )
 def test_configure_mtls_channel_exceptions(self, mock_get_client_cert_and_key):
     mock_get_client_cert_and_key.side_effect = exceptions.ClientCertError()
 
-    auth_session = google.auth.transport.requests.AuthorizedSession(
+    auth_session = rewired.auth.transport.requests.AuthorizedSession(
     credentials=mock.Mock()
     )
     with pytest.raises(exceptions.MutualTLSChannelError):
@@ -498,14 +498,14 @@ def test_configure_mtls_channel_exceptions(self, mock_get_client_cert_and_key):
     auth_session.configure_mtls_channel()
 
     @mock.patch(
-    "google.auth.transport._mtls_helper.get_client_cert_and_key", autospec=True
+    "rewired.auth.transport._mtls_helper.get_client_cert_and_key", autospec=True
     )
 def test_configure_mtls_channel_without_client_cert_env(
 self, get_client_cert_and_key
 ):
 # Test client cert won't be used if GOOGLE_API_USE_CLIENT_CERTIFICATE
 # environment variable is not set.
-auth_session = google.auth.transport.requests.AuthorizedSession(
+auth_session = rewired.auth.transport.requests.AuthorizedSession(
 credentials=mock.Mock()
 )
 
@@ -519,7 +519,7 @@ assert not auth_session.is_mtls
 mock_callback.assert_not_called()
 
 def test_close_wo_passed_in_auth_request(self):
-    authed_session = google.auth.transport.requests.AuthorizedSession(
+    authed_session = rewired.auth.transport.requests.AuthorizedSession(
     mock.sentinel.credentials
     )
     authed_session._auth_request_session = mock.Mock(spec=["close"])
@@ -530,8 +530,8 @@ def test_close_wo_passed_in_auth_request(self):
 
     def test_close_w_passed_in_auth_request(self):
     http = mock.create_autospec(requests.Session)
-    auth_request = google.auth.transport.requests.Request(http)
-    authed_session = google.auth.transport.requests.AuthorizedSession(
+    auth_request = rewired.auth.transport.requests.Request(http)
+    authed_session = rewired.auth.transport.requests.AuthorizedSession(
     mock.sentinel.credentials, auth_request=auth_request
     )
 
@@ -542,10 +542,10 @@ def test_close_wo_passed_in_auth_request(self):
     @mock.patch.object(requests.adapters.HTTPAdapter, "init_poolmanager")
     @mock.patch.object(requests.adapters.HTTPAdapter, "proxy_manager_for")
     @mock.patch.object(
-    google.auth.transport._custom_tls_signer.CustomTlsSigner, "load_libraries"
+    rewired.auth.transport._custom_tls_signer.CustomTlsSigner, "load_libraries"
     )
     @mock.patch.object(
-    google.auth.transport._custom_tls_signer.CustomTlsSigner,
+    rewired.auth.transport._custom_tls_signer.CustomTlsSigner,
     "attach_to_ssl_context",
     )
 def test_success(
@@ -556,7 +556,7 @@ mock_proxy_manager_for,
 mock_init_poolmanager,
 ):
 enterprise_cert_file_path = "/path/to/enterprise/cert/json"
-adapter = google.auth.transport.requests._MutualTlsOffloadAdapter(
+adapter = rewired.auth.transport.requests._MutualTlsOffloadAdapter(
 enterprise_cert_file_path
 )
 
@@ -572,13 +572,13 @@ mock_proxy_manager_for.assert_called_with(ssl_context=adapter._ctx_proxymanager)
 @mock.patch.object(requests.adapters.HTTPAdapter, "init_poolmanager")
 @mock.patch.object(requests.adapters.HTTPAdapter, "proxy_manager_for")
 @mock.patch.object(
-google.auth.transport._custom_tls_signer.CustomTlsSigner, "should_use_provider"
+rewired.auth.transport._custom_tls_signer.CustomTlsSigner, "should_use_provider"
 )
 @mock.patch.object(
-google.auth.transport._custom_tls_signer.CustomTlsSigner, "load_libraries"
+rewired.auth.transport._custom_tls_signer.CustomTlsSigner, "load_libraries"
 )
 @mock.patch.object(
-google.auth.transport._custom_tls_signer.CustomTlsSigner,
+rewired.auth.transport._custom_tls_signer.CustomTlsSigner,
 "attach_to_ssl_context",
 )
 def test_success_should_use_provider(
@@ -590,7 +590,7 @@ mock_proxy_manager_for,
 mock_init_poolmanager,
 ):
 enterprise_cert_file_path = "/path/to/enterprise/cert/json"
-adapter = google.auth.transport.requests._MutualTlsOffloadAdapter(
+adapter = rewired.auth.transport.requests._MutualTlsOffloadAdapter(
 enterprise_cert_file_path
 )
 

@@ -18,9 +18,9 @@ import os
 import mock
 import pytest  # type: ignore
 
-from google.auth import environment_vars
-from google.auth import exceptions
-from google.auth import transport
+from rewired.auth import environment_vars
+from rewired.auth import exceptions
+from rewired.auth import transport
 from google.oauth2 import id_token
 from google.oauth2 import service_account
 
@@ -61,7 +61,7 @@ def make_request(status, data=None):
     request.assert_called_once_with(mock.sentinel.cert_url, method="GET")
 
 
-    @mock.patch("google.auth.jwt.decode", autospec=True)
+    @mock.patch("rewired.auth.jwt.decode", autospec=True)
     @mock.patch("google.oauth2.id_token._fetch_certs", autospec=True)
                     def test_verify_token(_fetch_certs, decode):
     result = id_token.verify_token(mock.sentinel.token, mock.sentinel.request)
@@ -101,7 +101,7 @@ def make_request(status, data=None):
     )
 
 
-    @mock.patch("google.auth.jwt.decode", autospec=True)
+    @mock.patch("rewired.auth.jwt.decode", autospec=True)
     @mock.patch("google.oauth2.id_token._fetch_certs", autospec=True)
                             def test_verify_token_args(_fetch_certs, decode):
     result = id_token.verify_token(
@@ -121,7 +121,7 @@ def make_request(status, data=None):
     )
 
 
-    @mock.patch("google.auth.jwt.decode", autospec=True)
+    @mock.patch("rewired.auth.jwt.decode", autospec=True)
     @mock.patch("google.oauth2.id_token._fetch_certs", autospec=True)
                                 def test_verify_token_clock_skew(_fetch_certs, decode):
     result = id_token.verify_token(
@@ -228,12 +228,12 @@ def make_request(status, data=None):
     monkeypatch.delenv(environment_vars.CREDENTIALS, raising=False)
 
     # Test a request object is created if not provided
-                                                                with mock.patch("google.auth.compute_engine._metadata.ping", return_value=True):
+                                                                with mock.patch("rewired.auth.compute_engine._metadata.ping", return_value=True):
     with mock.patch(
-    "google.auth.compute_engine.IDTokenCredentials.__init__", return_value=None
+    "rewired.auth.compute_engine.IDTokenCredentials.__init__", return_value=None
     ):
     with mock.patch(
-    "google.auth.transport.requests.Request.__init__", return_value=None
+    "rewired.auth.transport.requests.Request.__init__", return_value=None
     ) as mock_request:
     id_token.fetch_id_token_credentials(ID_TOKEN_AUDIENCE)
     mock_request.assert_called()
@@ -244,9 +244,9 @@ def make_request(status, data=None):
 
     mock_req = mock.Mock()
 
-                                                                        with mock.patch("google.auth.compute_engine._metadata.ping", return_value=True):
+                                                                        with mock.patch("rewired.auth.compute_engine._metadata.ping", return_value=True):
     with mock.patch(
-    "google.auth.compute_engine.IDTokenCredentials.__init__", return_value=None
+    "rewired.auth.compute_engine.IDTokenCredentials.__init__", return_value=None
     ) as mock_init:
     id_token.fetch_id_token_credentials(ID_TOKEN_AUDIENCE, request=mock_req)
     mock_init.assert_called_once_with(
@@ -266,7 +266,7 @@ def make_request(status, data=None):
     monkeypatch.delenv(environment_vars.CREDENTIALS, raising=False)
 
     with mock.patch(
-    "google.auth.compute_engine._metadata.ping",
+    "rewired.auth.compute_engine._metadata.ping",
     side_effect=exceptions.TransportError()
     ):
                                                                                     with pytest.raises(exceptions.DefaultCredentialsError) as excinfo:
@@ -275,7 +275,7 @@ def make_request(status, data=None):
     r"Neither metadata server or valid service account credentials are found."
     )
 
-                                                                                        with mock.patch("google.auth.compute_engine._metadata.ping", return_value=False):
+                                                                                        with mock.patch("rewired.auth.compute_engine._metadata.ping", return_value=False):
                                                                                             with pytest.raises(exceptions.DefaultCredentialsError) as excinfo:
     id_token.fetch_id_token_credentials(ID_TOKEN_AUDIENCE)
     assert excinfo.match(
@@ -289,7 +289,7 @@ def make_request(status, data=None):
     )
     monkeypatch.setenv(environment_vars.CREDENTIALS, user_credentials_file)
 
-                                                                                                    with mock.patch("google.auth.compute_engine._metadata.ping", return_value=False):
+                                                                                                    with mock.patch("rewired.auth.compute_engine._metadata.ping", return_value=False):
                                                                                                         with pytest.raises(exceptions.DefaultCredentialsError) as excinfo:
     id_token.fetch_id_token_credentials(ID_TOKEN_AUDIENCE)
     assert excinfo.match(

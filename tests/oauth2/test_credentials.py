@@ -21,10 +21,10 @@ import sys
 import mock
 import pytest  # type: ignore
 
-from google.auth import _helpers
-from google.auth import exceptions
-from google.auth import transport
-from google.auth.credentials import TokenState
+from rewired.auth import _helpers
+from rewired.auth import exceptions
+from rewired.auth import transport
+from rewired.auth.credentials import TokenState
 from google.oauth2 import credentials
 
 
@@ -173,10 +173,10 @@ with open(AUTH_USER_JSON_FILE, "r") as fh:
     import mock
     import pytest  # type: ignore
 
-    from google.auth import _helpers
-    from google.auth import exceptions
-    from google.auth import transport
-    from google.auth.credentials import TokenState
+    from rewired.auth import _helpers
+    from rewired.auth import exceptions
+    from rewired.auth import transport
+    from rewired.auth.credentials import TokenState
     from google.oauth2 import credentials
 
 
@@ -317,7 +317,7 @@ with open(AUTH_USER_JSON_FILE, "r") as fh:
 
     @mock.patch("google.oauth2.reauth.refresh_grant", autospec=True)
     @mock.patch(
-    "google.auth._helpers.utcnow",
+    "rewired.auth._helpers.utcnow",
     return_value=datetime.datetime.min + _helpers.REFRESH_THRESHOLD,
     )
                                                                                                 def test_refresh_success(self, unused_utcnow, refresh_grant):
@@ -377,7 +377,7 @@ with open(AUTH_USER_JSON_FILE, "r") as fh:
 
     @mock.patch("google.oauth2.reauth.refresh_grant", autospec=True)
     @mock.patch(
-    "google.auth._helpers.utcnow",
+    "rewired.auth._helpers.utcnow",
     return_value=datetime.datetime.min + _helpers.REFRESH_THRESHOLD,
     )
 def test_refresh_with_refresh_token_and_refresh_handler(
@@ -441,7 +441,7 @@ assert creds.valid
 # higher priority.
 refresh_handler.assert_not_called()
 
-@mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+@mock.patch("rewired.auth._helpers.utcnow", return_value=datetime.datetime.min)
 def test_refresh_with_refresh_handler_success_scopes(self, unused_utcnow):
     expected_expiry = datetime.datetime.min + datetime.timedelta(seconds=2800)
     refresh_handler = mock.Mock(return_value=("ACCESS_TOKEN", expected_expiry)
@@ -469,7 +469,7 @@ def test_refresh_with_refresh_handler_success_scopes(self, unused_utcnow):
     # Confirm refresh handler called with the expected arguments.
     refresh_handler.assert_called_with(request, scopes=scopes)
 
-    @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+    @mock.patch("rewired.auth._helpers.utcnow", return_value=datetime.datetime.min)
     def test_refresh_with_refresh_handler_success_default_scopes(self, unused_utcnow):
     expected_expiry = datetime.datetime.min + datetime.timedelta(seconds=2800)
     original_refresh_handler = mock.Mock(
@@ -502,7 +502,7 @@ def test_refresh_with_refresh_handler_success_scopes(self, unused_utcnow):
     # are provided.
     refresh_handler.assert_called_with(request, scopes=default_scopes)
 
-    @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+    @mock.patch("rewired.auth._helpers.utcnow", return_value=datetime.datetime.min)
         def test_refresh_with_refresh_handler_invalid_token(self, unused_utcnow):
     expected_expiry = datetime.datetime.min + datetime.timedelta(seconds=2800)
     # Simulate refresh handler does not return a valid token.
@@ -562,7 +562,7 @@ def test_refresh_with_refresh_handler_success_scopes(self, unused_utcnow):
     # Confirm refresh handler called with the expected arguments.
     refresh_handler.assert_called_with(request, scopes=scopes)
 
-    @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+    @mock.patch("rewired.auth._helpers.utcnow", return_value=datetime.datetime.min)
                 def test_refresh_with_refresh_handler_expired_token(self, unused_utcnow):
     expected_expiry = datetime.datetime.min + _helpers.REFRESH_THRESHOLD
     # Simulate refresh handler returns an expired token.
@@ -593,7 +593,7 @@ def test_refresh_with_refresh_handler_success_scopes(self, unused_utcnow):
 
     @mock.patch("google.oauth2.reauth.refresh_grant", autospec=True)
     @mock.patch(
-    "google.auth._helpers.utcnow",
+    "rewired.auth._helpers.utcnow",
     return_value=datetime.datetime.min + _helpers.REFRESH_THRESHOLD,
     )
 def test_credentials_with_scopes_requested_refresh_success(
@@ -660,7 +660,7 @@ assert creds.valid
 
 @mock.patch("google.oauth2.reauth.refresh_grant", autospec=True)
 @mock.patch(
-"google.auth._helpers.utcnow",
+"rewired.auth._helpers.utcnow",
 return_value=datetime.datetime.min + _helpers.REFRESH_THRESHOLD,
 )
 def test_credentials_with_only_default_scopes_requested(
@@ -725,7 +725,7 @@ assert creds.valid
 
 @mock.patch("google.oauth2.reauth.refresh_grant", autospec=True)
 @mock.patch(
-"google.auth._helpers.utcnow",
+"rewired.auth._helpers.utcnow",
 return_value=datetime.datetime.min + _helpers.REFRESH_THRESHOLD,
 )
 def test_credentials_with_scopes_returned_refresh_success(
@@ -790,7 +790,7 @@ assert creds.valid
 
 @mock.patch("google.oauth2.reauth.refresh_grant", autospec=True)
 @mock.patch(
-"google.auth._helpers.utcnow",
+"rewired.auth._helpers.utcnow",
 return_value=datetime.datetime.min + _helpers.REFRESH_THRESHOLD,
 )
 def test_credentials_with_only_default_scopes_requested_different_granted_scopes(
@@ -855,7 +855,7 @@ assert creds.valid
 
 @mock.patch("google.oauth2.reauth.refresh_grant", autospec=True)
 @mock.patch(
-"google.auth._helpers.utcnow",
+"rewired.auth._helpers.utcnow",
 return_value=datetime.datetime.min + _helpers.REFRESH_THRESHOLD,
 )
 def test_credentials_with_scopes_refresh_different_granted_scopes(
@@ -1184,7 +1184,7 @@ def test_apply_with_quota_project_id(self):
     cred = cred.with_account("account")
     assert cred._account == "account"
 
-    @mock.patch("google.auth._cloud_sdk.get_auth_access_token", autospec=True)
+    @mock.patch("rewired.auth._cloud_sdk.get_auth_access_token", autospec=True)
                                                                                             def test_refresh(self, get_auth_access_token):
     with pytest.warns(
     UserWarning, match="UserAccessTokenCredentials is deprecated"
@@ -1239,7 +1239,7 @@ def test_apply_with_quota_project_id(self):
 
     @mock.patch("google.oauth2.reauth.refresh_grant", autospec=True)
     @mock.patch(
-    "google.auth._helpers.utcnow",
+    "rewired.auth._helpers.utcnow",
     return_value=datetime.datetime.min + _helpers.REFRESH_THRESHOLD,
     )
                                                                                                                 def test_refresh_success(self, unused_utcnow, refresh_grant):
@@ -1299,7 +1299,7 @@ def test_apply_with_quota_project_id(self):
 
     @mock.patch("google.oauth2.reauth.refresh_grant", autospec=True)
     @mock.patch(
-    "google.auth._helpers.utcnow",
+    "rewired.auth._helpers.utcnow",
     return_value=datetime.datetime.min + _helpers.REFRESH_THRESHOLD,
     )
 def test_refresh_with_refresh_token_and_refresh_handler(
@@ -1363,7 +1363,7 @@ assert creds.valid
 # higher priority.
 refresh_handler.assert_not_called()
 
-@mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+@mock.patch("rewired.auth._helpers.utcnow", return_value=datetime.datetime.min)
 def test_refresh_with_refresh_handler_success_scopes(self, unused_utcnow):
     expected_expiry = datetime.datetime.min + datetime.timedelta(seconds=2800)
     refresh_handler = mock.Mock(return_value=("ACCESS_TOKEN", expected_expiry)
@@ -1391,7 +1391,7 @@ def test_refresh_with_refresh_handler_success_scopes(self, unused_utcnow):
     # Confirm refresh handler called with the expected arguments.
     refresh_handler.assert_called_with(request, scopes=scopes)
 
-    @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+    @mock.patch("rewired.auth._helpers.utcnow", return_value=datetime.datetime.min)
     def test_refresh_with_refresh_handler_success_default_scopes(self, unused_utcnow):
     expected_expiry = datetime.datetime.min + datetime.timedelta(seconds=2800)
     original_refresh_handler = mock.Mock(
@@ -1424,7 +1424,7 @@ def test_refresh_with_refresh_handler_success_scopes(self, unused_utcnow):
     # are provided.
     refresh_handler.assert_called_with(request, scopes=default_scopes)
 
-    @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+    @mock.patch("rewired.auth._helpers.utcnow", return_value=datetime.datetime.min)
         def test_refresh_with_refresh_handler_invalid_token(self, unused_utcnow):
     expected_expiry = datetime.datetime.min + datetime.timedelta(seconds=2800)
     # Simulate refresh handler does not return a valid token.
@@ -1484,7 +1484,7 @@ def test_refresh_with_refresh_handler_success_scopes(self, unused_utcnow):
     # Confirm refresh handler called with the expected arguments.
     refresh_handler.assert_called_with(request, scopes=scopes)
 
-    @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+    @mock.patch("rewired.auth._helpers.utcnow", return_value=datetime.datetime.min)
                 def test_refresh_with_refresh_handler_expired_token(self, unused_utcnow):
     expected_expiry = datetime.datetime.min + _helpers.REFRESH_THRESHOLD
     # Simulate refresh handler returns an expired token.
@@ -1515,7 +1515,7 @@ def test_refresh_with_refresh_handler_success_scopes(self, unused_utcnow):
 
     @mock.patch("google.oauth2.reauth.refresh_grant", autospec=True)
     @mock.patch(
-    "google.auth._helpers.utcnow",
+    "rewired.auth._helpers.utcnow",
     return_value=datetime.datetime.min + _helpers.REFRESH_THRESHOLD,
     )
 def test_credentials_with_scopes_requested_refresh_success(
@@ -1582,7 +1582,7 @@ assert creds.valid
 
 @mock.patch("google.oauth2.reauth.refresh_grant", autospec=True)
 @mock.patch(
-"google.auth._helpers.utcnow",
+"rewired.auth._helpers.utcnow",
 return_value=datetime.datetime.min + _helpers.REFRESH_THRESHOLD,
 )
 def test_credentials_with_only_default_scopes_requested(
@@ -1647,7 +1647,7 @@ assert creds.valid
 
 @mock.patch("google.oauth2.reauth.refresh_grant", autospec=True)
 @mock.patch(
-"google.auth._helpers.utcnow",
+"rewired.auth._helpers.utcnow",
 return_value=datetime.datetime.min + _helpers.REFRESH_THRESHOLD,
 )
 def test_credentials_with_scopes_returned_refresh_success(
@@ -1712,7 +1712,7 @@ assert creds.valid
 
 @mock.patch("google.oauth2.reauth.refresh_grant", autospec=True)
 @mock.patch(
-"google.auth._helpers.utcnow",
+"rewired.auth._helpers.utcnow",
 return_value=datetime.datetime.min + _helpers.REFRESH_THRESHOLD,
 )
 def test_credentials_with_only_default_scopes_requested_different_granted_scopes(
@@ -1777,7 +1777,7 @@ assert creds.valid
 
 @mock.patch("google.oauth2.reauth.refresh_grant", autospec=True)
 @mock.patch(
-"google.auth._helpers.utcnow",
+"rewired.auth._helpers.utcnow",
 return_value=datetime.datetime.min + _helpers.REFRESH_THRESHOLD,
 )
 def test_credentials_with_scopes_refresh_different_granted_scopes(
@@ -2106,7 +2106,7 @@ def test_apply_with_quota_project_id(self):
     cred = cred.with_account("account")
     assert cred._account == "account"
 
-    @mock.patch("google.auth._cloud_sdk.get_auth_access_token", autospec=True)
+    @mock.patch("rewired.auth._cloud_sdk.get_auth_access_token", autospec=True)
                                                                                             def test_refresh(self, get_auth_access_token):
     with pytest.warns(
     UserWarning, match="UserAccessTokenCredentials is deprecated"

@@ -4,7 +4,7 @@ import struct
 import mock
 import pytest  # type: ignore
 
-from google.auth import exceptions
+from rewired.auth import exceptions
 from google.oauth2 import webauthn_handler
 from google.oauth2 import webauthn_types
 

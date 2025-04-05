@@ -19,8 +19,8 @@ import urllib
 import mock
 import pytest  # type: ignore
 
-from google.auth import exceptions
-from google.auth import transport
+from rewired.auth import exceptions
+from rewired.auth import transport
 from google.oauth2 import sts
 from google.oauth2 import utils
 

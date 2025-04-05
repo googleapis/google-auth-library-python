@@ -20,12 +20,12 @@ import urllib
 import mock
 import pytest  # type: ignore
 
-from google.auth import _helpers
-from google.auth import exceptions
-from google.auth import external_account
-from google.auth import transport
-from google.auth.credentials import DEFAULT_UNIVERSE_DOMAIN
-from google.auth.credentials import TokenState
+from rewired.auth import _helpers
+from rewired.auth import exceptions
+from rewired.auth import external_account
+from rewired.auth import transport
+from rewired.auth.credentials import DEFAULT_UNIVERSE_DOMAIN
+from rewired.auth.credentials import TokenState
 
 IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE = (
 "gl-python/3.7 auth/1.1 auth-request-type/at cred-type/imp"
@@ -671,10 +671,10 @@ def test_get_cred_info(self):
 
     @pytest.mark.parametrize("mock_expires_in", [2800, "2800"])
     @mock.patch(
-    "google.auth.metrics.python_and_auth_lib_version",
+    "rewired.auth.metrics.python_and_auth_lib_version",
     return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
     )
-    @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+    @mock.patch("rewired.auth._helpers.utcnow", return_value=datetime.datetime.min)
 def test_refresh_without_client_auth_success(
 self, unused_utcnow, mock_auth_lib_value, mock_expires_in
 ):
@@ -707,15 +707,15 @@ assert not credentials.expired
 assert credentials.token == response["access_token"]
 
 @mock.patch(
-"google.auth.metrics.python_and_auth_lib_version",
+"rewired.auth.metrics.python_and_auth_lib_version",
 return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
 )
-@mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+@mock.patch("rewired.auth._helpers.utcnow", return_value=datetime.datetime.min)
 @mock.patch(
-"google.auth.external_account.Credentials._mtls_required", return_value=True
+"rewired.auth.external_account.Credentials._mtls_required", return_value=True
 )
 @mock.patch(
-"google.auth.external_account.Credentials._get_mtls_cert_and_key_paths",
+"rewired.auth.external_account.Credentials._get_mtls_cert_and_key_paths",
 return_value=("path/to/cert.pem", "path/to/key.pem")
 )
 def test_refresh_with_mtls(
@@ -757,10 +757,10 @@ assert not credentials.expired
 assert credentials.token == response["access_token"]
 
 @mock.patch(
-"google.auth.metrics.python_and_auth_lib_version",
+"rewired.auth.metrics.python_and_auth_lib_version",
 return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
 )
-@mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+@mock.patch("rewired.auth._helpers.utcnow", return_value=datetime.datetime.min)
 def test_refresh_workforce_without_client_auth_success(
 self, unused_utcnow, test_auth_lib_value
 ):
@@ -798,10 +798,10 @@ assert not credentials.expired
 assert credentials.token == response["access_token"]
 
 @mock.patch(
-"google.auth.metrics.python_and_auth_lib_version",
+"rewired.auth.metrics.python_and_auth_lib_version",
 return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
 )
-@mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+@mock.patch("rewired.auth._helpers.utcnow", return_value=datetime.datetime.min)
 def test_refresh_workforce_with_client_auth_success(
 self, unused_utcnow, mock_auth_lib_value
 ):
@@ -840,10 +840,10 @@ assert not credentials.expired
 assert credentials.token == response["access_token"]
 
 @mock.patch(
-"google.auth.metrics.python_and_auth_lib_version",
+"rewired.auth.metrics.python_and_auth_lib_version",
 return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
 )
-@mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+@mock.patch("rewired.auth._helpers.utcnow", return_value=datetime.datetime.min)
 def test_refresh_workforce_with_client_auth_and_no_workforce_project_success(
 self, unused_utcnow, mock_lib_version_value
 ):
@@ -882,11 +882,11 @@ assert not credentials.expired
 assert credentials.token == response["access_token"]
 
 @mock.patch(
-"google.auth.metrics.token_request_access_token_impersonate",
+"rewired.auth.metrics.token_request_access_token_impersonate",
 return_value=IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
 )
 @mock.patch(
-"google.auth.metrics.python_and_auth_lib_version",
+"rewired.auth.metrics.python_and_auth_lib_version",
 return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
 )
 def test_refresh_impersonation_without_client_auth_success(
@@ -961,18 +961,18 @@ assert not credentials.expired
 assert credentials.token == impersonation_response["accessToken"]
 
 @mock.patch(
-"google.auth.metrics.token_request_access_token_impersonate",
+"rewired.auth.metrics.token_request_access_token_impersonate",
 return_value=IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
 )
 @mock.patch(
-"google.auth.metrics.python_and_auth_lib_version",
+"rewired.auth.metrics.python_and_auth_lib_version",
 return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
 )
 @mock.patch(
-"google.auth.external_account.Credentials._mtls_required", return_value=True
+"rewired.auth.external_account.Credentials._mtls_required", return_value=True
 )
 @mock.patch(
-"google.auth.external_account.Credentials._get_mtls_cert_and_key_paths",
+"rewired.auth.external_account.Credentials._get_mtls_cert_and_key_paths",
 return_value=("path/to/cert.pem", "path/to/key.pem")
 )
 def test_refresh_impersonation_with_mtls_success(
@@ -1056,11 +1056,11 @@ assert not credentials.expired
 assert credentials.token == impersonation_response["accessToken"]
 
 @mock.patch(
-"google.auth.metrics.token_request_access_token_impersonate",
+"rewired.auth.metrics.token_request_access_token_impersonate",
 return_value=IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
 )
 @mock.patch(
-"google.auth.metrics.python_and_auth_lib_version",
+"rewired.auth.metrics.python_and_auth_lib_version",
 return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
 )
 def test_refresh_workforce_impersonation_without_client_auth_success(
@@ -1139,7 +1139,7 @@ assert not credentials.expired
 assert credentials.token == impersonation_response["accessToken"]
 
 @mock.patch(
-"google.auth.metrics.python_and_auth_lib_version",
+"rewired.auth.metrics.python_and_auth_lib_version",
 return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
 )
 def test_refresh_without_client_auth_success_explicit_user_scopes_ignore_default_scopes(
@@ -1176,7 +1176,7 @@ assert credentials.has_scopes(["scope1", "scope2"])
 assert not credentials.has_scopes(["ignored"])
 
 @mock.patch(
-"google.auth.metrics.python_and_auth_lib_version",
+"rewired.auth.metrics.python_and_auth_lib_version",
 return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
 )
 def test_refresh_without_client_auth_success_explicit_default_scopes_only(
@@ -1263,12 +1263,12 @@ def test_refresh_without_client_auth_error(self):
     import mock
     import pytest  # type: ignore
 
-    from google.auth import _helpers
-    from google.auth import exceptions
-    from google.auth import external_account
-    from google.auth import transport
-    from google.auth.credentials import DEFAULT_UNIVERSE_DOMAIN
-    from google.auth.credentials import TokenState
+    from rewired.auth import _helpers
+    from rewired.auth import exceptions
+    from rewired.auth import external_account
+    from rewired.auth import transport
+    from rewired.auth.credentials import DEFAULT_UNIVERSE_DOMAIN
+    from rewired.auth.credentials import TokenState
 
     IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE = (
     "gl-python/3.7 auth/1.1 auth-request-type/at cred-type/imp"
@@ -1914,10 +1914,10 @@ def test_get_cred_info(self):
 
     @pytest.mark.parametrize("mock_expires_in", [2800, "2800"])
     @mock.patch(
-    "google.auth.metrics.python_and_auth_lib_version",
+    "rewired.auth.metrics.python_and_auth_lib_version",
     return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
     )
-    @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+    @mock.patch("rewired.auth._helpers.utcnow", return_value=datetime.datetime.min)
 def test_refresh_without_client_auth_success(
 self, unused_utcnow, mock_auth_lib_value, mock_expires_in
 ):
@@ -1950,15 +1950,15 @@ assert not credentials.expired
 assert credentials.token == response["access_token"]
 
 @mock.patch(
-"google.auth.metrics.python_and_auth_lib_version",
+"rewired.auth.metrics.python_and_auth_lib_version",
 return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
 )
-@mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+@mock.patch("rewired.auth._helpers.utcnow", return_value=datetime.datetime.min)
 @mock.patch(
-"google.auth.external_account.Credentials._mtls_required", return_value=True
+"rewired.auth.external_account.Credentials._mtls_required", return_value=True
 )
 @mock.patch(
-"google.auth.external_account.Credentials._get_mtls_cert_and_key_paths",
+"rewired.auth.external_account.Credentials._get_mtls_cert_and_key_paths",
 return_value=("path/to/cert.pem", "path/to/key.pem")
 )
 def test_refresh_with_mtls(
@@ -2000,10 +2000,10 @@ assert not credentials.expired
 assert credentials.token == response["access_token"]
 
 @mock.patch(
-"google.auth.metrics.python_and_auth_lib_version",
+"rewired.auth.metrics.python_and_auth_lib_version",
 return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
 )
-@mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+@mock.patch("rewired.auth._helpers.utcnow", return_value=datetime.datetime.min)
 def test_refresh_workforce_without_client_auth_success(
 self, unused_utcnow, test_auth_lib_value
 ):
@@ -2041,10 +2041,10 @@ assert not credentials.expired
 assert credentials.token == response["access_token"]
 
 @mock.patch(
-"google.auth.metrics.python_and_auth_lib_version",
+"rewired.auth.metrics.python_and_auth_lib_version",
 return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
 )
-@mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+@mock.patch("rewired.auth._helpers.utcnow", return_value=datetime.datetime.min)
 def test_refresh_workforce_with_client_auth_success(
 self, unused_utcnow, mock_auth_lib_value
 ):
@@ -2083,10 +2083,10 @@ assert not credentials.expired
 assert credentials.token == response["access_token"]
 
 @mock.patch(
-"google.auth.metrics.python_and_auth_lib_version",
+"rewired.auth.metrics.python_and_auth_lib_version",
 return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
 )
-@mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+@mock.patch("rewired.auth._helpers.utcnow", return_value=datetime.datetime.min)
 def test_refresh_workforce_with_client_auth_and_no_workforce_project_success(
 self, unused_utcnow, mock_lib_version_value
 ):
@@ -2125,11 +2125,11 @@ assert not credentials.expired
 assert credentials.token == response["access_token"]
 
 @mock.patch(
-"google.auth.metrics.token_request_access_token_impersonate",
+"rewired.auth.metrics.token_request_access_token_impersonate",
 return_value=IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
 )
 @mock.patch(
-"google.auth.metrics.python_and_auth_lib_version",
+"rewired.auth.metrics.python_and_auth_lib_version",
 return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
 )
 def test_refresh_impersonation_without_client_auth_success(
@@ -2204,18 +2204,18 @@ assert not credentials.expired
 assert credentials.token == impersonation_response["accessToken"]
 
 @mock.patch(
-"google.auth.metrics.token_request_access_token_impersonate",
+"rewired.auth.metrics.token_request_access_token_impersonate",
 return_value=IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
 )
 @mock.patch(
-"google.auth.metrics.python_and_auth_lib_version",
+"rewired.auth.metrics.python_and_auth_lib_version",
 return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
 )
 @mock.patch(
-"google.auth.external_account.Credentials._mtls_required", return_value=True
+"rewired.auth.external_account.Credentials._mtls_required", return_value=True
 )
 @mock.patch(
-"google.auth.external_account.Credentials._get_mtls_cert_and_key_paths",
+"rewired.auth.external_account.Credentials._get_mtls_cert_and_key_paths",
 return_value=("path/to/cert.pem", "path/to/key.pem")
 )
 def test_refresh_impersonation_with_mtls_success(
@@ -2299,11 +2299,11 @@ assert not credentials.expired
 assert credentials.token == impersonation_response["accessToken"]
 
 @mock.patch(
-"google.auth.metrics.token_request_access_token_impersonate",
+"rewired.auth.metrics.token_request_access_token_impersonate",
 return_value=IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
 )
 @mock.patch(
-"google.auth.metrics.python_and_auth_lib_version",
+"rewired.auth.metrics.python_and_auth_lib_version",
 return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
 )
 def test_refresh_workforce_impersonation_without_client_auth_success(
@@ -2382,7 +2382,7 @@ assert not credentials.expired
 assert credentials.token == impersonation_response["accessToken"]
 
 @mock.patch(
-"google.auth.metrics.python_and_auth_lib_version",
+"rewired.auth.metrics.python_and_auth_lib_version",
 return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
 )
 def test_refresh_without_client_auth_success_explicit_user_scopes_ignore_default_scopes(
@@ -2419,7 +2419,7 @@ assert credentials.has_scopes(["scope1", "scope2"])
 assert not credentials.has_scopes(["ignored"])
 
 @mock.patch(
-"google.auth.metrics.python_and_auth_lib_version",
+"rewired.auth.metrics.python_and_auth_lib_version",
 return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
 )
 def test_refresh_without_client_auth_success_explicit_default_scopes_only(
@@ -2504,7 +2504,7 @@ def test_refresh_without_client_auth_error(self):
     assert credentials.token is None
 
     @mock.patch(
-    "google.auth.metrics.python_and_auth_lib_version",
+    "rewired.auth.metrics.python_and_auth_lib_version",
     return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
     )
                         def test_refresh_with_client_auth_success(self, mock_auth_lib_value):
@@ -2535,11 +2535,11 @@ def test_refresh_without_client_auth_error(self):
     assert credentials.token == self.SUCCESS_RESPONSE["access_token"]
 
     @mock.patch(
-    "google.auth.metrics.token_request_access_token_impersonate",
+    "rewired.auth.metrics.token_request_access_token_impersonate",
     return_value=IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
     )
     @mock.patch(
-    "google.auth.metrics.python_and_auth_lib_version",
+    "rewired.auth.metrics.python_and_auth_lib_version",
     return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
     )
 def test_refresh_impersonation_with_client_auth_success_ignore_default_scopes(
@@ -2619,11 +2619,11 @@ assert not credentials.expired
 assert credentials.token == impersonation_response["accessToken"]
 
 @mock.patch(
-"google.auth.metrics.token_request_access_token_impersonate",
+"rewired.auth.metrics.token_request_access_token_impersonate",
 return_value=IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
 )
 @mock.patch(
-"google.auth.metrics.python_and_auth_lib_version",
+"rewired.auth.metrics.python_and_auth_lib_version",
 return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
 )
 def test_refresh_impersonation_with_client_auth_success_use_default_scopes(
@@ -2910,7 +2910,7 @@ def test_apply_without_quota_project_id(self):
     "x-allowed-locations": "0x0",
     }
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
                                 def test_before_request_expired(self, utcnow):
     headers = {}
     request = self.make_mock_request(
@@ -2955,7 +2955,7 @@ def test_apply_without_quota_project_id(self):
     "x-allowed-locations": "0x0",
     }
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
                                     def test_before_request_impersonation_expired(self, utcnow):
     headers = {}
     expire_time = (
@@ -3077,11 +3077,11 @@ def test_apply_without_quota_project_id(self):
     assert credentials.get_project_id(None) is None
 
     @mock.patch(
-    "google.auth.metrics.token_request_access_token_impersonate",
+    "rewired.auth.metrics.token_request_access_token_impersonate",
     return_value=IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
     )
     @mock.patch(
-    "google.auth.metrics.python_and_auth_lib_version",
+    "rewired.auth.metrics.python_and_auth_lib_version",
     return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
     )
 def test_get_project_id_cloud_resource_manager_success(
@@ -3181,7 +3181,7 @@ assert project_id == self.PROJECT_ID
 assert len(request.call_args_list) == 3
 
 @mock.patch(
-"google.auth.metrics.python_and_auth_lib_version",
+"rewired.auth.metrics.python_and_auth_lib_version",
 return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
 )
 def test_workforce_pool_get_project_id_cloud_resource_manager_success(
@@ -3253,11 +3253,11 @@ assert project_id == self.PROJECT_ID
 assert len(request.call_args_list) == 2
 
 @mock.patch(
-"google.auth.metrics.token_request_access_token_impersonate",
+"rewired.auth.metrics.token_request_access_token_impersonate",
 return_value=IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
 )
 @mock.patch(
-"google.auth.metrics.python_and_auth_lib_version",
+"rewired.auth.metrics.python_and_auth_lib_version",
 return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
 )
 def test_refresh_impersonation_with_lifetime(
@@ -3378,7 +3378,7 @@ def test_get_project_id_cloud_resource_manager_error(self):
     assert credentials.token is None
 
     @mock.patch(
-    "google.auth.metrics.python_and_auth_lib_version",
+    "rewired.auth.metrics.python_and_auth_lib_version",
     return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
     )
                 def test_refresh_with_client_auth_success(self, mock_auth_lib_value):
@@ -3409,11 +3409,11 @@ def test_get_project_id_cloud_resource_manager_error(self):
     assert credentials.token == self.SUCCESS_RESPONSE["access_token"]
 
     @mock.patch(
-    "google.auth.metrics.token_request_access_token_impersonate",
+    "rewired.auth.metrics.token_request_access_token_impersonate",
     return_value=IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
     )
     @mock.patch(
-    "google.auth.metrics.python_and_auth_lib_version",
+    "rewired.auth.metrics.python_and_auth_lib_version",
     return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
     )
 def test_refresh_impersonation_with_client_auth_success_ignore_default_scopes(
@@ -3493,11 +3493,11 @@ assert not credentials.expired
 assert credentials.token == impersonation_response["accessToken"]
 
 @mock.patch(
-"google.auth.metrics.token_request_access_token_impersonate",
+"rewired.auth.metrics.token_request_access_token_impersonate",
 return_value=IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
 )
 @mock.patch(
-"google.auth.metrics.python_and_auth_lib_version",
+"rewired.auth.metrics.python_and_auth_lib_version",
 return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
 )
 def test_refresh_impersonation_with_client_auth_success_use_default_scopes(
@@ -3784,7 +3784,7 @@ def test_apply_without_quota_project_id(self):
     "x-allowed-locations": "0x0",
     }
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
                                 def test_before_request_expired(self, utcnow):
     headers = {}
     request = self.make_mock_request(
@@ -3829,7 +3829,7 @@ def test_apply_without_quota_project_id(self):
     "x-allowed-locations": "0x0",
     }
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
                                     def test_before_request_impersonation_expired(self, utcnow):
     headers = {}
     expire_time = (
@@ -3951,11 +3951,11 @@ def test_apply_without_quota_project_id(self):
     assert credentials.get_project_id(None) is None
 
     @mock.patch(
-    "google.auth.metrics.token_request_access_token_impersonate",
+    "rewired.auth.metrics.token_request_access_token_impersonate",
     return_value=IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
     )
     @mock.patch(
-    "google.auth.metrics.python_and_auth_lib_version",
+    "rewired.auth.metrics.python_and_auth_lib_version",
     return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
     )
 def test_get_project_id_cloud_resource_manager_success(
@@ -4055,7 +4055,7 @@ assert project_id == self.PROJECT_ID
 assert len(request.call_args_list) == 3
 
 @mock.patch(
-"google.auth.metrics.python_and_auth_lib_version",
+"rewired.auth.metrics.python_and_auth_lib_version",
 return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
 )
 def test_workforce_pool_get_project_id_cloud_resource_manager_success(
@@ -4127,11 +4127,11 @@ assert project_id == self.PROJECT_ID
 assert len(request.call_args_list) == 2
 
 @mock.patch(
-"google.auth.metrics.token_request_access_token_impersonate",
+"rewired.auth.metrics.token_request_access_token_impersonate",
 return_value=IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
 )
 @mock.patch(
-"google.auth.metrics.python_and_auth_lib_version",
+"rewired.auth.metrics.python_and_auth_lib_version",
 return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
 )
 def test_refresh_impersonation_with_lifetime(

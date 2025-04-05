@@ -14,9 +14,9 @@
 
 import pytest
 
-from google.auth import _helpers
-from google.auth import exceptions
-from google.auth import iam
+from rewired.auth import _helpers
+from rewired.auth import exceptions
+from rewired.auth import iam
 from google.oauth2 import service_account
 
 

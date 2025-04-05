@@ -19,10 +19,10 @@ import json
 import mock
 import pytest  # type: ignore
 
-from google.auth import exceptions
-from google.auth import external_account_authorized_user
-from google.auth import transport
-from google.auth.credentials import DEFAULT_UNIVERSE_DOMAIN
+from rewired.auth import exceptions
+from rewired.auth import external_account_authorized_user
+from rewired.auth import transport
+from rewired.auth.credentials import DEFAULT_UNIVERSE_DOMAIN
 
 TOKEN_URL = "https://sts.googleapis.com/v1/token"
 TOKEN_INFO_URL = "https://sts.googleapis.com/v1/introspect"
@@ -177,7 +177,7 @@ def make_mock_request(cls, status=http_client.OK, data=None):
     r"`token_url`, `client_id`, `client_secret`\)\."
     )
 
-    @mock.patch("google.auth._helpers.utcnow", return_value=NOW)
+    @mock.patch("rewired.auth._helpers.utcnow", return_value=NOW)
                                                     def test_refresh_auth_success(self, utcnow):
     request = self.make_mock_request(
     status=http_client.OK,
@@ -207,7 +207,7 @@ def make_mock_request(cls, status=http_client.OK, data=None):
     ),
     )
 
-    @mock.patch("google.auth._helpers.utcnow", return_value=NOW)
+    @mock.patch("rewired.auth._helpers.utcnow", return_value=NOW)
                                                         def test_refresh_auth_success_new_refresh_token(self, utcnow):
     request = self.make_mock_request(
     status=http_client.OK,

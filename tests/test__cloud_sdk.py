@@ -21,9 +21,9 @@ import sys
 import mock
 import pytest  # type: ignore
 
-from google.auth import _cloud_sdk
-from google.auth import environment_vars
-from google.auth import exceptions
+from rewired.auth import _cloud_sdk
+from rewired.auth import environment_vars
+from rewired.auth import exceptions
 
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
@@ -102,7 +102,7 @@ with io.open(AUTHORIZED_USER_FILE, "rb") as fh:
     assert executable == "gcloud.cmd"
 
 
-    @mock.patch("google.auth._cloud_sdk.get_config_path", autospec=True)
+    @mock.patch("rewired.auth._cloud_sdk.get_config_path", autospec=True)
                                 def test_get_application_default_credentials_path(get_config_dir):
     config_path = "config_path"
     get_config_dir.return_value = config_path

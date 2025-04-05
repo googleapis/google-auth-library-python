@@ -18,9 +18,9 @@ import mock
 import pytest  # type: ignore
 from tests_async.transport import async_compliance
 
-import google.auth._credentials_async
-from google.auth.transport import _aiohttp_requests as aiohttp_requests
-import google.auth.transport._mtls_helper
+import rewired.auth._credentials_async
+from rewired.auth.transport import _aiohttp_requests as aiohttp_requests
+import rewired.auth.transport._mtls_helper
 
 
 class TestCombinedResponse:
@@ -60,7 +60,7 @@ class TestCombinedResponse:
         assert content == mock.sentinel.read
 
     @mock.patch(
-        "google.auth.transport._aiohttp_requests.urllib3.response.MultiDecoder.decompress",
+        "rewired.auth.transport._aiohttp_requests.urllib3.response.MultiDecoder.decompress",
         return_value="decompressed",
         autospec=True,
     )
@@ -128,7 +128,7 @@ class TestRequestResponse(async_compliance.RequestResponseTests):
         request(url="http://example.com", method="GET", timeout=5)
 
 
-class CredentialsStub(google.auth._credentials_async.Credentials):
+class CredentialsStub(rewired.auth._credentials_async.Credentials):
     def __init__(self, token="token"):
         super(CredentialsStub, self).__init__()
         self.token = token

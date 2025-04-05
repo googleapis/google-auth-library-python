@@ -12,18 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import google.auth
-import google.auth.credentials
-import google.auth.jwt
-import google.auth.transport.grpc
+import rewired.auth
+import rewired.auth.credentials
+import rewired.auth.jwt
+import rewired.auth.transport.grpc
 from google.oauth2 import service_account
 
 from google.cloud import pubsub_v1
 
 
 def test_grpc_request_with_regular_credentials(http_request):
-    credentials, project_id = google.auth.default()
-    credentials = google.auth.credentials.with_scopes_if_required(
+    credentials, project_id = rewired.auth.default()
+    credentials = rewired.auth.credentials.with_scopes_if_required(
         credentials, scopes=["https://www.googleapis.com/auth/pubsub"]
     )
 
@@ -38,7 +38,7 @@ def test_grpc_request_with_regular_credentials(http_request):
 
 
 def test_grpc_request_with_regular_credentials_and_self_signed_jwt(http_request):
-    credentials, project_id = google.auth.default()
+    credentials, project_id = rewired.auth.default()
 
     # At the time this test is being written, there are no GAPIC libraries
     # that will trigger the self-signed JWT flow. Manually create the self-signed
@@ -63,9 +63,9 @@ def test_grpc_request_with_regular_credentials_and_self_signed_jwt(http_request)
 
 
 def test_grpc_request_with_jwt_credentials():
-    credentials, project_id = google.auth.default()
+    credentials, project_id = rewired.auth.default()
     audience = "https://pubsub.googleapis.com/google.pubsub.v1.Publisher"
-    credentials = google.auth.jwt.Credentials.from_signing_credentials(
+    credentials = rewired.auth.jwt.Credentials.from_signing_credentials(
         credentials, audience=audience
     )
 
@@ -79,8 +79,8 @@ def test_grpc_request_with_jwt_credentials():
 
 
 def test_grpc_request_with_on_demand_jwt_credentials():
-    credentials, project_id = google.auth.default()
-    credentials = google.auth.jwt.OnDemandCredentials.from_signing_credentials(
+    credentials, project_id = rewired.auth.default()
+    credentials = rewired.auth.jwt.OnDemandCredentials.from_signing_credentials(
         credentials
     )
 

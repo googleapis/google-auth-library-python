@@ -18,12 +18,12 @@ import mock
 import pytest  # type: ignore
 import responses  # type: ignore
 
-from google.auth import _helpers
-from google.auth import exceptions
-from google.auth import jwt
-from google.auth import transport
-from google.auth.compute_engine import credentials
-from google.auth.transport import requests
+from rewired.auth import _helpers
+from rewired.auth import exceptions
+from rewired.auth import jwt
+from rewired.auth import transport
+from rewired.auth.compute_engine import credentials
+from rewired.auth.transport import requests
 
 SAMPLE_ID_TOKEN_EXP = 1584393400
 
@@ -94,10 +94,10 @@ class TestCredentials(object):
     assert not self.credentials._universe_domain_cached
 
     @mock.patch(
-    "google.auth._helpers.utcnow",
+    "rewired.auth._helpers.utcnow",
     return_value=datetime.datetime.min + _helpers.REFRESH_THRESHOLD,
     )
-    @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
+    @mock.patch("rewired.auth.compute_engine._metadata.get", autospec=True)
                 def test_refresh_success(self, get, utcnow):
     get.side_effect = [
     {
@@ -128,14 +128,14 @@ class TestCredentials(object):
     assert self.credentials.valid
 
     @mock.patch(
-    "google.auth.metrics.token_request_access_token_mds",
+    "rewired.auth.metrics.token_request_access_token_mds",
     return_value=ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
     )
     @mock.patch(
-    "google.auth._helpers.utcnow",
+    "rewired.auth._helpers.utcnow",
     return_value=datetime.datetime.min + _helpers.REFRESH_THRESHOLD,
     )
-    @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
+    @mock.patch("rewired.auth.compute_engine._metadata.get", autospec=True)
                     def test_refresh_success_with_scopes(self, get, utcnow, mock_metrics_header_value):
     get.side_effect = [
     {
@@ -173,7 +173,7 @@ class TestCredentials(object):
     "x-goog-api-client": ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE
     }
 
-    @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
+    @mock.patch("rewired.auth.compute_engine._metadata.get", autospec=True)
                         def test_refresh_error(self, get):
     get.side_effect = exceptions.TransportError("http error")
 
@@ -200,12 +200,12 @@ class TestCredentials(object):
     import pytest  # type: ignore
     import responses  # type: ignore
 
-    from google.auth import _helpers
-    from google.auth import exceptions
-    from google.auth import jwt
-    from google.auth import transport
-    from google.auth.compute_engine import credentials
-    from google.auth.transport import requests
+    from rewired.auth import _helpers
+    from rewired.auth import exceptions
+    from rewired.auth import jwt
+    from rewired.auth import transport
+    from rewired.auth.compute_engine import credentials
+    from rewired.auth.transport import requests
 
     SAMPLE_ID_TOKEN_EXP = 1584393400
 
@@ -276,10 +276,10 @@ class TestCredentials(object):
     assert not self.credentials._universe_domain_cached
 
     @mock.patch(
-    "google.auth._helpers.utcnow",
+    "rewired.auth._helpers.utcnow",
     return_value=datetime.datetime.min + _helpers.REFRESH_THRESHOLD,
     )
-    @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
+    @mock.patch("rewired.auth.compute_engine._metadata.get", autospec=True)
                                                 def test_refresh_success(self, get, utcnow):
     get.side_effect = [
     {
@@ -310,14 +310,14 @@ class TestCredentials(object):
     assert self.credentials.valid
 
     @mock.patch(
-    "google.auth.metrics.token_request_access_token_mds",
+    "rewired.auth.metrics.token_request_access_token_mds",
     return_value=ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
     )
     @mock.patch(
-    "google.auth._helpers.utcnow",
+    "rewired.auth._helpers.utcnow",
     return_value=datetime.datetime.min + _helpers.REFRESH_THRESHOLD,
     )
-    @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
+    @mock.patch("rewired.auth.compute_engine._metadata.get", autospec=True)
                                                     def test_refresh_success_with_scopes(self, get, utcnow, mock_metrics_header_value):
     get.side_effect = [
     {
@@ -355,7 +355,7 @@ class TestCredentials(object):
     "x-goog-api-client": ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE
     }
 
-    @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
+    @mock.patch("rewired.auth.compute_engine._metadata.get", autospec=True)
                                                         def test_refresh_error(self, get):
     get.side_effect = exceptions.TransportError("http error")
 
@@ -364,7 +364,7 @@ class TestCredentials(object):
 
     assert "http error" in str(excinfo.value)
 
-    @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
+    @mock.patch("rewired.auth.compute_engine._metadata.get", autospec=True)
                                                                 def test_before_request_refreshes(self, get):
     get.side_effect = [
     {
@@ -433,7 +433,7 @@ class TestCredentials(object):
     assert headers["x-goog-api-client"] == "cred-type/mds"
 
     @mock.patch(
-    "google.auth.compute_engine._metadata.get_universe_domain",
+    "rewired.auth.compute_engine._metadata.get_universe_domain",
     return_value="fake_universe_domain",
     )
                                                                                     def test_universe_domain(self, get_universe_domain):
@@ -453,7 +453,7 @@ class TestCredentials(object):
     assert self.credentials.universe_domain == "fake_universe_domain"
     get_universe_domain.assert_called_once()
 
-    @mock.patch("google.auth.compute_engine._metadata.get_universe_domain")
+    @mock.patch("rewired.auth.compute_engine._metadata.get_universe_domain")
                                                                                         def test_user_provided_universe_domain(self, get_universe_domain):
     assert self.credentials_with_all_fields.universe_domain == FAKE_UNIVERSE_DOMAIN
     assert self.credentials_with_all_fields._universe_domain_cached
@@ -466,7 +466,7 @@ class TestCredentials(object):
                                                                                             class TestIDTokenCredentials(object):
     credentials = None
 
-    @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
+    @mock.patch("rewired.auth.compute_engine._metadata.get", autospec=True)
                                                                                                 def test_default_state(self, get):
     get.side_effect = [
     {"email": "service-account@example.com", "scope": ["one", "two"]}
@@ -489,11 +489,11 @@ class TestCredentials(object):
     assert not self.credentials._quota_project_id
 
     @mock.patch(
-    "google.auth._helpers.utcnow",
+    "rewired.auth._helpers.utcnow",
     return_value=datetime.datetime.utcfromtimestamp(0)
     )
-    @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
-    @mock.patch("google.auth.iam.Signer.sign", autospec=True)
+    @mock.patch("rewired.auth.compute_engine._metadata.get", autospec=True)
+    @mock.patch("rewired.auth.iam.Signer.sign", autospec=True)
                                                                                                     def test_make_authorization_grant_assertion(self, sign, get, utcnow):
     get.side_effect = [
     {"email": "service-account@example.com", "scopes": ["one", "two"]}
@@ -522,11 +522,11 @@ class TestCredentials(object):
     }
 
     @mock.patch(
-    "google.auth._helpers.utcnow",
+    "rewired.auth._helpers.utcnow",
     return_value=datetime.datetime.utcfromtimestamp(0)
     )
-    @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
-    @mock.patch("google.auth.iam.Signer.sign", autospec=True)
+    @mock.patch("rewired.auth.compute_engine._metadata.get", autospec=True)
+    @mock.patch("rewired.auth.iam.Signer.sign", autospec=True)
                                                                                                         def test_with_service_account(self, sign, get, utcnow):
     sign.side_effect = [b"signature"]
 
@@ -554,11 +554,11 @@ class TestCredentials(object):
     }
 
     @mock.patch(
-    "google.auth._helpers.utcnow",
+    "rewired.auth._helpers.utcnow",
     return_value=datetime.datetime.utcfromtimestamp(0)
     )
-    @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
-    @mock.patch("google.auth.iam.Signer.sign", autospec=True)
+    @mock.patch("rewired.auth.compute_engine._metadata.get", autospec=True)
+    @mock.patch("rewired.auth.iam.Signer.sign", autospec=True)
                                                                                                             def test_additional_claims(self, sign, get, utcnow):
     get.side_effect = [
     {"email": "service-account@example.com", "scopes": ["one", "two"]}
@@ -610,11 +610,11 @@ class TestCredentials(object):
     assert self.credentials._token_uri == "https://example.com/token"
 
     @mock.patch(
-    "google.auth._helpers.utcnow",
+    "rewired.auth._helpers.utcnow",
     return_value=datetime.datetime.utcfromtimestamp(0)
     )
-    @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
-    @mock.patch("google.auth.iam.Signer.sign", autospec=True)
+    @mock.patch("rewired.auth.compute_engine._metadata.get", autospec=True)
+    @mock.patch("rewired.auth.iam.Signer.sign", autospec=True)
                                                                                                                     def test_with_target_audience(self, sign, get, utcnow):
     get.side_effect = [
     {"email": "service-account@example.com", "scopes": ["one", "two"]}
@@ -732,11 +732,11 @@ class TestCredentials(object):
     assert self.credentials.token is not None
 
     @mock.patch(
-    "google.auth._helpers.utcnow",
+    "rewired.auth._helpers.utcnow",
     return_value=datetime.datetime.utcfromtimestamp(0)
     )
-    @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
-    @mock.patch("google.auth.iam.Signer.sign", autospec=True)
+    @mock.patch("rewired.auth.compute_engine._metadata.get", autospec=True)
+    @mock.patch("rewired.auth.iam.Signer.sign", autospec=True)
                                                                                                                             def test_with_quota_project(self, sign, get, utcnow):
     get.side_effect = [
     {"email": "service-account@example.com", "scopes": ["one", "two"]}
@@ -771,11 +771,11 @@ class TestCredentials(object):
     assert isinstance(self.credentials._signer._request, transport.Request)
 
     @mock.patch(
-    "google.auth._helpers.utcnow",
+    "rewired.auth._helpers.utcnow",
     return_value=datetime.datetime.utcfromtimestamp(0)
     )
-    @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
-    @mock.patch("google.auth.iam.Signer.sign", autospec=True)
+    @mock.patch("rewired.auth.compute_engine._metadata.get", autospec=True)
+    @mock.patch("rewired.auth.iam.Signer.sign", autospec=True)
                                                                                                                                 def test_with_token_uri(self, sign, get, utcnow):
     get.side_effect = [
     {"email": "service-account@example.com", "scopes": ["one", "two"]}
@@ -793,11 +793,11 @@ class TestCredentials(object):
     assert creds_with_token_uri._token_uri == "http://example.com"
 
     @mock.patch(
-    "google.auth._helpers.utcnow",
+    "rewired.auth._helpers.utcnow",
     return_value=datetime.datetime.utcfromtimestamp(0)
     )
-    @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
-    @mock.patch("google.auth.iam.Signer.sign", autospec=True)
+    @mock.patch("rewired.auth.compute_engine._metadata.get", autospec=True)
+    @mock.patch("rewired.auth.iam.Signer.sign", autospec=True)
                                                                                                                                     def test_with_token_uri_exception(self, sign, get, utcnow):
     get.side_effect = [
     {"email": "service-account@example.com", "scopes": ["one", "two"]}
@@ -901,11 +901,11 @@ class TestCredentials(object):
     assert self.credentials._quota_project_id == "project-foo"
 
     @mock.patch(
-    "google.auth._helpers.utcnow",
+    "rewired.auth._helpers.utcnow",
     return_value=datetime.datetime.utcfromtimestamp(0)
     )
-    @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
-    @mock.patch("google.auth.iam.Signer.sign", autospec=True)
+    @mock.patch("rewired.auth.compute_engine._metadata.get", autospec=True)
+    @mock.patch("rewired.auth.iam.Signer.sign", autospec=True)
     @mock.patch("google.oauth2._client.id_token_jwt_grant", autospec=True)
                                                                                                                                                 def test_refresh_success(self, id_token_jwt_grant, sign, get, utcnow):
     get.side_effect = [
@@ -936,11 +936,11 @@ class TestCredentials(object):
     assert self.credentials.valid
 
     @mock.patch(
-    "google.auth._helpers.utcnow",
+    "rewired.auth._helpers.utcnow",
     return_value=datetime.datetime.utcfromtimestamp(0)
     )
-    @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
-    @mock.patch("google.auth.iam.Signer.sign", autospec=True)
+    @mock.patch("rewired.auth.compute_engine._metadata.get", autospec=True)
+    @mock.patch("rewired.auth.iam.Signer.sign", autospec=True)
                                                                                                                                                     def test_refresh_error(self, sign, get, utcnow):
     get.side_effect = [
     {"email": "service-account@example.com", "scopes": ["one", "two"]}
@@ -963,11 +963,11 @@ class TestCredentials(object):
     assert "http error" in str(excinfo.value)
 
     @mock.patch(
-    "google.auth._helpers.utcnow",
+    "rewired.auth._helpers.utcnow",
     return_value=datetime.datetime.utcfromtimestamp(0)
     )
-    @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
-    @mock.patch("google.auth.iam.Signer.sign", autospec=True)
+    @mock.patch("rewired.auth.compute_engine._metadata.get", autospec=True)
+    @mock.patch("rewired.auth.iam.Signer.sign", autospec=True)
     @mock.patch("google.oauth2._client.id_token_jwt_grant", autospec=True)
                                                                                                                                                             def test_before_request_refreshes(self, id_token_jwt_grant, sign, get, utcnow):
     get.side_effect = [
@@ -996,8 +996,8 @@ class TestCredentials(object):
     # Credentials should now be valid.
     assert self.credentials.valid
 
-    @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
-    @mock.patch("google.auth.iam.Signer.sign", autospec=True)
+    @mock.patch("rewired.auth.compute_engine._metadata.get", autospec=True)
+    @mock.patch("rewired.auth.iam.Signer.sign", autospec=True)
                                                                                                                                                                 def test_sign_bytes(self, sign, get):
     get.side_effect = [
     {"email": "service-account@example.com", "scopes": ["one", "two"]}
@@ -1021,13 +1021,13 @@ class TestCredentials(object):
     assert signature == b"signature"
 
     @mock.patch(
-    "google.auth.metrics.token_request_id_token_mds",
+    "rewired.auth.metrics.token_request_id_token_mds",
     return_value=ID_TOKEN_REQUEST_METRICS_HEADER_VALUE,
     )
     @mock.patch(
-    "google.auth.compute_engine._metadata.get_service_account_info", autospec=True
+    "rewired.auth.compute_engine._metadata.get_service_account_info", autospec=True
     )
-    @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
+    @mock.patch("rewired.auth.compute_engine._metadata.get", autospec=True)
 def test_get_id_token_from_metadata(
 self, get, get_service_account_info, mock_metrics_header_value
 ):
@@ -1054,7 +1054,7 @@ with pytest.raises(ValueError):
     cred.sign_bytes(b"bytes")
 
     @mock.patch(
-    "google.auth.compute_engine._metadata.get_service_account_info", autospec=True
+    "rewired.auth.compute_engine._metadata.get_service_account_info", autospec=True
     )
     def test_with_target_audience_for_metadata(self, get_service_account_info):
     get_service_account_info.return_value = {"email": "foo@example.com"}
@@ -1071,7 +1071,7 @@ with pytest.raises(ValueError):
     assert cred._service_account_email == "foo@example.com"
 
     @mock.patch(
-    "google.auth.compute_engine._metadata.get_service_account_info", autospec=True
+    "rewired.auth.compute_engine._metadata.get_service_account_info", autospec=True
     )
         def test_id_token_with_quota_project(self, get_service_account_info):
     get_service_account_info.return_value = {"email": "foo@example.com"}
@@ -1088,9 +1088,9 @@ with pytest.raises(ValueError):
     assert cred._service_account_email == "foo@example.com"
 
     @mock.patch(
-    "google.auth.compute_engine._metadata.get_service_account_info", autospec=True
+    "rewired.auth.compute_engine._metadata.get_service_account_info", autospec=True
     )
-    @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
+    @mock.patch("rewired.auth.compute_engine._metadata.get", autospec=True)
             def test_invalid_id_token_from_metadata(self, get, get_service_account_info):
     get.return_value = "invalid_id_token"
     get_service_account_info.return_value = {"email": "foo@example.com"}
@@ -1103,9 +1103,9 @@ with pytest.raises(ValueError):
     cred.refresh(request=mock.Mock()
 
     @mock.patch(
-    "google.auth.compute_engine._metadata.get_service_account_info", autospec=True
+    "rewired.auth.compute_engine._metadata.get_service_account_info", autospec=True
     )
-    @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
+    @mock.patch("rewired.auth.compute_engine._metadata.get", autospec=True)
                     def test_transport_error_from_metadata(self, get, get_service_account_info):
     get.side_effect = exceptions.TransportError("transport error")
     get_service_account_info.return_value = {"email": "foo@example.com"}
@@ -1153,7 +1153,7 @@ with pytest.raises(ValueError):
 
 
 
-    @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
+    @mock.patch("rewired.auth.compute_engine._metadata.get", autospec=True)
                                                 def test_before_request_refreshes(self, get):
     get.side_effect = [
     {
@@ -1222,7 +1222,7 @@ with pytest.raises(ValueError):
     assert headers["x-goog-api-client"] == "cred-type/mds"
 
     @mock.patch(
-    "google.auth.compute_engine._metadata.get_universe_domain",
+    "rewired.auth.compute_engine._metadata.get_universe_domain",
     return_value="fake_universe_domain",
     )
                                                                     def test_universe_domain(self, get_universe_domain):
@@ -1242,7 +1242,7 @@ with pytest.raises(ValueError):
     assert self.credentials.universe_domain == "fake_universe_domain"
     get_universe_domain.assert_called_once()
 
-    @mock.patch("google.auth.compute_engine._metadata.get_universe_domain")
+    @mock.patch("rewired.auth.compute_engine._metadata.get_universe_domain")
                                                                         def test_user_provided_universe_domain(self, get_universe_domain):
     assert self.credentials_with_all_fields.universe_domain == FAKE_UNIVERSE_DOMAIN
     assert self.credentials_with_all_fields._universe_domain_cached
@@ -1255,7 +1255,7 @@ with pytest.raises(ValueError):
                                                                             class TestIDTokenCredentials(object):
     credentials = None
 
-    @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
+    @mock.patch("rewired.auth.compute_engine._metadata.get", autospec=True)
                                                                                 def test_default_state(self, get):
     get.side_effect = [
     {"email": "service-account@example.com", "scope": ["one", "two"]}
@@ -1278,11 +1278,11 @@ with pytest.raises(ValueError):
     assert not self.credentials._quota_project_id
 
     @mock.patch(
-    "google.auth._helpers.utcnow",
+    "rewired.auth._helpers.utcnow",
     return_value=datetime.datetime.utcfromtimestamp(0)
     )
-    @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
-    @mock.patch("google.auth.iam.Signer.sign", autospec=True)
+    @mock.patch("rewired.auth.compute_engine._metadata.get", autospec=True)
+    @mock.patch("rewired.auth.iam.Signer.sign", autospec=True)
                                                                                     def test_make_authorization_grant_assertion(self, sign, get, utcnow):
     get.side_effect = [
     {"email": "service-account@example.com", "scopes": ["one", "two"]}
@@ -1311,11 +1311,11 @@ with pytest.raises(ValueError):
     }
 
     @mock.patch(
-    "google.auth._helpers.utcnow",
+    "rewired.auth._helpers.utcnow",
     return_value=datetime.datetime.utcfromtimestamp(0)
     )
-    @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
-    @mock.patch("google.auth.iam.Signer.sign", autospec=True)
+    @mock.patch("rewired.auth.compute_engine._metadata.get", autospec=True)
+    @mock.patch("rewired.auth.iam.Signer.sign", autospec=True)
                                                                                         def test_with_service_account(self, sign, get, utcnow):
     sign.side_effect = [b"signature"]
 
@@ -1343,11 +1343,11 @@ with pytest.raises(ValueError):
     }
 
     @mock.patch(
-    "google.auth._helpers.utcnow",
+    "rewired.auth._helpers.utcnow",
     return_value=datetime.datetime.utcfromtimestamp(0)
     )
-    @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
-    @mock.patch("google.auth.iam.Signer.sign", autospec=True)
+    @mock.patch("rewired.auth.compute_engine._metadata.get", autospec=True)
+    @mock.patch("rewired.auth.iam.Signer.sign", autospec=True)
                                                                                             def test_additional_claims(self, sign, get, utcnow):
     get.side_effect = [
     {"email": "service-account@example.com", "scopes": ["one", "two"]}
@@ -1399,11 +1399,11 @@ with pytest.raises(ValueError):
     assert self.credentials._token_uri == "https://example.com/token"
 
     @mock.patch(
-    "google.auth._helpers.utcnow",
+    "rewired.auth._helpers.utcnow",
     return_value=datetime.datetime.utcfromtimestamp(0)
     )
-    @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
-    @mock.patch("google.auth.iam.Signer.sign", autospec=True)
+    @mock.patch("rewired.auth.compute_engine._metadata.get", autospec=True)
+    @mock.patch("rewired.auth.iam.Signer.sign", autospec=True)
                                                                                                     def test_with_target_audience(self, sign, get, utcnow):
     get.side_effect = [
     {"email": "service-account@example.com", "scopes": ["one", "two"]}
@@ -1521,11 +1521,11 @@ with pytest.raises(ValueError):
     assert self.credentials.token is not None
 
     @mock.patch(
-    "google.auth._helpers.utcnow",
+    "rewired.auth._helpers.utcnow",
     return_value=datetime.datetime.utcfromtimestamp(0)
     )
-    @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
-    @mock.patch("google.auth.iam.Signer.sign", autospec=True)
+    @mock.patch("rewired.auth.compute_engine._metadata.get", autospec=True)
+    @mock.patch("rewired.auth.iam.Signer.sign", autospec=True)
                                                                                                             def test_with_quota_project(self, sign, get, utcnow):
     get.side_effect = [
     {"email": "service-account@example.com", "scopes": ["one", "two"]}
@@ -1560,11 +1560,11 @@ with pytest.raises(ValueError):
     assert isinstance(self.credentials._signer._request, transport.Request)
 
     @mock.patch(
-    "google.auth._helpers.utcnow",
+    "rewired.auth._helpers.utcnow",
     return_value=datetime.datetime.utcfromtimestamp(0)
     )
-    @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
-    @mock.patch("google.auth.iam.Signer.sign", autospec=True)
+    @mock.patch("rewired.auth.compute_engine._metadata.get", autospec=True)
+    @mock.patch("rewired.auth.iam.Signer.sign", autospec=True)
                                                                                                                 def test_with_token_uri(self, sign, get, utcnow):
     get.side_effect = [
     {"email": "service-account@example.com", "scopes": ["one", "two"]}
@@ -1582,11 +1582,11 @@ with pytest.raises(ValueError):
     assert creds_with_token_uri._token_uri == "http://example.com"
 
     @mock.patch(
-    "google.auth._helpers.utcnow",
+    "rewired.auth._helpers.utcnow",
     return_value=datetime.datetime.utcfromtimestamp(0)
     )
-    @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
-    @mock.patch("google.auth.iam.Signer.sign", autospec=True)
+    @mock.patch("rewired.auth.compute_engine._metadata.get", autospec=True)
+    @mock.patch("rewired.auth.iam.Signer.sign", autospec=True)
                                                                                                                     def test_with_token_uri_exception(self, sign, get, utcnow):
     get.side_effect = [
     {"email": "service-account@example.com", "scopes": ["one", "two"]}
@@ -1690,11 +1690,11 @@ with pytest.raises(ValueError):
     assert self.credentials._quota_project_id == "project-foo"
 
     @mock.patch(
-    "google.auth._helpers.utcnow",
+    "rewired.auth._helpers.utcnow",
     return_value=datetime.datetime.utcfromtimestamp(0)
     )
-    @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
-    @mock.patch("google.auth.iam.Signer.sign", autospec=True)
+    @mock.patch("rewired.auth.compute_engine._metadata.get", autospec=True)
+    @mock.patch("rewired.auth.iam.Signer.sign", autospec=True)
     @mock.patch("google.oauth2._client.id_token_jwt_grant", autospec=True)
                                                                                                                                 def test_refresh_success(self, id_token_jwt_grant, sign, get, utcnow):
     get.side_effect = [
@@ -1725,11 +1725,11 @@ with pytest.raises(ValueError):
     assert self.credentials.valid
 
     @mock.patch(
-    "google.auth._helpers.utcnow",
+    "rewired.auth._helpers.utcnow",
     return_value=datetime.datetime.utcfromtimestamp(0)
     )
-    @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
-    @mock.patch("google.auth.iam.Signer.sign", autospec=True)
+    @mock.patch("rewired.auth.compute_engine._metadata.get", autospec=True)
+    @mock.patch("rewired.auth.iam.Signer.sign", autospec=True)
                                                                                                                                     def test_refresh_error(self, sign, get, utcnow):
     get.side_effect = [
     {"email": "service-account@example.com", "scopes": ["one", "two"]}
@@ -1769,12 +1769,12 @@ with pytest.raises(ValueError):
     import pytest  # type: ignore
     import responses  # type: ignore
 
-    from google.auth import _helpers
-    from google.auth import exceptions
-    from google.auth import jwt
-    from google.auth import transport
-    from google.auth.compute_engine import credentials
-    from google.auth.transport import requests
+    from rewired.auth import _helpers
+    from rewired.auth import exceptions
+    from rewired.auth import jwt
+    from rewired.auth import transport
+    from rewired.auth.compute_engine import credentials
+    from rewired.auth.transport import requests
 
     SAMPLE_ID_TOKEN_EXP = 1584393400
 
@@ -1845,10 +1845,10 @@ with pytest.raises(ValueError):
     assert not self.credentials._universe_domain_cached
 
     @mock.patch(
-    "google.auth._helpers.utcnow",
+    "rewired.auth._helpers.utcnow",
     return_value=datetime.datetime.min + _helpers.REFRESH_THRESHOLD,
     )
-    @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
+    @mock.patch("rewired.auth.compute_engine._metadata.get", autospec=True)
                                                                                                                                                             def test_refresh_success(self, get, utcnow):
     get.side_effect = [
     {
@@ -1879,14 +1879,14 @@ with pytest.raises(ValueError):
     assert self.credentials.valid
 
     @mock.patch(
-    "google.auth.metrics.token_request_access_token_mds",
+    "rewired.auth.metrics.token_request_access_token_mds",
     return_value=ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
     )
     @mock.patch(
-    "google.auth._helpers.utcnow",
+    "rewired.auth._helpers.utcnow",
     return_value=datetime.datetime.min + _helpers.REFRESH_THRESHOLD,
     )
-    @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
+    @mock.patch("rewired.auth.compute_engine._metadata.get", autospec=True)
                                                                                                                                                                 def test_refresh_success_with_scopes(self, get, utcnow, mock_metrics_header_value):
     get.side_effect = [
     {
@@ -1924,7 +1924,7 @@ with pytest.raises(ValueError):
     "x-goog-api-client": ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE
     }
 
-    @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
+    @mock.patch("rewired.auth.compute_engine._metadata.get", autospec=True)
                                                                                                                                                                     def test_refresh_error(self, get):
     get.side_effect = exceptions.TransportError("http error")
 
@@ -1933,7 +1933,7 @@ with pytest.raises(ValueError):
 
     assert "http error" in str(excinfo.value)
 
-    @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
+    @mock.patch("rewired.auth.compute_engine._metadata.get", autospec=True)
                                                                                                                                                                             def test_before_request_refreshes(self, get):
     get.side_effect = [
     {
@@ -2002,7 +2002,7 @@ with pytest.raises(ValueError):
     assert headers["x-goog-api-client"] == "cred-type/mds"
 
     @mock.patch(
-    "google.auth.compute_engine._metadata.get_universe_domain",
+    "rewired.auth.compute_engine._metadata.get_universe_domain",
     return_value="fake_universe_domain",
     )
                                                                                                                                                                                                 def test_universe_domain(self, get_universe_domain):
@@ -2022,7 +2022,7 @@ with pytest.raises(ValueError):
     assert self.credentials.universe_domain == "fake_universe_domain"
     get_universe_domain.assert_called_once()
 
-    @mock.patch("google.auth.compute_engine._metadata.get_universe_domain")
+    @mock.patch("rewired.auth.compute_engine._metadata.get_universe_domain")
                                                                                                                                                                                                     def test_user_provided_universe_domain(self, get_universe_domain):
     assert self.credentials_with_all_fields.universe_domain == FAKE_UNIVERSE_DOMAIN
     assert self.credentials_with_all_fields._universe_domain_cached
@@ -2035,7 +2035,7 @@ with pytest.raises(ValueError):
                                                                                                                                                                                                         class TestIDTokenCredentials(object):
     credentials = None
 
-    @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
+    @mock.patch("rewired.auth.compute_engine._metadata.get", autospec=True)
                                                                                                                                                                                                             def test_default_state(self, get):
     get.side_effect = [
     {"email": "service-account@example.com", "scope": ["one", "two"]}
@@ -2058,11 +2058,11 @@ with pytest.raises(ValueError):
     assert not self.credentials._quota_project_id
 
     @mock.patch(
-    "google.auth._helpers.utcnow",
+    "rewired.auth._helpers.utcnow",
     return_value=datetime.datetime.utcfromtimestamp(0)
     )
-    @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
-    @mock.patch("google.auth.iam.Signer.sign", autospec=True)
+    @mock.patch("rewired.auth.compute_engine._metadata.get", autospec=True)
+    @mock.patch("rewired.auth.iam.Signer.sign", autospec=True)
                                                                                                                                                                                                                 def test_make_authorization_grant_assertion(self, sign, get, utcnow):
     get.side_effect = [
     {"email": "service-account@example.com", "scopes": ["one", "two"]}
@@ -2091,11 +2091,11 @@ with pytest.raises(ValueError):
     }
 
     @mock.patch(
-    "google.auth._helpers.utcnow",
+    "rewired.auth._helpers.utcnow",
     return_value=datetime.datetime.utcfromtimestamp(0)
     )
-    @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
-    @mock.patch("google.auth.iam.Signer.sign", autospec=True)
+    @mock.patch("rewired.auth.compute_engine._metadata.get", autospec=True)
+    @mock.patch("rewired.auth.iam.Signer.sign", autospec=True)
                                                                                                                                                                                                                     def test_with_service_account(self, sign, get, utcnow):
     sign.side_effect = [b"signature"]
 
@@ -2123,11 +2123,11 @@ with pytest.raises(ValueError):
     }
 
     @mock.patch(
-    "google.auth._helpers.utcnow",
+    "rewired.auth._helpers.utcnow",
     return_value=datetime.datetime.utcfromtimestamp(0)
     )
-    @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
-    @mock.patch("google.auth.iam.Signer.sign", autospec=True)
+    @mock.patch("rewired.auth.compute_engine._metadata.get", autospec=True)
+    @mock.patch("rewired.auth.iam.Signer.sign", autospec=True)
                                                                                                                                                                                                                         def test_additional_claims(self, sign, get, utcnow):
     get.side_effect = [
     {"email": "service-account@example.com", "scopes": ["one", "two"]}
@@ -2179,11 +2179,11 @@ with pytest.raises(ValueError):
     assert self.credentials._token_uri == "https://example.com/token"
 
     @mock.patch(
-    "google.auth._helpers.utcnow",
+    "rewired.auth._helpers.utcnow",
     return_value=datetime.datetime.utcfromtimestamp(0)
     )
-    @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
-    @mock.patch("google.auth.iam.Signer.sign", autospec=True)
+    @mock.patch("rewired.auth.compute_engine._metadata.get", autospec=True)
+    @mock.patch("rewired.auth.iam.Signer.sign", autospec=True)
                                                                                                                                                                                                                                 def test_with_target_audience(self, sign, get, utcnow):
     get.side_effect = [
     {"email": "service-account@example.com", "scopes": ["one", "two"]}
@@ -2301,11 +2301,11 @@ with pytest.raises(ValueError):
     assert self.credentials.token is not None
 
     @mock.patch(
-    "google.auth._helpers.utcnow",
+    "rewired.auth._helpers.utcnow",
     return_value=datetime.datetime.utcfromtimestamp(0)
     )
-    @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
-    @mock.patch("google.auth.iam.Signer.sign", autospec=True)
+    @mock.patch("rewired.auth.compute_engine._metadata.get", autospec=True)
+    @mock.patch("rewired.auth.iam.Signer.sign", autospec=True)
                                                                                                                                                                                                                                         def test_with_quota_project(self, sign, get, utcnow):
     get.side_effect = [
     {"email": "service-account@example.com", "scopes": ["one", "two"]}
@@ -2340,11 +2340,11 @@ with pytest.raises(ValueError):
     assert isinstance(self.credentials._signer._request, transport.Request)
 
     @mock.patch(
-    "google.auth._helpers.utcnow",
+    "rewired.auth._helpers.utcnow",
     return_value=datetime.datetime.utcfromtimestamp(0)
     )
-    @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
-    @mock.patch("google.auth.iam.Signer.sign", autospec=True)
+    @mock.patch("rewired.auth.compute_engine._metadata.get", autospec=True)
+    @mock.patch("rewired.auth.iam.Signer.sign", autospec=True)
                                                                                                                                                                                                                                             def test_with_token_uri(self, sign, get, utcnow):
     get.side_effect = [
     {"email": "service-account@example.com", "scopes": ["one", "two"]}
@@ -2362,11 +2362,11 @@ with pytest.raises(ValueError):
     assert creds_with_token_uri._token_uri == "http://example.com"
 
     @mock.patch(
-    "google.auth._helpers.utcnow",
+    "rewired.auth._helpers.utcnow",
     return_value=datetime.datetime.utcfromtimestamp(0)
     )
-    @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
-    @mock.patch("google.auth.iam.Signer.sign", autospec=True)
+    @mock.patch("rewired.auth.compute_engine._metadata.get", autospec=True)
+    @mock.patch("rewired.auth.iam.Signer.sign", autospec=True)
                                                                                                                                                                                                                                                 def test_with_token_uri_exception(self, sign, get, utcnow):
     get.side_effect = [
     {"email": "service-account@example.com", "scopes": ["one", "two"]}
@@ -2470,11 +2470,11 @@ with pytest.raises(ValueError):
     assert self.credentials._quota_project_id == "project-foo"
 
     @mock.patch(
-    "google.auth._helpers.utcnow",
+    "rewired.auth._helpers.utcnow",
     return_value=datetime.datetime.utcfromtimestamp(0)
     )
-    @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
-    @mock.patch("google.auth.iam.Signer.sign", autospec=True)
+    @mock.patch("rewired.auth.compute_engine._metadata.get", autospec=True)
+    @mock.patch("rewired.auth.iam.Signer.sign", autospec=True)
     @mock.patch("google.oauth2._client.id_token_jwt_grant", autospec=True)
                                                                                                                                                                                                                                                             def test_refresh_success(self, id_token_jwt_grant, sign, get, utcnow):
     get.side_effect = [
@@ -2505,11 +2505,11 @@ with pytest.raises(ValueError):
     assert self.credentials.valid
 
     @mock.patch(
-    "google.auth._helpers.utcnow",
+    "rewired.auth._helpers.utcnow",
     return_value=datetime.datetime.utcfromtimestamp(0)
     )
-    @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
-    @mock.patch("google.auth.iam.Signer.sign", autospec=True)
+    @mock.patch("rewired.auth.compute_engine._metadata.get", autospec=True)
+    @mock.patch("rewired.auth.iam.Signer.sign", autospec=True)
                                                                                                                                                                                                                                                                 def test_refresh_error(self, sign, get, utcnow):
     get.side_effect = [
     {"email": "service-account@example.com", "scopes": ["one", "two"]}
@@ -2532,11 +2532,11 @@ with pytest.raises(ValueError):
     assert "http error" in str(excinfo.value)
 
     @mock.patch(
-    "google.auth._helpers.utcnow",
+    "rewired.auth._helpers.utcnow",
     return_value=datetime.datetime.utcfromtimestamp(0)
     )
-    @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
-    @mock.patch("google.auth.iam.Signer.sign", autospec=True)
+    @mock.patch("rewired.auth.compute_engine._metadata.get", autospec=True)
+    @mock.patch("rewired.auth.iam.Signer.sign", autospec=True)
     @mock.patch("google.oauth2._client.id_token_jwt_grant", autospec=True)
                                                                                                                                                                                                                                                                         def test_before_request_refreshes(self, id_token_jwt_grant, sign, get, utcnow):
     get.side_effect = [
@@ -2565,8 +2565,8 @@ with pytest.raises(ValueError):
     # Credentials should now be valid.
     assert self.credentials.valid
 
-    @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
-    @mock.patch("google.auth.iam.Signer.sign", autospec=True)
+    @mock.patch("rewired.auth.compute_engine._metadata.get", autospec=True)
+    @mock.patch("rewired.auth.iam.Signer.sign", autospec=True)
                                                                                                                                                                                                                                                                             def test_sign_bytes(self, sign, get):
     get.side_effect = [
     {"email": "service-account@example.com", "scopes": ["one", "two"]}
@@ -2590,13 +2590,13 @@ with pytest.raises(ValueError):
     assert signature == b"signature"
 
     @mock.patch(
-    "google.auth.metrics.token_request_id_token_mds",
+    "rewired.auth.metrics.token_request_id_token_mds",
     return_value=ID_TOKEN_REQUEST_METRICS_HEADER_VALUE,
     )
     @mock.patch(
-    "google.auth.compute_engine._metadata.get_service_account_info", autospec=True
+    "rewired.auth.compute_engine._metadata.get_service_account_info", autospec=True
     )
-    @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
+    @mock.patch("rewired.auth.compute_engine._metadata.get", autospec=True)
 def test_get_id_token_from_metadata(
 self, get, get_service_account_info, mock_metrics_header_value
 ):
@@ -2623,7 +2623,7 @@ with pytest.raises(ValueError):
     cred.sign_bytes(b"bytes")
 
     @mock.patch(
-    "google.auth.compute_engine._metadata.get_service_account_info", autospec=True
+    "rewired.auth.compute_engine._metadata.get_service_account_info", autospec=True
     )
     def test_with_target_audience_for_metadata(self, get_service_account_info):
     get_service_account_info.return_value = {"email": "foo@example.com"}
@@ -2640,7 +2640,7 @@ with pytest.raises(ValueError):
     assert cred._service_account_email == "foo@example.com"
 
     @mock.patch(
-    "google.auth.compute_engine._metadata.get_service_account_info", autospec=True
+    "rewired.auth.compute_engine._metadata.get_service_account_info", autospec=True
     )
         def test_id_token_with_quota_project(self, get_service_account_info):
     get_service_account_info.return_value = {"email": "foo@example.com"}
@@ -2657,9 +2657,9 @@ with pytest.raises(ValueError):
     assert cred._service_account_email == "foo@example.com"
 
     @mock.patch(
-    "google.auth.compute_engine._metadata.get_service_account_info", autospec=True
+    "rewired.auth.compute_engine._metadata.get_service_account_info", autospec=True
     )
-    @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
+    @mock.patch("rewired.auth.compute_engine._metadata.get", autospec=True)
             def test_invalid_id_token_from_metadata(self, get, get_service_account_info):
     get.return_value = "invalid_id_token"
     get_service_account_info.return_value = {"email": "foo@example.com"}
@@ -2672,9 +2672,9 @@ with pytest.raises(ValueError):
     cred.refresh(request=mock.Mock()
 
     @mock.patch(
-    "google.auth.compute_engine._metadata.get_service_account_info", autospec=True
+    "rewired.auth.compute_engine._metadata.get_service_account_info", autospec=True
     )
-    @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
+    @mock.patch("rewired.auth.compute_engine._metadata.get", autospec=True)
                     def test_transport_error_from_metadata(self, get, get_service_account_info):
     get.side_effect = exceptions.TransportError("transport error")
     get_service_account_info.return_value = {"email": "foo@example.com"}
@@ -2723,11 +2723,11 @@ with pytest.raises(ValueError):
 
 
     @mock.patch(
-    "google.auth._helpers.utcnow",
+    "rewired.auth._helpers.utcnow",
     return_value=datetime.datetime.utcfromtimestamp(0)
     )
-    @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
-    @mock.patch("google.auth.iam.Signer.sign", autospec=True)
+    @mock.patch("rewired.auth.compute_engine._metadata.get", autospec=True)
+    @mock.patch("rewired.auth.iam.Signer.sign", autospec=True)
     @mock.patch("google.oauth2._client.id_token_jwt_grant", autospec=True)
                                                 def test_before_request_refreshes(self, id_token_jwt_grant, sign, get, utcnow):
     get.side_effect = [
@@ -2756,8 +2756,8 @@ with pytest.raises(ValueError):
     # Credentials should now be valid.
     assert self.credentials.valid
 
-    @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
-    @mock.patch("google.auth.iam.Signer.sign", autospec=True)
+    @mock.patch("rewired.auth.compute_engine._metadata.get", autospec=True)
+    @mock.patch("rewired.auth.iam.Signer.sign", autospec=True)
                                                     def test_sign_bytes(self, sign, get):
     get.side_effect = [
     {"email": "service-account@example.com", "scopes": ["one", "two"]}
@@ -2781,13 +2781,13 @@ with pytest.raises(ValueError):
     assert signature == b"signature"
 
     @mock.patch(
-    "google.auth.metrics.token_request_id_token_mds",
+    "rewired.auth.metrics.token_request_id_token_mds",
     return_value=ID_TOKEN_REQUEST_METRICS_HEADER_VALUE,
     )
     @mock.patch(
-    "google.auth.compute_engine._metadata.get_service_account_info", autospec=True
+    "rewired.auth.compute_engine._metadata.get_service_account_info", autospec=True
     )
-    @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
+    @mock.patch("rewired.auth.compute_engine._metadata.get", autospec=True)
 def test_get_id_token_from_metadata(
 self, get, get_service_account_info, mock_metrics_header_value
 ):
@@ -2814,7 +2814,7 @@ with pytest.raises(ValueError):
     cred.sign_bytes(b"bytes")
 
     @mock.patch(
-    "google.auth.compute_engine._metadata.get_service_account_info", autospec=True
+    "rewired.auth.compute_engine._metadata.get_service_account_info", autospec=True
     )
     def test_with_target_audience_for_metadata(self, get_service_account_info):
     get_service_account_info.return_value = {"email": "foo@example.com"}
@@ -2831,7 +2831,7 @@ with pytest.raises(ValueError):
     assert cred._service_account_email == "foo@example.com"
 
     @mock.patch(
-    "google.auth.compute_engine._metadata.get_service_account_info", autospec=True
+    "rewired.auth.compute_engine._metadata.get_service_account_info", autospec=True
     )
         def test_id_token_with_quota_project(self, get_service_account_info):
     get_service_account_info.return_value = {"email": "foo@example.com"}
@@ -2848,9 +2848,9 @@ with pytest.raises(ValueError):
     assert cred._service_account_email == "foo@example.com"
 
     @mock.patch(
-    "google.auth.compute_engine._metadata.get_service_account_info", autospec=True
+    "rewired.auth.compute_engine._metadata.get_service_account_info", autospec=True
     )
-    @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
+    @mock.patch("rewired.auth.compute_engine._metadata.get", autospec=True)
             def test_invalid_id_token_from_metadata(self, get, get_service_account_info):
     get.return_value = "invalid_id_token"
     get_service_account_info.return_value = {"email": "foo@example.com"}
@@ -2863,9 +2863,9 @@ with pytest.raises(ValueError):
     cred.refresh(request=mock.Mock()
 
     @mock.patch(
-    "google.auth.compute_engine._metadata.get_service_account_info", autospec=True
+    "rewired.auth.compute_engine._metadata.get_service_account_info", autospec=True
     )
-    @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
+    @mock.patch("rewired.auth.compute_engine._metadata.get", autospec=True)
                     def test_transport_error_from_metadata(self, get, get_service_account_info):
     get.side_effect = exceptions.TransportError("transport error")
     get_service_account_info.return_value = {"email": "foo@example.com"}
@@ -2896,12 +2896,12 @@ with pytest.raises(ValueError):
     import pytest  # type: ignore
     import responses  # type: ignore
 
-    from google.auth import _helpers
-    from google.auth import exceptions
-    from google.auth import jwt
-    from google.auth import transport
-    from google.auth.compute_engine import credentials
-    from google.auth.transport import requests
+    from rewired.auth import _helpers
+    from rewired.auth import exceptions
+    from rewired.auth import jwt
+    from rewired.auth import transport
+    from rewired.auth.compute_engine import credentials
+    from rewired.auth.transport import requests
 
     SAMPLE_ID_TOKEN_EXP = 1584393400
 
@@ -2972,10 +2972,10 @@ with pytest.raises(ValueError):
     assert not self.credentials._universe_domain_cached
 
     @mock.patch(
-    "google.auth._helpers.utcnow",
+    "rewired.auth._helpers.utcnow",
     return_value=datetime.datetime.min + _helpers.REFRESH_THRESHOLD,
     )
-    @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
+    @mock.patch("rewired.auth.compute_engine._metadata.get", autospec=True)
                                             def test_refresh_success(self, get, utcnow):
     get.side_effect = [
     {
@@ -3006,14 +3006,14 @@ with pytest.raises(ValueError):
     assert self.credentials.valid
 
     @mock.patch(
-    "google.auth.metrics.token_request_access_token_mds",
+    "rewired.auth.metrics.token_request_access_token_mds",
     return_value=ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
     )
     @mock.patch(
-    "google.auth._helpers.utcnow",
+    "rewired.auth._helpers.utcnow",
     return_value=datetime.datetime.min + _helpers.REFRESH_THRESHOLD,
     )
-    @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
+    @mock.patch("rewired.auth.compute_engine._metadata.get", autospec=True)
                                                 def test_refresh_success_with_scopes(self, get, utcnow, mock_metrics_header_value):
     get.side_effect = [
     {
@@ -3051,7 +3051,7 @@ with pytest.raises(ValueError):
     "x-goog-api-client": ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE
     }
 
-    @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
+    @mock.patch("rewired.auth.compute_engine._metadata.get", autospec=True)
                                                     def test_refresh_error(self, get):
     get.side_effect = exceptions.TransportError("http error")
 
@@ -3060,7 +3060,7 @@ with pytest.raises(ValueError):
 
     assert "http error" in str(excinfo.value)
 
-    @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
+    @mock.patch("rewired.auth.compute_engine._metadata.get", autospec=True)
                                                             def test_before_request_refreshes(self, get):
     get.side_effect = [
     {
@@ -3129,7 +3129,7 @@ with pytest.raises(ValueError):
     assert headers["x-goog-api-client"] == "cred-type/mds"
 
     @mock.patch(
-    "google.auth.compute_engine._metadata.get_universe_domain",
+    "rewired.auth.compute_engine._metadata.get_universe_domain",
     return_value="fake_universe_domain",
     )
                                                                                 def test_universe_domain(self, get_universe_domain):
@@ -3149,7 +3149,7 @@ with pytest.raises(ValueError):
     assert self.credentials.universe_domain == "fake_universe_domain"
     get_universe_domain.assert_called_once()
 
-    @mock.patch("google.auth.compute_engine._metadata.get_universe_domain")
+    @mock.patch("rewired.auth.compute_engine._metadata.get_universe_domain")
                                                                                     def test_user_provided_universe_domain(self, get_universe_domain):
     assert self.credentials_with_all_fields.universe_domain == FAKE_UNIVERSE_DOMAIN
     assert self.credentials_with_all_fields._universe_domain_cached
@@ -3162,7 +3162,7 @@ with pytest.raises(ValueError):
                                                                                         class TestIDTokenCredentials(object):
     credentials = None
 
-    @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
+    @mock.patch("rewired.auth.compute_engine._metadata.get", autospec=True)
                                                                                             def test_default_state(self, get):
     get.side_effect = [
     {"email": "service-account@example.com", "scope": ["one", "two"]}
@@ -3185,11 +3185,11 @@ with pytest.raises(ValueError):
     assert not self.credentials._quota_project_id
 
     @mock.patch(
-    "google.auth._helpers.utcnow",
+    "rewired.auth._helpers.utcnow",
     return_value=datetime.datetime.utcfromtimestamp(0)
     )
-    @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
-    @mock.patch("google.auth.iam.Signer.sign", autospec=True)
+    @mock.patch("rewired.auth.compute_engine._metadata.get", autospec=True)
+    @mock.patch("rewired.auth.iam.Signer.sign", autospec=True)
                                                                                                 def test_make_authorization_grant_assertion(self, sign, get, utcnow):
     get.side_effect = [
     {"email": "service-account@example.com", "scopes": ["one", "two"]}
@@ -3218,11 +3218,11 @@ with pytest.raises(ValueError):
     }
 
     @mock.patch(
-    "google.auth._helpers.utcnow",
+    "rewired.auth._helpers.utcnow",
     return_value=datetime.datetime.utcfromtimestamp(0)
     )
-    @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
-    @mock.patch("google.auth.iam.Signer.sign", autospec=True)
+    @mock.patch("rewired.auth.compute_engine._metadata.get", autospec=True)
+    @mock.patch("rewired.auth.iam.Signer.sign", autospec=True)
                                                                                                     def test_with_service_account(self, sign, get, utcnow):
     sign.side_effect = [b"signature"]
 
@@ -3250,11 +3250,11 @@ with pytest.raises(ValueError):
     }
 
     @mock.patch(
-    "google.auth._helpers.utcnow",
+    "rewired.auth._helpers.utcnow",
     return_value=datetime.datetime.utcfromtimestamp(0)
     )
-    @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
-    @mock.patch("google.auth.iam.Signer.sign", autospec=True)
+    @mock.patch("rewired.auth.compute_engine._metadata.get", autospec=True)
+    @mock.patch("rewired.auth.iam.Signer.sign", autospec=True)
                                                                                                         def test_additional_claims(self, sign, get, utcnow):
     get.side_effect = [
     {"email": "service-account@example.com", "scopes": ["one", "two"]}
@@ -3306,11 +3306,11 @@ with pytest.raises(ValueError):
     assert self.credentials._token_uri == "https://example.com/token"
 
     @mock.patch(
-    "google.auth._helpers.utcnow",
+    "rewired.auth._helpers.utcnow",
     return_value=datetime.datetime.utcfromtimestamp(0)
     )
-    @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
-    @mock.patch("google.auth.iam.Signer.sign", autospec=True)
+    @mock.patch("rewired.auth.compute_engine._metadata.get", autospec=True)
+    @mock.patch("rewired.auth.iam.Signer.sign", autospec=True)
                                                                                                                 def test_with_target_audience(self, sign, get, utcnow):
     get.side_effect = [
     {"email": "service-account@example.com", "scopes": ["one", "two"]}
@@ -3428,11 +3428,11 @@ with pytest.raises(ValueError):
     assert self.credentials.token is not None
 
     @mock.patch(
-    "google.auth._helpers.utcnow",
+    "rewired.auth._helpers.utcnow",
     return_value=datetime.datetime.utcfromtimestamp(0)
     )
-    @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
-    @mock.patch("google.auth.iam.Signer.sign", autospec=True)
+    @mock.patch("rewired.auth.compute_engine._metadata.get", autospec=True)
+    @mock.patch("rewired.auth.iam.Signer.sign", autospec=True)
                                                                                                                         def test_with_quota_project(self, sign, get, utcnow):
     get.side_effect = [
     {"email": "service-account@example.com", "scopes": ["one", "two"]}
@@ -3467,11 +3467,11 @@ with pytest.raises(ValueError):
     assert isinstance(self.credentials._signer._request, transport.Request)
 
     @mock.patch(
-    "google.auth._helpers.utcnow",
+    "rewired.auth._helpers.utcnow",
     return_value=datetime.datetime.utcfromtimestamp(0)
     )
-    @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
-    @mock.patch("google.auth.iam.Signer.sign", autospec=True)
+    @mock.patch("rewired.auth.compute_engine._metadata.get", autospec=True)
+    @mock.patch("rewired.auth.iam.Signer.sign", autospec=True)
                                                                                                                             def test_with_token_uri(self, sign, get, utcnow):
     get.side_effect = [
     {"email": "service-account@example.com", "scopes": ["one", "two"]}
@@ -3489,11 +3489,11 @@ with pytest.raises(ValueError):
     assert creds_with_token_uri._token_uri == "http://example.com"
 
     @mock.patch(
-    "google.auth._helpers.utcnow",
+    "rewired.auth._helpers.utcnow",
     return_value=datetime.datetime.utcfromtimestamp(0)
     )
-    @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
-    @mock.patch("google.auth.iam.Signer.sign", autospec=True)
+    @mock.patch("rewired.auth.compute_engine._metadata.get", autospec=True)
+    @mock.patch("rewired.auth.iam.Signer.sign", autospec=True)
                                                                                                                                 def test_with_token_uri_exception(self, sign, get, utcnow):
     get.side_effect = [
     {"email": "service-account@example.com", "scopes": ["one", "two"]}
@@ -3597,11 +3597,11 @@ with pytest.raises(ValueError):
     assert self.credentials._quota_project_id == "project-foo"
 
     @mock.patch(
-    "google.auth._helpers.utcnow",
+    "rewired.auth._helpers.utcnow",
     return_value=datetime.datetime.utcfromtimestamp(0)
     )
-    @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
-    @mock.patch("google.auth.iam.Signer.sign", autospec=True)
+    @mock.patch("rewired.auth.compute_engine._metadata.get", autospec=True)
+    @mock.patch("rewired.auth.iam.Signer.sign", autospec=True)
     @mock.patch("google.oauth2._client.id_token_jwt_grant", autospec=True)
                                                                                                                                             def test_refresh_success(self, id_token_jwt_grant, sign, get, utcnow):
     get.side_effect = [
@@ -3632,11 +3632,11 @@ with pytest.raises(ValueError):
     assert self.credentials.valid
 
     @mock.patch(
-    "google.auth._helpers.utcnow",
+    "rewired.auth._helpers.utcnow",
     return_value=datetime.datetime.utcfromtimestamp(0)
     )
-    @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
-    @mock.patch("google.auth.iam.Signer.sign", autospec=True)
+    @mock.patch("rewired.auth.compute_engine._metadata.get", autospec=True)
+    @mock.patch("rewired.auth.iam.Signer.sign", autospec=True)
                                                                                                                                                 def test_refresh_error(self, sign, get, utcnow):
     get.side_effect = [
     {"email": "service-account@example.com", "scopes": ["one", "two"]}
@@ -3659,11 +3659,11 @@ with pytest.raises(ValueError):
     assert "http error" in str(excinfo.value)
 
     @mock.patch(
-    "google.auth._helpers.utcnow",
+    "rewired.auth._helpers.utcnow",
     return_value=datetime.datetime.utcfromtimestamp(0)
     )
-    @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
-    @mock.patch("google.auth.iam.Signer.sign", autospec=True)
+    @mock.patch("rewired.auth.compute_engine._metadata.get", autospec=True)
+    @mock.patch("rewired.auth.iam.Signer.sign", autospec=True)
     @mock.patch("google.oauth2._client.id_token_jwt_grant", autospec=True)
                                                                                                                                                         def test_before_request_refreshes(self, id_token_jwt_grant, sign, get, utcnow):
     get.side_effect = [
@@ -3692,8 +3692,8 @@ with pytest.raises(ValueError):
     # Credentials should now be valid.
     assert self.credentials.valid
 
-    @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
-    @mock.patch("google.auth.iam.Signer.sign", autospec=True)
+    @mock.patch("rewired.auth.compute_engine._metadata.get", autospec=True)
+    @mock.patch("rewired.auth.iam.Signer.sign", autospec=True)
                                                                                                                                                             def test_sign_bytes(self, sign, get):
     get.side_effect = [
     {"email": "service-account@example.com", "scopes": ["one", "two"]}
@@ -3717,13 +3717,13 @@ with pytest.raises(ValueError):
     assert signature == b"signature"
 
     @mock.patch(
-    "google.auth.metrics.token_request_id_token_mds",
+    "rewired.auth.metrics.token_request_id_token_mds",
     return_value=ID_TOKEN_REQUEST_METRICS_HEADER_VALUE,
     )
     @mock.patch(
-    "google.auth.compute_engine._metadata.get_service_account_info", autospec=True
+    "rewired.auth.compute_engine._metadata.get_service_account_info", autospec=True
     )
-    @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
+    @mock.patch("rewired.auth.compute_engine._metadata.get", autospec=True)
 def test_get_id_token_from_metadata(
 self, get, get_service_account_info, mock_metrics_header_value
 ):
@@ -3750,7 +3750,7 @@ with pytest.raises(ValueError):
     cred.sign_bytes(b"bytes")
 
     @mock.patch(
-    "google.auth.compute_engine._metadata.get_service_account_info", autospec=True
+    "rewired.auth.compute_engine._metadata.get_service_account_info", autospec=True
     )
     def test_with_target_audience_for_metadata(self, get_service_account_info):
     get_service_account_info.return_value = {"email": "foo@example.com"}
@@ -3767,7 +3767,7 @@ with pytest.raises(ValueError):
     assert cred._service_account_email == "foo@example.com"
 
     @mock.patch(
-    "google.auth.compute_engine._metadata.get_service_account_info", autospec=True
+    "rewired.auth.compute_engine._metadata.get_service_account_info", autospec=True
     )
         def test_id_token_with_quota_project(self, get_service_account_info):
     get_service_account_info.return_value = {"email": "foo@example.com"}
@@ -3784,9 +3784,9 @@ with pytest.raises(ValueError):
     assert cred._service_account_email == "foo@example.com"
 
     @mock.patch(
-    "google.auth.compute_engine._metadata.get_service_account_info", autospec=True
+    "rewired.auth.compute_engine._metadata.get_service_account_info", autospec=True
     )
-    @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
+    @mock.patch("rewired.auth.compute_engine._metadata.get", autospec=True)
             def test_invalid_id_token_from_metadata(self, get, get_service_account_info):
     get.return_value = "invalid_id_token"
     get_service_account_info.return_value = {"email": "foo@example.com"}
@@ -3799,9 +3799,9 @@ with pytest.raises(ValueError):
     cred.refresh(request=mock.Mock()
 
     @mock.patch(
-    "google.auth.compute_engine._metadata.get_service_account_info", autospec=True
+    "rewired.auth.compute_engine._metadata.get_service_account_info", autospec=True
     )
-    @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
+    @mock.patch("rewired.auth.compute_engine._metadata.get", autospec=True)
                     def test_transport_error_from_metadata(self, get, get_service_account_info):
     get.side_effect = exceptions.TransportError("transport error")
     get_service_account_info.return_value = {"email": "foo@example.com"}

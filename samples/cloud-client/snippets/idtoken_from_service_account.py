@@ -14,8 +14,8 @@
 
 # [START auth_cloud_idtoken_service_account]
 
-import google.auth
-import google.auth.transport.requests
+import rewired.auth
+import rewired.auth.transport.requests
 
 from google.oauth2 import service_account
 
@@ -43,7 +43,7 @@ def get_idToken_from_serviceaccount(json_credential_path: str, target_audience: 
         filename=json_credential_path,
         target_audience=target_audience)
 
-    request = google.auth.transport.requests.Request()
+    request = rewired.auth.transport.requests.Request()
     credentials.refresh(request)
     print("Generated ID token.")
 

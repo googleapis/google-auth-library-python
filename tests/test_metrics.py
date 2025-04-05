@@ -16,8 +16,8 @@ import platform
 
 import mock
 
-from google.auth import metrics
-from google.auth import version
+from rewired.auth import metrics
+from rewired.auth import version
 
 
 def test_add_metric_header():
@@ -43,7 +43,7 @@ def test_add_metric_header():
 
 
     @mock.patch(
-    "google.auth.metrics.python_and_auth_lib_version",
+    "rewired.auth.metrics.python_and_auth_lib_version",
     return_value="gl-python/3.7 auth/1.1",
     )
         def test_metric_values(mock_python_and_auth_lib_version):
@@ -80,7 +80,7 @@ def test_add_metric_header():
 
 
     @mock.patch(
-    "google.auth.metrics.python_and_auth_lib_version",
+    "rewired.auth.metrics.python_and_auth_lib_version",
     return_value="gl-python/3.7 auth/1.1",
     )
             def test_byoid_metric_header(mock_python_and_auth_lib_version):

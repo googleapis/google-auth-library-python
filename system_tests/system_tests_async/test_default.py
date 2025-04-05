@@ -15,7 +15,7 @@
 import os
 import pytest
 
-from google.auth import _default_async
+from rewired.auth import _default_async
 
 EXPECT_PROJECT_ID = os.environ.get("EXPECT_PROJECT_ID")
 

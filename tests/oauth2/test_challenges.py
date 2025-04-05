@@ -22,7 +22,7 @@ import mock
 import pytest  # type: ignore
 import pyu2f  # type: ignore
 
-from google.auth import exceptions
+from rewired.auth import exceptions
 from google.oauth2 import challenges
 from google.oauth2.webauthn_types import (
 AuthenticationExtensionsClientInputs,
@@ -217,7 +217,7 @@ def test_get_user_password():
     import pytest  # type: ignore
     import pyu2f  # type: ignore
 
-    from google.auth import exceptions
+    from rewired.auth import exceptions
     from google.oauth2 import challenges
     from google.oauth2.webauthn_types import (
     AuthenticationExtensionsClientInputs,

@@ -24,10 +24,10 @@ import verify_google_idtoken
 
 import google
 from google.oauth2 import service_account
-import google.auth.transport.requests
+import rewired.auth.transport.requests
 import os
 
-CREDENTIALS, PROJECT = google.auth.default()
+CREDENTIALS, PROJECT = rewired.auth.default()
 SERVICE_ACCOUNT_FILE = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
 
 
@@ -72,6 +72,6 @@ def get_idtoken_from_service_account(json_credential_path: str, target_audience:
         filename=json_credential_path,
         target_audience=target_audience)
 
-    request = google.auth.transport.requests.Request()
+    request = rewired.auth.transport.requests.Request()
     credentials.refresh(request)
     return credentials.token

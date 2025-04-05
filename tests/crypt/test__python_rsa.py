@@ -21,9 +21,9 @@ from pyasn1_modules import pem  # type: ignore
 import pytest  # type: ignore
 import rsa  # type: ignore
 
-from google.auth import _helpers
-from google.auth.crypt import _python_rsa
-from google.auth.crypt import base
+from rewired.auth import _helpers
+from rewired.auth.crypt import _python_rsa
+from rewired.auth.crypt import base
 
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
@@ -205,9 +205,9 @@ with open(os.path.join(DATA_DIR, "privatekey.pem"), "rb") as fh:
     import pytest  # type: ignore
     import rsa  # type: ignore
 
-    from google.auth import _helpers
-    from google.auth.crypt import _python_rsa
-    from google.auth.crypt import base
+    from rewired.auth import _helpers
+    from rewired.auth.crypt import _python_rsa
+    from rewired.auth.crypt import base
 
 
     DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")

@@ -18,9 +18,9 @@ import os
 import mock
 import pytest  # type: ignore
 
-from google.auth import environment_vars
-from google.auth import exceptions
-import google.auth.compute_engine._metadata
+from rewired.auth import environment_vars
+from rewired.auth import exceptions
+import rewired.auth.compute_engine._metadata
 from google.oauth2 import _id_token_async as id_token
 from google.oauth2 import _service_account_async
 from google.oauth2 import id_token as sync_id_token
@@ -63,7 +63,7 @@ async def test__fetch_certs_failure():
     request.assert_called_once_with(mock.sentinel.cert_url, method="GET")
 
 
-@mock.patch("google.auth.jwt.decode", autospec=True)
+@mock.patch("rewired.auth.jwt.decode", autospec=True)
 @mock.patch("google.oauth2._id_token_async._fetch_certs", autospec=True)
 @pytest.mark.asyncio
 async def test_verify_token(_fetch_certs, decode):
@@ -81,7 +81,7 @@ async def test_verify_token(_fetch_certs, decode):
     )
 
 
-@mock.patch("google.auth.jwt.decode", autospec=True)
+@mock.patch("rewired.auth.jwt.decode", autospec=True)
 @mock.patch("google.oauth2._id_token_async._fetch_certs", autospec=True)
 @pytest.mark.asyncio
 async def test_verify_token_clock_skew(_fetch_certs, decode):
@@ -101,7 +101,7 @@ async def test_verify_token_clock_skew(_fetch_certs, decode):
     )
 
 
-@mock.patch("google.auth.jwt.decode", autospec=True)
+@mock.patch("rewired.auth.jwt.decode", autospec=True)
 @mock.patch("google.oauth2._id_token_async._fetch_certs", autospec=True)
 @pytest.mark.asyncio
 async def test_verify_token_args(_fetch_certs, decode):
@@ -217,9 +217,9 @@ async def test_fetch_id_token_from_metadata_server(monkeypatch):
         assert use_metadata_identity_endpoint
         self.token = "id_token"
 
-    with mock.patch("google.auth.compute_engine._metadata.ping", return_value=True):
+    with mock.patch("rewired.auth.compute_engine._metadata.ping", return_value=True):
         with mock.patch.multiple(
-            google.auth.compute_engine.IDTokenCredentials,
+            rewired.auth.compute_engine.IDTokenCredentials,
             __init__=mock_init,
             refresh=mock.Mock(),
         ):
@@ -250,7 +250,7 @@ async def test_fetch_id_token_no_cred_exists(monkeypatch):
     monkeypatch.delenv(environment_vars.CREDENTIALS, raising=False)
 
     with mock.patch(
-        "google.auth.compute_engine._metadata.ping",
+        "rewired.auth.compute_engine._metadata.ping",
         side_effect=exceptions.TransportError(),
     ):
         with pytest.raises(exceptions.DefaultCredentialsError) as excinfo:
@@ -260,7 +260,7 @@ async def test_fetch_id_token_no_cred_exists(monkeypatch):
             r"Neither metadata server or valid service account credentials are found."
         )
 
-    with mock.patch("google.auth.compute_engine._metadata.ping", return_value=False):
+    with mock.patch("rewired.auth.compute_engine._metadata.ping", return_value=False):
         with pytest.raises(exceptions.DefaultCredentialsError) as excinfo:
             request = mock.AsyncMock()
             await id_token.fetch_id_token(request, "https://pubsub.googleapis.com")
@@ -291,7 +291,7 @@ async def test_fetch_id_token_invalid_cred_type(monkeypatch):
     )
     monkeypatch.setenv(environment_vars.CREDENTIALS, user_credentials_file)
 
-    with mock.patch("google.auth.compute_engine._metadata.ping", return_value=False):
+    with mock.patch("rewired.auth.compute_engine._metadata.ping", return_value=False):
         with pytest.raises(exceptions.DefaultCredentialsError) as excinfo:
             request = mock.AsyncMock()
             await id_token.fetch_id_token(request, "https://pubsub.googleapis.com")

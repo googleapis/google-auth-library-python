@@ -21,12 +21,12 @@ import urllib.parse
 import mock
 import pytest  # type: ignore
 
-from google.auth import _helpers, external_account
-from google.auth import aws
-from google.auth import environment_vars
-from google.auth import exceptions
-from google.auth import transport
-from google.auth.credentials import DEFAULT_UNIVERSE_DOMAIN
+from rewired.auth import _helpers, external_account
+from rewired.auth import aws
+from rewired.auth import environment_vars
+from rewired.auth import exceptions
+from rewired.auth import transport
+from rewired.auth.credentials import DEFAULT_UNIVERSE_DOMAIN
 
 IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE = (
 "gl-python/3.7 auth/1.1 auth-request-type/at cred-type/imp"
@@ -610,7 +610,7 @@ class TestRequestSigner(object):
     @pytest.mark.parametrize(
     "region, time, credentials, original_request, signed_request", TEST_FIXTURES
     )
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_get_request_options(
 self, utcnow, region, time, credentials, original_request, signed_request
 ):
@@ -664,12 +664,12 @@ def test_get_request_options_with_missing_scheme_url(self):
     import mock
     import pytest  # type: ignore
 
-    from google.auth import _helpers, external_account
-    from google.auth import aws
-    from google.auth import environment_vars
-    from google.auth import exceptions
-    from google.auth import transport
-    from google.auth.credentials import DEFAULT_UNIVERSE_DOMAIN
+    from rewired.auth import _helpers, external_account
+    from rewired.auth import aws
+    from rewired.auth import environment_vars
+    from rewired.auth import exceptions
+    from rewired.auth import transport
+    from rewired.auth.credentials import DEFAULT_UNIVERSE_DOMAIN
 
     IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE = (
     "gl-python/3.7 auth/1.1 auth-request-type/at cred-type/imp"
@@ -1253,7 +1253,7 @@ def test_get_request_options_with_missing_scheme_url(self):
     @pytest.mark.parametrize(
     "region, time, credentials, original_request, signed_request", TEST_FIXTURES
     )
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_get_request_options(
 self, utcnow, region, time, credentials, original_request, signed_request
 ):
@@ -1908,7 +1908,7 @@ def test_from_info_full_options(self, mock_init):
 
     assert "Unable to determine AWS region" in str(excinfo.value)
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_temp_creds_no_environment_vars(
 self, utcnow
 ):
@@ -1968,7 +1968,7 @@ new_request.call_args_list[1][1],
 {"Content-Type": "application/json"},
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 @mock.patch.dict(os.environ, {})
 def test_retrieve_subject_token_success_temp_creds_no_environment_vars_idmsv2(
 self, utcnow
@@ -2072,7 +2072,7 @@ new_request.call_args_list[2][1],
 },
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 @mock.patch.dict(
 os.environ,
 {
@@ -2129,7 +2129,7 @@ request.call_args_list[2][1],
 },
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 @mock.patch.dict(
 os.environ,
 {
@@ -2186,7 +2186,7 @@ request.call_args_list[2][1],
 },
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 @mock.patch.dict(os.environ, {environment_vars.AWS_REGION: AWS_REGION})
 def test_retrieve_subject_token_success_temp_creds_environment_vars_missing_creds_idmsv2(
 self, utcnow
@@ -2237,7 +2237,7 @@ request.call_args_list[2][1],
 },
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 @mock.patch.dict(
 os.environ,
 {
@@ -2264,7 +2264,7 @@ def test_retrieve_subject_token_success_temp_creds_idmsv2(self, utcnow):
     credentials.retrieve_subject_token(request)
     assert not request.called
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
     def test_retrieve_subject_token_success_ipv6(self, utcnow):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -2325,7 +2325,7 @@ def test_retrieve_subject_token_success_temp_creds_idmsv2(self, utcnow):
     },
     )
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
         def test_retrieve_subject_token_session_error_idmsv2(self, utcnow):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -2355,7 +2355,7 @@ def test_retrieve_subject_token_success_temp_creds_idmsv2(self, utcnow):
     "PUT",
     )
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_permanent_creds_no_environment_vars(
 self, utcnow
 ):
@@ -2382,7 +2382,7 @@ assert subject_token == self.make_serialized_aws_signed_request(
 aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY)
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_environment_vars(self, utcnow, monkeypatch):
     monkeypatch.setenv(environment_vars.AWS_ACCESS_KEY_ID, ACCESS_KEY_ID)
     monkeypatch.setenv(environment_vars.AWS_SECRET_ACCESS_KEY, SECRET_ACCESS_KEY)
@@ -2399,7 +2399,7 @@ def test_retrieve_subject_token_success_environment_vars(self, utcnow, monkeypat
     aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
     )
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_environment_vars_with_default_region(
 self, utcnow, monkeypatch
 ):
@@ -2418,7 +2418,7 @@ assert subject_token == self.make_serialized_aws_signed_request(
 aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_environment_vars_with_both_regions_set(
 self, utcnow, monkeypatch
 ):
@@ -2441,7 +2441,7 @@ assert subject_token == self.make_serialized_aws_signed_request(
 aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_environment_vars_no_session_token(
 self, utcnow, monkeypatch
 ):
@@ -2459,7 +2459,7 @@ assert subject_token == self.make_serialized_aws_signed_request(
 aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY)
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_environment_vars_except_region(
 self, utcnow, monkeypatch
 ):
@@ -2539,10 +2539,10 @@ def test_retrieve_subject_token_error_determining_aws_region(self):
     assert "Unable to retrieve AWS security credentials" in str(excinfo.value)
 
     @mock.patch(
-    "google.auth.metrics.python_and_auth_lib_version",
+    "rewired.auth.metrics.python_and_auth_lib_version",
     return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
     )
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_without_impersonation_ignore_default_scopes(
 self, utcnow, mock_auth_lib_value
 ):
@@ -2598,10 +2598,10 @@ assert credentials.scopes == SCOPES
 assert credentials.default_scopes == ["ignored"]
 
 @mock.patch(
-"google.auth.metrics.python_and_auth_lib_version",
+"rewired.auth.metrics.python_and_auth_lib_version",
 return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
 )
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_without_impersonation_use_default_scopes(
 self, utcnow, mock_auth_lib_value
 ):
@@ -2657,14 +2657,14 @@ assert credentials.scopes is None
 assert credentials.default_scopes == SCOPES
 
 @mock.patch(
-"google.auth.metrics.token_request_access_token_impersonate",
+"rewired.auth.metrics.token_request_access_token_impersonate",
 return_value=IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
 )
 @mock.patch(
-"google.auth.metrics.python_and_auth_lib_version",
+"rewired.auth.metrics.python_and_auth_lib_version",
 return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
 )
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_with_impersonation_ignore_default_scopes(
 self, utcnow, mock_metrics_header_value, mock_auth_lib_value
 ):
@@ -2750,14 +2750,14 @@ assert credentials.scopes == SCOPES
 assert credentials.default_scopes == ["ignored"]
 
 @mock.patch(
-"google.auth.metrics.token_request_access_token_impersonate",
+"rewired.auth.metrics.token_request_access_token_impersonate",
 return_value=IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
 )
 @mock.patch(
-"google.auth.metrics.python_and_auth_lib_version",
+"rewired.auth.metrics.python_and_auth_lib_version",
 return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
 )
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_with_impersonation_use_default_scopes(
 self, utcnow, mock_metrics_header_value, mock_auth_lib_value
 ):
@@ -2851,7 +2851,7 @@ def test_refresh_with_retrieve_subject_token_error(self):
 
     assert "Unable to retrieve AWS region" in str(excinfo.value)
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
         def test_retrieve_subject_token_success_with_supplier(self, utcnow):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -2872,7 +2872,7 @@ def test_refresh_with_retrieve_subject_token_error(self):
     aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY)
     )
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
             def test_retrieve_subject_token_success_with_supplier_session_token(self, utcnow):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -2893,7 +2893,7 @@ def test_refresh_with_retrieve_subject_token_error(self):
     aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
     )
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
                 def test_retrieve_subject_token_success_with_supplier_correct_context(self, utcnow):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -2949,10 +2949,10 @@ def test_refresh_with_retrieve_subject_token_error(self):
     assert "Test error" in str(excinfo.value)
 
     @mock.patch(
-    "google.auth.metrics.python_and_auth_lib_version",
+    "rewired.auth.metrics.python_and_auth_lib_version",
     return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
     )
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_with_supplier_with_impersonation(
 self, utcnow, mock_auth_lib_value
 ):
@@ -3040,10 +3040,10 @@ assert credentials.scopes == SCOPES
 assert credentials.default_scopes == ["ignored"]
 
 @mock.patch(
-"google.auth.metrics.python_and_auth_lib_version",
+"rewired.auth.metrics.python_and_auth_lib_version",
 return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
 )
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_with_supplier(self, utcnow, mock_auth_lib_value):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -3135,12 +3135,12 @@ def test_refresh_success_with_supplier(self, utcnow, mock_auth_lib_value):
     import mock
     import pytest  # type: ignore
 
-    from google.auth import _helpers, external_account
-    from google.auth import aws
-    from google.auth import environment_vars
-    from google.auth import exceptions
-    from google.auth import transport
-    from google.auth.credentials import DEFAULT_UNIVERSE_DOMAIN
+    from rewired.auth import _helpers, external_account
+    from rewired.auth import aws
+    from rewired.auth import environment_vars
+    from rewired.auth import exceptions
+    from rewired.auth import transport
+    from rewired.auth.credentials import DEFAULT_UNIVERSE_DOMAIN
 
     IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE = (
     "gl-python/3.7 auth/1.1 auth-request-type/at cred-type/imp"
@@ -3724,7 +3724,7 @@ def test_refresh_success_with_supplier(self, utcnow, mock_auth_lib_value):
     @pytest.mark.parametrize(
     "region, time, credentials, original_request, signed_request", TEST_FIXTURES
     )
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_get_request_options(
 self, utcnow, region, time, credentials, original_request, signed_request
 ):
@@ -4379,7 +4379,7 @@ def test_from_info_full_options(self, mock_init):
 
     assert "Unable to determine AWS region" in str(excinfo.value)
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_temp_creds_no_environment_vars(
 self, utcnow
 ):
@@ -4439,7 +4439,7 @@ new_request.call_args_list[1][1],
 {"Content-Type": "application/json"},
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 @mock.patch.dict(os.environ, {})
 def test_retrieve_subject_token_success_temp_creds_no_environment_vars_idmsv2(
 self, utcnow
@@ -4543,7 +4543,7 @@ new_request.call_args_list[2][1],
 },
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 @mock.patch.dict(
 os.environ,
 {
@@ -4600,7 +4600,7 @@ request.call_args_list[2][1],
 },
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 @mock.patch.dict(
 os.environ,
 {
@@ -4657,7 +4657,7 @@ request.call_args_list[2][1],
 },
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 @mock.patch.dict(os.environ, {environment_vars.AWS_REGION: AWS_REGION})
 def test_retrieve_subject_token_success_temp_creds_environment_vars_missing_creds_idmsv2(
 self, utcnow
@@ -4708,7 +4708,7 @@ request.call_args_list[2][1],
 },
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 @mock.patch.dict(
 os.environ,
 {
@@ -4735,7 +4735,7 @@ def test_retrieve_subject_token_success_temp_creds_idmsv2(self, utcnow):
     credentials.retrieve_subject_token(request)
     assert not request.called
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
     def test_retrieve_subject_token_success_ipv6(self, utcnow):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -4796,7 +4796,7 @@ def test_retrieve_subject_token_success_temp_creds_idmsv2(self, utcnow):
     },
     )
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
         def test_retrieve_subject_token_session_error_idmsv2(self, utcnow):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -4826,7 +4826,7 @@ def test_retrieve_subject_token_success_temp_creds_idmsv2(self, utcnow):
     "PUT",
     )
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_permanent_creds_no_environment_vars(
 self, utcnow
 ):
@@ -4853,7 +4853,7 @@ assert subject_token == self.make_serialized_aws_signed_request(
 aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY)
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_environment_vars(self, utcnow, monkeypatch):
     monkeypatch.setenv(environment_vars.AWS_ACCESS_KEY_ID, ACCESS_KEY_ID)
     monkeypatch.setenv(environment_vars.AWS_SECRET_ACCESS_KEY, SECRET_ACCESS_KEY)
@@ -4870,7 +4870,7 @@ def test_retrieve_subject_token_success_environment_vars(self, utcnow, monkeypat
     aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
     )
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_environment_vars_with_default_region(
 self, utcnow, monkeypatch
 ):
@@ -4889,7 +4889,7 @@ assert subject_token == self.make_serialized_aws_signed_request(
 aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_environment_vars_with_both_regions_set(
 self, utcnow, monkeypatch
 ):
@@ -4912,7 +4912,7 @@ assert subject_token == self.make_serialized_aws_signed_request(
 aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_environment_vars_no_session_token(
 self, utcnow, monkeypatch
 ):
@@ -4930,7 +4930,7 @@ assert subject_token == self.make_serialized_aws_signed_request(
 aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY)
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_environment_vars_except_region(
 self, utcnow, monkeypatch
 ):
@@ -5010,10 +5010,10 @@ def test_retrieve_subject_token_error_determining_aws_region(self):
     assert "Unable to retrieve AWS security credentials" in str(excinfo.value)
 
     @mock.patch(
-    "google.auth.metrics.python_and_auth_lib_version",
+    "rewired.auth.metrics.python_and_auth_lib_version",
     return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
     )
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_without_impersonation_ignore_default_scopes(
 self, utcnow, mock_auth_lib_value
 ):
@@ -5069,10 +5069,10 @@ assert credentials.scopes == SCOPES
 assert credentials.default_scopes == ["ignored"]
 
 @mock.patch(
-"google.auth.metrics.python_and_auth_lib_version",
+"rewired.auth.metrics.python_and_auth_lib_version",
 return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
 )
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_without_impersonation_use_default_scopes(
 self, utcnow, mock_auth_lib_value
 ):
@@ -5128,14 +5128,14 @@ assert credentials.scopes is None
 assert credentials.default_scopes == SCOPES
 
 @mock.patch(
-"google.auth.metrics.token_request_access_token_impersonate",
+"rewired.auth.metrics.token_request_access_token_impersonate",
 return_value=IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
 )
 @mock.patch(
-"google.auth.metrics.python_and_auth_lib_version",
+"rewired.auth.metrics.python_and_auth_lib_version",
 return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
 )
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_with_impersonation_ignore_default_scopes(
 self, utcnow, mock_metrics_header_value, mock_auth_lib_value
 ):
@@ -5221,14 +5221,14 @@ assert credentials.scopes == SCOPES
 assert credentials.default_scopes == ["ignored"]
 
 @mock.patch(
-"google.auth.metrics.token_request_access_token_impersonate",
+"rewired.auth.metrics.token_request_access_token_impersonate",
 return_value=IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
 )
 @mock.patch(
-"google.auth.metrics.python_and_auth_lib_version",
+"rewired.auth.metrics.python_and_auth_lib_version",
 return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
 )
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_with_impersonation_use_default_scopes(
 self, utcnow, mock_metrics_header_value, mock_auth_lib_value
 ):
@@ -5322,7 +5322,7 @@ def test_refresh_with_retrieve_subject_token_error(self):
 
     assert "Unable to retrieve AWS region" in str(excinfo.value)
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
         def test_retrieve_subject_token_success_with_supplier(self, utcnow):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -5343,7 +5343,7 @@ def test_refresh_with_retrieve_subject_token_error(self):
     aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY)
     )
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
             def test_retrieve_subject_token_success_with_supplier_session_token(self, utcnow):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -5364,7 +5364,7 @@ def test_refresh_with_retrieve_subject_token_error(self):
     aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
     )
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
                 def test_retrieve_subject_token_success_with_supplier_correct_context(self, utcnow):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -5420,10 +5420,10 @@ def test_refresh_with_retrieve_subject_token_error(self):
     assert "Test error" in str(excinfo.value)
 
     @mock.patch(
-    "google.auth.metrics.python_and_auth_lib_version",
+    "rewired.auth.metrics.python_and_auth_lib_version",
     return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
     )
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_with_supplier_with_impersonation(
 self, utcnow, mock_auth_lib_value
 ):
@@ -5511,10 +5511,10 @@ assert credentials.scopes == SCOPES
 assert credentials.default_scopes == ["ignored"]
 
 @mock.patch(
-"google.auth.metrics.python_and_auth_lib_version",
+"rewired.auth.metrics.python_and_auth_lib_version",
 return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
 )
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_with_supplier(self, utcnow, mock_auth_lib_value):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -5606,12 +5606,12 @@ def test_refresh_success_with_supplier(self, utcnow, mock_auth_lib_value):
     import mock
     import pytest  # type: ignore
 
-    from google.auth import _helpers, external_account
-    from google.auth import aws
-    from google.auth import environment_vars
-    from google.auth import exceptions
-    from google.auth import transport
-    from google.auth.credentials import DEFAULT_UNIVERSE_DOMAIN
+    from rewired.auth import _helpers, external_account
+    from rewired.auth import aws
+    from rewired.auth import environment_vars
+    from rewired.auth import exceptions
+    from rewired.auth import transport
+    from rewired.auth.credentials import DEFAULT_UNIVERSE_DOMAIN
 
     IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE = (
     "gl-python/3.7 auth/1.1 auth-request-type/at cred-type/imp"
@@ -6195,7 +6195,7 @@ def test_refresh_success_with_supplier(self, utcnow, mock_auth_lib_value):
     @pytest.mark.parametrize(
     "region, time, credentials, original_request, signed_request", TEST_FIXTURES
     )
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_get_request_options(
 self, utcnow, region, time, credentials, original_request, signed_request
 ):
@@ -6850,7 +6850,7 @@ def test_from_info_full_options(self, mock_init):
 
     assert "Unable to determine AWS region" in str(excinfo.value)
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_temp_creds_no_environment_vars(
 self, utcnow
 ):
@@ -6910,7 +6910,7 @@ new_request.call_args_list[1][1],
 {"Content-Type": "application/json"},
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 @mock.patch.dict(os.environ, {})
 def test_retrieve_subject_token_success_temp_creds_no_environment_vars_idmsv2(
 self, utcnow
@@ -7014,7 +7014,7 @@ new_request.call_args_list[2][1],
 },
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 @mock.patch.dict(
 os.environ,
 {
@@ -7071,7 +7071,7 @@ request.call_args_list[2][1],
 },
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 @mock.patch.dict(
 os.environ,
 {
@@ -7128,7 +7128,7 @@ request.call_args_list[2][1],
 },
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 @mock.patch.dict(os.environ, {environment_vars.AWS_REGION: AWS_REGION})
 def test_retrieve_subject_token_success_temp_creds_environment_vars_missing_creds_idmsv2(
 self, utcnow
@@ -7179,7 +7179,7 @@ request.call_args_list[2][1],
 },
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 @mock.patch.dict(
 os.environ,
 {
@@ -7206,7 +7206,7 @@ def test_retrieve_subject_token_success_temp_creds_idmsv2(self, utcnow):
     credentials.retrieve_subject_token(request)
     assert not request.called
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
     def test_retrieve_subject_token_success_ipv6(self, utcnow):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -7267,7 +7267,7 @@ def test_retrieve_subject_token_success_temp_creds_idmsv2(self, utcnow):
     },
     )
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
         def test_retrieve_subject_token_session_error_idmsv2(self, utcnow):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -7297,7 +7297,7 @@ def test_retrieve_subject_token_success_temp_creds_idmsv2(self, utcnow):
     "PUT",
     )
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_permanent_creds_no_environment_vars(
 self, utcnow
 ):
@@ -7324,7 +7324,7 @@ assert subject_token == self.make_serialized_aws_signed_request(
 aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY)
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_environment_vars(self, utcnow, monkeypatch):
     monkeypatch.setenv(environment_vars.AWS_ACCESS_KEY_ID, ACCESS_KEY_ID)
     monkeypatch.setenv(environment_vars.AWS_SECRET_ACCESS_KEY, SECRET_ACCESS_KEY)
@@ -7341,7 +7341,7 @@ def test_retrieve_subject_token_success_environment_vars(self, utcnow, monkeypat
     aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
     )
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_environment_vars_with_default_region(
 self, utcnow, monkeypatch
 ):
@@ -7360,7 +7360,7 @@ assert subject_token == self.make_serialized_aws_signed_request(
 aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_environment_vars_with_both_regions_set(
 self, utcnow, monkeypatch
 ):
@@ -7383,7 +7383,7 @@ assert subject_token == self.make_serialized_aws_signed_request(
 aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_environment_vars_no_session_token(
 self, utcnow, monkeypatch
 ):
@@ -7401,7 +7401,7 @@ assert subject_token == self.make_serialized_aws_signed_request(
 aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY)
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_environment_vars_except_region(
 self, utcnow, monkeypatch
 ):
@@ -7481,10 +7481,10 @@ def test_retrieve_subject_token_error_determining_aws_region(self):
     assert "Unable to retrieve AWS security credentials" in str(excinfo.value)
 
     @mock.patch(
-    "google.auth.metrics.python_and_auth_lib_version",
+    "rewired.auth.metrics.python_and_auth_lib_version",
     return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
     )
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_without_impersonation_ignore_default_scopes(
 self, utcnow, mock_auth_lib_value
 ):
@@ -7540,10 +7540,10 @@ assert credentials.scopes == SCOPES
 assert credentials.default_scopes == ["ignored"]
 
 @mock.patch(
-"google.auth.metrics.python_and_auth_lib_version",
+"rewired.auth.metrics.python_and_auth_lib_version",
 return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
 )
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_without_impersonation_use_default_scopes(
 self, utcnow, mock_auth_lib_value
 ):
@@ -7599,14 +7599,14 @@ assert credentials.scopes is None
 assert credentials.default_scopes == SCOPES
 
 @mock.patch(
-"google.auth.metrics.token_request_access_token_impersonate",
+"rewired.auth.metrics.token_request_access_token_impersonate",
 return_value=IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
 )
 @mock.patch(
-"google.auth.metrics.python_and_auth_lib_version",
+"rewired.auth.metrics.python_and_auth_lib_version",
 return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
 )
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_with_impersonation_ignore_default_scopes(
 self, utcnow, mock_metrics_header_value, mock_auth_lib_value
 ):
@@ -7692,14 +7692,14 @@ assert credentials.scopes == SCOPES
 assert credentials.default_scopes == ["ignored"]
 
 @mock.patch(
-"google.auth.metrics.token_request_access_token_impersonate",
+"rewired.auth.metrics.token_request_access_token_impersonate",
 return_value=IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
 )
 @mock.patch(
-"google.auth.metrics.python_and_auth_lib_version",
+"rewired.auth.metrics.python_and_auth_lib_version",
 return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
 )
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_with_impersonation_use_default_scopes(
 self, utcnow, mock_metrics_header_value, mock_auth_lib_value
 ):
@@ -7793,7 +7793,7 @@ def test_refresh_with_retrieve_subject_token_error(self):
 
     assert "Unable to retrieve AWS region" in str(excinfo.value)
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
         def test_retrieve_subject_token_success_with_supplier(self, utcnow):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -7814,7 +7814,7 @@ def test_refresh_with_retrieve_subject_token_error(self):
     aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY)
     )
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
             def test_retrieve_subject_token_success_with_supplier_session_token(self, utcnow):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -7835,7 +7835,7 @@ def test_refresh_with_retrieve_subject_token_error(self):
     aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
     )
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
                 def test_retrieve_subject_token_success_with_supplier_correct_context(self, utcnow):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -7891,10 +7891,10 @@ def test_refresh_with_retrieve_subject_token_error(self):
     assert "Test error" in str(excinfo.value)
 
     @mock.patch(
-    "google.auth.metrics.python_and_auth_lib_version",
+    "rewired.auth.metrics.python_and_auth_lib_version",
     return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
     )
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_with_supplier_with_impersonation(
 self, utcnow, mock_auth_lib_value
 ):
@@ -7982,10 +7982,10 @@ assert credentials.scopes == SCOPES
 assert credentials.default_scopes == ["ignored"]
 
 @mock.patch(
-"google.auth.metrics.python_and_auth_lib_version",
+"rewired.auth.metrics.python_and_auth_lib_version",
 return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
 )
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_with_supplier(self, utcnow, mock_auth_lib_value):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -8507,12 +8507,12 @@ def test_from_info_full_options(self, mock_init):
     import mock
     import pytest  # type: ignore
 
-    from google.auth import _helpers, external_account
-    from google.auth import aws
-    from google.auth import environment_vars
-    from google.auth import exceptions
-    from google.auth import transport
-    from google.auth.credentials import DEFAULT_UNIVERSE_DOMAIN
+    from rewired.auth import _helpers, external_account
+    from rewired.auth import aws
+    from rewired.auth import environment_vars
+    from rewired.auth import exceptions
+    from rewired.auth import transport
+    from rewired.auth.credentials import DEFAULT_UNIVERSE_DOMAIN
 
     IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE = (
     "gl-python/3.7 auth/1.1 auth-request-type/at cred-type/imp"
@@ -9096,7 +9096,7 @@ def test_from_info_full_options(self, mock_init):
     @pytest.mark.parametrize(
     "region, time, credentials, original_request, signed_request", TEST_FIXTURES
     )
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_get_request_options(
 self, utcnow, region, time, credentials, original_request, signed_request
 ):
@@ -9751,7 +9751,7 @@ def test_from_info_full_options(self, mock_init):
 
     assert "Unable to determine AWS region" in str(excinfo.value)
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_temp_creds_no_environment_vars(
 self, utcnow
 ):
@@ -9811,7 +9811,7 @@ new_request.call_args_list[1][1],
 {"Content-Type": "application/json"},
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 @mock.patch.dict(os.environ, {})
 def test_retrieve_subject_token_success_temp_creds_no_environment_vars_idmsv2(
 self, utcnow
@@ -9915,7 +9915,7 @@ new_request.call_args_list[2][1],
 },
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 @mock.patch.dict(
 os.environ,
 {
@@ -9972,7 +9972,7 @@ request.call_args_list[2][1],
 },
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 @mock.patch.dict(
 os.environ,
 {
@@ -10029,7 +10029,7 @@ request.call_args_list[2][1],
 },
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 @mock.patch.dict(os.environ, {environment_vars.AWS_REGION: AWS_REGION})
 def test_retrieve_subject_token_success_temp_creds_environment_vars_missing_creds_idmsv2(
 self, utcnow
@@ -10080,7 +10080,7 @@ request.call_args_list[2][1],
 },
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 @mock.patch.dict(
 os.environ,
 {
@@ -10107,7 +10107,7 @@ def test_retrieve_subject_token_success_temp_creds_idmsv2(self, utcnow):
     credentials.retrieve_subject_token(request)
     assert not request.called
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
     def test_retrieve_subject_token_success_ipv6(self, utcnow):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -10168,7 +10168,7 @@ def test_retrieve_subject_token_success_temp_creds_idmsv2(self, utcnow):
     },
     )
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
         def test_retrieve_subject_token_session_error_idmsv2(self, utcnow):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -10198,7 +10198,7 @@ def test_retrieve_subject_token_success_temp_creds_idmsv2(self, utcnow):
     "PUT",
     )
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_permanent_creds_no_environment_vars(
 self, utcnow
 ):
@@ -10225,7 +10225,7 @@ assert subject_token == self.make_serialized_aws_signed_request(
 aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY)
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_environment_vars(self, utcnow, monkeypatch):
     monkeypatch.setenv(environment_vars.AWS_ACCESS_KEY_ID, ACCESS_KEY_ID)
     monkeypatch.setenv(environment_vars.AWS_SECRET_ACCESS_KEY, SECRET_ACCESS_KEY)
@@ -10242,7 +10242,7 @@ def test_retrieve_subject_token_success_environment_vars(self, utcnow, monkeypat
     aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
     )
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_environment_vars_with_default_region(
 self, utcnow, monkeypatch
 ):
@@ -10261,7 +10261,7 @@ assert subject_token == self.make_serialized_aws_signed_request(
 aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_environment_vars_with_both_regions_set(
 self, utcnow, monkeypatch
 ):
@@ -10284,7 +10284,7 @@ assert subject_token == self.make_serialized_aws_signed_request(
 aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_environment_vars_no_session_token(
 self, utcnow, monkeypatch
 ):
@@ -10302,7 +10302,7 @@ assert subject_token == self.make_serialized_aws_signed_request(
 aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY)
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_environment_vars_except_region(
 self, utcnow, monkeypatch
 ):
@@ -10382,10 +10382,10 @@ def test_retrieve_subject_token_error_determining_aws_region(self):
     assert "Unable to retrieve AWS security credentials" in str(excinfo.value)
 
     @mock.patch(
-    "google.auth.metrics.python_and_auth_lib_version",
+    "rewired.auth.metrics.python_and_auth_lib_version",
     return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
     )
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_without_impersonation_ignore_default_scopes(
 self, utcnow, mock_auth_lib_value
 ):
@@ -10441,10 +10441,10 @@ assert credentials.scopes == SCOPES
 assert credentials.default_scopes == ["ignored"]
 
 @mock.patch(
-"google.auth.metrics.python_and_auth_lib_version",
+"rewired.auth.metrics.python_and_auth_lib_version",
 return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
 )
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_without_impersonation_use_default_scopes(
 self, utcnow, mock_auth_lib_value
 ):
@@ -10500,14 +10500,14 @@ assert credentials.scopes is None
 assert credentials.default_scopes == SCOPES
 
 @mock.patch(
-"google.auth.metrics.token_request_access_token_impersonate",
+"rewired.auth.metrics.token_request_access_token_impersonate",
 return_value=IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
 )
 @mock.patch(
-"google.auth.metrics.python_and_auth_lib_version",
+"rewired.auth.metrics.python_and_auth_lib_version",
 return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
 )
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_with_impersonation_ignore_default_scopes(
 self, utcnow, mock_metrics_header_value, mock_auth_lib_value
 ):
@@ -10593,14 +10593,14 @@ assert credentials.scopes == SCOPES
 assert credentials.default_scopes == ["ignored"]
 
 @mock.patch(
-"google.auth.metrics.token_request_access_token_impersonate",
+"rewired.auth.metrics.token_request_access_token_impersonate",
 return_value=IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
 )
 @mock.patch(
-"google.auth.metrics.python_and_auth_lib_version",
+"rewired.auth.metrics.python_and_auth_lib_version",
 return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
 )
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_with_impersonation_use_default_scopes(
 self, utcnow, mock_metrics_header_value, mock_auth_lib_value
 ):
@@ -10694,7 +10694,7 @@ def test_refresh_with_retrieve_subject_token_error(self):
 
     assert "Unable to retrieve AWS region" in str(excinfo.value)
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
         def test_retrieve_subject_token_success_with_supplier(self, utcnow):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -10715,7 +10715,7 @@ def test_refresh_with_retrieve_subject_token_error(self):
     aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY)
     )
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
             def test_retrieve_subject_token_success_with_supplier_session_token(self, utcnow):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -10736,7 +10736,7 @@ def test_refresh_with_retrieve_subject_token_error(self):
     aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
     )
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
                 def test_retrieve_subject_token_success_with_supplier_correct_context(self, utcnow):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -10792,10 +10792,10 @@ def test_refresh_with_retrieve_subject_token_error(self):
     assert "Test error" in str(excinfo.value)
 
     @mock.patch(
-    "google.auth.metrics.python_and_auth_lib_version",
+    "rewired.auth.metrics.python_and_auth_lib_version",
     return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
     )
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_with_supplier_with_impersonation(
 self, utcnow, mock_auth_lib_value
 ):
@@ -10883,10 +10883,10 @@ assert credentials.scopes == SCOPES
 assert credentials.default_scopes == ["ignored"]
 
 @mock.patch(
-"google.auth.metrics.python_and_auth_lib_version",
+"rewired.auth.metrics.python_and_auth_lib_version",
 return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
 )
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_with_supplier(self, utcnow, mock_auth_lib_value):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -10997,12 +10997,12 @@ def test_refresh_success_with_supplier(self, utcnow, mock_auth_lib_value):
     import mock
     import pytest  # type: ignore
 
-    from google.auth import _helpers, external_account
-    from google.auth import aws
-    from google.auth import environment_vars
-    from google.auth import exceptions
-    from google.auth import transport
-    from google.auth.credentials import DEFAULT_UNIVERSE_DOMAIN
+    from rewired.auth import _helpers, external_account
+    from rewired.auth import aws
+    from rewired.auth import environment_vars
+    from rewired.auth import exceptions
+    from rewired.auth import transport
+    from rewired.auth.credentials import DEFAULT_UNIVERSE_DOMAIN
 
     IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE = (
     "gl-python/3.7 auth/1.1 auth-request-type/at cred-type/imp"
@@ -11586,7 +11586,7 @@ def test_refresh_success_with_supplier(self, utcnow, mock_auth_lib_value):
     @pytest.mark.parametrize(
     "region, time, credentials, original_request, signed_request", TEST_FIXTURES
     )
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_get_request_options(
 self, utcnow, region, time, credentials, original_request, signed_request
 ):
@@ -12241,7 +12241,7 @@ def test_from_info_full_options(self, mock_init):
 
     assert "Unable to determine AWS region" in str(excinfo.value)
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_temp_creds_no_environment_vars(
 self, utcnow
 ):
@@ -12301,7 +12301,7 @@ new_request.call_args_list[1][1],
 {"Content-Type": "application/json"},
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 @mock.patch.dict(os.environ, {})
 def test_retrieve_subject_token_success_temp_creds_no_environment_vars_idmsv2(
 self, utcnow
@@ -12405,7 +12405,7 @@ new_request.call_args_list[2][1],
 },
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 @mock.patch.dict(
 os.environ,
 {
@@ -12462,7 +12462,7 @@ request.call_args_list[2][1],
 },
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 @mock.patch.dict(
 os.environ,
 {
@@ -12519,7 +12519,7 @@ request.call_args_list[2][1],
 },
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 @mock.patch.dict(os.environ, {environment_vars.AWS_REGION: AWS_REGION})
 def test_retrieve_subject_token_success_temp_creds_environment_vars_missing_creds_idmsv2(
 self, utcnow
@@ -12570,7 +12570,7 @@ request.call_args_list[2][1],
 },
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 @mock.patch.dict(
 os.environ,
 {
@@ -12597,7 +12597,7 @@ def test_retrieve_subject_token_success_temp_creds_idmsv2(self, utcnow):
     credentials.retrieve_subject_token(request)
     assert not request.called
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
     def test_retrieve_subject_token_success_ipv6(self, utcnow):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -12658,7 +12658,7 @@ def test_retrieve_subject_token_success_temp_creds_idmsv2(self, utcnow):
     },
     )
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
         def test_retrieve_subject_token_session_error_idmsv2(self, utcnow):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -12688,7 +12688,7 @@ def test_retrieve_subject_token_success_temp_creds_idmsv2(self, utcnow):
     "PUT",
     )
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_permanent_creds_no_environment_vars(
 self, utcnow
 ):
@@ -12715,7 +12715,7 @@ assert subject_token == self.make_serialized_aws_signed_request(
 aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY)
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_environment_vars(self, utcnow, monkeypatch):
     monkeypatch.setenv(environment_vars.AWS_ACCESS_KEY_ID, ACCESS_KEY_ID)
     monkeypatch.setenv(environment_vars.AWS_SECRET_ACCESS_KEY, SECRET_ACCESS_KEY)
@@ -12732,7 +12732,7 @@ def test_retrieve_subject_token_success_environment_vars(self, utcnow, monkeypat
     aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
     )
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_environment_vars_with_default_region(
 self, utcnow, monkeypatch
 ):
@@ -12751,7 +12751,7 @@ assert subject_token == self.make_serialized_aws_signed_request(
 aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_environment_vars_with_both_regions_set(
 self, utcnow, monkeypatch
 ):
@@ -12774,7 +12774,7 @@ assert subject_token == self.make_serialized_aws_signed_request(
 aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_environment_vars_no_session_token(
 self, utcnow, monkeypatch
 ):
@@ -12792,7 +12792,7 @@ assert subject_token == self.make_serialized_aws_signed_request(
 aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY)
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_environment_vars_except_region(
 self, utcnow, monkeypatch
 ):
@@ -12872,10 +12872,10 @@ def test_retrieve_subject_token_error_determining_aws_region(self):
     assert "Unable to retrieve AWS security credentials" in str(excinfo.value)
 
     @mock.patch(
-    "google.auth.metrics.python_and_auth_lib_version",
+    "rewired.auth.metrics.python_and_auth_lib_version",
     return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
     )
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_without_impersonation_ignore_default_scopes(
 self, utcnow, mock_auth_lib_value
 ):
@@ -12931,10 +12931,10 @@ assert credentials.scopes == SCOPES
 assert credentials.default_scopes == ["ignored"]
 
 @mock.patch(
-"google.auth.metrics.python_and_auth_lib_version",
+"rewired.auth.metrics.python_and_auth_lib_version",
 return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
 )
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_without_impersonation_use_default_scopes(
 self, utcnow, mock_auth_lib_value
 ):
@@ -12990,14 +12990,14 @@ assert credentials.scopes is None
 assert credentials.default_scopes == SCOPES
 
 @mock.patch(
-"google.auth.metrics.token_request_access_token_impersonate",
+"rewired.auth.metrics.token_request_access_token_impersonate",
 return_value=IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
 )
 @mock.patch(
-"google.auth.metrics.python_and_auth_lib_version",
+"rewired.auth.metrics.python_and_auth_lib_version",
 return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
 )
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_with_impersonation_ignore_default_scopes(
 self, utcnow, mock_metrics_header_value, mock_auth_lib_value
 ):
@@ -13083,14 +13083,14 @@ assert credentials.scopes == SCOPES
 assert credentials.default_scopes == ["ignored"]
 
 @mock.patch(
-"google.auth.metrics.token_request_access_token_impersonate",
+"rewired.auth.metrics.token_request_access_token_impersonate",
 return_value=IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
 )
 @mock.patch(
-"google.auth.metrics.python_and_auth_lib_version",
+"rewired.auth.metrics.python_and_auth_lib_version",
 return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
 )
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_with_impersonation_use_default_scopes(
 self, utcnow, mock_metrics_header_value, mock_auth_lib_value
 ):
@@ -13184,7 +13184,7 @@ def test_refresh_with_retrieve_subject_token_error(self):
 
     assert "Unable to retrieve AWS region" in str(excinfo.value)
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
         def test_retrieve_subject_token_success_with_supplier(self, utcnow):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -13205,7 +13205,7 @@ def test_refresh_with_retrieve_subject_token_error(self):
     aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY)
     )
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
             def test_retrieve_subject_token_success_with_supplier_session_token(self, utcnow):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -13226,7 +13226,7 @@ def test_refresh_with_retrieve_subject_token_error(self):
     aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
     )
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
                 def test_retrieve_subject_token_success_with_supplier_correct_context(self, utcnow):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -13282,10 +13282,10 @@ def test_refresh_with_retrieve_subject_token_error(self):
     assert "Test error" in str(excinfo.value)
 
     @mock.patch(
-    "google.auth.metrics.python_and_auth_lib_version",
+    "rewired.auth.metrics.python_and_auth_lib_version",
     return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
     )
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_with_supplier_with_impersonation(
 self, utcnow, mock_auth_lib_value
 ):
@@ -13373,10 +13373,10 @@ assert credentials.scopes == SCOPES
 assert credentials.default_scopes == ["ignored"]
 
 @mock.patch(
-"google.auth.metrics.python_and_auth_lib_version",
+"rewired.auth.metrics.python_and_auth_lib_version",
 return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
 )
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_with_supplier(self, utcnow, mock_auth_lib_value):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -13466,12 +13466,12 @@ def test_refresh_success_with_supplier(self, utcnow, mock_auth_lib_value):
     import mock
     import pytest  # type: ignore
 
-    from google.auth import _helpers, external_account
-    from google.auth import aws
-    from google.auth import environment_vars
-    from google.auth import exceptions
-    from google.auth import transport
-    from google.auth.credentials import DEFAULT_UNIVERSE_DOMAIN
+    from rewired.auth import _helpers, external_account
+    from rewired.auth import aws
+    from rewired.auth import environment_vars
+    from rewired.auth import exceptions
+    from rewired.auth import transport
+    from rewired.auth.credentials import DEFAULT_UNIVERSE_DOMAIN
 
     IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE = (
     "gl-python/3.7 auth/1.1 auth-request-type/at cred-type/imp"
@@ -14055,7 +14055,7 @@ def test_refresh_success_with_supplier(self, utcnow, mock_auth_lib_value):
     @pytest.mark.parametrize(
     "region, time, credentials, original_request, signed_request", TEST_FIXTURES
     )
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_get_request_options(
 self, utcnow, region, time, credentials, original_request, signed_request
 ):
@@ -14710,7 +14710,7 @@ def test_from_info_full_options(self, mock_init):
 
     assert "Unable to determine AWS region" in str(excinfo.value)
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_temp_creds_no_environment_vars(
 self, utcnow
 ):
@@ -14770,7 +14770,7 @@ new_request.call_args_list[1][1],
 {"Content-Type": "application/json"},
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 @mock.patch.dict(os.environ, {})
 def test_retrieve_subject_token_success_temp_creds_no_environment_vars_idmsv2(
 self, utcnow
@@ -14874,7 +14874,7 @@ new_request.call_args_list[2][1],
 },
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 @mock.patch.dict(
 os.environ,
 {
@@ -14931,7 +14931,7 @@ request.call_args_list[2][1],
 },
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 @mock.patch.dict(
 os.environ,
 {
@@ -14988,7 +14988,7 @@ request.call_args_list[2][1],
 },
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 @mock.patch.dict(os.environ, {environment_vars.AWS_REGION: AWS_REGION})
 def test_retrieve_subject_token_success_temp_creds_environment_vars_missing_creds_idmsv2(
 self, utcnow
@@ -15039,7 +15039,7 @@ request.call_args_list[2][1],
 },
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 @mock.patch.dict(
 os.environ,
 {
@@ -15066,7 +15066,7 @@ def test_retrieve_subject_token_success_temp_creds_idmsv2(self, utcnow):
     credentials.retrieve_subject_token(request)
     assert not request.called
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
     def test_retrieve_subject_token_success_ipv6(self, utcnow):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -15127,7 +15127,7 @@ def test_retrieve_subject_token_success_temp_creds_idmsv2(self, utcnow):
     },
     )
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
         def test_retrieve_subject_token_session_error_idmsv2(self, utcnow):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -15157,7 +15157,7 @@ def test_retrieve_subject_token_success_temp_creds_idmsv2(self, utcnow):
     "PUT",
     )
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_permanent_creds_no_environment_vars(
 self, utcnow
 ):
@@ -15184,7 +15184,7 @@ assert subject_token == self.make_serialized_aws_signed_request(
 aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY)
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_environment_vars(self, utcnow, monkeypatch):
     monkeypatch.setenv(environment_vars.AWS_ACCESS_KEY_ID, ACCESS_KEY_ID)
     monkeypatch.setenv(environment_vars.AWS_SECRET_ACCESS_KEY, SECRET_ACCESS_KEY)
@@ -15201,7 +15201,7 @@ def test_retrieve_subject_token_success_environment_vars(self, utcnow, monkeypat
     aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
     )
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_environment_vars_with_default_region(
 self, utcnow, monkeypatch
 ):
@@ -15220,7 +15220,7 @@ assert subject_token == self.make_serialized_aws_signed_request(
 aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_environment_vars_with_both_regions_set(
 self, utcnow, monkeypatch
 ):
@@ -15243,7 +15243,7 @@ assert subject_token == self.make_serialized_aws_signed_request(
 aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_environment_vars_no_session_token(
 self, utcnow, monkeypatch
 ):
@@ -15261,7 +15261,7 @@ assert subject_token == self.make_serialized_aws_signed_request(
 aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY)
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_environment_vars_except_region(
 self, utcnow, monkeypatch
 ):
@@ -15341,10 +15341,10 @@ def test_retrieve_subject_token_error_determining_aws_region(self):
     assert "Unable to retrieve AWS security credentials" in str(excinfo.value)
 
     @mock.patch(
-    "google.auth.metrics.python_and_auth_lib_version",
+    "rewired.auth.metrics.python_and_auth_lib_version",
     return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
     )
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_without_impersonation_ignore_default_scopes(
 self, utcnow, mock_auth_lib_value
 ):
@@ -15400,10 +15400,10 @@ assert credentials.scopes == SCOPES
 assert credentials.default_scopes == ["ignored"]
 
 @mock.patch(
-"google.auth.metrics.python_and_auth_lib_version",
+"rewired.auth.metrics.python_and_auth_lib_version",
 return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
 )
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_without_impersonation_use_default_scopes(
 self, utcnow, mock_auth_lib_value
 ):
@@ -15459,14 +15459,14 @@ assert credentials.scopes is None
 assert credentials.default_scopes == SCOPES
 
 @mock.patch(
-"google.auth.metrics.token_request_access_token_impersonate",
+"rewired.auth.metrics.token_request_access_token_impersonate",
 return_value=IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
 )
 @mock.patch(
-"google.auth.metrics.python_and_auth_lib_version",
+"rewired.auth.metrics.python_and_auth_lib_version",
 return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
 )
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_with_impersonation_ignore_default_scopes(
 self, utcnow, mock_metrics_header_value, mock_auth_lib_value
 ):
@@ -15552,14 +15552,14 @@ assert credentials.scopes == SCOPES
 assert credentials.default_scopes == ["ignored"]
 
 @mock.patch(
-"google.auth.metrics.token_request_access_token_impersonate",
+"rewired.auth.metrics.token_request_access_token_impersonate",
 return_value=IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
 )
 @mock.patch(
-"google.auth.metrics.python_and_auth_lib_version",
+"rewired.auth.metrics.python_and_auth_lib_version",
 return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
 )
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_with_impersonation_use_default_scopes(
 self, utcnow, mock_metrics_header_value, mock_auth_lib_value
 ):
@@ -15653,7 +15653,7 @@ def test_refresh_with_retrieve_subject_token_error(self):
 
     assert "Unable to retrieve AWS region" in str(excinfo.value)
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
         def test_retrieve_subject_token_success_with_supplier(self, utcnow):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -15674,7 +15674,7 @@ def test_refresh_with_retrieve_subject_token_error(self):
     aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY)
     )
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
             def test_retrieve_subject_token_success_with_supplier_session_token(self, utcnow):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -15695,7 +15695,7 @@ def test_refresh_with_retrieve_subject_token_error(self):
     aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
     )
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
                 def test_retrieve_subject_token_success_with_supplier_correct_context(self, utcnow):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -15751,10 +15751,10 @@ def test_refresh_with_retrieve_subject_token_error(self):
     assert "Test error" in str(excinfo.value)
 
     @mock.patch(
-    "google.auth.metrics.python_and_auth_lib_version",
+    "rewired.auth.metrics.python_and_auth_lib_version",
     return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
     )
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_with_supplier_with_impersonation(
 self, utcnow, mock_auth_lib_value
 ):
@@ -15842,10 +15842,10 @@ assert credentials.scopes == SCOPES
 assert credentials.default_scopes == ["ignored"]
 
 @mock.patch(
-"google.auth.metrics.python_and_auth_lib_version",
+"rewired.auth.metrics.python_and_auth_lib_version",
 return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
 )
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_with_supplier(self, utcnow, mock_auth_lib_value):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -15935,12 +15935,12 @@ def test_refresh_success_with_supplier(self, utcnow, mock_auth_lib_value):
     import mock
     import pytest  # type: ignore
 
-    from google.auth import _helpers, external_account
-    from google.auth import aws
-    from google.auth import environment_vars
-    from google.auth import exceptions
-    from google.auth import transport
-    from google.auth.credentials import DEFAULT_UNIVERSE_DOMAIN
+    from rewired.auth import _helpers, external_account
+    from rewired.auth import aws
+    from rewired.auth import environment_vars
+    from rewired.auth import exceptions
+    from rewired.auth import transport
+    from rewired.auth.credentials import DEFAULT_UNIVERSE_DOMAIN
 
     IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE = (
     "gl-python/3.7 auth/1.1 auth-request-type/at cred-type/imp"
@@ -16524,7 +16524,7 @@ def test_refresh_success_with_supplier(self, utcnow, mock_auth_lib_value):
     @pytest.mark.parametrize(
     "region, time, credentials, original_request, signed_request", TEST_FIXTURES
     )
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_get_request_options(
 self, utcnow, region, time, credentials, original_request, signed_request
 ):
@@ -17179,7 +17179,7 @@ def test_from_info_full_options(self, mock_init):
 
     assert "Unable to determine AWS region" in str(excinfo.value)
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_temp_creds_no_environment_vars(
 self, utcnow
 ):
@@ -17239,7 +17239,7 @@ new_request.call_args_list[1][1],
 {"Content-Type": "application/json"},
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 @mock.patch.dict(os.environ, {})
 def test_retrieve_subject_token_success_temp_creds_no_environment_vars_idmsv2(
 self, utcnow
@@ -17343,7 +17343,7 @@ new_request.call_args_list[2][1],
 },
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 @mock.patch.dict(
 os.environ,
 {
@@ -17400,7 +17400,7 @@ request.call_args_list[2][1],
 },
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 @mock.patch.dict(
 os.environ,
 {
@@ -17457,7 +17457,7 @@ request.call_args_list[2][1],
 },
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 @mock.patch.dict(os.environ, {environment_vars.AWS_REGION: AWS_REGION})
 def test_retrieve_subject_token_success_temp_creds_environment_vars_missing_creds_idmsv2(
 self, utcnow
@@ -17508,7 +17508,7 @@ request.call_args_list[2][1],
 },
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 @mock.patch.dict(
 os.environ,
 {
@@ -17535,7 +17535,7 @@ def test_retrieve_subject_token_success_temp_creds_idmsv2(self, utcnow):
     credentials.retrieve_subject_token(request)
     assert not request.called
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
     def test_retrieve_subject_token_success_ipv6(self, utcnow):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -17596,7 +17596,7 @@ def test_retrieve_subject_token_success_temp_creds_idmsv2(self, utcnow):
     },
     )
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
         def test_retrieve_subject_token_session_error_idmsv2(self, utcnow):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -17626,7 +17626,7 @@ def test_retrieve_subject_token_success_temp_creds_idmsv2(self, utcnow):
     "PUT",
     )
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_permanent_creds_no_environment_vars(
 self, utcnow
 ):
@@ -17653,7 +17653,7 @@ assert subject_token == self.make_serialized_aws_signed_request(
 aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY)
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_environment_vars(self, utcnow, monkeypatch):
     monkeypatch.setenv(environment_vars.AWS_ACCESS_KEY_ID, ACCESS_KEY_ID)
     monkeypatch.setenv(environment_vars.AWS_SECRET_ACCESS_KEY, SECRET_ACCESS_KEY)
@@ -17670,7 +17670,7 @@ def test_retrieve_subject_token_success_environment_vars(self, utcnow, monkeypat
     aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
     )
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_environment_vars_with_default_region(
 self, utcnow, monkeypatch
 ):
@@ -17689,7 +17689,7 @@ assert subject_token == self.make_serialized_aws_signed_request(
 aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_environment_vars_with_both_regions_set(
 self, utcnow, monkeypatch
 ):
@@ -17712,7 +17712,7 @@ assert subject_token == self.make_serialized_aws_signed_request(
 aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_environment_vars_no_session_token(
 self, utcnow, monkeypatch
 ):
@@ -17730,7 +17730,7 @@ assert subject_token == self.make_serialized_aws_signed_request(
 aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY)
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_environment_vars_except_region(
 self, utcnow, monkeypatch
 ):
@@ -17810,10 +17810,10 @@ def test_retrieve_subject_token_error_determining_aws_region(self):
     assert "Unable to retrieve AWS security credentials" in str(excinfo.value)
 
     @mock.patch(
-    "google.auth.metrics.python_and_auth_lib_version",
+    "rewired.auth.metrics.python_and_auth_lib_version",
     return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
     )
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_without_impersonation_ignore_default_scopes(
 self, utcnow, mock_auth_lib_value
 ):
@@ -17869,10 +17869,10 @@ assert credentials.scopes == SCOPES
 assert credentials.default_scopes == ["ignored"]
 
 @mock.patch(
-"google.auth.metrics.python_and_auth_lib_version",
+"rewired.auth.metrics.python_and_auth_lib_version",
 return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
 )
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_without_impersonation_use_default_scopes(
 self, utcnow, mock_auth_lib_value
 ):
@@ -17928,14 +17928,14 @@ assert credentials.scopes is None
 assert credentials.default_scopes == SCOPES
 
 @mock.patch(
-"google.auth.metrics.token_request_access_token_impersonate",
+"rewired.auth.metrics.token_request_access_token_impersonate",
 return_value=IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
 )
 @mock.patch(
-"google.auth.metrics.python_and_auth_lib_version",
+"rewired.auth.metrics.python_and_auth_lib_version",
 return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
 )
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_with_impersonation_ignore_default_scopes(
 self, utcnow, mock_metrics_header_value, mock_auth_lib_value
 ):
@@ -18021,14 +18021,14 @@ assert credentials.scopes == SCOPES
 assert credentials.default_scopes == ["ignored"]
 
 @mock.patch(
-"google.auth.metrics.token_request_access_token_impersonate",
+"rewired.auth.metrics.token_request_access_token_impersonate",
 return_value=IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
 )
 @mock.patch(
-"google.auth.metrics.python_and_auth_lib_version",
+"rewired.auth.metrics.python_and_auth_lib_version",
 return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
 )
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_with_impersonation_use_default_scopes(
 self, utcnow, mock_metrics_header_value, mock_auth_lib_value
 ):
@@ -18122,7 +18122,7 @@ def test_refresh_with_retrieve_subject_token_error(self):
 
     assert "Unable to retrieve AWS region" in str(excinfo.value)
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
         def test_retrieve_subject_token_success_with_supplier(self, utcnow):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -18143,7 +18143,7 @@ def test_refresh_with_retrieve_subject_token_error(self):
     aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY)
     )
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
             def test_retrieve_subject_token_success_with_supplier_session_token(self, utcnow):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -18164,7 +18164,7 @@ def test_refresh_with_retrieve_subject_token_error(self):
     aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
     )
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
                 def test_retrieve_subject_token_success_with_supplier_correct_context(self, utcnow):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -18220,10 +18220,10 @@ def test_refresh_with_retrieve_subject_token_error(self):
     assert "Test error" in str(excinfo.value)
 
     @mock.patch(
-    "google.auth.metrics.python_and_auth_lib_version",
+    "rewired.auth.metrics.python_and_auth_lib_version",
     return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
     )
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_with_supplier_with_impersonation(
 self, utcnow, mock_auth_lib_value
 ):
@@ -18311,10 +18311,10 @@ assert credentials.scopes == SCOPES
 assert credentials.default_scopes == ["ignored"]
 
 @mock.patch(
-"google.auth.metrics.python_and_auth_lib_version",
+"rewired.auth.metrics.python_and_auth_lib_version",
 return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
 )
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_with_supplier(self, utcnow, mock_auth_lib_value):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -18499,12 +18499,12 @@ def test_refresh_success_with_supplier(self, utcnow, mock_auth_lib_value):
     import mock
     import pytest  # type: ignore
 
-    from google.auth import _helpers, external_account
-    from google.auth import aws
-    from google.auth import environment_vars
-    from google.auth import exceptions
-    from google.auth import transport
-    from google.auth.credentials import DEFAULT_UNIVERSE_DOMAIN
+    from rewired.auth import _helpers, external_account
+    from rewired.auth import aws
+    from rewired.auth import environment_vars
+    from rewired.auth import exceptions
+    from rewired.auth import transport
+    from rewired.auth.credentials import DEFAULT_UNIVERSE_DOMAIN
 
     IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE = (
     "gl-python/3.7 auth/1.1 auth-request-type/at cred-type/imp"
@@ -19088,7 +19088,7 @@ def test_refresh_success_with_supplier(self, utcnow, mock_auth_lib_value):
     @pytest.mark.parametrize(
     "region, time, credentials, original_request, signed_request", TEST_FIXTURES
     )
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_get_request_options(
 self, utcnow, region, time, credentials, original_request, signed_request
 ):
@@ -19743,7 +19743,7 @@ def test_from_info_full_options(self, mock_init):
 
     assert "Unable to determine AWS region" in str(excinfo.value)
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_temp_creds_no_environment_vars(
 self, utcnow
 ):
@@ -19803,7 +19803,7 @@ new_request.call_args_list[1][1],
 {"Content-Type": "application/json"},
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 @mock.patch.dict(os.environ, {})
 def test_retrieve_subject_token_success_temp_creds_no_environment_vars_idmsv2(
 self, utcnow
@@ -19907,7 +19907,7 @@ new_request.call_args_list[2][1],
 },
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 @mock.patch.dict(
 os.environ,
 {
@@ -19964,7 +19964,7 @@ request.call_args_list[2][1],
 },
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 @mock.patch.dict(
 os.environ,
 {
@@ -20021,7 +20021,7 @@ request.call_args_list[2][1],
 },
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 @mock.patch.dict(os.environ, {environment_vars.AWS_REGION: AWS_REGION})
 def test_retrieve_subject_token_success_temp_creds_environment_vars_missing_creds_idmsv2(
 self, utcnow
@@ -20072,7 +20072,7 @@ request.call_args_list[2][1],
 },
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 @mock.patch.dict(
 os.environ,
 {
@@ -20099,7 +20099,7 @@ def test_retrieve_subject_token_success_temp_creds_idmsv2(self, utcnow):
     credentials.retrieve_subject_token(request)
     assert not request.called
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
     def test_retrieve_subject_token_success_ipv6(self, utcnow):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -20160,7 +20160,7 @@ def test_retrieve_subject_token_success_temp_creds_idmsv2(self, utcnow):
     },
     )
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
         def test_retrieve_subject_token_session_error_idmsv2(self, utcnow):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -20190,7 +20190,7 @@ def test_retrieve_subject_token_success_temp_creds_idmsv2(self, utcnow):
     "PUT",
     )
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_permanent_creds_no_environment_vars(
 self, utcnow
 ):
@@ -20217,7 +20217,7 @@ assert subject_token == self.make_serialized_aws_signed_request(
 aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY)
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_environment_vars(self, utcnow, monkeypatch):
     monkeypatch.setenv(environment_vars.AWS_ACCESS_KEY_ID, ACCESS_KEY_ID)
     monkeypatch.setenv(environment_vars.AWS_SECRET_ACCESS_KEY, SECRET_ACCESS_KEY)
@@ -20234,7 +20234,7 @@ def test_retrieve_subject_token_success_environment_vars(self, utcnow, monkeypat
     aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
     )
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_environment_vars_with_default_region(
 self, utcnow, monkeypatch
 ):
@@ -20253,7 +20253,7 @@ assert subject_token == self.make_serialized_aws_signed_request(
 aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_environment_vars_with_both_regions_set(
 self, utcnow, monkeypatch
 ):
@@ -20276,7 +20276,7 @@ assert subject_token == self.make_serialized_aws_signed_request(
 aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_environment_vars_no_session_token(
 self, utcnow, monkeypatch
 ):
@@ -20294,7 +20294,7 @@ assert subject_token == self.make_serialized_aws_signed_request(
 aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY)
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_environment_vars_except_region(
 self, utcnow, monkeypatch
 ):
@@ -20374,10 +20374,10 @@ def test_retrieve_subject_token_error_determining_aws_region(self):
     assert "Unable to retrieve AWS security credentials" in str(excinfo.value)
 
     @mock.patch(
-    "google.auth.metrics.python_and_auth_lib_version",
+    "rewired.auth.metrics.python_and_auth_lib_version",
     return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
     )
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_without_impersonation_ignore_default_scopes(
 self, utcnow, mock_auth_lib_value
 ):
@@ -20433,10 +20433,10 @@ assert credentials.scopes == SCOPES
 assert credentials.default_scopes == ["ignored"]
 
 @mock.patch(
-"google.auth.metrics.python_and_auth_lib_version",
+"rewired.auth.metrics.python_and_auth_lib_version",
 return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
 )
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_without_impersonation_use_default_scopes(
 self, utcnow, mock_auth_lib_value
 ):
@@ -20492,14 +20492,14 @@ assert credentials.scopes is None
 assert credentials.default_scopes == SCOPES
 
 @mock.patch(
-"google.auth.metrics.token_request_access_token_impersonate",
+"rewired.auth.metrics.token_request_access_token_impersonate",
 return_value=IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
 )
 @mock.patch(
-"google.auth.metrics.python_and_auth_lib_version",
+"rewired.auth.metrics.python_and_auth_lib_version",
 return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
 )
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_with_impersonation_ignore_default_scopes(
 self, utcnow, mock_metrics_header_value, mock_auth_lib_value
 ):
@@ -20585,14 +20585,14 @@ assert credentials.scopes == SCOPES
 assert credentials.default_scopes == ["ignored"]
 
 @mock.patch(
-"google.auth.metrics.token_request_access_token_impersonate",
+"rewired.auth.metrics.token_request_access_token_impersonate",
 return_value=IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
 )
 @mock.patch(
-"google.auth.metrics.python_and_auth_lib_version",
+"rewired.auth.metrics.python_and_auth_lib_version",
 return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
 )
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_with_impersonation_use_default_scopes(
 self, utcnow, mock_metrics_header_value, mock_auth_lib_value
 ):
@@ -20686,7 +20686,7 @@ def test_refresh_with_retrieve_subject_token_error(self):
 
     assert "Unable to retrieve AWS region" in str(excinfo.value)
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
         def test_retrieve_subject_token_success_with_supplier(self, utcnow):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -20707,7 +20707,7 @@ def test_refresh_with_retrieve_subject_token_error(self):
     aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY)
     )
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
             def test_retrieve_subject_token_success_with_supplier_session_token(self, utcnow):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -20728,7 +20728,7 @@ def test_refresh_with_retrieve_subject_token_error(self):
     aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
     )
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
                 def test_retrieve_subject_token_success_with_supplier_correct_context(self, utcnow):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -20784,10 +20784,10 @@ def test_refresh_with_retrieve_subject_token_error(self):
     assert "Test error" in str(excinfo.value)
 
     @mock.patch(
-    "google.auth.metrics.python_and_auth_lib_version",
+    "rewired.auth.metrics.python_and_auth_lib_version",
     return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
     )
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_with_supplier_with_impersonation(
 self, utcnow, mock_auth_lib_value
 ):
@@ -20875,10 +20875,10 @@ assert credentials.scopes == SCOPES
 assert credentials.default_scopes == ["ignored"]
 
 @mock.patch(
-"google.auth.metrics.python_and_auth_lib_version",
+"rewired.auth.metrics.python_and_auth_lib_version",
 return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
 )
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_with_supplier(self, utcnow, mock_auth_lib_value):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -20937,7 +20937,7 @@ def test_refresh_success_with_supplier(self, utcnow, mock_auth_lib_value):
 
 
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_temp_creds_no_environment_vars(
 self, utcnow
 ):
@@ -20997,7 +20997,7 @@ new_request.call_args_list[1][1],
 {"Content-Type": "application/json"},
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 @mock.patch.dict(os.environ, {})
 def test_retrieve_subject_token_success_temp_creds_no_environment_vars_idmsv2(
 self, utcnow
@@ -21101,7 +21101,7 @@ new_request.call_args_list[2][1],
 },
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 @mock.patch.dict(
 os.environ,
 {
@@ -21158,7 +21158,7 @@ request.call_args_list[2][1],
 },
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 @mock.patch.dict(
 os.environ,
 {
@@ -21215,7 +21215,7 @@ request.call_args_list[2][1],
 },
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 @mock.patch.dict(os.environ, {environment_vars.AWS_REGION: AWS_REGION})
 def test_retrieve_subject_token_success_temp_creds_environment_vars_missing_creds_idmsv2(
 self, utcnow
@@ -21266,7 +21266,7 @@ request.call_args_list[2][1],
 },
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 @mock.patch.dict(
 os.environ,
 {
@@ -21293,7 +21293,7 @@ def test_retrieve_subject_token_success_temp_creds_idmsv2(self, utcnow):
     credentials.retrieve_subject_token(request)
     assert not request.called
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
     def test_retrieve_subject_token_success_ipv6(self, utcnow):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -21354,7 +21354,7 @@ def test_retrieve_subject_token_success_temp_creds_idmsv2(self, utcnow):
     },
     )
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
         def test_retrieve_subject_token_session_error_idmsv2(self, utcnow):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -21397,12 +21397,12 @@ def test_retrieve_subject_token_success_temp_creds_idmsv2(self, utcnow):
     import mock
     import pytest  # type: ignore
 
-    from google.auth import _helpers, external_account
-    from google.auth import aws
-    from google.auth import environment_vars
-    from google.auth import exceptions
-    from google.auth import transport
-    from google.auth.credentials import DEFAULT_UNIVERSE_DOMAIN
+    from rewired.auth import _helpers, external_account
+    from rewired.auth import aws
+    from rewired.auth import environment_vars
+    from rewired.auth import exceptions
+    from rewired.auth import transport
+    from rewired.auth.credentials import DEFAULT_UNIVERSE_DOMAIN
 
     IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE = (
     "gl-python/3.7 auth/1.1 auth-request-type/at cred-type/imp"
@@ -21986,7 +21986,7 @@ def test_retrieve_subject_token_success_temp_creds_idmsv2(self, utcnow):
     @pytest.mark.parametrize(
     "region, time, credentials, original_request, signed_request", TEST_FIXTURES
     )
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_get_request_options(
 self, utcnow, region, time, credentials, original_request, signed_request
 ):
@@ -22641,7 +22641,7 @@ def test_from_info_full_options(self, mock_init):
 
     assert "Unable to determine AWS region" in str(excinfo.value)
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_temp_creds_no_environment_vars(
 self, utcnow
 ):
@@ -22701,7 +22701,7 @@ new_request.call_args_list[1][1],
 {"Content-Type": "application/json"},
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 @mock.patch.dict(os.environ, {})
 def test_retrieve_subject_token_success_temp_creds_no_environment_vars_idmsv2(
 self, utcnow
@@ -22805,7 +22805,7 @@ new_request.call_args_list[2][1],
 },
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 @mock.patch.dict(
 os.environ,
 {
@@ -22862,7 +22862,7 @@ request.call_args_list[2][1],
 },
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 @mock.patch.dict(
 os.environ,
 {
@@ -22919,7 +22919,7 @@ request.call_args_list[2][1],
 },
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 @mock.patch.dict(os.environ, {environment_vars.AWS_REGION: AWS_REGION})
 def test_retrieve_subject_token_success_temp_creds_environment_vars_missing_creds_idmsv2(
 self, utcnow
@@ -22970,7 +22970,7 @@ request.call_args_list[2][1],
 },
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 @mock.patch.dict(
 os.environ,
 {
@@ -22997,7 +22997,7 @@ def test_retrieve_subject_token_success_temp_creds_idmsv2(self, utcnow):
     credentials.retrieve_subject_token(request)
     assert not request.called
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
     def test_retrieve_subject_token_success_ipv6(self, utcnow):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -23058,7 +23058,7 @@ def test_retrieve_subject_token_success_temp_creds_idmsv2(self, utcnow):
     },
     )
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
         def test_retrieve_subject_token_session_error_idmsv2(self, utcnow):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -23088,7 +23088,7 @@ def test_retrieve_subject_token_success_temp_creds_idmsv2(self, utcnow):
     "PUT",
     )
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_permanent_creds_no_environment_vars(
 self, utcnow
 ):
@@ -23115,7 +23115,7 @@ assert subject_token == self.make_serialized_aws_signed_request(
 aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY)
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_environment_vars(self, utcnow, monkeypatch):
     monkeypatch.setenv(environment_vars.AWS_ACCESS_KEY_ID, ACCESS_KEY_ID)
     monkeypatch.setenv(environment_vars.AWS_SECRET_ACCESS_KEY, SECRET_ACCESS_KEY)
@@ -23132,7 +23132,7 @@ def test_retrieve_subject_token_success_environment_vars(self, utcnow, monkeypat
     aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
     )
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_environment_vars_with_default_region(
 self, utcnow, monkeypatch
 ):
@@ -23151,7 +23151,7 @@ assert subject_token == self.make_serialized_aws_signed_request(
 aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_environment_vars_with_both_regions_set(
 self, utcnow, monkeypatch
 ):
@@ -23174,7 +23174,7 @@ assert subject_token == self.make_serialized_aws_signed_request(
 aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_environment_vars_no_session_token(
 self, utcnow, monkeypatch
 ):
@@ -23192,7 +23192,7 @@ assert subject_token == self.make_serialized_aws_signed_request(
 aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY)
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_environment_vars_except_region(
 self, utcnow, monkeypatch
 ):
@@ -23272,10 +23272,10 @@ def test_retrieve_subject_token_error_determining_aws_region(self):
     assert "Unable to retrieve AWS security credentials" in str(excinfo.value)
 
     @mock.patch(
-    "google.auth.metrics.python_and_auth_lib_version",
+    "rewired.auth.metrics.python_and_auth_lib_version",
     return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
     )
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_without_impersonation_ignore_default_scopes(
 self, utcnow, mock_auth_lib_value
 ):
@@ -23331,10 +23331,10 @@ assert credentials.scopes == SCOPES
 assert credentials.default_scopes == ["ignored"]
 
 @mock.patch(
-"google.auth.metrics.python_and_auth_lib_version",
+"rewired.auth.metrics.python_and_auth_lib_version",
 return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
 )
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_without_impersonation_use_default_scopes(
 self, utcnow, mock_auth_lib_value
 ):
@@ -23390,14 +23390,14 @@ assert credentials.scopes is None
 assert credentials.default_scopes == SCOPES
 
 @mock.patch(
-"google.auth.metrics.token_request_access_token_impersonate",
+"rewired.auth.metrics.token_request_access_token_impersonate",
 return_value=IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
 )
 @mock.patch(
-"google.auth.metrics.python_and_auth_lib_version",
+"rewired.auth.metrics.python_and_auth_lib_version",
 return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
 )
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_with_impersonation_ignore_default_scopes(
 self, utcnow, mock_metrics_header_value, mock_auth_lib_value
 ):
@@ -23483,14 +23483,14 @@ assert credentials.scopes == SCOPES
 assert credentials.default_scopes == ["ignored"]
 
 @mock.patch(
-"google.auth.metrics.token_request_access_token_impersonate",
+"rewired.auth.metrics.token_request_access_token_impersonate",
 return_value=IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
 )
 @mock.patch(
-"google.auth.metrics.python_and_auth_lib_version",
+"rewired.auth.metrics.python_and_auth_lib_version",
 return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
 )
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_with_impersonation_use_default_scopes(
 self, utcnow, mock_metrics_header_value, mock_auth_lib_value
 ):
@@ -23584,7 +23584,7 @@ def test_refresh_with_retrieve_subject_token_error(self):
 
     assert "Unable to retrieve AWS region" in str(excinfo.value)
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
         def test_retrieve_subject_token_success_with_supplier(self, utcnow):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -23605,7 +23605,7 @@ def test_refresh_with_retrieve_subject_token_error(self):
     aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY)
     )
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
             def test_retrieve_subject_token_success_with_supplier_session_token(self, utcnow):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -23626,7 +23626,7 @@ def test_refresh_with_retrieve_subject_token_error(self):
     aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
     )
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
                 def test_retrieve_subject_token_success_with_supplier_correct_context(self, utcnow):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -23682,10 +23682,10 @@ def test_refresh_with_retrieve_subject_token_error(self):
     assert "Test error" in str(excinfo.value)
 
     @mock.patch(
-    "google.auth.metrics.python_and_auth_lib_version",
+    "rewired.auth.metrics.python_and_auth_lib_version",
     return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
     )
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_with_supplier_with_impersonation(
 self, utcnow, mock_auth_lib_value
 ):
@@ -23773,10 +23773,10 @@ assert credentials.scopes == SCOPES
 assert credentials.default_scopes == ["ignored"]
 
 @mock.patch(
-"google.auth.metrics.python_and_auth_lib_version",
+"rewired.auth.metrics.python_and_auth_lib_version",
 return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
 )
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_with_supplier(self, utcnow, mock_auth_lib_value):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -23843,7 +23843,7 @@ def test_refresh_success_with_supplier(self, utcnow, mock_auth_lib_value):
     "PUT",
     )
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_permanent_creds_no_environment_vars(
 self, utcnow
 ):
@@ -23870,7 +23870,7 @@ assert subject_token == self.make_serialized_aws_signed_request(
 aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY)
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_environment_vars(self, utcnow, monkeypatch):
     monkeypatch.setenv(environment_vars.AWS_ACCESS_KEY_ID, ACCESS_KEY_ID)
     monkeypatch.setenv(environment_vars.AWS_SECRET_ACCESS_KEY, SECRET_ACCESS_KEY)
@@ -23887,7 +23887,7 @@ def test_retrieve_subject_token_success_environment_vars(self, utcnow, monkeypat
     aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
     )
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_environment_vars_with_default_region(
 self, utcnow, monkeypatch
 ):
@@ -23906,7 +23906,7 @@ assert subject_token == self.make_serialized_aws_signed_request(
 aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_environment_vars_with_both_regions_set(
 self, utcnow, monkeypatch
 ):
@@ -23929,7 +23929,7 @@ assert subject_token == self.make_serialized_aws_signed_request(
 aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_environment_vars_no_session_token(
 self, utcnow, monkeypatch
 ):
@@ -23947,7 +23947,7 @@ assert subject_token == self.make_serialized_aws_signed_request(
 aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY)
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_environment_vars_except_region(
 self, utcnow, monkeypatch
 ):
@@ -24000,12 +24000,12 @@ def test_retrieve_subject_token_error_determining_aws_region(self):
     import mock
     import pytest  # type: ignore
 
-    from google.auth import _helpers, external_account
-    from google.auth import aws
-    from google.auth import environment_vars
-    from google.auth import exceptions
-    from google.auth import transport
-    from google.auth.credentials import DEFAULT_UNIVERSE_DOMAIN
+    from rewired.auth import _helpers, external_account
+    from rewired.auth import aws
+    from rewired.auth import environment_vars
+    from rewired.auth import exceptions
+    from rewired.auth import transport
+    from rewired.auth.credentials import DEFAULT_UNIVERSE_DOMAIN
 
     IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE = (
     "gl-python/3.7 auth/1.1 auth-request-type/at cred-type/imp"
@@ -24589,7 +24589,7 @@ def test_retrieve_subject_token_error_determining_aws_region(self):
     @pytest.mark.parametrize(
     "region, time, credentials, original_request, signed_request", TEST_FIXTURES
     )
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_get_request_options(
 self, utcnow, region, time, credentials, original_request, signed_request
 ):
@@ -25244,7 +25244,7 @@ def test_from_info_full_options(self, mock_init):
 
     assert "Unable to determine AWS region" in str(excinfo.value)
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_temp_creds_no_environment_vars(
 self, utcnow
 ):
@@ -25304,7 +25304,7 @@ new_request.call_args_list[1][1],
 {"Content-Type": "application/json"},
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 @mock.patch.dict(os.environ, {})
 def test_retrieve_subject_token_success_temp_creds_no_environment_vars_idmsv2(
 self, utcnow
@@ -25408,7 +25408,7 @@ new_request.call_args_list[2][1],
 },
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 @mock.patch.dict(
 os.environ,
 {
@@ -25465,7 +25465,7 @@ request.call_args_list[2][1],
 },
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 @mock.patch.dict(
 os.environ,
 {
@@ -25522,7 +25522,7 @@ request.call_args_list[2][1],
 },
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 @mock.patch.dict(os.environ, {environment_vars.AWS_REGION: AWS_REGION})
 def test_retrieve_subject_token_success_temp_creds_environment_vars_missing_creds_idmsv2(
 self, utcnow
@@ -25573,7 +25573,7 @@ request.call_args_list[2][1],
 },
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 @mock.patch.dict(
 os.environ,
 {
@@ -25600,7 +25600,7 @@ def test_retrieve_subject_token_success_temp_creds_idmsv2(self, utcnow):
     credentials.retrieve_subject_token(request)
     assert not request.called
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
     def test_retrieve_subject_token_success_ipv6(self, utcnow):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -25661,7 +25661,7 @@ def test_retrieve_subject_token_success_temp_creds_idmsv2(self, utcnow):
     },
     )
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
         def test_retrieve_subject_token_session_error_idmsv2(self, utcnow):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -25691,7 +25691,7 @@ def test_retrieve_subject_token_success_temp_creds_idmsv2(self, utcnow):
     "PUT",
     )
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_permanent_creds_no_environment_vars(
 self, utcnow
 ):
@@ -25718,7 +25718,7 @@ assert subject_token == self.make_serialized_aws_signed_request(
 aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY)
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_environment_vars(self, utcnow, monkeypatch):
     monkeypatch.setenv(environment_vars.AWS_ACCESS_KEY_ID, ACCESS_KEY_ID)
     monkeypatch.setenv(environment_vars.AWS_SECRET_ACCESS_KEY, SECRET_ACCESS_KEY)
@@ -25735,7 +25735,7 @@ def test_retrieve_subject_token_success_environment_vars(self, utcnow, monkeypat
     aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
     )
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_environment_vars_with_default_region(
 self, utcnow, monkeypatch
 ):
@@ -25754,7 +25754,7 @@ assert subject_token == self.make_serialized_aws_signed_request(
 aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_environment_vars_with_both_regions_set(
 self, utcnow, monkeypatch
 ):
@@ -25777,7 +25777,7 @@ assert subject_token == self.make_serialized_aws_signed_request(
 aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_environment_vars_no_session_token(
 self, utcnow, monkeypatch
 ):
@@ -25795,7 +25795,7 @@ assert subject_token == self.make_serialized_aws_signed_request(
 aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY)
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_environment_vars_except_region(
 self, utcnow, monkeypatch
 ):
@@ -25875,10 +25875,10 @@ def test_retrieve_subject_token_error_determining_aws_region(self):
     assert "Unable to retrieve AWS security credentials" in str(excinfo.value)
 
     @mock.patch(
-    "google.auth.metrics.python_and_auth_lib_version",
+    "rewired.auth.metrics.python_and_auth_lib_version",
     return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
     )
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_without_impersonation_ignore_default_scopes(
 self, utcnow, mock_auth_lib_value
 ):
@@ -25934,10 +25934,10 @@ assert credentials.scopes == SCOPES
 assert credentials.default_scopes == ["ignored"]
 
 @mock.patch(
-"google.auth.metrics.python_and_auth_lib_version",
+"rewired.auth.metrics.python_and_auth_lib_version",
 return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
 )
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_without_impersonation_use_default_scopes(
 self, utcnow, mock_auth_lib_value
 ):
@@ -25993,14 +25993,14 @@ assert credentials.scopes is None
 assert credentials.default_scopes == SCOPES
 
 @mock.patch(
-"google.auth.metrics.token_request_access_token_impersonate",
+"rewired.auth.metrics.token_request_access_token_impersonate",
 return_value=IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
 )
 @mock.patch(
-"google.auth.metrics.python_and_auth_lib_version",
+"rewired.auth.metrics.python_and_auth_lib_version",
 return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
 )
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_with_impersonation_ignore_default_scopes(
 self, utcnow, mock_metrics_header_value, mock_auth_lib_value
 ):
@@ -26086,14 +26086,14 @@ assert credentials.scopes == SCOPES
 assert credentials.default_scopes == ["ignored"]
 
 @mock.patch(
-"google.auth.metrics.token_request_access_token_impersonate",
+"rewired.auth.metrics.token_request_access_token_impersonate",
 return_value=IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
 )
 @mock.patch(
-"google.auth.metrics.python_and_auth_lib_version",
+"rewired.auth.metrics.python_and_auth_lib_version",
 return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
 )
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_with_impersonation_use_default_scopes(
 self, utcnow, mock_metrics_header_value, mock_auth_lib_value
 ):
@@ -26187,7 +26187,7 @@ def test_refresh_with_retrieve_subject_token_error(self):
 
     assert "Unable to retrieve AWS region" in str(excinfo.value)
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
         def test_retrieve_subject_token_success_with_supplier(self, utcnow):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -26208,7 +26208,7 @@ def test_refresh_with_retrieve_subject_token_error(self):
     aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY)
     )
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
             def test_retrieve_subject_token_success_with_supplier_session_token(self, utcnow):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -26229,7 +26229,7 @@ def test_refresh_with_retrieve_subject_token_error(self):
     aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
     )
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
                 def test_retrieve_subject_token_success_with_supplier_correct_context(self, utcnow):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -26285,10 +26285,10 @@ def test_refresh_with_retrieve_subject_token_error(self):
     assert "Test error" in str(excinfo.value)
 
     @mock.patch(
-    "google.auth.metrics.python_and_auth_lib_version",
+    "rewired.auth.metrics.python_and_auth_lib_version",
     return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
     )
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_with_supplier_with_impersonation(
 self, utcnow, mock_auth_lib_value
 ):
@@ -26376,10 +26376,10 @@ assert credentials.scopes == SCOPES
 assert credentials.default_scopes == ["ignored"]
 
 @mock.patch(
-"google.auth.metrics.python_and_auth_lib_version",
+"rewired.auth.metrics.python_and_auth_lib_version",
 return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
 )
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_with_supplier(self, utcnow, mock_auth_lib_value):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -26473,12 +26473,12 @@ def test_refresh_success_with_supplier(self, utcnow, mock_auth_lib_value):
     import mock
     import pytest  # type: ignore
 
-    from google.auth import _helpers, external_account
-    from google.auth import aws
-    from google.auth import environment_vars
-    from google.auth import exceptions
-    from google.auth import transport
-    from google.auth.credentials import DEFAULT_UNIVERSE_DOMAIN
+    from rewired.auth import _helpers, external_account
+    from rewired.auth import aws
+    from rewired.auth import environment_vars
+    from rewired.auth import exceptions
+    from rewired.auth import transport
+    from rewired.auth.credentials import DEFAULT_UNIVERSE_DOMAIN
 
     IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE = (
     "gl-python/3.7 auth/1.1 auth-request-type/at cred-type/imp"
@@ -27062,7 +27062,7 @@ def test_refresh_success_with_supplier(self, utcnow, mock_auth_lib_value):
     @pytest.mark.parametrize(
     "region, time, credentials, original_request, signed_request", TEST_FIXTURES
     )
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_get_request_options(
 self, utcnow, region, time, credentials, original_request, signed_request
 ):
@@ -27717,7 +27717,7 @@ def test_from_info_full_options(self, mock_init):
 
     assert "Unable to determine AWS region" in str(excinfo.value)
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_temp_creds_no_environment_vars(
 self, utcnow
 ):
@@ -27777,7 +27777,7 @@ new_request.call_args_list[1][1],
 {"Content-Type": "application/json"},
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 @mock.patch.dict(os.environ, {})
 def test_retrieve_subject_token_success_temp_creds_no_environment_vars_idmsv2(
 self, utcnow
@@ -27881,7 +27881,7 @@ new_request.call_args_list[2][1],
 },
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 @mock.patch.dict(
 os.environ,
 {
@@ -27938,7 +27938,7 @@ request.call_args_list[2][1],
 },
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 @mock.patch.dict(
 os.environ,
 {
@@ -27995,7 +27995,7 @@ request.call_args_list[2][1],
 },
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 @mock.patch.dict(os.environ, {environment_vars.AWS_REGION: AWS_REGION})
 def test_retrieve_subject_token_success_temp_creds_environment_vars_missing_creds_idmsv2(
 self, utcnow
@@ -28046,7 +28046,7 @@ request.call_args_list[2][1],
 },
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 @mock.patch.dict(
 os.environ,
 {
@@ -28073,7 +28073,7 @@ def test_retrieve_subject_token_success_temp_creds_idmsv2(self, utcnow):
     credentials.retrieve_subject_token(request)
     assert not request.called
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
     def test_retrieve_subject_token_success_ipv6(self, utcnow):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -28134,7 +28134,7 @@ def test_retrieve_subject_token_success_temp_creds_idmsv2(self, utcnow):
     },
     )
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
         def test_retrieve_subject_token_session_error_idmsv2(self, utcnow):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -28164,7 +28164,7 @@ def test_retrieve_subject_token_success_temp_creds_idmsv2(self, utcnow):
     "PUT",
     )
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_permanent_creds_no_environment_vars(
 self, utcnow
 ):
@@ -28191,7 +28191,7 @@ assert subject_token == self.make_serialized_aws_signed_request(
 aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY)
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_environment_vars(self, utcnow, monkeypatch):
     monkeypatch.setenv(environment_vars.AWS_ACCESS_KEY_ID, ACCESS_KEY_ID)
     monkeypatch.setenv(environment_vars.AWS_SECRET_ACCESS_KEY, SECRET_ACCESS_KEY)
@@ -28208,7 +28208,7 @@ def test_retrieve_subject_token_success_environment_vars(self, utcnow, monkeypat
     aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
     )
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_environment_vars_with_default_region(
 self, utcnow, monkeypatch
 ):
@@ -28227,7 +28227,7 @@ assert subject_token == self.make_serialized_aws_signed_request(
 aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_environment_vars_with_both_regions_set(
 self, utcnow, monkeypatch
 ):
@@ -28250,7 +28250,7 @@ assert subject_token == self.make_serialized_aws_signed_request(
 aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_environment_vars_no_session_token(
 self, utcnow, monkeypatch
 ):
@@ -28268,7 +28268,7 @@ assert subject_token == self.make_serialized_aws_signed_request(
 aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY)
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_environment_vars_except_region(
 self, utcnow, monkeypatch
 ):
@@ -28348,10 +28348,10 @@ def test_retrieve_subject_token_error_determining_aws_region(self):
     assert "Unable to retrieve AWS security credentials" in str(excinfo.value)
 
     @mock.patch(
-    "google.auth.metrics.python_and_auth_lib_version",
+    "rewired.auth.metrics.python_and_auth_lib_version",
     return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
     )
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_without_impersonation_ignore_default_scopes(
 self, utcnow, mock_auth_lib_value
 ):
@@ -28407,10 +28407,10 @@ assert credentials.scopes == SCOPES
 assert credentials.default_scopes == ["ignored"]
 
 @mock.patch(
-"google.auth.metrics.python_and_auth_lib_version",
+"rewired.auth.metrics.python_and_auth_lib_version",
 return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
 )
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_without_impersonation_use_default_scopes(
 self, utcnow, mock_auth_lib_value
 ):
@@ -28466,14 +28466,14 @@ assert credentials.scopes is None
 assert credentials.default_scopes == SCOPES
 
 @mock.patch(
-"google.auth.metrics.token_request_access_token_impersonate",
+"rewired.auth.metrics.token_request_access_token_impersonate",
 return_value=IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
 )
 @mock.patch(
-"google.auth.metrics.python_and_auth_lib_version",
+"rewired.auth.metrics.python_and_auth_lib_version",
 return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
 )
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_with_impersonation_ignore_default_scopes(
 self, utcnow, mock_metrics_header_value, mock_auth_lib_value
 ):
@@ -28559,14 +28559,14 @@ assert credentials.scopes == SCOPES
 assert credentials.default_scopes == ["ignored"]
 
 @mock.patch(
-"google.auth.metrics.token_request_access_token_impersonate",
+"rewired.auth.metrics.token_request_access_token_impersonate",
 return_value=IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
 )
 @mock.patch(
-"google.auth.metrics.python_and_auth_lib_version",
+"rewired.auth.metrics.python_and_auth_lib_version",
 return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
 )
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_with_impersonation_use_default_scopes(
 self, utcnow, mock_metrics_header_value, mock_auth_lib_value
 ):
@@ -28660,7 +28660,7 @@ def test_refresh_with_retrieve_subject_token_error(self):
 
     assert "Unable to retrieve AWS region" in str(excinfo.value)
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
         def test_retrieve_subject_token_success_with_supplier(self, utcnow):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -28681,7 +28681,7 @@ def test_refresh_with_retrieve_subject_token_error(self):
     aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY)
     )
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
             def test_retrieve_subject_token_success_with_supplier_session_token(self, utcnow):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -28702,7 +28702,7 @@ def test_refresh_with_retrieve_subject_token_error(self):
     aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
     )
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
                 def test_retrieve_subject_token_success_with_supplier_correct_context(self, utcnow):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -28758,10 +28758,10 @@ def test_refresh_with_retrieve_subject_token_error(self):
     assert "Test error" in str(excinfo.value)
 
     @mock.patch(
-    "google.auth.metrics.python_and_auth_lib_version",
+    "rewired.auth.metrics.python_and_auth_lib_version",
     return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
     )
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_with_supplier_with_impersonation(
 self, utcnow, mock_auth_lib_value
 ):
@@ -28849,10 +28849,10 @@ assert credentials.scopes == SCOPES
 assert credentials.default_scopes == ["ignored"]
 
 @mock.patch(
-"google.auth.metrics.python_and_auth_lib_version",
+"rewired.auth.metrics.python_and_auth_lib_version",
 return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
 )
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_with_supplier(self, utcnow, mock_auth_lib_value):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -28965,12 +28965,12 @@ def test_refresh_success_with_supplier(self, utcnow, mock_auth_lib_value):
     import mock
     import pytest  # type: ignore
 
-    from google.auth import _helpers, external_account
-    from google.auth import aws
-    from google.auth import environment_vars
-    from google.auth import exceptions
-    from google.auth import transport
-    from google.auth.credentials import DEFAULT_UNIVERSE_DOMAIN
+    from rewired.auth import _helpers, external_account
+    from rewired.auth import aws
+    from rewired.auth import environment_vars
+    from rewired.auth import exceptions
+    from rewired.auth import transport
+    from rewired.auth.credentials import DEFAULT_UNIVERSE_DOMAIN
 
     IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE = (
     "gl-python/3.7 auth/1.1 auth-request-type/at cred-type/imp"
@@ -29554,7 +29554,7 @@ def test_refresh_success_with_supplier(self, utcnow, mock_auth_lib_value):
     @pytest.mark.parametrize(
     "region, time, credentials, original_request, signed_request", TEST_FIXTURES
     )
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_get_request_options(
 self, utcnow, region, time, credentials, original_request, signed_request
 ):
@@ -30209,7 +30209,7 @@ def test_from_info_full_options(self, mock_init):
 
     assert "Unable to determine AWS region" in str(excinfo.value)
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_temp_creds_no_environment_vars(
 self, utcnow
 ):
@@ -30269,7 +30269,7 @@ new_request.call_args_list[1][1],
 {"Content-Type": "application/json"},
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 @mock.patch.dict(os.environ, {})
 def test_retrieve_subject_token_success_temp_creds_no_environment_vars_idmsv2(
 self, utcnow
@@ -30373,7 +30373,7 @@ new_request.call_args_list[2][1],
 },
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 @mock.patch.dict(
 os.environ,
 {
@@ -30430,7 +30430,7 @@ request.call_args_list[2][1],
 },
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 @mock.patch.dict(
 os.environ,
 {
@@ -30487,7 +30487,7 @@ request.call_args_list[2][1],
 },
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 @mock.patch.dict(os.environ, {environment_vars.AWS_REGION: AWS_REGION})
 def test_retrieve_subject_token_success_temp_creds_environment_vars_missing_creds_idmsv2(
 self, utcnow
@@ -30538,7 +30538,7 @@ request.call_args_list[2][1],
 },
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 @mock.patch.dict(
 os.environ,
 {
@@ -30565,7 +30565,7 @@ def test_retrieve_subject_token_success_temp_creds_idmsv2(self, utcnow):
     credentials.retrieve_subject_token(request)
     assert not request.called
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
     def test_retrieve_subject_token_success_ipv6(self, utcnow):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -30626,7 +30626,7 @@ def test_retrieve_subject_token_success_temp_creds_idmsv2(self, utcnow):
     },
     )
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
         def test_retrieve_subject_token_session_error_idmsv2(self, utcnow):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -30656,7 +30656,7 @@ def test_retrieve_subject_token_success_temp_creds_idmsv2(self, utcnow):
     "PUT",
     )
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_permanent_creds_no_environment_vars(
 self, utcnow
 ):
@@ -30683,7 +30683,7 @@ assert subject_token == self.make_serialized_aws_signed_request(
 aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY)
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_environment_vars(self, utcnow, monkeypatch):
     monkeypatch.setenv(environment_vars.AWS_ACCESS_KEY_ID, ACCESS_KEY_ID)
     monkeypatch.setenv(environment_vars.AWS_SECRET_ACCESS_KEY, SECRET_ACCESS_KEY)
@@ -30700,7 +30700,7 @@ def test_retrieve_subject_token_success_environment_vars(self, utcnow, monkeypat
     aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
     )
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_environment_vars_with_default_region(
 self, utcnow, monkeypatch
 ):
@@ -30719,7 +30719,7 @@ assert subject_token == self.make_serialized_aws_signed_request(
 aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_environment_vars_with_both_regions_set(
 self, utcnow, monkeypatch
 ):
@@ -30742,7 +30742,7 @@ assert subject_token == self.make_serialized_aws_signed_request(
 aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_environment_vars_no_session_token(
 self, utcnow, monkeypatch
 ):
@@ -30760,7 +30760,7 @@ assert subject_token == self.make_serialized_aws_signed_request(
 aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY)
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_environment_vars_except_region(
 self, utcnow, monkeypatch
 ):
@@ -30840,10 +30840,10 @@ def test_retrieve_subject_token_error_determining_aws_region(self):
     assert "Unable to retrieve AWS security credentials" in str(excinfo.value)
 
     @mock.patch(
-    "google.auth.metrics.python_and_auth_lib_version",
+    "rewired.auth.metrics.python_and_auth_lib_version",
     return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
     )
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_without_impersonation_ignore_default_scopes(
 self, utcnow, mock_auth_lib_value
 ):
@@ -30899,10 +30899,10 @@ assert credentials.scopes == SCOPES
 assert credentials.default_scopes == ["ignored"]
 
 @mock.patch(
-"google.auth.metrics.python_and_auth_lib_version",
+"rewired.auth.metrics.python_and_auth_lib_version",
 return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
 )
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_without_impersonation_use_default_scopes(
 self, utcnow, mock_auth_lib_value
 ):
@@ -30958,14 +30958,14 @@ assert credentials.scopes is None
 assert credentials.default_scopes == SCOPES
 
 @mock.patch(
-"google.auth.metrics.token_request_access_token_impersonate",
+"rewired.auth.metrics.token_request_access_token_impersonate",
 return_value=IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
 )
 @mock.patch(
-"google.auth.metrics.python_and_auth_lib_version",
+"rewired.auth.metrics.python_and_auth_lib_version",
 return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
 )
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_with_impersonation_ignore_default_scopes(
 self, utcnow, mock_metrics_header_value, mock_auth_lib_value
 ):
@@ -31051,14 +31051,14 @@ assert credentials.scopes == SCOPES
 assert credentials.default_scopes == ["ignored"]
 
 @mock.patch(
-"google.auth.metrics.token_request_access_token_impersonate",
+"rewired.auth.metrics.token_request_access_token_impersonate",
 return_value=IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
 )
 @mock.patch(
-"google.auth.metrics.python_and_auth_lib_version",
+"rewired.auth.metrics.python_and_auth_lib_version",
 return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
 )
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_with_impersonation_use_default_scopes(
 self, utcnow, mock_metrics_header_value, mock_auth_lib_value
 ):
@@ -31152,7 +31152,7 @@ def test_refresh_with_retrieve_subject_token_error(self):
 
     assert "Unable to retrieve AWS region" in str(excinfo.value)
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
         def test_retrieve_subject_token_success_with_supplier(self, utcnow):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -31173,7 +31173,7 @@ def test_refresh_with_retrieve_subject_token_error(self):
     aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY)
     )
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
             def test_retrieve_subject_token_success_with_supplier_session_token(self, utcnow):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -31194,7 +31194,7 @@ def test_refresh_with_retrieve_subject_token_error(self):
     aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
     )
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
                 def test_retrieve_subject_token_success_with_supplier_correct_context(self, utcnow):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -31250,10 +31250,10 @@ def test_refresh_with_retrieve_subject_token_error(self):
     assert "Test error" in str(excinfo.value)
 
     @mock.patch(
-    "google.auth.metrics.python_and_auth_lib_version",
+    "rewired.auth.metrics.python_and_auth_lib_version",
     return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
     )
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_with_supplier_with_impersonation(
 self, utcnow, mock_auth_lib_value
 ):
@@ -31341,10 +31341,10 @@ assert credentials.scopes == SCOPES
 assert credentials.default_scopes == ["ignored"]
 
 @mock.patch(
-"google.auth.metrics.python_and_auth_lib_version",
+"rewired.auth.metrics.python_and_auth_lib_version",
 return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
 )
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_with_supplier(self, utcnow, mock_auth_lib_value):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -31404,10 +31404,10 @@ def test_refresh_success_with_supplier(self, utcnow, mock_auth_lib_value):
 
 
     @mock.patch(
-    "google.auth.metrics.python_and_auth_lib_version",
+    "rewired.auth.metrics.python_and_auth_lib_version",
     return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
     )
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_without_impersonation_ignore_default_scopes(
 self, utcnow, mock_auth_lib_value
 ):
@@ -31463,10 +31463,10 @@ assert credentials.scopes == SCOPES
 assert credentials.default_scopes == ["ignored"]
 
 @mock.patch(
-"google.auth.metrics.python_and_auth_lib_version",
+"rewired.auth.metrics.python_and_auth_lib_version",
 return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
 )
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_without_impersonation_use_default_scopes(
 self, utcnow, mock_auth_lib_value
 ):
@@ -31522,14 +31522,14 @@ assert credentials.scopes is None
 assert credentials.default_scopes == SCOPES
 
 @mock.patch(
-"google.auth.metrics.token_request_access_token_impersonate",
+"rewired.auth.metrics.token_request_access_token_impersonate",
 return_value=IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
 )
 @mock.patch(
-"google.auth.metrics.python_and_auth_lib_version",
+"rewired.auth.metrics.python_and_auth_lib_version",
 return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
 )
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_with_impersonation_ignore_default_scopes(
 self, utcnow, mock_metrics_header_value, mock_auth_lib_value
 ):
@@ -31615,14 +31615,14 @@ assert credentials.scopes == SCOPES
 assert credentials.default_scopes == ["ignored"]
 
 @mock.patch(
-"google.auth.metrics.token_request_access_token_impersonate",
+"rewired.auth.metrics.token_request_access_token_impersonate",
 return_value=IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
 )
 @mock.patch(
-"google.auth.metrics.python_and_auth_lib_version",
+"rewired.auth.metrics.python_and_auth_lib_version",
 return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
 )
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_with_impersonation_use_default_scopes(
 self, utcnow, mock_metrics_header_value, mock_auth_lib_value
 ):
@@ -31737,12 +31737,12 @@ def test_refresh_with_retrieve_subject_token_error(self):
     import mock
     import pytest  # type: ignore
 
-    from google.auth import _helpers, external_account
-    from google.auth import aws
-    from google.auth import environment_vars
-    from google.auth import exceptions
-    from google.auth import transport
-    from google.auth.credentials import DEFAULT_UNIVERSE_DOMAIN
+    from rewired.auth import _helpers, external_account
+    from rewired.auth import aws
+    from rewired.auth import environment_vars
+    from rewired.auth import exceptions
+    from rewired.auth import transport
+    from rewired.auth.credentials import DEFAULT_UNIVERSE_DOMAIN
 
     IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE = (
     "gl-python/3.7 auth/1.1 auth-request-type/at cred-type/imp"
@@ -32326,7 +32326,7 @@ def test_refresh_with_retrieve_subject_token_error(self):
     @pytest.mark.parametrize(
     "region, time, credentials, original_request, signed_request", TEST_FIXTURES
     )
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_get_request_options(
 self, utcnow, region, time, credentials, original_request, signed_request
 ):
@@ -32981,7 +32981,7 @@ def test_from_info_full_options(self, mock_init):
 
     assert "Unable to determine AWS region" in str(excinfo.value)
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_temp_creds_no_environment_vars(
 self, utcnow
 ):
@@ -33041,7 +33041,7 @@ new_request.call_args_list[1][1],
 {"Content-Type": "application/json"},
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 @mock.patch.dict(os.environ, {})
 def test_retrieve_subject_token_success_temp_creds_no_environment_vars_idmsv2(
 self, utcnow
@@ -33145,7 +33145,7 @@ new_request.call_args_list[2][1],
 },
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 @mock.patch.dict(
 os.environ,
 {
@@ -33202,7 +33202,7 @@ request.call_args_list[2][1],
 },
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 @mock.patch.dict(
 os.environ,
 {
@@ -33259,7 +33259,7 @@ request.call_args_list[2][1],
 },
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 @mock.patch.dict(os.environ, {environment_vars.AWS_REGION: AWS_REGION})
 def test_retrieve_subject_token_success_temp_creds_environment_vars_missing_creds_idmsv2(
 self, utcnow
@@ -33310,7 +33310,7 @@ request.call_args_list[2][1],
 },
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 @mock.patch.dict(
 os.environ,
 {
@@ -33337,7 +33337,7 @@ def test_retrieve_subject_token_success_temp_creds_idmsv2(self, utcnow):
     credentials.retrieve_subject_token(request)
     assert not request.called
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
     def test_retrieve_subject_token_success_ipv6(self, utcnow):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -33398,7 +33398,7 @@ def test_retrieve_subject_token_success_temp_creds_idmsv2(self, utcnow):
     },
     )
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
         def test_retrieve_subject_token_session_error_idmsv2(self, utcnow):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -33428,7 +33428,7 @@ def test_retrieve_subject_token_success_temp_creds_idmsv2(self, utcnow):
     "PUT",
     )
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_permanent_creds_no_environment_vars(
 self, utcnow
 ):
@@ -33455,7 +33455,7 @@ assert subject_token == self.make_serialized_aws_signed_request(
 aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY)
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_environment_vars(self, utcnow, monkeypatch):
     monkeypatch.setenv(environment_vars.AWS_ACCESS_KEY_ID, ACCESS_KEY_ID)
     monkeypatch.setenv(environment_vars.AWS_SECRET_ACCESS_KEY, SECRET_ACCESS_KEY)
@@ -33472,7 +33472,7 @@ def test_retrieve_subject_token_success_environment_vars(self, utcnow, monkeypat
     aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
     )
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_environment_vars_with_default_region(
 self, utcnow, monkeypatch
 ):
@@ -33491,7 +33491,7 @@ assert subject_token == self.make_serialized_aws_signed_request(
 aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_environment_vars_with_both_regions_set(
 self, utcnow, monkeypatch
 ):
@@ -33514,7 +33514,7 @@ assert subject_token == self.make_serialized_aws_signed_request(
 aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_environment_vars_no_session_token(
 self, utcnow, monkeypatch
 ):
@@ -33532,7 +33532,7 @@ assert subject_token == self.make_serialized_aws_signed_request(
 aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY)
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_environment_vars_except_region(
 self, utcnow, monkeypatch
 ):
@@ -33612,10 +33612,10 @@ def test_retrieve_subject_token_error_determining_aws_region(self):
     assert "Unable to retrieve AWS security credentials" in str(excinfo.value)
 
     @mock.patch(
-    "google.auth.metrics.python_and_auth_lib_version",
+    "rewired.auth.metrics.python_and_auth_lib_version",
     return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
     )
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_without_impersonation_ignore_default_scopes(
 self, utcnow, mock_auth_lib_value
 ):
@@ -33671,10 +33671,10 @@ assert credentials.scopes == SCOPES
 assert credentials.default_scopes == ["ignored"]
 
 @mock.patch(
-"google.auth.metrics.python_and_auth_lib_version",
+"rewired.auth.metrics.python_and_auth_lib_version",
 return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
 )
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_without_impersonation_use_default_scopes(
 self, utcnow, mock_auth_lib_value
 ):
@@ -33730,14 +33730,14 @@ assert credentials.scopes is None
 assert credentials.default_scopes == SCOPES
 
 @mock.patch(
-"google.auth.metrics.token_request_access_token_impersonate",
+"rewired.auth.metrics.token_request_access_token_impersonate",
 return_value=IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
 )
 @mock.patch(
-"google.auth.metrics.python_and_auth_lib_version",
+"rewired.auth.metrics.python_and_auth_lib_version",
 return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
 )
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_with_impersonation_ignore_default_scopes(
 self, utcnow, mock_metrics_header_value, mock_auth_lib_value
 ):
@@ -33823,14 +33823,14 @@ assert credentials.scopes == SCOPES
 assert credentials.default_scopes == ["ignored"]
 
 @mock.patch(
-"google.auth.metrics.token_request_access_token_impersonate",
+"rewired.auth.metrics.token_request_access_token_impersonate",
 return_value=IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
 )
 @mock.patch(
-"google.auth.metrics.python_and_auth_lib_version",
+"rewired.auth.metrics.python_and_auth_lib_version",
 return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
 )
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_with_impersonation_use_default_scopes(
 self, utcnow, mock_metrics_header_value, mock_auth_lib_value
 ):
@@ -33924,7 +33924,7 @@ def test_refresh_with_retrieve_subject_token_error(self):
 
     assert "Unable to retrieve AWS region" in str(excinfo.value)
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
         def test_retrieve_subject_token_success_with_supplier(self, utcnow):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -33945,7 +33945,7 @@ def test_refresh_with_retrieve_subject_token_error(self):
     aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY)
     )
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
             def test_retrieve_subject_token_success_with_supplier_session_token(self, utcnow):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -33966,7 +33966,7 @@ def test_refresh_with_retrieve_subject_token_error(self):
     aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
     )
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
                 def test_retrieve_subject_token_success_with_supplier_correct_context(self, utcnow):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -34022,10 +34022,10 @@ def test_refresh_with_retrieve_subject_token_error(self):
     assert "Test error" in str(excinfo.value)
 
     @mock.patch(
-    "google.auth.metrics.python_and_auth_lib_version",
+    "rewired.auth.metrics.python_and_auth_lib_version",
     return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
     )
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_with_supplier_with_impersonation(
 self, utcnow, mock_auth_lib_value
 ):
@@ -34113,10 +34113,10 @@ assert credentials.scopes == SCOPES
 assert credentials.default_scopes == ["ignored"]
 
 @mock.patch(
-"google.auth.metrics.python_and_auth_lib_version",
+"rewired.auth.metrics.python_and_auth_lib_version",
 return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
 )
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_with_supplier(self, utcnow, mock_auth_lib_value):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -34175,7 +34175,7 @@ def test_refresh_success_with_supplier(self, utcnow, mock_auth_lib_value):
 
 
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
     def test_retrieve_subject_token_success_with_supplier(self, utcnow):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -34196,7 +34196,7 @@ def test_refresh_success_with_supplier(self, utcnow, mock_auth_lib_value):
     aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY)
     )
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
         def test_retrieve_subject_token_success_with_supplier_session_token(self, utcnow):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -34217,7 +34217,7 @@ def test_refresh_success_with_supplier(self, utcnow, mock_auth_lib_value):
     aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
     )
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
             def test_retrieve_subject_token_success_with_supplier_correct_context(self, utcnow):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -34275,12 +34275,12 @@ def test_refresh_success_with_supplier(self, utcnow, mock_auth_lib_value):
     import mock
     import pytest  # type: ignore
 
-    from google.auth import _helpers, external_account
-    from google.auth import aws
-    from google.auth import environment_vars
-    from google.auth import exceptions
-    from google.auth import transport
-    from google.auth.credentials import DEFAULT_UNIVERSE_DOMAIN
+    from rewired.auth import _helpers, external_account
+    from rewired.auth import aws
+    from rewired.auth import environment_vars
+    from rewired.auth import exceptions
+    from rewired.auth import transport
+    from rewired.auth.credentials import DEFAULT_UNIVERSE_DOMAIN
 
     IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE = (
     "gl-python/3.7 auth/1.1 auth-request-type/at cred-type/imp"
@@ -34864,7 +34864,7 @@ def test_refresh_success_with_supplier(self, utcnow, mock_auth_lib_value):
     @pytest.mark.parametrize(
     "region, time, credentials, original_request, signed_request", TEST_FIXTURES
     )
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_get_request_options(
 self, utcnow, region, time, credentials, original_request, signed_request
 ):
@@ -35519,7 +35519,7 @@ def test_from_info_full_options(self, mock_init):
 
     assert "Unable to determine AWS region" in str(excinfo.value)
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_temp_creds_no_environment_vars(
 self, utcnow
 ):
@@ -35579,7 +35579,7 @@ new_request.call_args_list[1][1],
 {"Content-Type": "application/json"},
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 @mock.patch.dict(os.environ, {})
 def test_retrieve_subject_token_success_temp_creds_no_environment_vars_idmsv2(
 self, utcnow
@@ -35683,7 +35683,7 @@ new_request.call_args_list[2][1],
 },
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 @mock.patch.dict(
 os.environ,
 {
@@ -35740,7 +35740,7 @@ request.call_args_list[2][1],
 },
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 @mock.patch.dict(
 os.environ,
 {
@@ -35797,7 +35797,7 @@ request.call_args_list[2][1],
 },
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 @mock.patch.dict(os.environ, {environment_vars.AWS_REGION: AWS_REGION})
 def test_retrieve_subject_token_success_temp_creds_environment_vars_missing_creds_idmsv2(
 self, utcnow
@@ -35848,7 +35848,7 @@ request.call_args_list[2][1],
 },
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 @mock.patch.dict(
 os.environ,
 {
@@ -35875,7 +35875,7 @@ def test_retrieve_subject_token_success_temp_creds_idmsv2(self, utcnow):
     credentials.retrieve_subject_token(request)
     assert not request.called
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
     def test_retrieve_subject_token_success_ipv6(self, utcnow):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -35936,7 +35936,7 @@ def test_retrieve_subject_token_success_temp_creds_idmsv2(self, utcnow):
     },
     )
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
         def test_retrieve_subject_token_session_error_idmsv2(self, utcnow):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -35966,7 +35966,7 @@ def test_retrieve_subject_token_success_temp_creds_idmsv2(self, utcnow):
     "PUT",
     )
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_permanent_creds_no_environment_vars(
 self, utcnow
 ):
@@ -35993,7 +35993,7 @@ assert subject_token == self.make_serialized_aws_signed_request(
 aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY)
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_environment_vars(self, utcnow, monkeypatch):
     monkeypatch.setenv(environment_vars.AWS_ACCESS_KEY_ID, ACCESS_KEY_ID)
     monkeypatch.setenv(environment_vars.AWS_SECRET_ACCESS_KEY, SECRET_ACCESS_KEY)
@@ -36010,7 +36010,7 @@ def test_retrieve_subject_token_success_environment_vars(self, utcnow, monkeypat
     aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
     )
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_environment_vars_with_default_region(
 self, utcnow, monkeypatch
 ):
@@ -36029,7 +36029,7 @@ assert subject_token == self.make_serialized_aws_signed_request(
 aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_environment_vars_with_both_regions_set(
 self, utcnow, monkeypatch
 ):
@@ -36052,7 +36052,7 @@ assert subject_token == self.make_serialized_aws_signed_request(
 aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_environment_vars_no_session_token(
 self, utcnow, monkeypatch
 ):
@@ -36070,7 +36070,7 @@ assert subject_token == self.make_serialized_aws_signed_request(
 aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY)
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_environment_vars_except_region(
 self, utcnow, monkeypatch
 ):
@@ -36150,10 +36150,10 @@ def test_retrieve_subject_token_error_determining_aws_region(self):
     assert "Unable to retrieve AWS security credentials" in str(excinfo.value)
 
     @mock.patch(
-    "google.auth.metrics.python_and_auth_lib_version",
+    "rewired.auth.metrics.python_and_auth_lib_version",
     return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
     )
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_without_impersonation_ignore_default_scopes(
 self, utcnow, mock_auth_lib_value
 ):
@@ -36209,10 +36209,10 @@ assert credentials.scopes == SCOPES
 assert credentials.default_scopes == ["ignored"]
 
 @mock.patch(
-"google.auth.metrics.python_and_auth_lib_version",
+"rewired.auth.metrics.python_and_auth_lib_version",
 return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
 )
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_without_impersonation_use_default_scopes(
 self, utcnow, mock_auth_lib_value
 ):
@@ -36268,14 +36268,14 @@ assert credentials.scopes is None
 assert credentials.default_scopes == SCOPES
 
 @mock.patch(
-"google.auth.metrics.token_request_access_token_impersonate",
+"rewired.auth.metrics.token_request_access_token_impersonate",
 return_value=IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
 )
 @mock.patch(
-"google.auth.metrics.python_and_auth_lib_version",
+"rewired.auth.metrics.python_and_auth_lib_version",
 return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
 )
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_with_impersonation_ignore_default_scopes(
 self, utcnow, mock_metrics_header_value, mock_auth_lib_value
 ):
@@ -36361,14 +36361,14 @@ assert credentials.scopes == SCOPES
 assert credentials.default_scopes == ["ignored"]
 
 @mock.patch(
-"google.auth.metrics.token_request_access_token_impersonate",
+"rewired.auth.metrics.token_request_access_token_impersonate",
 return_value=IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
 )
 @mock.patch(
-"google.auth.metrics.python_and_auth_lib_version",
+"rewired.auth.metrics.python_and_auth_lib_version",
 return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
 )
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_with_impersonation_use_default_scopes(
 self, utcnow, mock_metrics_header_value, mock_auth_lib_value
 ):
@@ -36462,7 +36462,7 @@ def test_refresh_with_retrieve_subject_token_error(self):
 
     assert "Unable to retrieve AWS region" in str(excinfo.value)
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
         def test_retrieve_subject_token_success_with_supplier(self, utcnow):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -36483,7 +36483,7 @@ def test_refresh_with_retrieve_subject_token_error(self):
     aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY)
     )
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
             def test_retrieve_subject_token_success_with_supplier_session_token(self, utcnow):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -36504,7 +36504,7 @@ def test_refresh_with_retrieve_subject_token_error(self):
     aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
     )
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
                 def test_retrieve_subject_token_success_with_supplier_correct_context(self, utcnow):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -36560,10 +36560,10 @@ def test_refresh_with_retrieve_subject_token_error(self):
     assert "Test error" in str(excinfo.value)
 
     @mock.patch(
-    "google.auth.metrics.python_and_auth_lib_version",
+    "rewired.auth.metrics.python_and_auth_lib_version",
     return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
     )
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_with_supplier_with_impersonation(
 self, utcnow, mock_auth_lib_value
 ):
@@ -36651,10 +36651,10 @@ assert credentials.scopes == SCOPES
 assert credentials.default_scopes == ["ignored"]
 
 @mock.patch(
-"google.auth.metrics.python_and_auth_lib_version",
+"rewired.auth.metrics.python_and_auth_lib_version",
 return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
 )
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_with_supplier(self, utcnow, mock_auth_lib_value):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -36752,12 +36752,12 @@ def test_refresh_success_with_supplier(self, utcnow, mock_auth_lib_value):
     import mock
     import pytest  # type: ignore
 
-    from google.auth import _helpers, external_account
-    from google.auth import aws
-    from google.auth import environment_vars
-    from google.auth import exceptions
-    from google.auth import transport
-    from google.auth.credentials import DEFAULT_UNIVERSE_DOMAIN
+    from rewired.auth import _helpers, external_account
+    from rewired.auth import aws
+    from rewired.auth import environment_vars
+    from rewired.auth import exceptions
+    from rewired.auth import transport
+    from rewired.auth.credentials import DEFAULT_UNIVERSE_DOMAIN
 
     IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE = (
     "gl-python/3.7 auth/1.1 auth-request-type/at cred-type/imp"
@@ -37341,7 +37341,7 @@ def test_refresh_success_with_supplier(self, utcnow, mock_auth_lib_value):
     @pytest.mark.parametrize(
     "region, time, credentials, original_request, signed_request", TEST_FIXTURES
     )
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_get_request_options(
 self, utcnow, region, time, credentials, original_request, signed_request
 ):
@@ -37996,7 +37996,7 @@ def test_from_info_full_options(self, mock_init):
 
     assert "Unable to determine AWS region" in str(excinfo.value)
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_temp_creds_no_environment_vars(
 self, utcnow
 ):
@@ -38056,7 +38056,7 @@ new_request.call_args_list[1][1],
 {"Content-Type": "application/json"},
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 @mock.patch.dict(os.environ, {})
 def test_retrieve_subject_token_success_temp_creds_no_environment_vars_idmsv2(
 self, utcnow
@@ -38160,7 +38160,7 @@ new_request.call_args_list[2][1],
 },
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 @mock.patch.dict(
 os.environ,
 {
@@ -38217,7 +38217,7 @@ request.call_args_list[2][1],
 },
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 @mock.patch.dict(
 os.environ,
 {
@@ -38274,7 +38274,7 @@ request.call_args_list[2][1],
 },
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 @mock.patch.dict(os.environ, {environment_vars.AWS_REGION: AWS_REGION})
 def test_retrieve_subject_token_success_temp_creds_environment_vars_missing_creds_idmsv2(
 self, utcnow
@@ -38325,7 +38325,7 @@ request.call_args_list[2][1],
 },
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 @mock.patch.dict(
 os.environ,
 {
@@ -38352,7 +38352,7 @@ def test_retrieve_subject_token_success_temp_creds_idmsv2(self, utcnow):
     credentials.retrieve_subject_token(request)
     assert not request.called
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
     def test_retrieve_subject_token_success_ipv6(self, utcnow):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -38413,7 +38413,7 @@ def test_retrieve_subject_token_success_temp_creds_idmsv2(self, utcnow):
     },
     )
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
         def test_retrieve_subject_token_session_error_idmsv2(self, utcnow):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -38443,7 +38443,7 @@ def test_retrieve_subject_token_success_temp_creds_idmsv2(self, utcnow):
     "PUT",
     )
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_permanent_creds_no_environment_vars(
 self, utcnow
 ):
@@ -38470,7 +38470,7 @@ assert subject_token == self.make_serialized_aws_signed_request(
 aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY)
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_environment_vars(self, utcnow, monkeypatch):
     monkeypatch.setenv(environment_vars.AWS_ACCESS_KEY_ID, ACCESS_KEY_ID)
     monkeypatch.setenv(environment_vars.AWS_SECRET_ACCESS_KEY, SECRET_ACCESS_KEY)
@@ -38487,7 +38487,7 @@ def test_retrieve_subject_token_success_environment_vars(self, utcnow, monkeypat
     aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
     )
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_environment_vars_with_default_region(
 self, utcnow, monkeypatch
 ):
@@ -38506,7 +38506,7 @@ assert subject_token == self.make_serialized_aws_signed_request(
 aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_environment_vars_with_both_regions_set(
 self, utcnow, monkeypatch
 ):
@@ -38529,7 +38529,7 @@ assert subject_token == self.make_serialized_aws_signed_request(
 aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_environment_vars_no_session_token(
 self, utcnow, monkeypatch
 ):
@@ -38547,7 +38547,7 @@ assert subject_token == self.make_serialized_aws_signed_request(
 aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY)
 )
 
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_retrieve_subject_token_success_environment_vars_except_region(
 self, utcnow, monkeypatch
 ):
@@ -38627,10 +38627,10 @@ def test_retrieve_subject_token_error_determining_aws_region(self):
     assert "Unable to retrieve AWS security credentials" in str(excinfo.value)
 
     @mock.patch(
-    "google.auth.metrics.python_and_auth_lib_version",
+    "rewired.auth.metrics.python_and_auth_lib_version",
     return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
     )
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_without_impersonation_ignore_default_scopes(
 self, utcnow, mock_auth_lib_value
 ):
@@ -38686,10 +38686,10 @@ assert credentials.scopes == SCOPES
 assert credentials.default_scopes == ["ignored"]
 
 @mock.patch(
-"google.auth.metrics.python_and_auth_lib_version",
+"rewired.auth.metrics.python_and_auth_lib_version",
 return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
 )
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_without_impersonation_use_default_scopes(
 self, utcnow, mock_auth_lib_value
 ):
@@ -38745,14 +38745,14 @@ assert credentials.scopes is None
 assert credentials.default_scopes == SCOPES
 
 @mock.patch(
-"google.auth.metrics.token_request_access_token_impersonate",
+"rewired.auth.metrics.token_request_access_token_impersonate",
 return_value=IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
 )
 @mock.patch(
-"google.auth.metrics.python_and_auth_lib_version",
+"rewired.auth.metrics.python_and_auth_lib_version",
 return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
 )
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_with_impersonation_ignore_default_scopes(
 self, utcnow, mock_metrics_header_value, mock_auth_lib_value
 ):
@@ -38838,14 +38838,14 @@ assert credentials.scopes == SCOPES
 assert credentials.default_scopes == ["ignored"]
 
 @mock.patch(
-"google.auth.metrics.token_request_access_token_impersonate",
+"rewired.auth.metrics.token_request_access_token_impersonate",
 return_value=IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
 )
 @mock.patch(
-"google.auth.metrics.python_and_auth_lib_version",
+"rewired.auth.metrics.python_and_auth_lib_version",
 return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
 )
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_with_impersonation_use_default_scopes(
 self, utcnow, mock_metrics_header_value, mock_auth_lib_value
 ):
@@ -38939,7 +38939,7 @@ def test_refresh_with_retrieve_subject_token_error(self):
 
     assert "Unable to retrieve AWS region" in str(excinfo.value)
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
         def test_retrieve_subject_token_success_with_supplier(self, utcnow):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -38960,7 +38960,7 @@ def test_refresh_with_retrieve_subject_token_error(self):
     aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY)
     )
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
             def test_retrieve_subject_token_success_with_supplier_session_token(self, utcnow):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -38981,7 +38981,7 @@ def test_refresh_with_retrieve_subject_token_error(self):
     aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
     )
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
                 def test_retrieve_subject_token_success_with_supplier_correct_context(self, utcnow):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -39037,10 +39037,10 @@ def test_refresh_with_retrieve_subject_token_error(self):
     assert "Test error" in str(excinfo.value)
 
     @mock.patch(
-    "google.auth.metrics.python_and_auth_lib_version",
+    "rewired.auth.metrics.python_and_auth_lib_version",
     return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
     )
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_with_supplier_with_impersonation(
 self, utcnow, mock_auth_lib_value
 ):
@@ -39128,10 +39128,10 @@ assert credentials.scopes == SCOPES
 assert credentials.default_scopes == ["ignored"]
 
 @mock.patch(
-"google.auth.metrics.python_and_auth_lib_version",
+"rewired.auth.metrics.python_and_auth_lib_version",
 return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
 )
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_with_supplier(self, utcnow, mock_auth_lib_value):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
@@ -39191,10 +39191,10 @@ def test_refresh_success_with_supplier(self, utcnow, mock_auth_lib_value):
 
 
     @mock.patch(
-    "google.auth.metrics.python_and_auth_lib_version",
+    "rewired.auth.metrics.python_and_auth_lib_version",
     return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
     )
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_with_supplier_with_impersonation(
 self, utcnow, mock_auth_lib_value
 ):
@@ -39282,10 +39282,10 @@ assert credentials.scopes == SCOPES
 assert credentials.default_scopes == ["ignored"]
 
 @mock.patch(
-"google.auth.metrics.python_and_auth_lib_version",
+"rewired.auth.metrics.python_and_auth_lib_version",
 return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
 )
-@mock.patch("google.auth._helpers.utcnow")
+@mock.patch("rewired.auth._helpers.utcnow")
 def test_refresh_success_with_supplier(self, utcnow, mock_auth_lib_value):
     utcnow.return_value = datetime.datetime.strptime(
     self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"

@@ -19,8 +19,8 @@ import mock
 from OpenSSL import crypto
 import pytest  # type: ignore
 
-from google.auth import exceptions
-from google.auth.transport import _mtls_helper
+from rewired.auth import exceptions
+from rewired.auth.transport import _mtls_helper
 
 CONTEXT_AWARE_METADATA = {"cert_provider_command": ["some command"]}
 
@@ -275,13 +275,13 @@ def check_cert_and_key(content, expected_cert, expected_key):
 
                                                                                                                                     class TestGetClientSslCredentials(object):
     @mock.patch(
-    "google.auth.transport._mtls_helper._get_workload_cert_and_key", autospec=True
+    "rewired.auth.transport._mtls_helper._get_workload_cert_and_key", autospec=True
     )
     @mock.patch(
-    "google.auth.transport._mtls_helper._run_cert_provider_command", autospec=True
+    "rewired.auth.transport._mtls_helper._run_cert_provider_command", autospec=True
     )
-    @mock.patch("google.auth.transport._mtls_helper._load_json_file", autospec=True)
-    @mock.patch("google.auth.transport._mtls_helper._check_config_path", autospec=True)
+    @mock.patch("rewired.auth.transport._mtls_helper._load_json_file", autospec=True)
+    @mock.patch("rewired.auth.transport._mtls_helper._check_config_path", autospec=True)
 def test_success_with_context_aware_metadata(
 self,
 mock_check_config_path,
@@ -300,13 +300,13 @@ assert key == b"key"
 assert passphrase is None
 
 @mock.patch(
-"google.auth.transport._mtls_helper._read_cert_and_key_files", autospec=True
+"rewired.auth.transport._mtls_helper._read_cert_and_key_files", autospec=True
 )
 @mock.patch(
-"google.auth.transport._mtls_helper._get_cert_config_path", autospec=True
+"rewired.auth.transport._mtls_helper._get_cert_config_path", autospec=True
 )
-@mock.patch("google.auth.transport._mtls_helper._load_json_file", autospec=True)
-@mock.patch("google.auth.transport._mtls_helper._check_config_path", autospec=True)
+@mock.patch("rewired.auth.transport._mtls_helper._load_json_file", autospec=True)
+@mock.patch("rewired.auth.transport._mtls_helper._check_config_path", autospec=True)
 def test_success_with_certificate_config(
 self,
 mock_check_config_path,
@@ -333,7 +333,7 @@ assert cert == pytest.public_cert_bytes
 assert key == pytest.private_key_bytes
 assert passphrase is None
 
-@mock.patch("google.auth.transport._mtls_helper._check_config_path", autospec=True)
+@mock.patch("rewired.auth.transport._mtls_helper._check_config_path", autospec=True)
 def test_success_without_metadata(self, mock_check_config_path):
     mock_check_config_path.return_value = False
     has_cert, cert, key, passphrase = _mtls_helper.get_client_ssl_credentials()
@@ -343,13 +343,13 @@ def test_success_without_metadata(self, mock_check_config_path):
     assert passphrase is None
 
     @mock.patch(
-    "google.auth.transport._mtls_helper._get_workload_cert_and_key", autospec=True
+    "rewired.auth.transport._mtls_helper._get_workload_cert_and_key", autospec=True
     )
     @mock.patch(
-    "google.auth.transport._mtls_helper._run_cert_provider_command", autospec=True
+    "rewired.auth.transport._mtls_helper._run_cert_provider_command", autospec=True
     )
-    @mock.patch("google.auth.transport._mtls_helper._load_json_file", autospec=True)
-    @mock.patch("google.auth.transport._mtls_helper._check_config_path", autospec=True)
+    @mock.patch("rewired.auth.transport._mtls_helper._load_json_file", autospec=True)
+    @mock.patch("rewired.auth.transport._mtls_helper._check_config_path", autospec=True)
 def test_success_with_encrypted_key(
 self,
 mock_check_config_path,
@@ -373,10 +373,10 @@ mock_run_cert_provider_command.assert_called_once_with(
 )
 
 @mock.patch(
-"google.auth.transport._mtls_helper._get_workload_cert_and_key", autospec=True
+"rewired.auth.transport._mtls_helper._get_workload_cert_and_key", autospec=True
 )
-@mock.patch("google.auth.transport._mtls_helper._load_json_file", autospec=True)
-@mock.patch("google.auth.transport._mtls_helper._check_config_path", autospec=True)
+@mock.patch("rewired.auth.transport._mtls_helper._load_json_file", autospec=True)
+@mock.patch("rewired.auth.transport._mtls_helper._check_config_path", autospec=True)
 def test_missing_cert_command(
 self,
 mock_check_config_path,
@@ -390,10 +390,10 @@ with pytest.raises(exceptions.ClientCertError):
     _mtls_helper.get_client_ssl_credentials()
 
     @mock.patch(
-    "google.auth.transport._mtls_helper._run_cert_provider_command", autospec=True
+    "rewired.auth.transport._mtls_helper._run_cert_provider_command", autospec=True
     )
-    @mock.patch("google.auth.transport._mtls_helper._load_json_file", autospec=True)
-    @mock.patch("google.auth.transport._mtls_helper._check_config_path", autospec=True)
+    @mock.patch("rewired.auth.transport._mtls_helper._load_json_file", autospec=True)
+    @mock.patch("rewired.auth.transport._mtls_helper._check_config_path", autospec=True)
 def test_customize_context_aware_metadata_path(
 self,
 mock_check_config_path,
@@ -418,12 +418,12 @@ mock_load_json_file.assert_called_with(context_aware_metadata_path)
 
 
 class TestGetWorkloadCertAndKey(object):
-    @mock.patch("google.auth.transport._mtls_helper._load_json_file", autospec=True)
+    @mock.patch("rewired.auth.transport._mtls_helper._load_json_file", autospec=True)
     @mock.patch(
-    "google.auth.transport._mtls_helper._get_cert_config_path", autospec=True
+    "rewired.auth.transport._mtls_helper._get_cert_config_path", autospec=True
     )
     @mock.patch(
-    "google.auth.transport._mtls_helper._read_cert_and_key_files", autospec=True
+    "rewired.auth.transport._mtls_helper._read_cert_and_key_files", autospec=True
     )
 def test_success(
 self,
@@ -450,7 +450,7 @@ assert actual_cert == pytest.public_cert_bytes
 assert actual_key == pytest.private_key_bytes
 
 @mock.patch(
-"google.auth.transport._mtls_helper._get_cert_config_path", autospec=True
+"rewired.auth.transport._mtls_helper._get_cert_config_path", autospec=True
 )
 def test_file_not_found_returns_none(self, mock_get_cert_config_path):
     mock_get_cert_config_path.return_value = None
@@ -459,9 +459,9 @@ def test_file_not_found_returns_none(self, mock_get_cert_config_path):
     assert actual_cert is None
     assert actual_key is None
 
-    @mock.patch("google.auth.transport._mtls_helper._load_json_file", autospec=True)
+    @mock.patch("rewired.auth.transport._mtls_helper._load_json_file", autospec=True)
     @mock.patch(
-    "google.auth.transport._mtls_helper._get_cert_config_path", autospec=True
+    "rewired.auth.transport._mtls_helper._get_cert_config_path", autospec=True
     )
     def test_no_cert_configs(self, mock_get_cert_config_path, mock_load_json_file):
     mock_get_cert_config_path.return_value = "/path/to/cert"
@@ -470,9 +470,9 @@ def test_file_not_found_returns_none(self, mock_get_cert_config_path):
         with pytest.raises(exceptions.ClientCertError):
     _mtls_helper._get_workload_cert_and_key("")
 
-    @mock.patch("google.auth.transport._mtls_helper._load_json_file", autospec=True)
+    @mock.patch("rewired.auth.transport._mtls_helper._load_json_file", autospec=True)
     @mock.patch(
-    "google.auth.transport._mtls_helper._get_cert_config_path", autospec=True
+    "rewired.auth.transport._mtls_helper._get_cert_config_path", autospec=True
     )
             def test_no_workload(self, mock_get_cert_config_path, mock_load_json_file):
     mock_get_cert_config_path.return_value = "/path/to/cert"
@@ -481,9 +481,9 @@ def test_file_not_found_returns_none(self, mock_get_cert_config_path):
                 with pytest.raises(exceptions.ClientCertError):
     _mtls_helper._get_workload_cert_and_key("")
 
-    @mock.patch("google.auth.transport._mtls_helper._load_json_file", autospec=True)
+    @mock.patch("rewired.auth.transport._mtls_helper._load_json_file", autospec=True)
     @mock.patch(
-    "google.auth.transport._mtls_helper._get_cert_config_path", autospec=True
+    "rewired.auth.transport._mtls_helper._get_cert_config_path", autospec=True
     )
                     def test_no_cert_file(self, mock_get_cert_config_path, mock_load_json_file):
     mock_get_cert_config_path.return_value = "/path/to/cert"
@@ -494,9 +494,9 @@ def test_file_not_found_returns_none(self, mock_get_cert_config_path):
                         with pytest.raises(exceptions.ClientCertError):
     _mtls_helper._get_workload_cert_and_key("")
 
-    @mock.patch("google.auth.transport._mtls_helper._load_json_file", autospec=True)
+    @mock.patch("rewired.auth.transport._mtls_helper._load_json_file", autospec=True)
     @mock.patch(
-    "google.auth.transport._mtls_helper._get_cert_config_path", autospec=True
+    "rewired.auth.transport._mtls_helper._get_cert_config_path", autospec=True
     )
                             def test_no_key_file(self, mock_get_cert_config_path, mock_load_json_file):
     mock_get_cert_config_path.return_value = "/path/to/cert"
@@ -603,7 +603,7 @@ def test_file_not_found_returns_none(self, mock_get_cert_config_path):
     assert key == pytest.private_key_bytes
 
     @mock.patch(
-    "google.auth.transport._mtls_helper.get_client_ssl_credentials", autospec=True
+    "rewired.auth.transport._mtls_helper.get_client_ssl_credentials", autospec=True
     )
                                                                                                                 def test_use_metadata(self, mock_get_client_ssl_credentials):
     mock_get_client_ssl_credentials.return_value = (

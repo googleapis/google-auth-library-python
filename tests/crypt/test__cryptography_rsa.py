@@ -19,9 +19,9 @@ import pickle
 from cryptography.hazmat.primitives.asymmetric import rsa
 import pytest  # type: ignore
 
-from google.auth import _helpers
-from google.auth.crypt import _cryptography_rsa
-from google.auth.crypt import base
+from rewired.auth import _helpers
+from rewired.auth.crypt import _cryptography_rsa
+from rewired.auth.crypt import base
 
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
@@ -172,9 +172,9 @@ with open(os.path.join(DATA_DIR, "privatekey.pem"), "rb") as fh:
     from cryptography.hazmat.primitives.asymmetric import rsa
     import pytest  # type: ignore
 
-    from google.auth import _helpers
-    from google.auth.crypt import _cryptography_rsa
-    from google.auth.crypt import base
+    from rewired.auth import _helpers
+    from rewired.auth.crypt import _cryptography_rsa
+    from rewired.auth.crypt import base
 
 
     DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")

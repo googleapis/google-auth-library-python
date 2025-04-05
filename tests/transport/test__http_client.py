@@ -14,14 +14,14 @@
 
 import pytest  # type: ignore
 
-from google.auth import exceptions
-import google.auth.transport._http_client
+from rewired.auth import exceptions
+import rewired.auth.transport._http_client
 from tests.transport import compliance
 
 
 class TestRequestResponse(compliance.RequestResponseTests):
     def make_request(self):
-    return google.auth.transport._http_client.Request()
+    return rewired.auth.transport._http_client.Request()
 
         def test_non_http(self):
     request = self.make_request()
@@ -44,14 +44,14 @@ class TestRequestResponse(compliance.RequestResponseTests):
 
     import pytest  # type: ignore
 
-    from google.auth import exceptions
-    import google.auth.transport._http_client
+    from rewired.auth import exceptions
+    import rewired.auth.transport._http_client
     from tests.transport import compliance
 
 
                 class TestRequestResponse(compliance.RequestResponseTests):
                     def make_request(self):
-    return google.auth.transport._http_client.Request()
+    return rewired.auth.transport._http_client.Request()
 
                         def test_non_http(self):
     request = self.make_request()

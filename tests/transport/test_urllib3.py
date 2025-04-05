@@ -21,11 +21,11 @@ import OpenSSL
 import pytest  # type: ignore
 import urllib3  # type: ignore
 
-from google.auth import environment_vars
-from google.auth import exceptions
-import google.auth.credentials
-import google.auth.transport._mtls_helper
-import google.auth.transport.urllib3
+from rewired.auth import environment_vars
+from rewired.auth import exceptions
+import rewired.auth.credentials
+import rewired.auth.transport._mtls_helper
+import rewired.auth.transport.urllib3
 from google.oauth2 import service_account
 from tests.transport import compliance
 
@@ -33,28 +33,28 @@ from tests.transport import compliance
 class TestRequestResponse(compliance.RequestResponseTests):
     def make_request(self):
     http = urllib3.PoolManager()
-    return google.auth.transport.urllib3.Request(http)
+    return rewired.auth.transport.urllib3.Request(http)
 
         def test_timeout(self):
     http = mock.create_autospec(urllib3.PoolManager)
-    request = google.auth.transport.urllib3.Request(http)
+    request = rewired.auth.transport.urllib3.Request(http)
     request(url="http://example.com", method="GET", timeout=5)
 
     assert http.request.call_args[1]["timeout"] == 5
 
 
             def test__make_default_http_with_certifi():
-    http = google.auth.transport.urllib3._make_default_http()
+    http = rewired.auth.transport.urllib3._make_default_http()
     assert "cert_reqs" in http.connection_pool_kw
 
 
-    @mock.patch.object(google.auth.transport.urllib3, "certifi", new=None)
+    @mock.patch.object(rewired.auth.transport.urllib3, "certifi", new=None)
                 def test__make_default_http_without_certifi():
-    http = google.auth.transport.urllib3._make_default_http()
+    http = rewired.auth.transport.urllib3._make_default_http()
     assert "cert_reqs" not in http.connection_pool_kw
 
 
-                    class CredentialsStub(google.auth.credentials.Credentials):
+                    class CredentialsStub(rewired.auth.credentials.Credentials):
                         def __init__(self, token="token"):
     super(CredentialsStub, self).__init__()
     self.token = token
@@ -94,21 +94,21 @@ class TestRequestResponse(compliance.RequestResponseTests):
 
                                                                     class TestMakeMutualTlsHttp(object):
                                                                         def test_success(self):
-    http = google.auth.transport.urllib3._make_mutual_tls_http(
+    http = rewired.auth.transport.urllib3._make_mutual_tls_http(
     pytest.public_cert_bytes, pytest.private_key_bytes
     )
     assert isinstance(http, urllib3.PoolManager)
 
                                                                             def test_crypto_error(self):
                                                                                 with pytest.raises(OpenSSL.crypto.Error):
-    google.auth.transport.urllib3._make_mutual_tls_http(
+    rewired.auth.transport.urllib3._make_mutual_tls_http(
     b"invalid cert", b"invalid key"
     )
 
     @mock.patch.dict("sys.modules", {"OpenSSL.crypto": None})
                                                                                     def test_import_error(self):
                                                                                         with pytest.raises(ImportError):
-    google.auth.transport.urllib3._make_mutual_tls_http(
+    rewired.auth.transport.urllib3._make_mutual_tls_http(
     pytest.public_cert_bytes, pytest.private_key_bytes
     )
 
@@ -117,7 +117,7 @@ class TestRequestResponse(compliance.RequestResponseTests):
     TEST_URL = "http://example.com"
 
                                                                                                 def test_authed_http_defaults(self):
-    authed_http = google.auth.transport.urllib3.AuthorizedHttp(
+    authed_http = rewired.auth.transport.urllib3.AuthorizedHttp(
     mock.sentinel.credentials
     )
 
@@ -129,7 +129,7 @@ class TestRequestResponse(compliance.RequestResponseTests):
     response = ResponseStub()
     http = HttpStub([response])
 
-    authed_http = google.auth.transport.urllib3.AuthorizedHttp(
+    authed_http = rewired.auth.transport.urllib3.AuthorizedHttp(
     credentials, http=http
     )
 
@@ -148,7 +148,7 @@ class TestRequestResponse(compliance.RequestResponseTests):
     # First request will 401, second request will succeed.
     http = HttpStub([ResponseStub(status=http_client.UNAUTHORIZED), final_response])
 
-    authed_http = google.auth.transport.urllib3.AuthorizedHttp(
+    authed_http = rewired.auth.transport.urllib3.AuthorizedHttp(
     credentials, http=http
     )
 
@@ -165,7 +165,7 @@ class TestRequestResponse(compliance.RequestResponseTests):
                                                                                                             def test_urlopen_no_default_host(self):
     credentials = mock.create_autospec(service_account.Credentials)
 
-    authed_http = google.auth.transport.urllib3.AuthorizedHttp(credentials)
+    authed_http = rewired.auth.transport.urllib3.AuthorizedHttp(credentials)
 
     authed_http.credentials._create_self_signed_jwt.assert_called_once_with(None)
 
@@ -173,7 +173,7 @@ class TestRequestResponse(compliance.RequestResponseTests):
     default_host = "pubsub.googleapis.com"
     credentials = mock.create_autospec(service_account.Credentials)
 
-    authed_http = google.auth.transport.urllib3.AuthorizedHttp(
+    authed_http = rewired.auth.transport.urllib3.AuthorizedHttp(
     credentials, default_host=default_host
     )
 
@@ -183,7 +183,7 @@ class TestRequestResponse(compliance.RequestResponseTests):
 
                                                                                                                     def test_proxies(self):
     http = mock.create_autospec(urllib3.PoolManager)
-    authed_http = google.auth.transport.urllib3.AuthorizedHttp(None, http=http)
+    authed_http = rewired.auth.transport.urllib3.AuthorizedHttp(None, http=http)
 
                                                                                                                         with authed_http:
     pass
@@ -194,12 +194,12 @@ class TestRequestResponse(compliance.RequestResponseTests):
     authed_http.headers = mock.sentinel.headers
     assert authed_http.headers == http.headers
 
-    @mock.patch("google.auth.transport.urllib3._make_mutual_tls_http", autospec=True)
+    @mock.patch("rewired.auth.transport.urllib3._make_mutual_tls_http", autospec=True)
                                                                                                                             def test_configure_mtls_channel_with_callback(self, mock_make_mutual_tls_http):
     callback = mock.Mock()
     callback.return_value = (pytest.public_cert_bytes, pytest.private_key_bytes)
 
-    authed_http = google.auth.transport.urllib3.AuthorizedHttp(
+    authed_http = rewired.auth.transport.urllib3.AuthorizedHttp(
     credentials=mock.Mock(), http=mock.Mock()
     )
 
@@ -214,14 +214,14 @@ class TestRequestResponse(compliance.RequestResponseTests):
     cert=pytest.public_cert_bytes, key=pytest.private_key_bytes
     )
 
-    @mock.patch("google.auth.transport.urllib3._make_mutual_tls_http", autospec=True)
+    @mock.patch("rewired.auth.transport.urllib3._make_mutual_tls_http", autospec=True)
     @mock.patch(
-    "google.auth.transport._mtls_helper.get_client_cert_and_key", autospec=True
+    "rewired.auth.transport._mtls_helper.get_client_cert_and_key", autospec=True
     )
 def test_configure_mtls_channel_with_metadata(
 self, mock_get_client_cert_and_key, mock_make_mutual_tls_http
 ):
-authed_http = google.auth.transport.urllib3.AuthorizedHttp(
+authed_http = rewired.auth.transport.urllib3.AuthorizedHttp(
 credentials=mock.Mock()
 )
 
@@ -241,14 +241,14 @@ mock_make_mutual_tls_http.assert_called_once_with(
 cert=pytest.public_cert_bytes, key=pytest.private_key_bytes
 )
 
-@mock.patch("google.auth.transport.urllib3._make_mutual_tls_http", autospec=True)
+@mock.patch("rewired.auth.transport.urllib3._make_mutual_tls_http", autospec=True)
 @mock.patch(
-"google.auth.transport._mtls_helper.get_client_cert_and_key", autospec=True
+"rewired.auth.transport._mtls_helper.get_client_cert_and_key", autospec=True
 )
 def test_configure_mtls_channel_non_mtls(
 self, mock_get_client_cert_and_key, mock_make_mutual_tls_http
 ):
-authed_http = google.auth.transport.urllib3.AuthorizedHttp(
+authed_http = rewired.auth.transport.urllib3.AuthorizedHttp(
 credentials=mock.Mock()
 )
 
@@ -263,10 +263,10 @@ mock_get_client_cert_and_key.assert_called_once()
 mock_make_mutual_tls_http.assert_not_called()
 
 @mock.patch(
-"google.auth.transport._mtls_helper.get_client_cert_and_key", autospec=True
+"rewired.auth.transport._mtls_helper.get_client_cert_and_key", autospec=True
 )
 def test_configure_mtls_channel_exceptions(self, mock_get_client_cert_and_key):
-    authed_http = google.auth.transport.urllib3.AuthorizedHttp(
+    authed_http = rewired.auth.transport.urllib3.AuthorizedHttp(
     credentials=mock.Mock()
     )
 
@@ -288,14 +288,14 @@ def test_configure_mtls_channel_exceptions(self, mock_get_client_cert_and_key):
     authed_http.configure_mtls_channel()
 
     @mock.patch(
-    "google.auth.transport._mtls_helper.get_client_cert_and_key", autospec=True
+    "rewired.auth.transport._mtls_helper.get_client_cert_and_key", autospec=True
     )
 def test_configure_mtls_channel_without_client_cert_env(
 self, get_client_cert_and_key
 ):
 callback = mock.Mock()
 
-authed_http = google.auth.transport.urllib3.AuthorizedHttp(
+authed_http = rewired.auth.transport.urllib3.AuthorizedHttp(
 credentials=mock.Mock(), http=mock.Mock()
 )
 
@@ -311,7 +311,7 @@ get_client_cert_and_key.assert_not_called()
 
 def test_clear_pool_on_del(self):
     http = mock.create_autospec(urllib3.PoolManager)
-    authed_http = google.auth.transport.urllib3.AuthorizedHttp(
+    authed_http = rewired.auth.transport.urllib3.AuthorizedHttp(
     mock.sentinel.credentials, http=http
     )
     authed_http.__del__()

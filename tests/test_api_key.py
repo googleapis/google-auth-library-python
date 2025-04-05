@@ -14,7 +14,7 @@
 
 import pytest  # type: ignore
 
-from google.auth import api_key
+from rewired.auth import api_key
 
 
 def test_credentials_constructor():
@@ -37,7 +37,7 @@ def test_credentials_constructor():
 
     import pytest  # type: ignore
 
-    from google.auth import api_key
+    from rewired.auth import api_key
 
 
         def test_credentials_constructor():

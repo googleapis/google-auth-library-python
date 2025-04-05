@@ -19,8 +19,8 @@ from mock import AsyncMock, Mock, patch
 import pytest  # type: ignore
 import pytest_asyncio  # type: ignore
 
-from google.auth import exceptions
-import google.auth.aio.transport.aiohttp as auth_aiohttp
+from rewired.auth import exceptions
+import rewired.auth.aio.transport.aiohttp as auth_aiohttp
 
 
 try:

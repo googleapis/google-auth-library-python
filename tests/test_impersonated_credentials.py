@@ -20,12 +20,12 @@ import os
 import mock
 import pytest  # type: ignore
 
-from google.auth import _helpers
-from google.auth import crypt
-from google.auth import exceptions
-from google.auth import impersonated_credentials
-from google.auth import transport
-from google.auth.impersonated_credentials import Credentials
+from rewired.auth import _helpers
+from rewired.auth import crypt
+from rewired.auth import exceptions
+from rewired.auth import impersonated_credentials
+from rewired.auth import transport
+from rewired.auth.impersonated_credentials import Credentials
 from google.oauth2 import credentials
 from google.oauth2 import service_account
 
@@ -94,7 +94,7 @@ with open(os.path.join(DATA_DIR, "privatekey.pem"), "rb") as fh:
     @pytest.fixture
                                     def mock_authorizedsession_sign():
     with mock.patch(
-    "google.auth.transport.requests.AuthorizedSession.request", autospec=True
+    "rewired.auth.transport.requests.AuthorizedSession.request", autospec=True
     ) as auth_session:
     data = {"keyId": "1", "signedBlob": "c2lnbmF0dXJl"}
     auth_session.return_value = MockResponse(data, http_client.OK)
@@ -104,7 +104,7 @@ with open(os.path.join(DATA_DIR, "privatekey.pem"), "rb") as fh:
     @pytest.fixture
                                         def mock_authorizedsession_idtoken():
     with mock.patch(
-    "google.auth.transport.requests.AuthorizedSession.request", autospec=True
+    "rewired.auth.transport.requests.AuthorizedSession.request", autospec=True
     ) as auth_session:
     data = {"token": ID_TOKEN_DATA}
     auth_session.return_value = MockResponse(data, http_client.OK)
@@ -239,7 +239,7 @@ def test_token_usage_metrics(self):
     )
 
     with mock.patch(
-    "google.auth.metrics.token_request_access_token_impersonate",
+    "rewired.auth.metrics.token_request_access_token_impersonate",
     return_value=ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
     ):
     credentials.refresh(request)
@@ -264,7 +264,7 @@ def test_token_usage_metrics(self):
     )
 
     with mock.patch(
-    "google.auth.metrics.token_request_access_token_impersonate",
+    "rewired.auth.metrics.token_request_access_token_impersonate",
     return_value=ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
     ):
     credentials.refresh(request)
@@ -409,12 +409,12 @@ def test_refresh_source_credentials(self, time_skew):
     import mock
     import pytest  # type: ignore
 
-    from google.auth import _helpers
-    from google.auth import crypt
-    from google.auth import exceptions
-    from google.auth import impersonated_credentials
-    from google.auth import transport
-    from google.auth.impersonated_credentials import Credentials
+    from rewired.auth import _helpers
+    from rewired.auth import crypt
+    from rewired.auth import exceptions
+    from rewired.auth import impersonated_credentials
+    from rewired.auth import transport
+    from rewired.auth.impersonated_credentials import Credentials
     from google.oauth2 import credentials
     from google.oauth2 import service_account
 
@@ -483,7 +483,7 @@ def test_refresh_source_credentials(self, time_skew):
     @pytest.fixture
                                                         def mock_authorizedsession_sign():
     with mock.patch(
-    "google.auth.transport.requests.AuthorizedSession.request", autospec=True
+    "rewired.auth.transport.requests.AuthorizedSession.request", autospec=True
     ) as auth_session:
     data = {"keyId": "1", "signedBlob": "c2lnbmF0dXJl"}
     auth_session.return_value = MockResponse(data, http_client.OK)
@@ -493,7 +493,7 @@ def test_refresh_source_credentials(self, time_skew):
     @pytest.fixture
                                                             def mock_authorizedsession_idtoken():
     with mock.patch(
-    "google.auth.transport.requests.AuthorizedSession.request", autospec=True
+    "rewired.auth.transport.requests.AuthorizedSession.request", autospec=True
     ) as auth_session:
     data = {"token": ID_TOKEN_DATA}
     auth_session.return_value = MockResponse(data, http_client.OK)
@@ -628,7 +628,7 @@ def test_token_usage_metrics(self):
     )
 
     with mock.patch(
-    "google.auth.metrics.token_request_access_token_impersonate",
+    "rewired.auth.metrics.token_request_access_token_impersonate",
     return_value=ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
     ):
     credentials.refresh(request)
@@ -653,7 +653,7 @@ def test_token_usage_metrics(self):
     )
 
     with mock.patch(
-    "google.auth.metrics.token_request_access_token_impersonate",
+    "rewired.auth.metrics.token_request_access_token_impersonate",
     return_value=ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
     ):
     credentials.refresh(request)
@@ -817,7 +817,7 @@ def test_refresh_source_credentials(self, time_skew):
     response.json = mock.Mock(return_value="failed to get ID token")
 
     with mock.patch(
-    "google.auth.transport.requests.AuthorizedSession.post",
+    "rewired.auth.transport.requests.AuthorizedSession.post",
     return_value=response,
     ):
                                 with pytest.raises(exceptions.RefreshError) as excinfo:
@@ -953,7 +953,7 @@ def test_sign_bytes_failure(self):
     credentials = self.make_credentials(lifetime=None)
 
     with mock.patch(
-    "google.auth.transport.requests.AuthorizedSession.request", autospec=True
+    "rewired.auth.transport.requests.AuthorizedSession.request", autospec=True
     ) as auth_session:
     data = {"error": {"code": 403, "message": "unauthorized"}}
     mock_response = MockResponse(data, http_client.UNAUTHORIZED)
@@ -968,7 +968,7 @@ def test_sign_bytes_failure(self):
     credentials = self.make_credentials(lifetime=None)
 
     with mock.patch(
-    "google.auth.transport.requests.AuthorizedSession.request", autospec=True
+    "rewired.auth.transport.requests.AuthorizedSession.request", autospec=True
     ) as auth_session:
     data = {"error": {"code": 500, "message": "internal_failure"}}
     mock_response = MockResponse(data, http_client.INTERNAL_SERVER_ERROR)
@@ -1070,11 +1070,11 @@ def test_id_token_metrics(self, mock_donor_credentials):
     )
 
     with mock.patch(
-    "google.auth.metrics.token_request_id_token_impersonate",
+    "rewired.auth.metrics.token_request_id_token_impersonate",
     return_value=ID_TOKEN_REQUEST_METRICS_HEADER_VALUE,
     ):
     with mock.patch(
-    "google.auth.transport.requests.AuthorizedSession.post", autospec=True
+    "rewired.auth.transport.requests.AuthorizedSession.post", autospec=True
     ) as mock_post:
     data = {"token": ID_TOKEN_DATA}
     mock_post.return_value = MockResponse(data, http_client.OK)
@@ -1368,12 +1368,12 @@ def test_sign_jwt_request_success(self):
     import mock
     import pytest  # type: ignore
 
-    from google.auth import _helpers
-    from google.auth import crypt
-    from google.auth import exceptions
-    from google.auth import impersonated_credentials
-    from google.auth import transport
-    from google.auth.impersonated_credentials import Credentials
+    from rewired.auth import _helpers
+    from rewired.auth import crypt
+    from rewired.auth import exceptions
+    from rewired.auth import impersonated_credentials
+    from rewired.auth import transport
+    from rewired.auth.impersonated_credentials import Credentials
     from google.oauth2 import credentials
     from google.oauth2 import service_account
 
@@ -1442,7 +1442,7 @@ def test_sign_jwt_request_success(self):
     @pytest.fixture
                                                                 def mock_authorizedsession_sign():
     with mock.patch(
-    "google.auth.transport.requests.AuthorizedSession.request", autospec=True
+    "rewired.auth.transport.requests.AuthorizedSession.request", autospec=True
     ) as auth_session:
     data = {"keyId": "1", "signedBlob": "c2lnbmF0dXJl"}
     auth_session.return_value = MockResponse(data, http_client.OK)
@@ -1452,7 +1452,7 @@ def test_sign_jwt_request_success(self):
     @pytest.fixture
                                                                     def mock_authorizedsession_idtoken():
     with mock.patch(
-    "google.auth.transport.requests.AuthorizedSession.request", autospec=True
+    "rewired.auth.transport.requests.AuthorizedSession.request", autospec=True
     ) as auth_session:
     data = {"token": ID_TOKEN_DATA}
     auth_session.return_value = MockResponse(data, http_client.OK)
@@ -1587,7 +1587,7 @@ def test_token_usage_metrics(self):
     )
 
     with mock.patch(
-    "google.auth.metrics.token_request_access_token_impersonate",
+    "rewired.auth.metrics.token_request_access_token_impersonate",
     return_value=ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
     ):
     credentials.refresh(request)
@@ -1612,7 +1612,7 @@ def test_token_usage_metrics(self):
     )
 
     with mock.patch(
-    "google.auth.metrics.token_request_access_token_impersonate",
+    "rewired.auth.metrics.token_request_access_token_impersonate",
     return_value=ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
     ):
     credentials.refresh(request)
@@ -1776,7 +1776,7 @@ def test_refresh_source_credentials(self, time_skew):
     response.json = mock.Mock(return_value="failed to get ID token")
 
     with mock.patch(
-    "google.auth.transport.requests.AuthorizedSession.post",
+    "rewired.auth.transport.requests.AuthorizedSession.post",
     return_value=response,
     ):
                                 with pytest.raises(exceptions.RefreshError) as excinfo:
@@ -1912,7 +1912,7 @@ def test_sign_bytes_failure(self):
     credentials = self.make_credentials(lifetime=None)
 
     with mock.patch(
-    "google.auth.transport.requests.AuthorizedSession.request", autospec=True
+    "rewired.auth.transport.requests.AuthorizedSession.request", autospec=True
     ) as auth_session:
     data = {"error": {"code": 403, "message": "unauthorized"}}
     mock_response = MockResponse(data, http_client.UNAUTHORIZED)
@@ -1927,7 +1927,7 @@ def test_sign_bytes_failure(self):
     credentials = self.make_credentials(lifetime=None)
 
     with mock.patch(
-    "google.auth.transport.requests.AuthorizedSession.request", autospec=True
+    "rewired.auth.transport.requests.AuthorizedSession.request", autospec=True
     ) as auth_session:
     data = {"error": {"code": 500, "message": "internal_failure"}}
     mock_response = MockResponse(data, http_client.INTERNAL_SERVER_ERROR)
@@ -2029,11 +2029,11 @@ def test_id_token_metrics(self, mock_donor_credentials):
     )
 
     with mock.patch(
-    "google.auth.metrics.token_request_id_token_impersonate",
+    "rewired.auth.metrics.token_request_id_token_impersonate",
     return_value=ID_TOKEN_REQUEST_METRICS_HEADER_VALUE,
     ):
     with mock.patch(
-    "google.auth.transport.requests.AuthorizedSession.post", autospec=True
+    "rewired.auth.transport.requests.AuthorizedSession.post", autospec=True
     ) as mock_post:
     data = {"token": ID_TOKEN_DATA}
     mock_post.return_value = MockResponse(data, http_client.OK)
@@ -2300,7 +2300,7 @@ def test_sign_jwt_request_success(self):
     response.json = mock.Mock(return_value="failed to get ID token")
 
     with mock.patch(
-    "google.auth.transport.requests.AuthorizedSession.post",
+    "rewired.auth.transport.requests.AuthorizedSession.post",
     return_value=response,
     ):
                         with pytest.raises(exceptions.RefreshError) as excinfo:
@@ -2328,12 +2328,12 @@ def test_sign_jwt_request_success(self):
     import mock
     import pytest  # type: ignore
 
-    from google.auth import _helpers
-    from google.auth import crypt
-    from google.auth import exceptions
-    from google.auth import impersonated_credentials
-    from google.auth import transport
-    from google.auth.impersonated_credentials import Credentials
+    from rewired.auth import _helpers
+    from rewired.auth import crypt
+    from rewired.auth import exceptions
+    from rewired.auth import impersonated_credentials
+    from rewired.auth import transport
+    from rewired.auth.impersonated_credentials import Credentials
     from google.oauth2 import credentials
     from google.oauth2 import service_account
 
@@ -2402,7 +2402,7 @@ def test_sign_jwt_request_success(self):
     @pytest.fixture
                                                                 def mock_authorizedsession_sign():
     with mock.patch(
-    "google.auth.transport.requests.AuthorizedSession.request", autospec=True
+    "rewired.auth.transport.requests.AuthorizedSession.request", autospec=True
     ) as auth_session:
     data = {"keyId": "1", "signedBlob": "c2lnbmF0dXJl"}
     auth_session.return_value = MockResponse(data, http_client.OK)
@@ -2412,7 +2412,7 @@ def test_sign_jwt_request_success(self):
     @pytest.fixture
                                                                     def mock_authorizedsession_idtoken():
     with mock.patch(
-    "google.auth.transport.requests.AuthorizedSession.request", autospec=True
+    "rewired.auth.transport.requests.AuthorizedSession.request", autospec=True
     ) as auth_session:
     data = {"token": ID_TOKEN_DATA}
     auth_session.return_value = MockResponse(data, http_client.OK)
@@ -2547,7 +2547,7 @@ def test_token_usage_metrics(self):
     )
 
     with mock.patch(
-    "google.auth.metrics.token_request_access_token_impersonate",
+    "rewired.auth.metrics.token_request_access_token_impersonate",
     return_value=ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
     ):
     credentials.refresh(request)
@@ -2572,7 +2572,7 @@ def test_token_usage_metrics(self):
     )
 
     with mock.patch(
-    "google.auth.metrics.token_request_access_token_impersonate",
+    "rewired.auth.metrics.token_request_access_token_impersonate",
     return_value=ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
     ):
     credentials.refresh(request)
@@ -2736,7 +2736,7 @@ def test_refresh_source_credentials(self, time_skew):
     response.json = mock.Mock(return_value="failed to get ID token")
 
     with mock.patch(
-    "google.auth.transport.requests.AuthorizedSession.post",
+    "rewired.auth.transport.requests.AuthorizedSession.post",
     return_value=response,
     ):
                                 with pytest.raises(exceptions.RefreshError) as excinfo:
@@ -2872,7 +2872,7 @@ def test_sign_bytes_failure(self):
     credentials = self.make_credentials(lifetime=None)
 
     with mock.patch(
-    "google.auth.transport.requests.AuthorizedSession.request", autospec=True
+    "rewired.auth.transport.requests.AuthorizedSession.request", autospec=True
     ) as auth_session:
     data = {"error": {"code": 403, "message": "unauthorized"}}
     mock_response = MockResponse(data, http_client.UNAUTHORIZED)
@@ -2887,7 +2887,7 @@ def test_sign_bytes_failure(self):
     credentials = self.make_credentials(lifetime=None)
 
     with mock.patch(
-    "google.auth.transport.requests.AuthorizedSession.request", autospec=True
+    "rewired.auth.transport.requests.AuthorizedSession.request", autospec=True
     ) as auth_session:
     data = {"error": {"code": 500, "message": "internal_failure"}}
     mock_response = MockResponse(data, http_client.INTERNAL_SERVER_ERROR)
@@ -2989,11 +2989,11 @@ def test_id_token_metrics(self, mock_donor_credentials):
     )
 
     with mock.patch(
-    "google.auth.metrics.token_request_id_token_impersonate",
+    "rewired.auth.metrics.token_request_id_token_impersonate",
     return_value=ID_TOKEN_REQUEST_METRICS_HEADER_VALUE,
     ):
     with mock.patch(
-    "google.auth.transport.requests.AuthorizedSession.post", autospec=True
+    "rewired.auth.transport.requests.AuthorizedSession.post", autospec=True
     ) as mock_post:
     data = {"token": ID_TOKEN_DATA}
     mock_post.return_value = MockResponse(data, http_client.OK)
@@ -3278,12 +3278,12 @@ def test_sign_jwt_request_success(self):
     import mock
     import pytest  # type: ignore
 
-    from google.auth import _helpers
-    from google.auth import crypt
-    from google.auth import exceptions
-    from google.auth import impersonated_credentials
-    from google.auth import transport
-    from google.auth.impersonated_credentials import Credentials
+    from rewired.auth import _helpers
+    from rewired.auth import crypt
+    from rewired.auth import exceptions
+    from rewired.auth import impersonated_credentials
+    from rewired.auth import transport
+    from rewired.auth.impersonated_credentials import Credentials
     from google.oauth2 import credentials
     from google.oauth2 import service_account
 
@@ -3352,7 +3352,7 @@ def test_sign_jwt_request_success(self):
     @pytest.fixture
                                                                 def mock_authorizedsession_sign():
     with mock.patch(
-    "google.auth.transport.requests.AuthorizedSession.request", autospec=True
+    "rewired.auth.transport.requests.AuthorizedSession.request", autospec=True
     ) as auth_session:
     data = {"keyId": "1", "signedBlob": "c2lnbmF0dXJl"}
     auth_session.return_value = MockResponse(data, http_client.OK)
@@ -3362,7 +3362,7 @@ def test_sign_jwt_request_success(self):
     @pytest.fixture
                                                                     def mock_authorizedsession_idtoken():
     with mock.patch(
-    "google.auth.transport.requests.AuthorizedSession.request", autospec=True
+    "rewired.auth.transport.requests.AuthorizedSession.request", autospec=True
     ) as auth_session:
     data = {"token": ID_TOKEN_DATA}
     auth_session.return_value = MockResponse(data, http_client.OK)
@@ -3497,7 +3497,7 @@ def test_token_usage_metrics(self):
     )
 
     with mock.patch(
-    "google.auth.metrics.token_request_access_token_impersonate",
+    "rewired.auth.metrics.token_request_access_token_impersonate",
     return_value=ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
     ):
     credentials.refresh(request)
@@ -3522,7 +3522,7 @@ def test_token_usage_metrics(self):
     )
 
     with mock.patch(
-    "google.auth.metrics.token_request_access_token_impersonate",
+    "rewired.auth.metrics.token_request_access_token_impersonate",
     return_value=ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
     ):
     credentials.refresh(request)
@@ -3686,7 +3686,7 @@ def test_refresh_source_credentials(self, time_skew):
     response.json = mock.Mock(return_value="failed to get ID token")
 
     with mock.patch(
-    "google.auth.transport.requests.AuthorizedSession.post",
+    "rewired.auth.transport.requests.AuthorizedSession.post",
     return_value=response,
     ):
                                 with pytest.raises(exceptions.RefreshError) as excinfo:
@@ -3822,7 +3822,7 @@ def test_sign_bytes_failure(self):
     credentials = self.make_credentials(lifetime=None)
 
     with mock.patch(
-    "google.auth.transport.requests.AuthorizedSession.request", autospec=True
+    "rewired.auth.transport.requests.AuthorizedSession.request", autospec=True
     ) as auth_session:
     data = {"error": {"code": 403, "message": "unauthorized"}}
     mock_response = MockResponse(data, http_client.UNAUTHORIZED)
@@ -3837,7 +3837,7 @@ def test_sign_bytes_failure(self):
     credentials = self.make_credentials(lifetime=None)
 
     with mock.patch(
-    "google.auth.transport.requests.AuthorizedSession.request", autospec=True
+    "rewired.auth.transport.requests.AuthorizedSession.request", autospec=True
     ) as auth_session:
     data = {"error": {"code": 500, "message": "internal_failure"}}
     mock_response = MockResponse(data, http_client.INTERNAL_SERVER_ERROR)
@@ -3939,11 +3939,11 @@ def test_id_token_metrics(self, mock_donor_credentials):
     )
 
     with mock.patch(
-    "google.auth.metrics.token_request_id_token_impersonate",
+    "rewired.auth.metrics.token_request_id_token_impersonate",
     return_value=ID_TOKEN_REQUEST_METRICS_HEADER_VALUE,
     ):
     with mock.patch(
-    "google.auth.transport.requests.AuthorizedSession.post", autospec=True
+    "rewired.auth.transport.requests.AuthorizedSession.post", autospec=True
     ) as mock_post:
     data = {"token": ID_TOKEN_DATA}
     mock_post.return_value = MockResponse(data, http_client.OK)
@@ -4308,7 +4308,7 @@ def test_sign_bytes_failure(self):
     credentials = self.make_credentials(lifetime=None)
 
     with mock.patch(
-    "google.auth.transport.requests.AuthorizedSession.request", autospec=True
+    "rewired.auth.transport.requests.AuthorizedSession.request", autospec=True
     ) as auth_session:
     data = {"error": {"code": 403, "message": "unauthorized"}}
     mock_response = MockResponse(data, http_client.UNAUTHORIZED)
@@ -4338,12 +4338,12 @@ def test_sign_bytes_failure(self):
     import mock
     import pytest  # type: ignore
 
-    from google.auth import _helpers
-    from google.auth import crypt
-    from google.auth import exceptions
-    from google.auth import impersonated_credentials
-    from google.auth import transport
-    from google.auth.impersonated_credentials import Credentials
+    from rewired.auth import _helpers
+    from rewired.auth import crypt
+    from rewired.auth import exceptions
+    from rewired.auth import impersonated_credentials
+    from rewired.auth import transport
+    from rewired.auth.impersonated_credentials import Credentials
     from google.oauth2 import credentials
     from google.oauth2 import service_account
 
@@ -4412,7 +4412,7 @@ def test_sign_bytes_failure(self):
     @pytest.fixture
                                             def mock_authorizedsession_sign():
     with mock.patch(
-    "google.auth.transport.requests.AuthorizedSession.request", autospec=True
+    "rewired.auth.transport.requests.AuthorizedSession.request", autospec=True
     ) as auth_session:
     data = {"keyId": "1", "signedBlob": "c2lnbmF0dXJl"}
     auth_session.return_value = MockResponse(data, http_client.OK)
@@ -4422,7 +4422,7 @@ def test_sign_bytes_failure(self):
     @pytest.fixture
                                                 def mock_authorizedsession_idtoken():
     with mock.patch(
-    "google.auth.transport.requests.AuthorizedSession.request", autospec=True
+    "rewired.auth.transport.requests.AuthorizedSession.request", autospec=True
     ) as auth_session:
     data = {"token": ID_TOKEN_DATA}
     auth_session.return_value = MockResponse(data, http_client.OK)
@@ -4557,7 +4557,7 @@ def test_token_usage_metrics(self):
     )
 
     with mock.patch(
-    "google.auth.metrics.token_request_access_token_impersonate",
+    "rewired.auth.metrics.token_request_access_token_impersonate",
     return_value=ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
     ):
     credentials.refresh(request)
@@ -4582,7 +4582,7 @@ def test_token_usage_metrics(self):
     )
 
     with mock.patch(
-    "google.auth.metrics.token_request_access_token_impersonate",
+    "rewired.auth.metrics.token_request_access_token_impersonate",
     return_value=ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
     ):
     credentials.refresh(request)
@@ -4746,7 +4746,7 @@ def test_refresh_source_credentials(self, time_skew):
     response.json = mock.Mock(return_value="failed to get ID token")
 
     with mock.patch(
-    "google.auth.transport.requests.AuthorizedSession.post",
+    "rewired.auth.transport.requests.AuthorizedSession.post",
     return_value=response,
     ):
                                 with pytest.raises(exceptions.RefreshError) as excinfo:
@@ -4882,7 +4882,7 @@ def test_sign_bytes_failure(self):
     credentials = self.make_credentials(lifetime=None)
 
     with mock.patch(
-    "google.auth.transport.requests.AuthorizedSession.request", autospec=True
+    "rewired.auth.transport.requests.AuthorizedSession.request", autospec=True
     ) as auth_session:
     data = {"error": {"code": 403, "message": "unauthorized"}}
     mock_response = MockResponse(data, http_client.UNAUTHORIZED)
@@ -4897,7 +4897,7 @@ def test_sign_bytes_failure(self):
     credentials = self.make_credentials(lifetime=None)
 
     with mock.patch(
-    "google.auth.transport.requests.AuthorizedSession.request", autospec=True
+    "rewired.auth.transport.requests.AuthorizedSession.request", autospec=True
     ) as auth_session:
     data = {"error": {"code": 500, "message": "internal_failure"}}
     mock_response = MockResponse(data, http_client.INTERNAL_SERVER_ERROR)
@@ -4999,11 +4999,11 @@ def test_id_token_metrics(self, mock_donor_credentials):
     )
 
     with mock.patch(
-    "google.auth.metrics.token_request_id_token_impersonate",
+    "rewired.auth.metrics.token_request_id_token_impersonate",
     return_value=ID_TOKEN_REQUEST_METRICS_HEADER_VALUE,
     ):
     with mock.patch(
-    "google.auth.transport.requests.AuthorizedSession.post", autospec=True
+    "rewired.auth.transport.requests.AuthorizedSession.post", autospec=True
     ) as mock_post:
     data = {"token": ID_TOKEN_DATA}
     mock_post.return_value = MockResponse(data, http_client.OK)
@@ -5259,7 +5259,7 @@ def test_sign_jwt_request_success(self):
     credentials = self.make_credentials(lifetime=None)
 
     with mock.patch(
-    "google.auth.transport.requests.AuthorizedSession.request", autospec=True
+    "rewired.auth.transport.requests.AuthorizedSession.request", autospec=True
     ) as auth_session:
     data = {"error": {"code": 500, "message": "internal_failure"}}
     mock_response = MockResponse(data, http_client.INTERNAL_SERVER_ERROR)
@@ -5289,12 +5289,12 @@ def test_sign_jwt_request_success(self):
     import mock
     import pytest  # type: ignore
 
-    from google.auth import _helpers
-    from google.auth import crypt
-    from google.auth import exceptions
-    from google.auth import impersonated_credentials
-    from google.auth import transport
-    from google.auth.impersonated_credentials import Credentials
+    from rewired.auth import _helpers
+    from rewired.auth import crypt
+    from rewired.auth import exceptions
+    from rewired.auth import impersonated_credentials
+    from rewired.auth import transport
+    from rewired.auth.impersonated_credentials import Credentials
     from google.oauth2 import credentials
     from google.oauth2 import service_account
 
@@ -5363,7 +5363,7 @@ def test_sign_jwt_request_success(self):
     @pytest.fixture
                                                                 def mock_authorizedsession_sign():
     with mock.patch(
-    "google.auth.transport.requests.AuthorizedSession.request", autospec=True
+    "rewired.auth.transport.requests.AuthorizedSession.request", autospec=True
     ) as auth_session:
     data = {"keyId": "1", "signedBlob": "c2lnbmF0dXJl"}
     auth_session.return_value = MockResponse(data, http_client.OK)
@@ -5373,7 +5373,7 @@ def test_sign_jwt_request_success(self):
     @pytest.fixture
                                                                     def mock_authorizedsession_idtoken():
     with mock.patch(
-    "google.auth.transport.requests.AuthorizedSession.request", autospec=True
+    "rewired.auth.transport.requests.AuthorizedSession.request", autospec=True
     ) as auth_session:
     data = {"token": ID_TOKEN_DATA}
     auth_session.return_value = MockResponse(data, http_client.OK)
@@ -5508,7 +5508,7 @@ def test_token_usage_metrics(self):
     )
 
     with mock.patch(
-    "google.auth.metrics.token_request_access_token_impersonate",
+    "rewired.auth.metrics.token_request_access_token_impersonate",
     return_value=ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
     ):
     credentials.refresh(request)
@@ -5533,7 +5533,7 @@ def test_token_usage_metrics(self):
     )
 
     with mock.patch(
-    "google.auth.metrics.token_request_access_token_impersonate",
+    "rewired.auth.metrics.token_request_access_token_impersonate",
     return_value=ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
     ):
     credentials.refresh(request)
@@ -5697,7 +5697,7 @@ def test_refresh_source_credentials(self, time_skew):
     response.json = mock.Mock(return_value="failed to get ID token")
 
     with mock.patch(
-    "google.auth.transport.requests.AuthorizedSession.post",
+    "rewired.auth.transport.requests.AuthorizedSession.post",
     return_value=response,
     ):
                                 with pytest.raises(exceptions.RefreshError) as excinfo:
@@ -5833,7 +5833,7 @@ def test_sign_bytes_failure(self):
     credentials = self.make_credentials(lifetime=None)
 
     with mock.patch(
-    "google.auth.transport.requests.AuthorizedSession.request", autospec=True
+    "rewired.auth.transport.requests.AuthorizedSession.request", autospec=True
     ) as auth_session:
     data = {"error": {"code": 403, "message": "unauthorized"}}
     mock_response = MockResponse(data, http_client.UNAUTHORIZED)
@@ -5848,7 +5848,7 @@ def test_sign_bytes_failure(self):
     credentials = self.make_credentials(lifetime=None)
 
     with mock.patch(
-    "google.auth.transport.requests.AuthorizedSession.request", autospec=True
+    "rewired.auth.transport.requests.AuthorizedSession.request", autospec=True
     ) as auth_session:
     data = {"error": {"code": 500, "message": "internal_failure"}}
     mock_response = MockResponse(data, http_client.INTERNAL_SERVER_ERROR)
@@ -5950,11 +5950,11 @@ def test_id_token_metrics(self, mock_donor_credentials):
     )
 
     with mock.patch(
-    "google.auth.metrics.token_request_id_token_impersonate",
+    "rewired.auth.metrics.token_request_id_token_impersonate",
     return_value=ID_TOKEN_REQUEST_METRICS_HEADER_VALUE,
     ):
     with mock.patch(
-    "google.auth.transport.requests.AuthorizedSession.post", autospec=True
+    "rewired.auth.transport.requests.AuthorizedSession.post", autospec=True
     ) as mock_post:
     data = {"token": ID_TOKEN_DATA}
     mock_post.return_value = MockResponse(data, http_client.OK)
@@ -6297,11 +6297,11 @@ def test_id_token_metrics(self, mock_donor_credentials):
     )
 
     with mock.patch(
-    "google.auth.metrics.token_request_id_token_impersonate",
+    "rewired.auth.metrics.token_request_id_token_impersonate",
     return_value=ID_TOKEN_REQUEST_METRICS_HEADER_VALUE,
     ):
     with mock.patch(
-    "google.auth.transport.requests.AuthorizedSession.post", autospec=True
+    "rewired.auth.transport.requests.AuthorizedSession.post", autospec=True
     ) as mock_post:
     data = {"token": ID_TOKEN_DATA}
     mock_post.return_value = MockResponse(data, http_client.OK)
@@ -6451,12 +6451,12 @@ with pytest.raises(exceptions.GoogleAuthError) as excinfo:
     import mock
     import pytest  # type: ignore
 
-    from google.auth import _helpers
-    from google.auth import crypt
-    from google.auth import exceptions
-    from google.auth import impersonated_credentials
-    from google.auth import transport
-    from google.auth.impersonated_credentials import Credentials
+    from rewired.auth import _helpers
+    from rewired.auth import crypt
+    from rewired.auth import exceptions
+    from rewired.auth import impersonated_credentials
+    from rewired.auth import transport
+    from rewired.auth.impersonated_credentials import Credentials
     from google.oauth2 import credentials
     from google.oauth2 import service_account
 
@@ -6525,7 +6525,7 @@ with pytest.raises(exceptions.GoogleAuthError) as excinfo:
     @pytest.fixture
                                         def mock_authorizedsession_sign():
     with mock.patch(
-    "google.auth.transport.requests.AuthorizedSession.request", autospec=True
+    "rewired.auth.transport.requests.AuthorizedSession.request", autospec=True
     ) as auth_session:
     data = {"keyId": "1", "signedBlob": "c2lnbmF0dXJl"}
     auth_session.return_value = MockResponse(data, http_client.OK)
@@ -6535,7 +6535,7 @@ with pytest.raises(exceptions.GoogleAuthError) as excinfo:
     @pytest.fixture
                                             def mock_authorizedsession_idtoken():
     with mock.patch(
-    "google.auth.transport.requests.AuthorizedSession.request", autospec=True
+    "rewired.auth.transport.requests.AuthorizedSession.request", autospec=True
     ) as auth_session:
     data = {"token": ID_TOKEN_DATA}
     auth_session.return_value = MockResponse(data, http_client.OK)
@@ -6670,7 +6670,7 @@ def test_token_usage_metrics(self):
     )
 
     with mock.patch(
-    "google.auth.metrics.token_request_access_token_impersonate",
+    "rewired.auth.metrics.token_request_access_token_impersonate",
     return_value=ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
     ):
     credentials.refresh(request)
@@ -6695,7 +6695,7 @@ def test_token_usage_metrics(self):
     )
 
     with mock.patch(
-    "google.auth.metrics.token_request_access_token_impersonate",
+    "rewired.auth.metrics.token_request_access_token_impersonate",
     return_value=ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
     ):
     credentials.refresh(request)
@@ -6859,7 +6859,7 @@ def test_refresh_source_credentials(self, time_skew):
     response.json = mock.Mock(return_value="failed to get ID token")
 
     with mock.patch(
-    "google.auth.transport.requests.AuthorizedSession.post",
+    "rewired.auth.transport.requests.AuthorizedSession.post",
     return_value=response,
     ):
                                 with pytest.raises(exceptions.RefreshError) as excinfo:
@@ -6995,7 +6995,7 @@ def test_sign_bytes_failure(self):
     credentials = self.make_credentials(lifetime=None)
 
     with mock.patch(
-    "google.auth.transport.requests.AuthorizedSession.request", autospec=True
+    "rewired.auth.transport.requests.AuthorizedSession.request", autospec=True
     ) as auth_session:
     data = {"error": {"code": 403, "message": "unauthorized"}}
     mock_response = MockResponse(data, http_client.UNAUTHORIZED)
@@ -7010,7 +7010,7 @@ def test_sign_bytes_failure(self):
     credentials = self.make_credentials(lifetime=None)
 
     with mock.patch(
-    "google.auth.transport.requests.AuthorizedSession.request", autospec=True
+    "rewired.auth.transport.requests.AuthorizedSession.request", autospec=True
     ) as auth_session:
     data = {"error": {"code": 500, "message": "internal_failure"}}
     mock_response = MockResponse(data, http_client.INTERNAL_SERVER_ERROR)
@@ -7112,11 +7112,11 @@ def test_id_token_metrics(self, mock_donor_credentials):
     )
 
     with mock.patch(
-    "google.auth.metrics.token_request_id_token_impersonate",
+    "rewired.auth.metrics.token_request_id_token_impersonate",
     return_value=ID_TOKEN_REQUEST_METRICS_HEADER_VALUE,
     ):
     with mock.patch(
-    "google.auth.transport.requests.AuthorizedSession.post", autospec=True
+    "rewired.auth.transport.requests.AuthorizedSession.post", autospec=True
     ) as mock_post:
     data = {"token": ID_TOKEN_DATA}
     mock_post.return_value = MockResponse(data, http_client.OK)
@@ -7482,12 +7482,12 @@ def test_sign_jwt_request_success(self):
     import mock
     import pytest  # type: ignore
 
-    from google.auth import _helpers
-    from google.auth import crypt
-    from google.auth import exceptions
-    from google.auth import impersonated_credentials
-    from google.auth import transport
-    from google.auth.impersonated_credentials import Credentials
+    from rewired.auth import _helpers
+    from rewired.auth import crypt
+    from rewired.auth import exceptions
+    from rewired.auth import impersonated_credentials
+    from rewired.auth import transport
+    from rewired.auth.impersonated_credentials import Credentials
     from google.oauth2 import credentials
     from google.oauth2 import service_account
 
@@ -7556,7 +7556,7 @@ def test_sign_jwt_request_success(self):
     @pytest.fixture
                                                 def mock_authorizedsession_sign():
     with mock.patch(
-    "google.auth.transport.requests.AuthorizedSession.request", autospec=True
+    "rewired.auth.transport.requests.AuthorizedSession.request", autospec=True
     ) as auth_session:
     data = {"keyId": "1", "signedBlob": "c2lnbmF0dXJl"}
     auth_session.return_value = MockResponse(data, http_client.OK)
@@ -7566,7 +7566,7 @@ def test_sign_jwt_request_success(self):
     @pytest.fixture
                                                     def mock_authorizedsession_idtoken():
     with mock.patch(
-    "google.auth.transport.requests.AuthorizedSession.request", autospec=True
+    "rewired.auth.transport.requests.AuthorizedSession.request", autospec=True
     ) as auth_session:
     data = {"token": ID_TOKEN_DATA}
     auth_session.return_value = MockResponse(data, http_client.OK)
@@ -7701,7 +7701,7 @@ def test_token_usage_metrics(self):
     )
 
     with mock.patch(
-    "google.auth.metrics.token_request_access_token_impersonate",
+    "rewired.auth.metrics.token_request_access_token_impersonate",
     return_value=ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
     ):
     credentials.refresh(request)
@@ -7726,7 +7726,7 @@ def test_token_usage_metrics(self):
     )
 
     with mock.patch(
-    "google.auth.metrics.token_request_access_token_impersonate",
+    "rewired.auth.metrics.token_request_access_token_impersonate",
     return_value=ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
     ):
     credentials.refresh(request)
@@ -7890,7 +7890,7 @@ def test_refresh_source_credentials(self, time_skew):
     response.json = mock.Mock(return_value="failed to get ID token")
 
     with mock.patch(
-    "google.auth.transport.requests.AuthorizedSession.post",
+    "rewired.auth.transport.requests.AuthorizedSession.post",
     return_value=response,
     ):
                                 with pytest.raises(exceptions.RefreshError) as excinfo:
@@ -8026,7 +8026,7 @@ def test_sign_bytes_failure(self):
     credentials = self.make_credentials(lifetime=None)
 
     with mock.patch(
-    "google.auth.transport.requests.AuthorizedSession.request", autospec=True
+    "rewired.auth.transport.requests.AuthorizedSession.request", autospec=True
     ) as auth_session:
     data = {"error": {"code": 403, "message": "unauthorized"}}
     mock_response = MockResponse(data, http_client.UNAUTHORIZED)
@@ -8041,7 +8041,7 @@ def test_sign_bytes_failure(self):
     credentials = self.make_credentials(lifetime=None)
 
     with mock.patch(
-    "google.auth.transport.requests.AuthorizedSession.request", autospec=True
+    "rewired.auth.transport.requests.AuthorizedSession.request", autospec=True
     ) as auth_session:
     data = {"error": {"code": 500, "message": "internal_failure"}}
     mock_response = MockResponse(data, http_client.INTERNAL_SERVER_ERROR)
@@ -8143,11 +8143,11 @@ def test_id_token_metrics(self, mock_donor_credentials):
     )
 
     with mock.patch(
-    "google.auth.metrics.token_request_id_token_impersonate",
+    "rewired.auth.metrics.token_request_id_token_impersonate",
     return_value=ID_TOKEN_REQUEST_METRICS_HEADER_VALUE,
     ):
     with mock.patch(
-    "google.auth.transport.requests.AuthorizedSession.post", autospec=True
+    "rewired.auth.transport.requests.AuthorizedSession.post", autospec=True
     ) as mock_post:
     data = {"token": ID_TOKEN_DATA}
     mock_post.return_value = MockResponse(data, http_client.OK)
@@ -8433,12 +8433,12 @@ def test_sign_jwt_request_success(self):
     import mock
     import pytest  # type: ignore
 
-    from google.auth import _helpers
-    from google.auth import crypt
-    from google.auth import exceptions
-    from google.auth import impersonated_credentials
-    from google.auth import transport
-    from google.auth.impersonated_credentials import Credentials
+    from rewired.auth import _helpers
+    from rewired.auth import crypt
+    from rewired.auth import exceptions
+    from rewired.auth import impersonated_credentials
+    from rewired.auth import transport
+    from rewired.auth.impersonated_credentials import Credentials
     from google.oauth2 import credentials
     from google.oauth2 import service_account
 
@@ -8507,7 +8507,7 @@ def test_sign_jwt_request_success(self):
     @pytest.fixture
                                                                 def mock_authorizedsession_sign():
     with mock.patch(
-    "google.auth.transport.requests.AuthorizedSession.request", autospec=True
+    "rewired.auth.transport.requests.AuthorizedSession.request", autospec=True
     ) as auth_session:
     data = {"keyId": "1", "signedBlob": "c2lnbmF0dXJl"}
     auth_session.return_value = MockResponse(data, http_client.OK)
@@ -8517,7 +8517,7 @@ def test_sign_jwt_request_success(self):
     @pytest.fixture
                                                                     def mock_authorizedsession_idtoken():
     with mock.patch(
-    "google.auth.transport.requests.AuthorizedSession.request", autospec=True
+    "rewired.auth.transport.requests.AuthorizedSession.request", autospec=True
     ) as auth_session:
     data = {"token": ID_TOKEN_DATA}
     auth_session.return_value = MockResponse(data, http_client.OK)
@@ -8652,7 +8652,7 @@ def test_token_usage_metrics(self):
     )
 
     with mock.patch(
-    "google.auth.metrics.token_request_access_token_impersonate",
+    "rewired.auth.metrics.token_request_access_token_impersonate",
     return_value=ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
     ):
     credentials.refresh(request)
@@ -8677,7 +8677,7 @@ def test_token_usage_metrics(self):
     )
 
     with mock.patch(
-    "google.auth.metrics.token_request_access_token_impersonate",
+    "rewired.auth.metrics.token_request_access_token_impersonate",
     return_value=ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
     ):
     credentials.refresh(request)
@@ -8841,7 +8841,7 @@ def test_refresh_source_credentials(self, time_skew):
     response.json = mock.Mock(return_value="failed to get ID token")
 
     with mock.patch(
-    "google.auth.transport.requests.AuthorizedSession.post",
+    "rewired.auth.transport.requests.AuthorizedSession.post",
     return_value=response,
     ):
                                 with pytest.raises(exceptions.RefreshError) as excinfo:
@@ -8977,7 +8977,7 @@ def test_sign_bytes_failure(self):
     credentials = self.make_credentials(lifetime=None)
 
     with mock.patch(
-    "google.auth.transport.requests.AuthorizedSession.request", autospec=True
+    "rewired.auth.transport.requests.AuthorizedSession.request", autospec=True
     ) as auth_session:
     data = {"error": {"code": 403, "message": "unauthorized"}}
     mock_response = MockResponse(data, http_client.UNAUTHORIZED)
@@ -8992,7 +8992,7 @@ def test_sign_bytes_failure(self):
     credentials = self.make_credentials(lifetime=None)
 
     with mock.patch(
-    "google.auth.transport.requests.AuthorizedSession.request", autospec=True
+    "rewired.auth.transport.requests.AuthorizedSession.request", autospec=True
     ) as auth_session:
     data = {"error": {"code": 500, "message": "internal_failure"}}
     mock_response = MockResponse(data, http_client.INTERNAL_SERVER_ERROR)
@@ -9094,11 +9094,11 @@ def test_id_token_metrics(self, mock_donor_credentials):
     )
 
     with mock.patch(
-    "google.auth.metrics.token_request_id_token_impersonate",
+    "rewired.auth.metrics.token_request_id_token_impersonate",
     return_value=ID_TOKEN_REQUEST_METRICS_HEADER_VALUE,
     ):
     with mock.patch(
-    "google.auth.transport.requests.AuthorizedSession.post", autospec=True
+    "rewired.auth.transport.requests.AuthorizedSession.post", autospec=True
     ) as mock_post:
     data = {"token": ID_TOKEN_DATA}
     mock_post.return_value = MockResponse(data, http_client.OK)

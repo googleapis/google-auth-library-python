@@ -19,17 +19,17 @@ import time
 import mock
 import pytest  # type: ignore
 
-from google.auth import _helpers
-from google.auth import credentials
-from google.auth import environment_vars
-from google.auth import exceptions
-from google.auth import transport
+from rewired.auth import _helpers
+from rewired.auth import credentials
+from rewired.auth import environment_vars
+from rewired.auth import exceptions
+from rewired.auth import transport
 from google.oauth2 import service_account
 
 try:
     # pylint: disable=ungrouped-imports
     import grpc  # type: ignore
-    import google.auth.transport.grpc
+    import rewired.auth.transport.grpc
 
     HAS_GRPC = True
     except ImportError:  # pragma: NO COVER
@@ -63,7 +63,7 @@ try:
     credentials = CredentialsStub()
     request = mock.create_autospec(transport.Request)
 
-    plugin = google.auth.transport.grpc.AuthMetadataPlugin(credentials, request)
+    plugin = rewired.auth.transport.grpc.AuthMetadataPlugin(credentials, request)
 
     context = mock.create_autospec(grpc.AuthMetadataContext, instance=True)
     context.method_name = mock.sentinel.method_name
@@ -83,7 +83,7 @@ try:
     credentials.expiry = datetime.datetime.min + _helpers.REFRESH_THRESHOLD
     request = mock.create_autospec(transport.Request)
 
-    plugin = google.auth.transport.grpc.AuthMetadataPlugin(credentials, request)
+    plugin = rewired.auth.transport.grpc.AuthMetadataPlugin(credentials, request)
 
     context = mock.create_autospec(grpc.AuthMetadataContext, instance=True)
     context.method_name = mock.sentinel.method_name
@@ -103,7 +103,7 @@ try:
     credentials = mock.create_autospec(service_account.Credentials)
     request = mock.create_autospec(transport.Request)
 
-    plugin = google.auth.transport.grpc.AuthMetadataPlugin(credentials, request)
+    plugin = rewired.auth.transport.grpc.AuthMetadataPlugin(credentials, request)
 
     context = mock.create_autospec(grpc.AuthMetadataContext, instance=True)
     context.method_name = "methodName"
@@ -118,7 +118,7 @@ try:
     request = mock.create_autospec(transport.Request)
 
     default_host = "pubsub.googleapis.com"
-    plugin = google.auth.transport.grpc.AuthMetadataPlugin(
+    plugin = rewired.auth.transport.grpc.AuthMetadataPlugin(
     credentials, request, default_host=default_host
     )
 
@@ -134,15 +134,15 @@ try:
 
 
     @mock.patch(
-    "google.auth.transport._mtls_helper.get_client_ssl_credentials", autospec=True
+    "rewired.auth.transport._mtls_helper.get_client_ssl_credentials", autospec=True
     )
     @mock.patch("grpc.composite_channel_credentials", autospec=True)
     @mock.patch("grpc.metadata_call_credentials", autospec=True)
     @mock.patch("grpc.ssl_channel_credentials", autospec=True)
     @mock.patch("grpc.secure_channel", autospec=True)
                                                 class TestSecureAuthorizedChannel(object):
-    @mock.patch("google.auth.transport._mtls_helper._load_json_file", autospec=True)
-    @mock.patch("google.auth.transport._mtls_helper._check_config_path", autospec=True)
+    @mock.patch("rewired.auth.transport._mtls_helper._load_json_file", autospec=True)
+    @mock.patch("rewired.auth.transport._mtls_helper._check_config_path", autospec=True)
 def test_secure_authorized_channel_adc(
 self,
 check_config_path,
@@ -172,13 +172,13 @@ channel = None
 with mock.patch.dict(
 os.environ, {environment_vars.GOOGLE_API_USE_CLIENT_CERTIFICATE: "true"}
 ):
-channel = google.auth.transport.grpc.secure_authorized_channel(
+channel = rewired.auth.transport.grpc.secure_authorized_channel(
 credentials, request, target, options=mock.sentinel.options
 )
 
 # Check the auth plugin construction.
 auth_plugin = metadata_call_credentials.call_args[0][0]
-assert isinstance(auth_plugin, google.auth.transport.grpc.AuthMetadataPlugin)
+assert isinstance(auth_plugin, rewired.auth.transport.grpc.AuthMetadataPlugin)
 assert auth_plugin._credentials == credentials
 assert auth_plugin._request == request
 
@@ -200,7 +200,7 @@ options=mock.sentinel.options,
 )
 assert channel == secure_channel.return_value
 
-@mock.patch("google.auth.transport.grpc.SslCredentials", autospec=True)
+@mock.patch("rewired.auth.transport.grpc.SslCredentials", autospec=True)
 def test_secure_authorized_channel_adc_without_client_cert_env(
 self,
 ssl_credentials_adc_method,
@@ -216,13 +216,13 @@ credentials = CredentialsStub()
 request = mock.create_autospec(transport.Request)
 target = "example.com:80"
 
-channel = google.auth.transport.grpc.secure_authorized_channel(
+channel = rewired.auth.transport.grpc.secure_authorized_channel(
 credentials, request, target, options=mock.sentinel.options
 )
 
 # Check the auth plugin construction.
 auth_plugin = metadata_call_credentials.call_args[0][0]
-assert isinstance(auth_plugin, google.auth.transport.grpc.AuthMetadataPlugin)
+assert isinstance(auth_plugin, rewired.auth.transport.grpc.AuthMetadataPlugin)
 assert auth_plugin._credentials == credentials
 assert auth_plugin._request == request
 
@@ -256,7 +256,7 @@ request = mock.Mock()
 target = "example.com:80"
 ssl_credentials = mock.Mock()
 
-google.auth.transport.grpc.secure_authorized_channel(
+rewired.auth.transport.grpc.secure_authorized_channel(
 credentials, request, target, ssl_credentials=ssl_credentials
 )
 
@@ -287,7 +287,7 @@ ssl_credentials = mock.Mock()
 client_cert_callback = mock.Mock()
 
 with pytest.raises(ValueError):
-    google.auth.transport.grpc.secure_authorized_channel(
+    rewired.auth.transport.grpc.secure_authorized_channel(
     credentials,
     request,
     target,
@@ -312,7 +312,7 @@ client_cert_callback.return_value = (PUBLIC_CERT_BYTES, PRIVATE_KEY_BYTES)
 with mock.patch.dict(
 os.environ, {environment_vars.GOOGLE_API_USE_CLIENT_CERTIFICATE: "true"}
 ):
-google.auth.transport.grpc.secure_authorized_channel(
+rewired.auth.transport.grpc.secure_authorized_channel(
 credentials, request, target, client_cert_callback=client_cert_callback
 )
 
@@ -328,8 +328,8 @@ composite_channel_credentials.assert_called_once_with(
 ssl_channel_credentials.return_value, metadata_call_credentials.return_value
 )
 
-@mock.patch("google.auth.transport._mtls_helper._load_json_file", autospec=True)
-@mock.patch("google.auth.transport._mtls_helper._check_config_path", autospec=True)
+@mock.patch("rewired.auth.transport._mtls_helper._load_json_file", autospec=True)
+@mock.patch("rewired.auth.transport._mtls_helper._check_config_path", autospec=True)
 def test_secure_authorized_channel_with_client_cert_callback_failure(
 self,
 check_config_path,
@@ -351,7 +351,7 @@ with pytest.raises(Exception) as excinfo:
     with mock.patch.dict(
     os.environ, {environment_vars.GOOGLE_API_USE_CLIENT_CERTIFICATE: "true"}
     ):
-    google.auth.transport.grpc.secure_authorized_channel(
+    rewired.auth.transport.grpc.secure_authorized_channel(
     credentials,
     request,
     target,
@@ -375,7 +375,7 @@ request = mock.Mock()
 target = "example.com:80"
 client_cert_callback = mock.Mock()
 
-google.auth.transport.grpc.secure_authorized_channel(
+rewired.auth.transport.grpc.secure_authorized_channel(
 credentials, request, target, client_cert_callback=client_cert_callback
 )
 
@@ -393,10 +393,10 @@ ssl_channel_credentials.return_value, metadata_call_credentials.return_value
 
 @mock.patch("grpc.ssl_channel_credentials", autospec=True)
 @mock.patch(
-"google.auth.transport._mtls_helper.get_client_ssl_credentials", autospec=True
+"rewired.auth.transport._mtls_helper.get_client_ssl_credentials", autospec=True
 )
-@mock.patch("google.auth.transport._mtls_helper._load_json_file", autospec=True)
-@mock.patch("google.auth.transport._mtls_helper._check_config_path", autospec=True)
+@mock.patch("rewired.auth.transport._mtls_helper._load_json_file", autospec=True)
+@mock.patch("rewired.auth.transport._mtls_helper._check_config_path", autospec=True)
 class TestSslCredentials(object):
     def test_no_context_aware_metadata(
 self,
@@ -411,7 +411,7 @@ mock_check_config_path.return_value = None
 with mock.patch.dict(
 os.environ, {environment_vars.GOOGLE_API_USE_CLIENT_CERTIFICATE: "true"}
 ):
-ssl_credentials = google.auth.transport.grpc.SslCredentials()
+ssl_credentials = rewired.auth.transport.grpc.SslCredentials()
 
 # Since no context aware metadata is found, we wouldn't call
 # get_client_ssl_credentials, and the SSL channel credentials created is
@@ -438,7 +438,7 @@ with pytest.raises(exceptions.MutualTLSChannelError):
     with mock.patch.dict(
     os.environ, {environment_vars.GOOGLE_API_USE_CLIENT_CERTIFICATE: "true"}
     ):
-    assert google.auth.transport.grpc.SslCredentials().ssl_credentials
+    assert rewired.auth.transport.grpc.SslCredentials().ssl_credentials
 
 def test_get_client_ssl_credentials_success(
 self,
@@ -459,7 +459,7 @@ None,
 with mock.patch.dict(
 os.environ, {environment_vars.GOOGLE_API_USE_CLIENT_CERTIFICATE: "true"}
 ):
-ssl_credentials = google.auth.transport.grpc.SslCredentials()
+ssl_credentials = rewired.auth.transport.grpc.SslCredentials()
 
 assert ssl_credentials.ssl_credentials is not None
 assert ssl_credentials.is_mtls
@@ -476,7 +476,7 @@ mock_get_client_ssl_credentials,
 mock_ssl_channel_credentials,
 ):
 # Test client cert won't be used if GOOGLE_API_USE_CLIENT_CERTIFICATE is not set.
-ssl_credentials = google.auth.transport.grpc.SslCredentials()
+ssl_credentials = rewired.auth.transport.grpc.SslCredentials()
 
 assert ssl_credentials.ssl_credentials is not None
 assert not ssl_credentials.is_mtls

@@ -17,7 +17,7 @@ import copy
 import mock
 import pytest  # type: ignore
 
-from google.auth import exceptions
+from rewired.auth import exceptions
 from google.oauth2 import reauth
 
 
@@ -63,7 +63,7 @@ class MockChallenge(object):
 
 
     @mock.patch(
-    "google.auth.metrics.reauth_start", return_value=REAUTH_START_METRICS_HEADER_VALUE
+    "rewired.auth.metrics.reauth_start", return_value=REAUTH_START_METRICS_HEADER_VALUE
     )
                     def test__get_challenges(mock_metrics_header_value):
     with mock.patch(
@@ -81,7 +81,7 @@ class MockChallenge(object):
 
 
     @mock.patch(
-    "google.auth.metrics.reauth_start", return_value=REAUTH_START_METRICS_HEADER_VALUE
+    "rewired.auth.metrics.reauth_start", return_value=REAUTH_START_METRICS_HEADER_VALUE
     )
                         def test__get_challenges_with_scopes(mock_metrics_header_value):
     with mock.patch(
@@ -104,7 +104,7 @@ class MockChallenge(object):
 
 
     @mock.patch(
-    "google.auth.metrics.reauth_continue",
+    "rewired.auth.metrics.reauth_continue",
     return_value=REAUTH_CONTINUE_METRICS_HEADER_VALUE,
     )
                             def test__send_challenge_result(mock_metrics_header_value):
@@ -161,7 +161,7 @@ class MockChallenge(object):
     import mock
     import pytest  # type: ignore
 
-    from google.auth import exceptions
+    from rewired.auth import exceptions
     from google.oauth2 import reauth
 
 
@@ -207,7 +207,7 @@ class MockChallenge(object):
 
 
     @mock.patch(
-    "google.auth.metrics.reauth_start", return_value=REAUTH_START_METRICS_HEADER_VALUE
+    "rewired.auth.metrics.reauth_start", return_value=REAUTH_START_METRICS_HEADER_VALUE
     )
                                                                 def test__get_challenges(mock_metrics_header_value):
     with mock.patch(
@@ -225,7 +225,7 @@ class MockChallenge(object):
 
 
     @mock.patch(
-    "google.auth.metrics.reauth_start", return_value=REAUTH_START_METRICS_HEADER_VALUE
+    "rewired.auth.metrics.reauth_start", return_value=REAUTH_START_METRICS_HEADER_VALUE
     )
                                                                     def test__get_challenges_with_scopes(mock_metrics_header_value):
     with mock.patch(
@@ -248,7 +248,7 @@ class MockChallenge(object):
 
 
     @mock.patch(
-    "google.auth.metrics.reauth_continue",
+    "rewired.auth.metrics.reauth_continue",
     return_value=REAUTH_CONTINUE_METRICS_HEADER_VALUE,
     )
                                                                         def test__send_challenge_result(mock_metrics_header_value):
@@ -434,7 +434,7 @@ class MockChallenge(object):
 
 
     @mock.patch(
-    "google.auth.metrics.token_request_user",
+    "rewired.auth.metrics.token_request_user",
     return_value=TOKEN_REQUEST_METRICS_HEADER_VALUE,
     )
                                                                                                                                                                     def test_refresh_grant_failed(mock_metrics_header_value):
@@ -565,7 +565,7 @@ class MockChallenge(object):
     import mock
     import pytest  # type: ignore
 
-    from google.auth import exceptions
+    from rewired.auth import exceptions
     from google.oauth2 import reauth
 
 
@@ -611,7 +611,7 @@ class MockChallenge(object):
 
 
     @mock.patch(
-    "google.auth.metrics.reauth_start", return_value=REAUTH_START_METRICS_HEADER_VALUE
+    "rewired.auth.metrics.reauth_start", return_value=REAUTH_START_METRICS_HEADER_VALUE
     )
                                                                                                                                                                                                                             def test__get_challenges(mock_metrics_header_value):
     with mock.patch(
@@ -629,7 +629,7 @@ class MockChallenge(object):
 
 
     @mock.patch(
-    "google.auth.metrics.reauth_start", return_value=REAUTH_START_METRICS_HEADER_VALUE
+    "rewired.auth.metrics.reauth_start", return_value=REAUTH_START_METRICS_HEADER_VALUE
     )
                                                                                                                                                                                                                                 def test__get_challenges_with_scopes(mock_metrics_header_value):
     with mock.patch(
@@ -652,7 +652,7 @@ class MockChallenge(object):
 
 
     @mock.patch(
-    "google.auth.metrics.reauth_continue",
+    "rewired.auth.metrics.reauth_continue",
     return_value=REAUTH_CONTINUE_METRICS_HEADER_VALUE,
     )
                                                                                                                                                                                                                                     def test__send_challenge_result(mock_metrics_header_value):
@@ -838,7 +838,7 @@ class MockChallenge(object):
 
 
     @mock.patch(
-    "google.auth.metrics.token_request_user",
+    "rewired.auth.metrics.token_request_user",
     return_value=TOKEN_REQUEST_METRICS_HEADER_VALUE,
     )
                                                                                                                                                                                                                                                                                                                                 def test_refresh_grant_failed(mock_metrics_header_value):
@@ -1023,7 +1023,7 @@ class MockChallenge(object):
     import mock
     import pytest  # type: ignore
 
-    from google.auth import exceptions
+    from rewired.auth import exceptions
     from google.oauth2 import reauth
 
 
@@ -1069,7 +1069,7 @@ class MockChallenge(object):
 
 
     @mock.patch(
-    "google.auth.metrics.reauth_start", return_value=REAUTH_START_METRICS_HEADER_VALUE
+    "rewired.auth.metrics.reauth_start", return_value=REAUTH_START_METRICS_HEADER_VALUE
     )
                                                                                                                                                                                                                                                                                                                                                                                                             def test__get_challenges(mock_metrics_header_value):
     with mock.patch(
@@ -1087,7 +1087,7 @@ class MockChallenge(object):
 
 
     @mock.patch(
-    "google.auth.metrics.reauth_start", return_value=REAUTH_START_METRICS_HEADER_VALUE
+    "rewired.auth.metrics.reauth_start", return_value=REAUTH_START_METRICS_HEADER_VALUE
     )
                                                                                                                                                                                                                                                                                                                                                                                                                 def test__get_challenges_with_scopes(mock_metrics_header_value):
     with mock.patch(
@@ -1110,7 +1110,7 @@ class MockChallenge(object):
 
 
     @mock.patch(
-    "google.auth.metrics.reauth_continue",
+    "rewired.auth.metrics.reauth_continue",
     return_value=REAUTH_CONTINUE_METRICS_HEADER_VALUE,
     )
                                                                                                                                                                                                                                                                                                                                                                                                                     def test__send_challenge_result(mock_metrics_header_value):
@@ -1296,7 +1296,7 @@ class MockChallenge(object):
 
 
     @mock.patch(
-    "google.auth.metrics.token_request_user",
+    "rewired.auth.metrics.token_request_user",
     return_value=TOKEN_REQUEST_METRICS_HEADER_VALUE,
     )
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 def test_refresh_grant_failed(mock_metrics_header_value):
@@ -1429,7 +1429,7 @@ class MockChallenge(object):
     import mock
     import pytest  # type: ignore
 
-    from google.auth import exceptions
+    from rewired.auth import exceptions
     from google.oauth2 import reauth
 
 
@@ -1475,7 +1475,7 @@ class MockChallenge(object):
 
 
     @mock.patch(
-    "google.auth.metrics.reauth_start", return_value=REAUTH_START_METRICS_HEADER_VALUE
+    "rewired.auth.metrics.reauth_start", return_value=REAUTH_START_METRICS_HEADER_VALUE
     )
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             def test__get_challenges(mock_metrics_header_value):
     with mock.patch(
@@ -1493,7 +1493,7 @@ class MockChallenge(object):
 
 
     @mock.patch(
-    "google.auth.metrics.reauth_start", return_value=REAUTH_START_METRICS_HEADER_VALUE
+    "rewired.auth.metrics.reauth_start", return_value=REAUTH_START_METRICS_HEADER_VALUE
     )
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 def test__get_challenges_with_scopes(mock_metrics_header_value):
     with mock.patch(
@@ -1516,7 +1516,7 @@ class MockChallenge(object):
 
 
     @mock.patch(
-    "google.auth.metrics.reauth_continue",
+    "rewired.auth.metrics.reauth_continue",
     return_value=REAUTH_CONTINUE_METRICS_HEADER_VALUE,
     )
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     def test__send_challenge_result(mock_metrics_header_value):
@@ -1702,7 +1702,7 @@ class MockChallenge(object):
 
 
     @mock.patch(
-    "google.auth.metrics.token_request_user",
+    "rewired.auth.metrics.token_request_user",
     return_value=TOKEN_REQUEST_METRICS_HEADER_VALUE,
     )
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 def test_refresh_grant_failed(mock_metrics_header_value):
@@ -1832,7 +1832,7 @@ class MockChallenge(object):
     import mock
     import pytest  # type: ignore
 
-    from google.auth import exceptions
+    from rewired.auth import exceptions
     from google.oauth2 import reauth
 
 
@@ -1878,7 +1878,7 @@ class MockChallenge(object):
 
 
     @mock.patch(
-    "google.auth.metrics.reauth_start", return_value=REAUTH_START_METRICS_HEADER_VALUE
+    "rewired.auth.metrics.reauth_start", return_value=REAUTH_START_METRICS_HEADER_VALUE
     )
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             def test__get_challenges(mock_metrics_header_value):
     with mock.patch(
@@ -1896,7 +1896,7 @@ class MockChallenge(object):
 
 
     @mock.patch(
-    "google.auth.metrics.reauth_start", return_value=REAUTH_START_METRICS_HEADER_VALUE
+    "rewired.auth.metrics.reauth_start", return_value=REAUTH_START_METRICS_HEADER_VALUE
     )
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 def test__get_challenges_with_scopes(mock_metrics_header_value):
     with mock.patch(
@@ -1919,7 +1919,7 @@ class MockChallenge(object):
 
 
     @mock.patch(
-    "google.auth.metrics.reauth_continue",
+    "rewired.auth.metrics.reauth_continue",
     return_value=REAUTH_CONTINUE_METRICS_HEADER_VALUE,
     )
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     def test__send_challenge_result(mock_metrics_header_value):
@@ -2105,7 +2105,7 @@ class MockChallenge(object):
 
 
     @mock.patch(
-    "google.auth.metrics.token_request_user",
+    "rewired.auth.metrics.token_request_user",
     return_value=TOKEN_REQUEST_METRICS_HEADER_VALUE,
     )
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 def test_refresh_grant_failed(mock_metrics_header_value):
@@ -2235,7 +2235,7 @@ class MockChallenge(object):
     import mock
     import pytest  # type: ignore
 
-    from google.auth import exceptions
+    from rewired.auth import exceptions
     from google.oauth2 import reauth
 
 
@@ -2281,7 +2281,7 @@ class MockChallenge(object):
 
 
     @mock.patch(
-    "google.auth.metrics.reauth_start", return_value=REAUTH_START_METRICS_HEADER_VALUE
+    "rewired.auth.metrics.reauth_start", return_value=REAUTH_START_METRICS_HEADER_VALUE
     )
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             def test__get_challenges(mock_metrics_header_value):
     with mock.patch(
@@ -2299,7 +2299,7 @@ class MockChallenge(object):
 
 
     @mock.patch(
-    "google.auth.metrics.reauth_start", return_value=REAUTH_START_METRICS_HEADER_VALUE
+    "rewired.auth.metrics.reauth_start", return_value=REAUTH_START_METRICS_HEADER_VALUE
     )
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 def test__get_challenges_with_scopes(mock_metrics_header_value):
     with mock.patch(
@@ -2322,7 +2322,7 @@ class MockChallenge(object):
 
 
     @mock.patch(
-    "google.auth.metrics.reauth_continue",
+    "rewired.auth.metrics.reauth_continue",
     return_value=REAUTH_CONTINUE_METRICS_HEADER_VALUE,
     )
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     def test__send_challenge_result(mock_metrics_header_value):
@@ -2508,7 +2508,7 @@ class MockChallenge(object):
 
 
     @mock.patch(
-    "google.auth.metrics.token_request_user",
+    "rewired.auth.metrics.token_request_user",
     return_value=TOKEN_REQUEST_METRICS_HEADER_VALUE,
     )
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 def test_refresh_grant_failed(mock_metrics_header_value):
@@ -2642,7 +2642,7 @@ class MockChallenge(object):
 
 
     @mock.patch(
-    "google.auth.metrics.token_request_user",
+    "rewired.auth.metrics.token_request_user",
     return_value=TOKEN_REQUEST_METRICS_HEADER_VALUE,
     )
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 def test_refresh_grant_failed(mock_metrics_header_value):
@@ -2680,7 +2680,7 @@ class MockChallenge(object):
     import mock
     import pytest  # type: ignore
 
-    from google.auth import exceptions
+    from rewired.auth import exceptions
     from google.oauth2 import reauth
 
 
@@ -2726,7 +2726,7 @@ class MockChallenge(object):
 
 
     @mock.patch(
-    "google.auth.metrics.reauth_start", return_value=REAUTH_START_METRICS_HEADER_VALUE
+    "rewired.auth.metrics.reauth_start", return_value=REAUTH_START_METRICS_HEADER_VALUE
     )
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             def test__get_challenges(mock_metrics_header_value):
     with mock.patch(
@@ -2744,7 +2744,7 @@ class MockChallenge(object):
 
 
     @mock.patch(
-    "google.auth.metrics.reauth_start", return_value=REAUTH_START_METRICS_HEADER_VALUE
+    "rewired.auth.metrics.reauth_start", return_value=REAUTH_START_METRICS_HEADER_VALUE
     )
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 def test__get_challenges_with_scopes(mock_metrics_header_value):
     with mock.patch(
@@ -2767,7 +2767,7 @@ class MockChallenge(object):
 
 
     @mock.patch(
-    "google.auth.metrics.reauth_continue",
+    "rewired.auth.metrics.reauth_continue",
     return_value=REAUTH_CONTINUE_METRICS_HEADER_VALUE,
     )
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     def test__send_challenge_result(mock_metrics_header_value):
@@ -2953,7 +2953,7 @@ class MockChallenge(object):
 
 
     @mock.patch(
-    "google.auth.metrics.token_request_user",
+    "rewired.auth.metrics.token_request_user",
     return_value=TOKEN_REQUEST_METRICS_HEADER_VALUE,
     )
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 def test_refresh_grant_failed(mock_metrics_header_value):
@@ -3105,7 +3105,7 @@ class MockChallenge(object):
     import mock
     import pytest  # type: ignore
 
-    from google.auth import exceptions
+    from rewired.auth import exceptions
     from google.oauth2 import reauth
 
 
@@ -3151,7 +3151,7 @@ class MockChallenge(object):
 
 
     @mock.patch(
-    "google.auth.metrics.reauth_start", return_value=REAUTH_START_METRICS_HEADER_VALUE
+    "rewired.auth.metrics.reauth_start", return_value=REAUTH_START_METRICS_HEADER_VALUE
     )
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         def test__get_challenges(mock_metrics_header_value):
     with mock.patch(
@@ -3169,7 +3169,7 @@ class MockChallenge(object):
 
 
     @mock.patch(
-    "google.auth.metrics.reauth_start", return_value=REAUTH_START_METRICS_HEADER_VALUE
+    "rewired.auth.metrics.reauth_start", return_value=REAUTH_START_METRICS_HEADER_VALUE
     )
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             def test__get_challenges_with_scopes(mock_metrics_header_value):
     with mock.patch(
@@ -3192,7 +3192,7 @@ class MockChallenge(object):
 
 
     @mock.patch(
-    "google.auth.metrics.reauth_continue",
+    "rewired.auth.metrics.reauth_continue",
     return_value=REAUTH_CONTINUE_METRICS_HEADER_VALUE,
     )
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 def test__send_challenge_result(mock_metrics_header_value):
@@ -3378,7 +3378,7 @@ class MockChallenge(object):
 
 
     @mock.patch(
-    "google.auth.metrics.token_request_user",
+    "rewired.auth.metrics.token_request_user",
     return_value=TOKEN_REQUEST_METRICS_HEADER_VALUE,
     )
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             def test_refresh_grant_failed(mock_metrics_header_value):
@@ -3540,7 +3540,7 @@ class MockChallenge(object):
     import mock
     import pytest  # type: ignore
 
-    from google.auth import exceptions
+    from rewired.auth import exceptions
     from google.oauth2 import reauth
 
 
@@ -3586,7 +3586,7 @@ class MockChallenge(object):
 
 
     @mock.patch(
-    "google.auth.metrics.reauth_start", return_value=REAUTH_START_METRICS_HEADER_VALUE
+    "rewired.auth.metrics.reauth_start", return_value=REAUTH_START_METRICS_HEADER_VALUE
     )
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         def test__get_challenges(mock_metrics_header_value):
     with mock.patch(
@@ -3604,7 +3604,7 @@ class MockChallenge(object):
 
 
     @mock.patch(
-    "google.auth.metrics.reauth_start", return_value=REAUTH_START_METRICS_HEADER_VALUE
+    "rewired.auth.metrics.reauth_start", return_value=REAUTH_START_METRICS_HEADER_VALUE
     )
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             def test__get_challenges_with_scopes(mock_metrics_header_value):
     with mock.patch(
@@ -3627,7 +3627,7 @@ class MockChallenge(object):
 
 
     @mock.patch(
-    "google.auth.metrics.reauth_continue",
+    "rewired.auth.metrics.reauth_continue",
     return_value=REAUTH_CONTINUE_METRICS_HEADER_VALUE,
     )
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 def test__send_challenge_result(mock_metrics_header_value):
@@ -3813,7 +3813,7 @@ class MockChallenge(object):
 
 
     @mock.patch(
-    "google.auth.metrics.token_request_user",
+    "rewired.auth.metrics.token_request_user",
     return_value=TOKEN_REQUEST_METRICS_HEADER_VALUE,
     )
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             def test_refresh_grant_failed(mock_metrics_header_value):

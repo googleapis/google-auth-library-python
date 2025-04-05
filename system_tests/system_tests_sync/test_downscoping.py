@@ -15,10 +15,10 @@
 import re
 import uuid
 
-import google.auth
+import rewired.auth
 
-from google.auth import downscoped
-from google.auth.transport import requests
+from rewired.auth import downscoped
+from rewired.auth.transport import requests
 from google.cloud import exceptions
 from google.cloud import storage
 from google.oauth2 import credentials
@@ -95,7 +95,7 @@ def get_token_from_broker(bucket_name, object_prefix):
     credential_access_boundary = downscoped.CredentialAccessBoundary(rules=[rule])
 
     # Retrieve the source credentials via ADC.
-    source_credentials, _ = google.auth.default()
+    source_credentials, _ = rewired.auth.default()
     if source_credentials.requires_scopes:
         source_credentials = source_credentials.with_scopes(
             ["https://www.googleapis.com/auth/cloud-platform"]

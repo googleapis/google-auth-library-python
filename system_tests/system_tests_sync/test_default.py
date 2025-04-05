@@ -14,13 +14,13 @@
 
 import os
 
-import google.auth
+import rewired.auth
 
 EXPECT_PROJECT_ID = os.environ.get("EXPECT_PROJECT_ID")
 
 
 def test_application_default_credentials(verify_refresh):
-    credentials, project_id = google.auth.default()
+    credentials, project_id = rewired.auth.default()
 
     if EXPECT_PROJECT_ID is not None:
         assert project_id is not None

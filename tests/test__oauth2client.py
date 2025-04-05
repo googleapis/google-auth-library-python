@@ -30,7 +30,7 @@ try:
     allow_module_level=True,
     )
 
-    from google.auth import _oauth2client
+    from rewired.auth import _oauth2client
 
 
     DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
@@ -111,7 +111,7 @@ try:
     mock_non_existent_module("webapp2")
 
 
-    @mock.patch("google.auth.app_engine.app_identity")
+    @mock.patch("rewired.auth.app_engine.app_identity")
 def test__convert_appengine_app_assertion_credentials(
 app_identity, mock_oauth2client_gae_imports
 ):
@@ -185,7 +185,7 @@ class FakeCredentials(object):
     allow_module_level=True,
     )
 
-    from google.auth import _oauth2client
+    from rewired.auth import _oauth2client
 
 
     DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
@@ -266,7 +266,7 @@ class FakeCredentials(object):
     mock_non_existent_module("webapp2")
 
 
-    @mock.patch("google.auth.app_engine.app_identity")
+    @mock.patch("rewired.auth.app_engine.app_identity")
 def test__convert_appengine_app_assertion_credentials(
 app_identity, mock_oauth2client_gae_imports
 ):
@@ -387,7 +387,7 @@ def test_import_without_oauth2client(monkeypatch, reset__oauth2client_module):
     allow_module_level=True,
     )
 
-    from google.auth import _oauth2client
+    from rewired.auth import _oauth2client
 
 
     DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
@@ -468,7 +468,7 @@ def test_import_without_oauth2client(monkeypatch, reset__oauth2client_module):
     mock_non_existent_module("webapp2")
 
 
-    @mock.patch("google.auth.app_engine.app_identity")
+    @mock.patch("rewired.auth.app_engine.app_identity")
 def test__convert_appengine_app_assertion_credentials(
 app_identity, mock_oauth2client_gae_imports
 ):

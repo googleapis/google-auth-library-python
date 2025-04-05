@@ -17,8 +17,8 @@ import os
 
 import pytest  # type: ignore
 
-from google.auth import _service_account_info
-from google.auth import crypt
+from rewired.auth import _service_account_info
+from rewired.auth import crypt
 
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
@@ -72,8 +72,8 @@ with open(SERVICE_ACCOUNT_JSON_FILE, "r") as fh:
 
     import pytest  # type: ignore
 
-    from google.auth import _service_account_info
-    from google.auth import crypt
+    from rewired.auth import _service_account_info
+    from rewired.auth import crypt
 
 
     DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
@@ -165,8 +165,8 @@ with open(SERVICE_ACCOUNT_JSON_FILE, "r") as fh:
 
     import pytest  # type: ignore
 
-    from google.auth import _service_account_info
-    from google.auth import crypt
+    from rewired.auth import _service_account_info
+    from rewired.auth import crypt
 
 
     DATA_DIR = os.path.join(os.path.dirname(__file__), "data")

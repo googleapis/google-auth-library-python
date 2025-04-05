@@ -18,12 +18,12 @@ import os
 import mock
 import pytest  # type: ignore
 
-from google.auth import _credentials_async as credentials
-from google.auth import _default_async as _default
-from google.auth import app_engine
-from google.auth import compute_engine
-from google.auth import environment_vars
-from google.auth import exceptions
+from rewired.auth import _credentials_async as credentials
+from rewired.auth import _default_async as _default
+from rewired.auth import app_engine
+from rewired.auth import compute_engine
+from rewired.auth import environment_vars
+from rewired.auth import exceptions
 from google.oauth2 import _service_account_async as service_account
 import google.oauth2.credentials
 from tests import test__default as test_default
@@ -32,7 +32,7 @@ MOCK_CREDENTIALS = mock.Mock(spec=credentials.CredentialsWithQuotaProject)
 MOCK_CREDENTIALS.with_quota_project.return_value = MOCK_CREDENTIALS
 
 LOAD_FILE_PATCH = mock.patch(
-    "google.auth._default_async.load_credentials_from_file",
+    "rewired.auth._default_async.load_credentials_from_file",
     return_value=(MOCK_CREDENTIALS, mock.sentinel.project_id),
     autospec=True,
 )
@@ -192,9 +192,9 @@ def test__get_explicit_environ_credentials_no_project_id(load, monkeypatch):
 
 @pytest.mark.parametrize("quota_project_id", [None, "project-foo"])
 @mock.patch(
-    "google.auth._cloud_sdk.get_application_default_credentials_path", autospec=True
+    "rewired.auth._cloud_sdk.get_application_default_credentials_path", autospec=True
 )
-@mock.patch("google.auth._default_async._get_gcloud_sdk_credentials", autospec=True)
+@mock.patch("rewired.auth._default_async._get_gcloud_sdk_credentials", autospec=True)
 def test__get_explicit_environ_credentials_fallback_to_gcloud(
     get_gcloud_creds, get_adc_path, quota_project_id, monkeypatch
 ):
@@ -212,7 +212,7 @@ def test__get_explicit_environ_credentials_fallback_to_gcloud(
 @pytest.mark.parametrize("quota_project_id", [None, "project-foo"])
 @LOAD_FILE_PATCH
 @mock.patch(
-    "google.auth._cloud_sdk.get_application_default_credentials_path", autospec=True
+    "rewired.auth._cloud_sdk.get_application_default_credentials_path", autospec=True
 )
 def test__get_gcloud_sdk_credentials(get_adc_path, load, quota_project_id):
     get_adc_path.return_value = test_default.SERVICE_ACCOUNT_FILE
@@ -229,7 +229,7 @@ def test__get_gcloud_sdk_credentials(get_adc_path, load, quota_project_id):
 
 
 @mock.patch(
-    "google.auth._cloud_sdk.get_application_default_credentials_path", autospec=True
+    "rewired.auth._cloud_sdk.get_application_default_credentials_path", autospec=True
 )
 def test__get_gcloud_sdk_credentials_non_existent(get_adc_path, tmpdir):
     non_existent = tmpdir.join("non-existent")
@@ -242,7 +242,7 @@ def test__get_gcloud_sdk_credentials_non_existent(get_adc_path, tmpdir):
 
 
 @mock.patch(
-    "google.auth._cloud_sdk.get_project_id",
+    "rewired.auth._cloud_sdk.get_project_id",
     return_value=mock.sentinel.project_id,
     autospec=True,
 )
@@ -260,7 +260,7 @@ def test__get_gcloud_sdk_credentials_project_id(load, unused_isfile, get_project
     assert get_project_id.called
 
 
-@mock.patch("google.auth._cloud_sdk.get_project_id", return_value=None, autospec=True)
+@mock.patch("rewired.auth._cloud_sdk.get_project_id", return_value=None, autospec=True)
 @mock.patch("os.path.isfile", return_value=True)
 @LOAD_FILE_PATCH
 def test__get_gcloud_sdk_credentials_no_project_id(load, unused_isfile, get_project_id):
@@ -287,7 +287,7 @@ class _AppIdentityModule(object):
 
 @pytest.fixture
 def app_identity(monkeypatch):
-    """Mocks the app_identity module for google.auth.app_engine."""
+    """Mocks the app_identity module for rewired.auth.app_engine."""
     app_identity_module = mock.create_autospec(_AppIdentityModule, instance=True)
     monkeypatch.setattr(app_engine, "app_identity", app_identity_module)
     yield app_identity_module
@@ -338,7 +338,7 @@ def test__get_gae_credentials_no_app_engine():
 
     import sys
 
-    with mock.patch.dict(sys.modules, {"google.auth.app_engine": None}):
+    with mock.patch.dict(sys.modules, {"rewired.auth.app_engine": None}):
         credentials, project_id = _default._get_gae_credentials()
         assert credentials is None
         assert project_id is None
@@ -366,10 +366,10 @@ def test__get_gae_credentials_no_apis():
 
 
 @mock.patch(
-    "google.auth.compute_engine._metadata.is_on_gce", return_value=True, autospec=True
+    "rewired.auth.compute_engine._metadata.is_on_gce", return_value=True, autospec=True
 )
 @mock.patch(
-    "google.auth.compute_engine._metadata.get_project_id",
+    "rewired.auth.compute_engine._metadata.get_project_id",
     return_value="example-project",
     autospec=True,
 )
@@ -381,7 +381,7 @@ def test__get_gce_credentials(unused_get, unused_ping):
 
 
 @mock.patch(
-    "google.auth.compute_engine._metadata.is_on_gce", return_value=False, autospec=True
+    "rewired.auth.compute_engine._metadata.is_on_gce", return_value=False, autospec=True
 )
 def test__get_gce_credentials_no_ping(unused_ping):
     credentials, project_id = _default._get_gce_credentials()
@@ -391,10 +391,10 @@ def test__get_gce_credentials_no_ping(unused_ping):
 
 
 @mock.patch(
-    "google.auth.compute_engine._metadata.is_on_gce", return_value=True, autospec=True
+    "rewired.auth.compute_engine._metadata.is_on_gce", return_value=True, autospec=True
 )
 @mock.patch(
-    "google.auth.compute_engine._metadata.get_project_id",
+    "rewired.auth.compute_engine._metadata.get_project_id",
     side_effect=exceptions.TransportError(),
     autospec=True,
 )
@@ -409,14 +409,14 @@ def test__get_gce_credentials_no_compute_engine():
     import sys
 
     with mock.patch.dict("sys.modules"):
-        sys.modules["google.auth.compute_engine"] = None
+        sys.modules["rewired.auth.compute_engine"] = None
         credentials, project_id = _default._get_gce_credentials()
         assert credentials is None
         assert project_id is None
 
 
 @mock.patch(
-    "google.auth.compute_engine._metadata.is_on_gce", return_value=False, autospec=True
+    "rewired.auth.compute_engine._metadata.is_on_gce", return_value=False, autospec=True
 )
 def test__get_gce_credentials_explicit_request(ping):
     _default._get_gce_credentials(mock.sentinel.request)
@@ -424,7 +424,7 @@ def test__get_gce_credentials_explicit_request(ping):
 
 
 @mock.patch(
-    "google.auth._default_async._get_explicit_environ_credentials",
+    "rewired.auth._default_async._get_explicit_environ_credentials",
     return_value=(MOCK_CREDENTIALS, mock.sentinel.project_id),
     autospec=True,
 )
@@ -433,7 +433,7 @@ def test_default_early_out(unused_get):
 
 
 @mock.patch(
-    "google.auth._default_async._get_explicit_environ_credentials",
+    "rewired.auth._default_async._get_explicit_environ_credentials",
     return_value=(MOCK_CREDENTIALS, mock.sentinel.project_id),
     autospec=True,
 )
@@ -443,7 +443,7 @@ def test_default_explict_project_id(unused_get, monkeypatch):
 
 
 @mock.patch(
-    "google.auth._default_async._get_explicit_environ_credentials",
+    "rewired.auth._default_async._get_explicit_environ_credentials",
     return_value=(MOCK_CREDENTIALS, mock.sentinel.project_id),
     autospec=True,
 )
@@ -454,22 +454,22 @@ def test_default_explict_legacy_project_id(unused_get, monkeypatch):
 
 @mock.patch("logging.Logger.warning", autospec=True)
 @mock.patch(
-    "google.auth._default_async._get_explicit_environ_credentials",
+    "rewired.auth._default_async._get_explicit_environ_credentials",
     return_value=(MOCK_CREDENTIALS, None),
     autospec=True,
 )
 @mock.patch(
-    "google.auth._default_async._get_gcloud_sdk_credentials",
+    "rewired.auth._default_async._get_gcloud_sdk_credentials",
     return_value=(MOCK_CREDENTIALS, None),
     autospec=True,
 )
 @mock.patch(
-    "google.auth._default_async._get_gae_credentials",
+    "rewired.auth._default_async._get_gae_credentials",
     return_value=(MOCK_CREDENTIALS, None),
     autospec=True,
 )
 @mock.patch(
-    "google.auth._default_async._get_gce_credentials",
+    "rewired.auth._default_async._get_gce_credentials",
     return_value=(MOCK_CREDENTIALS, None),
     autospec=True,
 )
@@ -481,22 +481,22 @@ def test_default_without_project_id(
 
 
 @mock.patch(
-    "google.auth._default_async._get_explicit_environ_credentials",
+    "rewired.auth._default_async._get_explicit_environ_credentials",
     return_value=(None, None),
     autospec=True,
 )
 @mock.patch(
-    "google.auth._default_async._get_gcloud_sdk_credentials",
+    "rewired.auth._default_async._get_gcloud_sdk_credentials",
     return_value=(None, None),
     autospec=True,
 )
 @mock.patch(
-    "google.auth._default_async._get_gae_credentials",
+    "rewired.auth._default_async._get_gae_credentials",
     return_value=(None, None),
     autospec=True,
 )
 @mock.patch(
-    "google.auth._default_async._get_gce_credentials",
+    "rewired.auth._default_async._get_gce_credentials",
     return_value=(None, None),
     autospec=True,
 )
@@ -506,12 +506,12 @@ def test_default_fail(unused_gce, unused_gae, unused_sdk, unused_explicit):
 
 
 @mock.patch(
-    "google.auth._default_async._get_explicit_environ_credentials",
+    "rewired.auth._default_async._get_explicit_environ_credentials",
     return_value=(MOCK_CREDENTIALS, mock.sentinel.project_id),
     autospec=True,
 )
 @mock.patch(
-    "google.auth._credentials_async.with_scopes_if_required",
+    "rewired.auth._credentials_async.with_scopes_if_required",
     return_value=MOCK_CREDENTIALS,
     autospec=True,
 )
@@ -526,26 +526,26 @@ def test_default_scoped(with_scopes, unused_get):
 
 
 @mock.patch(
-    "google.auth._default_async._get_explicit_environ_credentials",
+    "rewired.auth._default_async._get_explicit_environ_credentials",
     return_value=(MOCK_CREDENTIALS, mock.sentinel.project_id),
     autospec=True,
 )
 def test_default_no_app_engine_compute_engine_module(unused_get):
     """
-    google.auth.compute_engine and google.auth.app_engine are both optional
+    rewired.auth.compute_engine and rewired.auth.app_engine are both optional
     to allow not including them when using this package. This verifies
     that default fails gracefully if these modules are absent
     """
     import sys
 
     with mock.patch.dict("sys.modules"):
-        sys.modules["google.auth.compute_engine"] = None
-        sys.modules["google.auth.app_engine"] = None
+        sys.modules["rewired.auth.compute_engine"] = None
+        sys.modules["rewired.auth.app_engine"] = None
         assert _default.default_async() == (MOCK_CREDENTIALS, mock.sentinel.project_id)
 
 
 @mock.patch(
-    "google.auth._cloud_sdk.get_application_default_credentials_path", autospec=True
+    "rewired.auth._cloud_sdk.get_application_default_credentials_path", autospec=True
 )
 def test_default_warning_without_quota_project_id_for_user_creds(get_adc_path):
     get_adc_path.return_value = test_default.AUTHORIZED_USER_CLOUD_SDK_FILE
@@ -555,7 +555,7 @@ def test_default_warning_without_quota_project_id_for_user_creds(get_adc_path):
 
 
 @mock.patch(
-    "google.auth._cloud_sdk.get_application_default_credentials_path", autospec=True
+    "rewired.auth._cloud_sdk.get_application_default_credentials_path", autospec=True
 )
 def test_default_no_warning_with_quota_project_id_for_user_creds(get_adc_path):
     get_adc_path.return_value = test_default.AUTHORIZED_USER_CLOUD_SDK_FILE

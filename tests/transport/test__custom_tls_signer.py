@@ -20,8 +20,8 @@ import pytest  # type: ignore
 from requests.packages.urllib3.util.ssl_ import create_urllib3_context  # type: ignore
 import urllib3.contrib.pyopenssl  # type: ignore
 
-from google.auth import exceptions
-from google.auth.transport import _custom_tls_signer
+from rewired.auth import exceptions
+from rewired.auth.transport import _custom_tls_signer
 
 urllib3.contrib.pyopenssl.inject_into_urllib3()
 
@@ -169,8 +169,8 @@ def test_load_provider_lib():
     from requests.packages.urllib3.util.ssl_ import create_urllib3_context  # type: ignore
     import urllib3.contrib.pyopenssl  # type: ignore
 
-    from google.auth import exceptions
-    from google.auth.transport import _custom_tls_signer
+    from rewired.auth import exceptions
+    from rewired.auth.transport import _custom_tls_signer
 
     urllib3.contrib.pyopenssl.inject_into_urllib3()
 
@@ -322,18 +322,18 @@ def test_load_provider_lib():
 
     # Test load_libraries method
     with mock.patch(
-    "google.auth.transport._custom_tls_signer.load_signer_lib"
+    "rewired.auth.transport._custom_tls_signer.load_signer_lib"
     ) as load_signer_lib:
     with mock.patch(
-    "google.auth.transport._custom_tls_signer.load_offload_lib"
+    "rewired.auth.transport._custom_tls_signer.load_offload_lib"
     ) as load_offload_lib:
     load_offload_lib.return_value = offload_lib
     load_signer_lib.return_value = signer_lib
     with mock.patch(
-    "google.auth.transport._custom_tls_signer.get_cert"
+    "rewired.auth.transport._custom_tls_signer.get_cert"
     ) as get_cert:
     with mock.patch(
-    "google.auth.transport._custom_tls_signer.get_sign_callback"
+    "rewired.auth.transport._custom_tls_signer.get_sign_callback"
     ) as get_sign_callback:
     get_cert.return_value = b"mock_cert"
     signer_object = _custom_tls_signer.CustomTlsSigner(
@@ -357,7 +357,7 @@ def test_load_provider_lib():
 
     # Test load_libraries method
     with mock.patch(
-    "google.auth.transport._custom_tls_signer.load_provider_lib"
+    "rewired.auth.transport._custom_tls_signer.load_provider_lib"
     ) as load_provider_lib:
     load_provider_lib.return_value = provider_lib
     signer_object = _custom_tls_signer.CustomTlsSigner(
@@ -439,18 +439,18 @@ def test_load_provider_lib():
 
     # Test load_libraries method
     with mock.patch(
-    "google.auth.transport._custom_tls_signer.load_signer_lib"
+    "rewired.auth.transport._custom_tls_signer.load_signer_lib"
     ) as load_signer_lib:
     with mock.patch(
-    "google.auth.transport._custom_tls_signer.load_offload_lib"
+    "rewired.auth.transport._custom_tls_signer.load_offload_lib"
     ) as load_offload_lib:
     load_offload_lib.return_value = offload_lib
     load_signer_lib.return_value = signer_lib
     with mock.patch(
-    "google.auth.transport._custom_tls_signer.get_cert"
+    "rewired.auth.transport._custom_tls_signer.get_cert"
     ) as get_cert:
     with mock.patch(
-    "google.auth.transport._custom_tls_signer.get_sign_callback"
+    "rewired.auth.transport._custom_tls_signer.get_sign_callback"
     ) as get_sign_callback:
     get_cert.return_value = b"mock_cert"
     signer_object = _custom_tls_signer.CustomTlsSigner(
@@ -474,7 +474,7 @@ def test_load_provider_lib():
 
     # Test load_libraries method
     with mock.patch(
-    "google.auth.transport._custom_tls_signer.load_provider_lib"
+    "rewired.auth.transport._custom_tls_signer.load_provider_lib"
     ) as load_provider_lib:
     load_provider_lib.return_value = provider_lib
     signer_object = _custom_tls_signer.CustomTlsSigner(
@@ -515,8 +515,8 @@ def test_load_provider_lib():
     from requests.packages.urllib3.util.ssl_ import create_urllib3_context  # type: ignore
     import urllib3.contrib.pyopenssl  # type: ignore
 
-    from google.auth import exceptions
-    from google.auth.transport import _custom_tls_signer
+    from rewired.auth import exceptions
+    from rewired.auth.transport import _custom_tls_signer
 
     urllib3.contrib.pyopenssl.inject_into_urllib3()
 
@@ -668,18 +668,18 @@ def test_load_provider_lib():
 
     # Test load_libraries method
     with mock.patch(
-    "google.auth.transport._custom_tls_signer.load_signer_lib"
+    "rewired.auth.transport._custom_tls_signer.load_signer_lib"
     ) as load_signer_lib:
     with mock.patch(
-    "google.auth.transport._custom_tls_signer.load_offload_lib"
+    "rewired.auth.transport._custom_tls_signer.load_offload_lib"
     ) as load_offload_lib:
     load_offload_lib.return_value = offload_lib
     load_signer_lib.return_value = signer_lib
     with mock.patch(
-    "google.auth.transport._custom_tls_signer.get_cert"
+    "rewired.auth.transport._custom_tls_signer.get_cert"
     ) as get_cert:
     with mock.patch(
-    "google.auth.transport._custom_tls_signer.get_sign_callback"
+    "rewired.auth.transport._custom_tls_signer.get_sign_callback"
     ) as get_sign_callback:
     get_cert.return_value = b"mock_cert"
     signer_object = _custom_tls_signer.CustomTlsSigner(
@@ -703,7 +703,7 @@ def test_load_provider_lib():
 
     # Test load_libraries method
     with mock.patch(
-    "google.auth.transport._custom_tls_signer.load_provider_lib"
+    "rewired.auth.transport._custom_tls_signer.load_provider_lib"
     ) as load_provider_lib:
     load_provider_lib.return_value = provider_lib
     signer_object = _custom_tls_signer.CustomTlsSigner(
@@ -793,8 +793,8 @@ def test_load_provider_lib():
     from requests.packages.urllib3.util.ssl_ import create_urllib3_context  # type: ignore
     import urllib3.contrib.pyopenssl  # type: ignore
 
-    from google.auth import exceptions
-    from google.auth.transport import _custom_tls_signer
+    from rewired.auth import exceptions
+    from rewired.auth.transport import _custom_tls_signer
 
     urllib3.contrib.pyopenssl.inject_into_urllib3()
 
@@ -946,18 +946,18 @@ def test_load_provider_lib():
 
     # Test load_libraries method
     with mock.patch(
-    "google.auth.transport._custom_tls_signer.load_signer_lib"
+    "rewired.auth.transport._custom_tls_signer.load_signer_lib"
     ) as load_signer_lib:
     with mock.patch(
-    "google.auth.transport._custom_tls_signer.load_offload_lib"
+    "rewired.auth.transport._custom_tls_signer.load_offload_lib"
     ) as load_offload_lib:
     load_offload_lib.return_value = offload_lib
     load_signer_lib.return_value = signer_lib
     with mock.patch(
-    "google.auth.transport._custom_tls_signer.get_cert"
+    "rewired.auth.transport._custom_tls_signer.get_cert"
     ) as get_cert:
     with mock.patch(
-    "google.auth.transport._custom_tls_signer.get_sign_callback"
+    "rewired.auth.transport._custom_tls_signer.get_sign_callback"
     ) as get_sign_callback:
     get_cert.return_value = b"mock_cert"
     signer_object = _custom_tls_signer.CustomTlsSigner(
@@ -981,7 +981,7 @@ def test_load_provider_lib():
 
     # Test load_libraries method
     with mock.patch(
-    "google.auth.transport._custom_tls_signer.load_provider_lib"
+    "rewired.auth.transport._custom_tls_signer.load_provider_lib"
     ) as load_provider_lib:
     load_provider_lib.return_value = provider_lib
     signer_object = _custom_tls_signer.CustomTlsSigner(
@@ -1070,8 +1070,8 @@ def test_load_provider_lib():
     from requests.packages.urllib3.util.ssl_ import create_urllib3_context  # type: ignore
     import urllib3.contrib.pyopenssl  # type: ignore
 
-    from google.auth import exceptions
-    from google.auth.transport import _custom_tls_signer
+    from rewired.auth import exceptions
+    from rewired.auth.transport import _custom_tls_signer
 
     urllib3.contrib.pyopenssl.inject_into_urllib3()
 
@@ -1223,18 +1223,18 @@ def test_load_provider_lib():
 
     # Test load_libraries method
     with mock.patch(
-    "google.auth.transport._custom_tls_signer.load_signer_lib"
+    "rewired.auth.transport._custom_tls_signer.load_signer_lib"
     ) as load_signer_lib:
     with mock.patch(
-    "google.auth.transport._custom_tls_signer.load_offload_lib"
+    "rewired.auth.transport._custom_tls_signer.load_offload_lib"
     ) as load_offload_lib:
     load_offload_lib.return_value = offload_lib
     load_signer_lib.return_value = signer_lib
     with mock.patch(
-    "google.auth.transport._custom_tls_signer.get_cert"
+    "rewired.auth.transport._custom_tls_signer.get_cert"
     ) as get_cert:
     with mock.patch(
-    "google.auth.transport._custom_tls_signer.get_sign_callback"
+    "rewired.auth.transport._custom_tls_signer.get_sign_callback"
     ) as get_sign_callback:
     get_cert.return_value = b"mock_cert"
     signer_object = _custom_tls_signer.CustomTlsSigner(
@@ -1258,7 +1258,7 @@ def test_load_provider_lib():
 
     # Test load_libraries method
     with mock.patch(
-    "google.auth.transport._custom_tls_signer.load_provider_lib"
+    "rewired.auth.transport._custom_tls_signer.load_provider_lib"
     ) as load_provider_lib:
     load_provider_lib.return_value = provider_lib
     signer_object = _custom_tls_signer.CustomTlsSigner(
@@ -1345,8 +1345,8 @@ def test_load_provider_lib():
     from requests.packages.urllib3.util.ssl_ import create_urllib3_context  # type: ignore
     import urllib3.contrib.pyopenssl  # type: ignore
 
-    from google.auth import exceptions
-    from google.auth.transport import _custom_tls_signer
+    from rewired.auth import exceptions
+    from rewired.auth.transport import _custom_tls_signer
 
     urllib3.contrib.pyopenssl.inject_into_urllib3()
 
@@ -1498,18 +1498,18 @@ def test_load_provider_lib():
 
     # Test load_libraries method
     with mock.patch(
-    "google.auth.transport._custom_tls_signer.load_signer_lib"
+    "rewired.auth.transport._custom_tls_signer.load_signer_lib"
     ) as load_signer_lib:
     with mock.patch(
-    "google.auth.transport._custom_tls_signer.load_offload_lib"
+    "rewired.auth.transport._custom_tls_signer.load_offload_lib"
     ) as load_offload_lib:
     load_offload_lib.return_value = offload_lib
     load_signer_lib.return_value = signer_lib
     with mock.patch(
-    "google.auth.transport._custom_tls_signer.get_cert"
+    "rewired.auth.transport._custom_tls_signer.get_cert"
     ) as get_cert:
     with mock.patch(
-    "google.auth.transport._custom_tls_signer.get_sign_callback"
+    "rewired.auth.transport._custom_tls_signer.get_sign_callback"
     ) as get_sign_callback:
     get_cert.return_value = b"mock_cert"
     signer_object = _custom_tls_signer.CustomTlsSigner(
@@ -1533,7 +1533,7 @@ def test_load_provider_lib():
 
     # Test load_libraries method
     with mock.patch(
-    "google.auth.transport._custom_tls_signer.load_provider_lib"
+    "rewired.auth.transport._custom_tls_signer.load_provider_lib"
     ) as load_provider_lib:
     load_provider_lib.return_value = provider_lib
     signer_object = _custom_tls_signer.CustomTlsSigner(

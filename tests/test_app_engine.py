@@ -17,7 +17,7 @@ import datetime
 import mock
 import pytest  # type: ignore
 
-from google.auth import app_engine
+from rewired.auth import app_engine
 
 
 class _AppIdentityModule(object):
@@ -41,7 +41,7 @@ class _AppIdentityModule(object):
 
     @pytest.fixture
                     def app_identity(monkeypatch):
-    """Mocks the app_identity module for google.auth.app_engine."""
+    """Mocks the app_identity module for rewired.auth.app_engine."""
     app_identity_module = mock.create_autospec(_AppIdentityModule, instance=True)
     monkeypatch.setattr(app_engine, "app_identity", app_identity_module)
     yield app_identity_module
@@ -76,7 +76,7 @@ class _AppIdentityModule(object):
     import mock
     import pytest  # type: ignore
 
-    from google.auth import app_engine
+    from rewired.auth import app_engine
 
 
                                     class _AppIdentityModule(object):
@@ -100,7 +100,7 @@ class _AppIdentityModule(object):
 
     @pytest.fixture
                                                         def app_identity(monkeypatch):
-    """Mocks the app_identity module for google.auth.app_engine."""
+    """Mocks the app_identity module for rewired.auth.app_engine."""
     app_identity_module = mock.create_autospec(_AppIdentityModule, instance=True)
     monkeypatch.setattr(app_engine, "app_identity", app_identity_module)
     yield app_identity_module
@@ -218,7 +218,7 @@ class _AppIdentityModule(object):
     assert credentials.service_account_email == mock.sentinel.service_account_email
     assert not app_identity.get_service_account_name.called
 
-    @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+    @mock.patch("rewired.auth._helpers.utcnow", return_value=datetime.datetime.min)
                                                                                                                         def test_refresh(self, utcnow, app_identity):
     token = "token"
     ttl = 643942923
@@ -237,7 +237,7 @@ class _AppIdentityModule(object):
     assert credentials.valid
     assert not credentials.expired
 
-    @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+    @mock.patch("rewired.auth._helpers.utcnow", return_value=datetime.datetime.min)
                                                                                                                             def test_refresh_with_default_scopes(self, utcnow, app_identity):
     token = "token"
     ttl = 643942923
@@ -332,7 +332,7 @@ class _AppIdentityModule(object):
     import mock
     import pytest  # type: ignore
 
-    from google.auth import app_engine
+    from rewired.auth import app_engine
 
 
                                                                                                                                                                     class _AppIdentityModule(object):
@@ -356,7 +356,7 @@ class _AppIdentityModule(object):
 
     @pytest.fixture
                                                                                                                                                                                         def app_identity(monkeypatch):
-    """Mocks the app_identity module for google.auth.app_engine."""
+    """Mocks the app_identity module for rewired.auth.app_engine."""
     app_identity_module = mock.create_autospec(_AppIdentityModule, instance=True)
     monkeypatch.setattr(app_engine, "app_identity", app_identity_module)
     yield app_identity_module
@@ -474,7 +474,7 @@ class _AppIdentityModule(object):
     assert credentials.service_account_email == mock.sentinel.service_account_email
     assert not app_identity.get_service_account_name.called
 
-    @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+    @mock.patch("rewired.auth._helpers.utcnow", return_value=datetime.datetime.min)
                                                                                                                                                                                                                                                         def test_refresh(self, utcnow, app_identity):
     token = "token"
     ttl = 643942923
@@ -493,7 +493,7 @@ class _AppIdentityModule(object):
     assert credentials.valid
     assert not credentials.expired
 
-    @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+    @mock.patch("rewired.auth._helpers.utcnow", return_value=datetime.datetime.min)
                                                                                                                                                                                                                                                             def test_refresh_with_default_scopes(self, utcnow, app_identity):
     token = "token"
     ttl = 643942923
@@ -601,7 +601,7 @@ class _AppIdentityModule(object):
     assert credentials.service_account_email == mock.sentinel.service_account_email
     assert not app_identity.get_service_account_name.called
 
-    @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+    @mock.patch("rewired.auth._helpers.utcnow", return_value=datetime.datetime.min)
                                                                                                                                                                                                                                                                                                     def test_refresh(self, utcnow, app_identity):
     token = "token"
     ttl = 643942923
@@ -620,7 +620,7 @@ class _AppIdentityModule(object):
     assert credentials.valid
     assert not credentials.expired
 
-    @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+    @mock.patch("rewired.auth._helpers.utcnow", return_value=datetime.datetime.min)
                                                                                                                                                                                                                                                                                                         def test_refresh_with_default_scopes(self, utcnow, app_identity):
     token = "token"
     ttl = 643942923

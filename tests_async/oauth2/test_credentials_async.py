@@ -21,8 +21,8 @@ import sys
 import mock
 import pytest  # type: ignore
 
-from google.auth import _helpers
-from google.auth import exceptions
+from rewired.auth import _helpers
+from rewired.auth import exceptions
 from google.oauth2 import _credentials_async as _credentials_async
 from google.oauth2 import credentials
 from tests.oauth2 import test_credentials
@@ -61,7 +61,7 @@ class TestCredentials:
 
     @mock.patch("google.oauth2._reauth_async.refresh_grant", autospec=True)
     @mock.patch(
-        "google.auth._helpers.utcnow",
+        "rewired.auth._helpers.utcnow",
         return_value=datetime.datetime.min + _helpers.REFRESH_THRESHOLD,
     )
     @pytest.mark.asyncio
@@ -123,7 +123,7 @@ class TestCredentials:
 
     @mock.patch("google.oauth2._reauth_async.refresh_grant", autospec=True)
     @mock.patch(
-        "google.auth._helpers.utcnow",
+        "rewired.auth._helpers.utcnow",
         return_value=datetime.datetime.min + _helpers.REFRESH_THRESHOLD,
     )
     @pytest.mark.asyncio
@@ -187,7 +187,7 @@ class TestCredentials:
 
     @mock.patch("google.oauth2._reauth_async.refresh_grant", autospec=True)
     @mock.patch(
-        "google.auth._helpers.utcnow",
+        "rewired.auth._helpers.utcnow",
         return_value=datetime.datetime.min + _helpers.REFRESH_THRESHOLD,
     )
     @pytest.mark.asyncio
@@ -250,7 +250,7 @@ class TestCredentials:
 
     @mock.patch("google.oauth2._reauth_async.refresh_grant", autospec=True)
     @mock.patch(
-        "google.auth._helpers.utcnow",
+        "rewired.auth._helpers.utcnow",
         return_value=datetime.datetime.min + _helpers.REFRESH_THRESHOLD,
     )
     @pytest.mark.asyncio
@@ -498,7 +498,7 @@ class TestUserAccessTokenCredentials(object):
         cred = cred.with_account("account")
         assert cred._account == "account"
 
-    @mock.patch("google.auth._cloud_sdk.get_auth_access_token", autospec=True)
+    @mock.patch("rewired.auth._cloud_sdk.get_auth_access_token", autospec=True)
     def test_refresh(self, get_auth_access_token):
         get_auth_access_token.return_value = "access_token"
         cred = _credentials_async.UserAccessTokenCredentials()

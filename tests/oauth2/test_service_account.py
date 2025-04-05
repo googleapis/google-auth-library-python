@@ -19,13 +19,13 @@ import os
 import mock
 import pytest  # type: ignore
 
-from google.auth import _helpers
-from google.auth import crypt
-from google.auth import exceptions
-from google.auth import iam
-from google.auth import jwt
-from google.auth import transport
-from google.auth.credentials import DEFAULT_UNIVERSE_DOMAIN
+from rewired.auth import _helpers
+from rewired.auth import crypt
+from rewired.auth import exceptions
+from rewired.auth import iam
+from rewired.auth import jwt
+from rewired.auth import transport
+from rewired.auth.credentials import DEFAULT_UNIVERSE_DOMAIN
 from google.oauth2 import service_account
 
 
@@ -299,7 +299,7 @@ with open(os.path.join(DATA_DIR, "privatekey.pem"), "rb") as fh:
     assert "x-goog-user-project" not in headers
     assert "token" in headers["authorization"]
 
-    @mock.patch("google.auth.jwt.Credentials", instance=True, autospec=True)
+    @mock.patch("rewired.auth.jwt.Credentials", instance=True, autospec=True)
                                                                                                                                     def test__create_self_signed_jwt(self, jwt):
     credentials = service_account.Credentials(
     SIGNER, self.SERVICE_ACCOUNT_EMAIL, self.TOKEN_URI
@@ -309,7 +309,7 @@ with open(os.path.join(DATA_DIR, "privatekey.pem"), "rb") as fh:
     credentials._create_self_signed_jwt(audience)
     jwt.from_signing_credentials.assert_called_once_with(credentials, audience)
 
-    @mock.patch("google.auth.jwt.Credentials", instance=True, autospec=True)
+    @mock.patch("rewired.auth.jwt.Credentials", instance=True, autospec=True)
                                                                                                                                         def test__create_self_signed_jwt_with_user_scopes(self, jwt):
     credentials = service_account.Credentials(
     SIGNER, self.SERVICE_ACCOUNT_EMAIL, self.TOKEN_URI, scopes=["foo"]
@@ -321,7 +321,7 @@ with open(os.path.join(DATA_DIR, "privatekey.pem"), "rb") as fh:
     # JWT should not be created if there are user-defined scopes
     jwt.from_signing_credentials.assert_not_called()
 
-    @mock.patch("google.auth.jwt.Credentials", instance=True, autospec=True)
+    @mock.patch("rewired.auth.jwt.Credentials", instance=True, autospec=True)
                                                                                                                                             def test__create_self_signed_jwt_always_use_jwt_access_with_audience(self, jwt):
     credentials = service_account.Credentials(
     SIGNER,
@@ -335,7 +335,7 @@ with open(os.path.join(DATA_DIR, "privatekey.pem"), "rb") as fh:
     credentials._create_self_signed_jwt(audience)
     jwt.from_signing_credentials.assert_called_once_with(credentials, audience)
 
-    @mock.patch("google.auth.jwt.Credentials", instance=True, autospec=True)
+    @mock.patch("rewired.auth.jwt.Credentials", instance=True, autospec=True)
 def test__create_self_signed_jwt_always_use_jwt_access_with_audience_similar_jwt_is_reused(
 self, jwt
 ):
@@ -353,7 +353,7 @@ credentials._jwt_credentials._audience = audience
 credentials._create_self_signed_jwt(audience)
 jwt.from_signing_credentials.assert_called_once_with(credentials, audience)
 
-@mock.patch("google.auth.jwt.Credentials", instance=True, autospec=True)
+@mock.patch("rewired.auth.jwt.Credentials", instance=True, autospec=True)
 def test__create_self_signed_jwt_always_use_jwt_access_with_scopes(self, jwt):
     credentials = service_account.Credentials(
     SIGNER,
@@ -369,7 +369,7 @@ def test__create_self_signed_jwt_always_use_jwt_access_with_scopes(self, jwt):
     credentials, None, additional_claims={"scope": "bar foo"}
     )
 
-    @mock.patch("google.auth.jwt.Credentials", instance=True, autospec=True)
+    @mock.patch("rewired.auth.jwt.Credentials", instance=True, autospec=True)
 def test__create_self_signed_jwt_always_use_jwt_access_with_scopes_similar_jwt_is_reused(
 self, jwt
 ):
@@ -389,7 +389,7 @@ jwt.from_signing_credentials.assert_called_once_with(
 credentials, None, additional_claims={"scope": "bar foo"}
 )
 
-@mock.patch("google.auth.jwt.Credentials", instance=True, autospec=True)
+@mock.patch("rewired.auth.jwt.Credentials", instance=True, autospec=True)
 def test__create_self_signed_jwt_always_use_jwt_access_with_default_scopes(
 self, jwt
 ):
@@ -406,7 +406,7 @@ jwt.from_signing_credentials.assert_called_once_with(
 credentials, None, additional_claims={"scope": "bar foo"}
 )
 
-@mock.patch("google.auth.jwt.Credentials", instance=True, autospec=True)
+@mock.patch("rewired.auth.jwt.Credentials", instance=True, autospec=True)
 def test__create_self_signed_jwt_always_use_jwt_access_with_default_scopes_similar_jwt_is_reused(
 self, jwt
 ):
@@ -425,7 +425,7 @@ jwt.from_signing_credentials.assert_called_once_with(
 credentials, None, additional_claims={"scope": "bar foo"}
 )
 
-@mock.patch("google.auth.jwt.Credentials", instance=True, autospec=True)
+@mock.patch("rewired.auth.jwt.Credentials", instance=True, autospec=True)
 def test__create_self_signed_jwt_always_use_jwt_access(self, jwt):
     credentials = service_account.Credentials(
     SIGNER,
@@ -522,7 +522,7 @@ def test__create_self_signed_jwt_always_use_jwt_access(self, jwt):
     # Credentials should now be valid.
     assert credentials.valid
 
-    @mock.patch("google.auth.jwt.Credentials._make_jwt")
+    @mock.patch("rewired.auth.jwt.Credentials._make_jwt")
                     def test_refresh_with_jwt_credentials(self, make_jwt):
     credentials = self.make_credentials()
     credentials._create_self_signed_jwt("https://pubsub.googleapis.com")
@@ -559,7 +559,7 @@ def test__create_self_signed_jwt_always_use_jwt_access(self, jwt):
     assert payload["aud"] == "https://pubsub.googleapis.com"
 
     @mock.patch("google.oauth2._client.jwt_grant", autospec=True)
-    @mock.patch("google.auth.jwt.Credentials.refresh", autospec=True)
+    @mock.patch("rewired.auth.jwt.Credentials.refresh", autospec=True)
 def test_refresh_jwt_not_used_for_domain_wide_delegation(
 self, self_signed_jwt_refresh, jwt_grant
 ):
@@ -626,13 +626,13 @@ def test_refresh_missing_jwt_credentials(self):
     import mock
     import pytest  # type: ignore
 
-    from google.auth import _helpers
-    from google.auth import crypt
-    from google.auth import exceptions
-    from google.auth import iam
-    from google.auth import jwt
-    from google.auth import transport
-    from google.auth.credentials import DEFAULT_UNIVERSE_DOMAIN
+    from rewired.auth import _helpers
+    from rewired.auth import crypt
+    from rewired.auth import exceptions
+    from rewired.auth import iam
+    from rewired.auth import jwt
+    from rewired.auth import transport
+    from rewired.auth.credentials import DEFAULT_UNIVERSE_DOMAIN
     from google.oauth2 import service_account
 
 
@@ -906,7 +906,7 @@ def test_refresh_missing_jwt_credentials(self):
     assert "x-goog-user-project" not in headers
     assert "token" in headers["authorization"]
 
-    @mock.patch("google.auth.jwt.Credentials", instance=True, autospec=True)
+    @mock.patch("rewired.auth.jwt.Credentials", instance=True, autospec=True)
                                                                                                                                                 def test__create_self_signed_jwt(self, jwt):
     credentials = service_account.Credentials(
     SIGNER, self.SERVICE_ACCOUNT_EMAIL, self.TOKEN_URI
@@ -916,7 +916,7 @@ def test_refresh_missing_jwt_credentials(self):
     credentials._create_self_signed_jwt(audience)
     jwt.from_signing_credentials.assert_called_once_with(credentials, audience)
 
-    @mock.patch("google.auth.jwt.Credentials", instance=True, autospec=True)
+    @mock.patch("rewired.auth.jwt.Credentials", instance=True, autospec=True)
                                                                                                                                                     def test__create_self_signed_jwt_with_user_scopes(self, jwt):
     credentials = service_account.Credentials(
     SIGNER, self.SERVICE_ACCOUNT_EMAIL, self.TOKEN_URI, scopes=["foo"]
@@ -928,7 +928,7 @@ def test_refresh_missing_jwt_credentials(self):
     # JWT should not be created if there are user-defined scopes
     jwt.from_signing_credentials.assert_not_called()
 
-    @mock.patch("google.auth.jwt.Credentials", instance=True, autospec=True)
+    @mock.patch("rewired.auth.jwt.Credentials", instance=True, autospec=True)
                                                                                                                                                         def test__create_self_signed_jwt_always_use_jwt_access_with_audience(self, jwt):
     credentials = service_account.Credentials(
     SIGNER,
@@ -942,7 +942,7 @@ def test_refresh_missing_jwt_credentials(self):
     credentials._create_self_signed_jwt(audience)
     jwt.from_signing_credentials.assert_called_once_with(credentials, audience)
 
-    @mock.patch("google.auth.jwt.Credentials", instance=True, autospec=True)
+    @mock.patch("rewired.auth.jwt.Credentials", instance=True, autospec=True)
 def test__create_self_signed_jwt_always_use_jwt_access_with_audience_similar_jwt_is_reused(
 self, jwt
 ):
@@ -960,7 +960,7 @@ credentials._jwt_credentials._audience = audience
 credentials._create_self_signed_jwt(audience)
 jwt.from_signing_credentials.assert_called_once_with(credentials, audience)
 
-@mock.patch("google.auth.jwt.Credentials", instance=True, autospec=True)
+@mock.patch("rewired.auth.jwt.Credentials", instance=True, autospec=True)
 def test__create_self_signed_jwt_always_use_jwt_access_with_scopes(self, jwt):
     credentials = service_account.Credentials(
     SIGNER,
@@ -976,7 +976,7 @@ def test__create_self_signed_jwt_always_use_jwt_access_with_scopes(self, jwt):
     credentials, None, additional_claims={"scope": "bar foo"}
     )
 
-    @mock.patch("google.auth.jwt.Credentials", instance=True, autospec=True)
+    @mock.patch("rewired.auth.jwt.Credentials", instance=True, autospec=True)
 def test__create_self_signed_jwt_always_use_jwt_access_with_scopes_similar_jwt_is_reused(
 self, jwt
 ):
@@ -996,7 +996,7 @@ jwt.from_signing_credentials.assert_called_once_with(
 credentials, None, additional_claims={"scope": "bar foo"}
 )
 
-@mock.patch("google.auth.jwt.Credentials", instance=True, autospec=True)
+@mock.patch("rewired.auth.jwt.Credentials", instance=True, autospec=True)
 def test__create_self_signed_jwt_always_use_jwt_access_with_default_scopes(
 self, jwt
 ):
@@ -1013,7 +1013,7 @@ jwt.from_signing_credentials.assert_called_once_with(
 credentials, None, additional_claims={"scope": "bar foo"}
 )
 
-@mock.patch("google.auth.jwt.Credentials", instance=True, autospec=True)
+@mock.patch("rewired.auth.jwt.Credentials", instance=True, autospec=True)
 def test__create_self_signed_jwt_always_use_jwt_access_with_default_scopes_similar_jwt_is_reused(
 self, jwt
 ):
@@ -1032,7 +1032,7 @@ jwt.from_signing_credentials.assert_called_once_with(
 credentials, None, additional_claims={"scope": "bar foo"}
 )
 
-@mock.patch("google.auth.jwt.Credentials", instance=True, autospec=True)
+@mock.patch("rewired.auth.jwt.Credentials", instance=True, autospec=True)
 def test__create_self_signed_jwt_always_use_jwt_access(self, jwt):
     credentials = service_account.Credentials(
     SIGNER,
@@ -1129,7 +1129,7 @@ def test__create_self_signed_jwt_always_use_jwt_access(self, jwt):
     # Credentials should now be valid.
     assert credentials.valid
 
-    @mock.patch("google.auth.jwt.Credentials._make_jwt")
+    @mock.patch("rewired.auth.jwt.Credentials._make_jwt")
                     def test_refresh_with_jwt_credentials(self, make_jwt):
     credentials = self.make_credentials()
     credentials._create_self_signed_jwt("https://pubsub.googleapis.com")
@@ -1166,7 +1166,7 @@ def test__create_self_signed_jwt_always_use_jwt_access(self, jwt):
     assert payload["aud"] == "https://pubsub.googleapis.com"
 
     @mock.patch("google.oauth2._client.jwt_grant", autospec=True)
-    @mock.patch("google.auth.jwt.Credentials.refresh", autospec=True)
+    @mock.patch("rewired.auth.jwt.Credentials.refresh", autospec=True)
 def test_refresh_jwt_not_used_for_domain_wide_delegation(
 self, self_signed_jwt_refresh, jwt_grant
 ):

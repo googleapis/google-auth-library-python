@@ -20,7 +20,7 @@ import time
 import mock
 import pytest  # type: ignore
 
-from google.auth import _refresh_worker, credentials, exceptions
+from rewired.auth import _refresh_worker, credentials, exceptions
 
 MAIN_THREAD_SLEEP_MS = 100 / 1000
 

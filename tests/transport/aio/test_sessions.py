@@ -19,8 +19,8 @@ from aioresponses import aioresponses  # type: ignore
 from mock import Mock, patch
 import pytest  # type: ignore
 
-from google.auth.aio.credentials import AnonymousCredentials
-from google.auth.aio.transport import (
+from rewired.auth.aio.credentials import AnonymousCredentials
+from rewired.auth.aio.transport import (
 _DEFAULT_TIMEOUT_SECONDS,
 DEFAULT_MAX_RETRY_ATTEMPTS,
 DEFAULT_RETRYABLE_STATUS_CODES,
@@ -28,7 +28,7 @@ Request,
 Response,
 sessions,
 )
-from google.auth.exceptions import InvalidType, TimeoutError, TransportError
+from rewired.auth.exceptions import InvalidType, TimeoutError, TransportError
 
 
 @pytest.fixture
@@ -158,7 +158,7 @@ class MockRequest(Request):
 
     @pytest.mark.asyncio
     async def test_constructor_with_default_auth_request(self):
-                                                                    with patch("google.auth.aio.transport.sessions.AIOHTTP_INSTALLED", True):
+                                                                    with patch("rewired.auth.aio.transport.sessions.AIOHTTP_INSTALLED", True):
     authed_session = sessions.AsyncAuthorizedSession(self.credentials)
     assert authed_session._credentials == self.credentials
     await authed_session.close()
@@ -175,7 +175,7 @@ class MockRequest(Request):
 
     @pytest.mark.asyncio
     async def test_constructor_raises_no_auth_request_error(self):
-                                                                        with patch("google.auth.aio.transport.sessions.AIOHTTP_INSTALLED", False):
+                                                                        with patch("rewired.auth.aio.transport.sessions.AIOHTTP_INSTALLED", False):
                                                                             with pytest.raises(TransportError) as exc:
     sessions.AsyncAuthorizedSession(self.credentials)
 
@@ -190,7 +190,7 @@ class MockRequest(Request):
     sessions.AsyncAuthorizedSession(credentials)
 
     exc.match(
-    f"The configured credentials of type {type(credentials)} are invalid and must be of type `google.auth.aio.credentials.Credentials`"
+    f"The configured credentials of type {type(credentials)} are invalid and must be of type `rewired.auth.aio.credentials.Credentials`"
     )
 
     @pytest.mark.asyncio

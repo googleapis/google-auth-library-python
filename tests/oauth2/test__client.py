@@ -21,12 +21,12 @@ import urllib
 import mock
 import pytest  # type: ignore
 
-from google.auth import _helpers
-from google.auth import crypt
-from google.auth import exceptions
-from google.auth import iam
-from google.auth import jwt
-from google.auth import transport
+from rewired.auth import _helpers
+from rewired.auth import crypt
+from rewired.auth import exceptions
+from rewired.auth import iam
+from rewired.auth import jwt
+from rewired.auth import transport
 from google.oauth2 import _client
 
 
@@ -85,12 +85,12 @@ with open(os.path.join(DATA_DIR, "privatekey.pem"), "rb") as fh:
     import mock
     import pytest  # type: ignore
 
-    from google.auth import _helpers
-    from google.auth import crypt
-    from google.auth import exceptions
-    from google.auth import iam
-    from google.auth import jwt
-    from google.auth import transport
+    from rewired.auth import _helpers
+    from rewired.auth import crypt
+    from rewired.auth import exceptions
+    from rewired.auth import iam
+    from rewired.auth import jwt
+    from rewired.auth import transport
     from google.oauth2 import _client
 
 
@@ -178,7 +178,7 @@ with open(os.path.join(DATA_DIR, "privatekey.pem"), "rb") as fh:
 
 
     @pytest.mark.parametrize("mock_expires_in", [500, "500"])
-    @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+    @mock.patch("rewired.auth._helpers.utcnow", return_value=datetime.datetime.min)
                                                                 def test__parse_expiry(unused_utcnow, mock_expires_in):
     result = _client._parse_expiry({"expires_in": mock_expires_in})
     assert result == datetime.datetime.min + datetime.timedelta(seconds=500)
@@ -341,7 +341,7 @@ with open(os.path.join(DATA_DIR, "privatekey.pem"), "rb") as fh:
     assert request_params[key][0] == value
 
 
-    @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+    @mock.patch("rewired.auth._helpers.utcnow", return_value=datetime.datetime.min)
                                                                                                                                     def test_jwt_grant(utcnow):
     request = make_request(
     {"access_token": "token", "expires_in": 500, "extra": "data"}
@@ -468,7 +468,7 @@ with open(os.path.join(DATA_DIR, "privatekey.pem"), "rb") as fh:
     assert not excinfo.value.retryable
 
 
-    @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+    @mock.patch("rewired.auth._helpers.utcnow", return_value=datetime.datetime.min)
                                                                                                                                                                         def test_refresh_grant(unused_utcnow):
     request = make_request(
     {
@@ -507,7 +507,7 @@ with open(os.path.join(DATA_DIR, "privatekey.pem"), "rb") as fh:
     assert extra_data["extra"] == "data"
 
 
-    @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+    @mock.patch("rewired.auth._helpers.utcnow", return_value=datetime.datetime.min)
                                                                                                                                                                             def test_refresh_grant_with_scopes(unused_utcnow):
     request = make_request(
     {
@@ -565,7 +565,7 @@ with open(os.path.join(DATA_DIR, "privatekey.pem"), "rb") as fh:
 
 
     @mock.patch(
-    "google.auth.metrics.token_request_access_token_sa_assertion",
+    "rewired.auth.metrics.token_request_access_token_sa_assertion",
     return_value=ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
     )
     @mock.patch("google.oauth2._client._parse_expiry", return_value=None)
@@ -585,7 +585,7 @@ headers={"x-goog-api-client": ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE},
 
 @pytest.mark.parametrize("can_retry", [True, False])
 @mock.patch(
-"google.auth.metrics.token_request_access_token_sa_assertion",
+"rewired.auth.metrics.token_request_access_token_sa_assertion",
 return_value=ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
 )
 @mock.patch("google.oauth2._client._parse_expiry", return_value=None)
@@ -604,10 +604,10 @@ headers={"x-goog-api-client": ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE},
 
 
 @mock.patch(
-"google.auth.metrics.token_request_id_token_sa_assertion",
+"rewired.auth.metrics.token_request_id_token_sa_assertion",
 return_value=ID_TOKEN_REQUEST_METRICS_HEADER_VALUE,
 )
-@mock.patch("google.auth.jwt.decode", return_value={"exp": 0})
+@mock.patch("rewired.auth.jwt.decode", return_value={"exp": 0})
 @mock.patch.object(_client, "_token_endpoint_request", autospec=True)
 def test_id_token_jwt_grant_retry_default(
 mock_token_endpoint_request, mock_jwt_decode, mock_metrics_header_value
@@ -624,10 +624,10 @@ headers={"x-goog-api-client": ID_TOKEN_REQUEST_METRICS_HEADER_VALUE},
 
 @pytest.mark.parametrize("can_retry", [True, False])
 @mock.patch(
-"google.auth.metrics.token_request_id_token_sa_assertion",
+"rewired.auth.metrics.token_request_id_token_sa_assertion",
 return_value=ID_TOKEN_REQUEST_METRICS_HEADER_VALUE,
 )
-@mock.patch("google.auth.jwt.decode", return_value={"exp": 0})
+@mock.patch("rewired.auth.jwt.decode", return_value={"exp": 0})
 @mock.patch.object(_client, "_token_endpoint_request", autospec=True)
 def test_id_token_jwt_grant_retry_with_retry(
 mock_token_endpoint_request, mock_jwt_decode, mock_metrics_header_value, can_retry
@@ -731,12 +731,12 @@ def test__token_endpoint_request_no_throw_with_retry(can_retry):
     import mock
     import pytest  # type: ignore
 
-    from google.auth import _helpers
-    from google.auth import crypt
-    from google.auth import exceptions
-    from google.auth import iam
-    from google.auth import jwt
-    from google.auth import transport
+    from rewired.auth import _helpers
+    from rewired.auth import crypt
+    from rewired.auth import exceptions
+    from rewired.auth import iam
+    from rewired.auth import jwt
+    from rewired.auth import transport
     from google.oauth2 import _client
 
 
@@ -824,7 +824,7 @@ def test__token_endpoint_request_no_throw_with_retry(can_retry):
 
 
     @pytest.mark.parametrize("mock_expires_in", [500, "500"])
-    @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+    @mock.patch("rewired.auth._helpers.utcnow", return_value=datetime.datetime.min)
                                                                         def test__parse_expiry(unused_utcnow, mock_expires_in):
     result = _client._parse_expiry({"expires_in": mock_expires_in})
     assert result == datetime.datetime.min + datetime.timedelta(seconds=500)
@@ -987,7 +987,7 @@ def test__token_endpoint_request_no_throw_with_retry(can_retry):
     assert request_params[key][0] == value
 
 
-    @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+    @mock.patch("rewired.auth._helpers.utcnow", return_value=datetime.datetime.min)
                                                                                                                                             def test_jwt_grant(utcnow):
     request = make_request(
     {"access_token": "token", "expires_in": 500, "extra": "data"}
@@ -1114,7 +1114,7 @@ def test__token_endpoint_request_no_throw_with_retry(can_retry):
     assert not excinfo.value.retryable
 
 
-    @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+    @mock.patch("rewired.auth._helpers.utcnow", return_value=datetime.datetime.min)
                                                                                                                                                                                 def test_refresh_grant(unused_utcnow):
     request = make_request(
     {
@@ -1153,7 +1153,7 @@ def test__token_endpoint_request_no_throw_with_retry(can_retry):
     assert extra_data["extra"] == "data"
 
 
-    @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+    @mock.patch("rewired.auth._helpers.utcnow", return_value=datetime.datetime.min)
                                                                                                                                                                                     def test_refresh_grant_with_scopes(unused_utcnow):
     request = make_request(
     {
@@ -1211,7 +1211,7 @@ def test__token_endpoint_request_no_throw_with_retry(can_retry):
 
 
     @mock.patch(
-    "google.auth.metrics.token_request_access_token_sa_assertion",
+    "rewired.auth.metrics.token_request_access_token_sa_assertion",
     return_value=ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
     )
     @mock.patch("google.oauth2._client._parse_expiry", return_value=None)
@@ -1231,7 +1231,7 @@ headers={"x-goog-api-client": ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE},
 
 @pytest.mark.parametrize("can_retry", [True, False])
 @mock.patch(
-"google.auth.metrics.token_request_access_token_sa_assertion",
+"rewired.auth.metrics.token_request_access_token_sa_assertion",
 return_value=ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
 )
 @mock.patch("google.oauth2._client._parse_expiry", return_value=None)
@@ -1250,10 +1250,10 @@ headers={"x-goog-api-client": ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE},
 
 
 @mock.patch(
-"google.auth.metrics.token_request_id_token_sa_assertion",
+"rewired.auth.metrics.token_request_id_token_sa_assertion",
 return_value=ID_TOKEN_REQUEST_METRICS_HEADER_VALUE,
 )
-@mock.patch("google.auth.jwt.decode", return_value={"exp": 0})
+@mock.patch("rewired.auth.jwt.decode", return_value={"exp": 0})
 @mock.patch.object(_client, "_token_endpoint_request", autospec=True)
 def test_id_token_jwt_grant_retry_default(
 mock_token_endpoint_request, mock_jwt_decode, mock_metrics_header_value
@@ -1270,10 +1270,10 @@ headers={"x-goog-api-client": ID_TOKEN_REQUEST_METRICS_HEADER_VALUE},
 
 @pytest.mark.parametrize("can_retry", [True, False])
 @mock.patch(
-"google.auth.metrics.token_request_id_token_sa_assertion",
+"rewired.auth.metrics.token_request_id_token_sa_assertion",
 return_value=ID_TOKEN_REQUEST_METRICS_HEADER_VALUE,
 )
-@mock.patch("google.auth.jwt.decode", return_value={"exp": 0})
+@mock.patch("rewired.auth.jwt.decode", return_value={"exp": 0})
 @mock.patch.object(_client, "_token_endpoint_request", autospec=True)
 def test_id_token_jwt_grant_retry_with_retry(
 mock_token_endpoint_request, mock_jwt_decode, mock_metrics_header_value, can_retry
@@ -1377,12 +1377,12 @@ def test__token_endpoint_request_no_throw_with_retry(can_retry):
     import mock
     import pytest  # type: ignore
 
-    from google.auth import _helpers
-    from google.auth import crypt
-    from google.auth import exceptions
-    from google.auth import iam
-    from google.auth import jwt
-    from google.auth import transport
+    from rewired.auth import _helpers
+    from rewired.auth import crypt
+    from rewired.auth import exceptions
+    from rewired.auth import iam
+    from rewired.auth import jwt
+    from rewired.auth import transport
     from google.oauth2 import _client
 
 
@@ -1470,7 +1470,7 @@ def test__token_endpoint_request_no_throw_with_retry(can_retry):
 
 
     @pytest.mark.parametrize("mock_expires_in", [500, "500"])
-    @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+    @mock.patch("rewired.auth._helpers.utcnow", return_value=datetime.datetime.min)
                                                                         def test__parse_expiry(unused_utcnow, mock_expires_in):
     result = _client._parse_expiry({"expires_in": mock_expires_in})
     assert result == datetime.datetime.min + datetime.timedelta(seconds=500)
@@ -1633,7 +1633,7 @@ def test__token_endpoint_request_no_throw_with_retry(can_retry):
     assert request_params[key][0] == value
 
 
-    @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+    @mock.patch("rewired.auth._helpers.utcnow", return_value=datetime.datetime.min)
                                                                                                                                             def test_jwt_grant(utcnow):
     request = make_request(
     {"access_token": "token", "expires_in": 500, "extra": "data"}
@@ -1760,7 +1760,7 @@ def test__token_endpoint_request_no_throw_with_retry(can_retry):
     assert not excinfo.value.retryable
 
 
-    @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+    @mock.patch("rewired.auth._helpers.utcnow", return_value=datetime.datetime.min)
                                                                                                                                                                                 def test_refresh_grant(unused_utcnow):
     request = make_request(
     {
@@ -1799,7 +1799,7 @@ def test__token_endpoint_request_no_throw_with_retry(can_retry):
     assert extra_data["extra"] == "data"
 
 
-    @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+    @mock.patch("rewired.auth._helpers.utcnow", return_value=datetime.datetime.min)
                                                                                                                                                                                     def test_refresh_grant_with_scopes(unused_utcnow):
     request = make_request(
     {
@@ -1857,7 +1857,7 @@ def test__token_endpoint_request_no_throw_with_retry(can_retry):
 
 
     @mock.patch(
-    "google.auth.metrics.token_request_access_token_sa_assertion",
+    "rewired.auth.metrics.token_request_access_token_sa_assertion",
     return_value=ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
     )
     @mock.patch("google.oauth2._client._parse_expiry", return_value=None)
@@ -1877,7 +1877,7 @@ headers={"x-goog-api-client": ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE},
 
 @pytest.mark.parametrize("can_retry", [True, False])
 @mock.patch(
-"google.auth.metrics.token_request_access_token_sa_assertion",
+"rewired.auth.metrics.token_request_access_token_sa_assertion",
 return_value=ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
 )
 @mock.patch("google.oauth2._client._parse_expiry", return_value=None)
@@ -1896,10 +1896,10 @@ headers={"x-goog-api-client": ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE},
 
 
 @mock.patch(
-"google.auth.metrics.token_request_id_token_sa_assertion",
+"rewired.auth.metrics.token_request_id_token_sa_assertion",
 return_value=ID_TOKEN_REQUEST_METRICS_HEADER_VALUE,
 )
-@mock.patch("google.auth.jwt.decode", return_value={"exp": 0})
+@mock.patch("rewired.auth.jwt.decode", return_value={"exp": 0})
 @mock.patch.object(_client, "_token_endpoint_request", autospec=True)
 def test_id_token_jwt_grant_retry_default(
 mock_token_endpoint_request, mock_jwt_decode, mock_metrics_header_value
@@ -1916,10 +1916,10 @@ headers={"x-goog-api-client": ID_TOKEN_REQUEST_METRICS_HEADER_VALUE},
 
 @pytest.mark.parametrize("can_retry", [True, False])
 @mock.patch(
-"google.auth.metrics.token_request_id_token_sa_assertion",
+"rewired.auth.metrics.token_request_id_token_sa_assertion",
 return_value=ID_TOKEN_REQUEST_METRICS_HEADER_VALUE,
 )
-@mock.patch("google.auth.jwt.decode", return_value={"exp": 0})
+@mock.patch("rewired.auth.jwt.decode", return_value={"exp": 0})
 @mock.patch.object(_client, "_token_endpoint_request", autospec=True)
 def test_id_token_jwt_grant_retry_with_retry(
 mock_token_endpoint_request, mock_jwt_decode, mock_metrics_header_value, can_retry
@@ -2022,7 +2022,7 @@ def test__token_endpoint_request_no_throw_with_retry(can_retry):
 
 
     @pytest.mark.parametrize("mock_expires_in", [500, "500"])
-    @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+    @mock.patch("rewired.auth._helpers.utcnow", return_value=datetime.datetime.min)
                                     def test__parse_expiry(unused_utcnow, mock_expires_in):
     result = _client._parse_expiry({"expires_in": mock_expires_in})
     assert result == datetime.datetime.min + datetime.timedelta(seconds=500)
@@ -2197,12 +2197,12 @@ def test__token_endpoint_request_no_throw_with_retry(can_retry):
     import mock
     import pytest  # type: ignore
 
-    from google.auth import _helpers
-    from google.auth import crypt
-    from google.auth import exceptions
-    from google.auth import iam
-    from google.auth import jwt
-    from google.auth import transport
+    from rewired.auth import _helpers
+    from rewired.auth import crypt
+    from rewired.auth import exceptions
+    from rewired.auth import iam
+    from rewired.auth import jwt
+    from rewired.auth import transport
     from google.oauth2 import _client
 
 
@@ -2290,7 +2290,7 @@ def test__token_endpoint_request_no_throw_with_retry(can_retry):
 
 
     @pytest.mark.parametrize("mock_expires_in", [500, "500"])
-    @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+    @mock.patch("rewired.auth._helpers.utcnow", return_value=datetime.datetime.min)
                                                                                                                                                     def test__parse_expiry(unused_utcnow, mock_expires_in):
     result = _client._parse_expiry({"expires_in": mock_expires_in})
     assert result == datetime.datetime.min + datetime.timedelta(seconds=500)
@@ -2453,7 +2453,7 @@ def test__token_endpoint_request_no_throw_with_retry(can_retry):
     assert request_params[key][0] == value
 
 
-    @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+    @mock.patch("rewired.auth._helpers.utcnow", return_value=datetime.datetime.min)
                                                                                                                                                                                                                         def test_jwt_grant(utcnow):
     request = make_request(
     {"access_token": "token", "expires_in": 500, "extra": "data"}
@@ -2580,7 +2580,7 @@ def test__token_endpoint_request_no_throw_with_retry(can_retry):
     assert not excinfo.value.retryable
 
 
-    @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+    @mock.patch("rewired.auth._helpers.utcnow", return_value=datetime.datetime.min)
                                                                                                                                                                                                                                                             def test_refresh_grant(unused_utcnow):
     request = make_request(
     {
@@ -2619,7 +2619,7 @@ def test__token_endpoint_request_no_throw_with_retry(can_retry):
     assert extra_data["extra"] == "data"
 
 
-    @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+    @mock.patch("rewired.auth._helpers.utcnow", return_value=datetime.datetime.min)
                                                                                                                                                                                                                                                                 def test_refresh_grant_with_scopes(unused_utcnow):
     request = make_request(
     {
@@ -2677,7 +2677,7 @@ def test__token_endpoint_request_no_throw_with_retry(can_retry):
 
 
     @mock.patch(
-    "google.auth.metrics.token_request_access_token_sa_assertion",
+    "rewired.auth.metrics.token_request_access_token_sa_assertion",
     return_value=ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
     )
     @mock.patch("google.oauth2._client._parse_expiry", return_value=None)
@@ -2697,7 +2697,7 @@ headers={"x-goog-api-client": ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE},
 
 @pytest.mark.parametrize("can_retry", [True, False])
 @mock.patch(
-"google.auth.metrics.token_request_access_token_sa_assertion",
+"rewired.auth.metrics.token_request_access_token_sa_assertion",
 return_value=ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
 )
 @mock.patch("google.oauth2._client._parse_expiry", return_value=None)
@@ -2716,10 +2716,10 @@ headers={"x-goog-api-client": ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE},
 
 
 @mock.patch(
-"google.auth.metrics.token_request_id_token_sa_assertion",
+"rewired.auth.metrics.token_request_id_token_sa_assertion",
 return_value=ID_TOKEN_REQUEST_METRICS_HEADER_VALUE,
 )
-@mock.patch("google.auth.jwt.decode", return_value={"exp": 0})
+@mock.patch("rewired.auth.jwt.decode", return_value={"exp": 0})
 @mock.patch.object(_client, "_token_endpoint_request", autospec=True)
 def test_id_token_jwt_grant_retry_default(
 mock_token_endpoint_request, mock_jwt_decode, mock_metrics_header_value
@@ -2736,10 +2736,10 @@ headers={"x-goog-api-client": ID_TOKEN_REQUEST_METRICS_HEADER_VALUE},
 
 @pytest.mark.parametrize("can_retry", [True, False])
 @mock.patch(
-"google.auth.metrics.token_request_id_token_sa_assertion",
+"rewired.auth.metrics.token_request_id_token_sa_assertion",
 return_value=ID_TOKEN_REQUEST_METRICS_HEADER_VALUE,
 )
-@mock.patch("google.auth.jwt.decode", return_value={"exp": 0})
+@mock.patch("rewired.auth.jwt.decode", return_value={"exp": 0})
 @mock.patch.object(_client, "_token_endpoint_request", autospec=True)
 def test_id_token_jwt_grant_retry_with_retry(
 mock_token_endpoint_request, mock_jwt_decode, mock_metrics_header_value, can_retry
@@ -2821,7 +2821,7 @@ def test__token_endpoint_request_no_throw_with_retry(can_retry):
     assert request_params[key][0] == value
 
 
-    @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+    @mock.patch("rewired.auth._helpers.utcnow", return_value=datetime.datetime.min)
                     def test_jwt_grant(utcnow):
     request = make_request(
     {"access_token": "token", "expires_in": 500, "extra": "data"}
@@ -2931,12 +2931,12 @@ def test__token_endpoint_request_no_throw_with_retry(can_retry):
     import mock
     import pytest  # type: ignore
 
-    from google.auth import _helpers
-    from google.auth import crypt
-    from google.auth import exceptions
-    from google.auth import iam
-    from google.auth import jwt
-    from google.auth import transport
+    from rewired.auth import _helpers
+    from rewired.auth import crypt
+    from rewired.auth import exceptions
+    from rewired.auth import iam
+    from rewired.auth import jwt
+    from rewired.auth import transport
     from google.oauth2 import _client
 
 
@@ -3024,7 +3024,7 @@ def test__token_endpoint_request_no_throw_with_retry(can_retry):
 
 
     @pytest.mark.parametrize("mock_expires_in", [500, "500"])
-    @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+    @mock.patch("rewired.auth._helpers.utcnow", return_value=datetime.datetime.min)
                                                                                                 def test__parse_expiry(unused_utcnow, mock_expires_in):
     result = _client._parse_expiry({"expires_in": mock_expires_in})
     assert result == datetime.datetime.min + datetime.timedelta(seconds=500)
@@ -3187,7 +3187,7 @@ def test__token_endpoint_request_no_throw_with_retry(can_retry):
     assert request_params[key][0] == value
 
 
-    @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+    @mock.patch("rewired.auth._helpers.utcnow", return_value=datetime.datetime.min)
                                                                                                                                                                     def test_jwt_grant(utcnow):
     request = make_request(
     {"access_token": "token", "expires_in": 500, "extra": "data"}
@@ -3314,7 +3314,7 @@ def test__token_endpoint_request_no_throw_with_retry(can_retry):
     assert not excinfo.value.retryable
 
 
-    @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+    @mock.patch("rewired.auth._helpers.utcnow", return_value=datetime.datetime.min)
                                                                                                                                                                                                         def test_refresh_grant(unused_utcnow):
     request = make_request(
     {
@@ -3353,7 +3353,7 @@ def test__token_endpoint_request_no_throw_with_retry(can_retry):
     assert extra_data["extra"] == "data"
 
 
-    @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+    @mock.patch("rewired.auth._helpers.utcnow", return_value=datetime.datetime.min)
                                                                                                                                                                                                             def test_refresh_grant_with_scopes(unused_utcnow):
     request = make_request(
     {
@@ -3411,7 +3411,7 @@ def test__token_endpoint_request_no_throw_with_retry(can_retry):
 
 
     @mock.patch(
-    "google.auth.metrics.token_request_access_token_sa_assertion",
+    "rewired.auth.metrics.token_request_access_token_sa_assertion",
     return_value=ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
     )
     @mock.patch("google.oauth2._client._parse_expiry", return_value=None)
@@ -3431,7 +3431,7 @@ headers={"x-goog-api-client": ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE},
 
 @pytest.mark.parametrize("can_retry", [True, False])
 @mock.patch(
-"google.auth.metrics.token_request_access_token_sa_assertion",
+"rewired.auth.metrics.token_request_access_token_sa_assertion",
 return_value=ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
 )
 @mock.patch("google.oauth2._client._parse_expiry", return_value=None)
@@ -3450,10 +3450,10 @@ headers={"x-goog-api-client": ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE},
 
 
 @mock.patch(
-"google.auth.metrics.token_request_id_token_sa_assertion",
+"rewired.auth.metrics.token_request_id_token_sa_assertion",
 return_value=ID_TOKEN_REQUEST_METRICS_HEADER_VALUE,
 )
-@mock.patch("google.auth.jwt.decode", return_value={"exp": 0})
+@mock.patch("rewired.auth.jwt.decode", return_value={"exp": 0})
 @mock.patch.object(_client, "_token_endpoint_request", autospec=True)
 def test_id_token_jwt_grant_retry_default(
 mock_token_endpoint_request, mock_jwt_decode, mock_metrics_header_value
@@ -3470,10 +3470,10 @@ headers={"x-goog-api-client": ID_TOKEN_REQUEST_METRICS_HEADER_VALUE},
 
 @pytest.mark.parametrize("can_retry", [True, False])
 @mock.patch(
-"google.auth.metrics.token_request_id_token_sa_assertion",
+"rewired.auth.metrics.token_request_id_token_sa_assertion",
 return_value=ID_TOKEN_REQUEST_METRICS_HEADER_VALUE,
 )
-@mock.patch("google.auth.jwt.decode", return_value={"exp": 0})
+@mock.patch("rewired.auth.jwt.decode", return_value={"exp": 0})
 @mock.patch.object(_client, "_token_endpoint_request", autospec=True)
 def test_id_token_jwt_grant_retry_with_retry(
 mock_token_endpoint_request, mock_jwt_decode, mock_metrics_header_value, can_retry
@@ -3584,7 +3584,7 @@ def test__token_endpoint_request_no_throw_with_retry(can_retry):
     assert not excinfo.value.retryable
 
 
-    @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+    @mock.patch("rewired.auth._helpers.utcnow", return_value=datetime.datetime.min)
                         def test_refresh_grant(unused_utcnow):
     request = make_request(
     {
@@ -3623,7 +3623,7 @@ def test__token_endpoint_request_no_throw_with_retry(can_retry):
     assert extra_data["extra"] == "data"
 
 
-    @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+    @mock.patch("rewired.auth._helpers.utcnow", return_value=datetime.datetime.min)
                             def test_refresh_grant_with_scopes(unused_utcnow):
     request = make_request(
     {
@@ -3681,7 +3681,7 @@ def test__token_endpoint_request_no_throw_with_retry(can_retry):
 
 
     @mock.patch(
-    "google.auth.metrics.token_request_access_token_sa_assertion",
+    "rewired.auth.metrics.token_request_access_token_sa_assertion",
     return_value=ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
     )
     @mock.patch("google.oauth2._client._parse_expiry", return_value=None)
@@ -3701,7 +3701,7 @@ headers={"x-goog-api-client": ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE},
 
 @pytest.mark.parametrize("can_retry", [True, False])
 @mock.patch(
-"google.auth.metrics.token_request_access_token_sa_assertion",
+"rewired.auth.metrics.token_request_access_token_sa_assertion",
 return_value=ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
 )
 @mock.patch("google.oauth2._client._parse_expiry", return_value=None)
@@ -3720,10 +3720,10 @@ headers={"x-goog-api-client": ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE},
 
 
 @mock.patch(
-"google.auth.metrics.token_request_id_token_sa_assertion",
+"rewired.auth.metrics.token_request_id_token_sa_assertion",
 return_value=ID_TOKEN_REQUEST_METRICS_HEADER_VALUE,
 )
-@mock.patch("google.auth.jwt.decode", return_value={"exp": 0})
+@mock.patch("rewired.auth.jwt.decode", return_value={"exp": 0})
 @mock.patch.object(_client, "_token_endpoint_request", autospec=True)
 def test_id_token_jwt_grant_retry_default(
 mock_token_endpoint_request, mock_jwt_decode, mock_metrics_header_value
@@ -3740,10 +3740,10 @@ headers={"x-goog-api-client": ID_TOKEN_REQUEST_METRICS_HEADER_VALUE},
 
 @pytest.mark.parametrize("can_retry", [True, False])
 @mock.patch(
-"google.auth.metrics.token_request_id_token_sa_assertion",
+"rewired.auth.metrics.token_request_id_token_sa_assertion",
 return_value=ID_TOKEN_REQUEST_METRICS_HEADER_VALUE,
 )
-@mock.patch("google.auth.jwt.decode", return_value={"exp": 0})
+@mock.patch("rewired.auth.jwt.decode", return_value={"exp": 0})
 @mock.patch.object(_client, "_token_endpoint_request", autospec=True)
 def test_id_token_jwt_grant_retry_with_retry(
 mock_token_endpoint_request, mock_jwt_decode, mock_metrics_header_value, can_retry

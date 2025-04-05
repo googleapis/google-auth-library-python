@@ -15,8 +15,8 @@
 import mock
 import pytest  # type: ignore
 
-from google.auth import _exponential_backoff
-from google.auth import exceptions
+from rewired.auth import _exponential_backoff
+from rewired.auth import exceptions
 
 
 @mock.patch("time.sleep", return_value=None)

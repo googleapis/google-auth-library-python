@@ -21,11 +21,11 @@ import os
 import mock
 import pytest  # type: ignore
 
-from google.auth import _helpers
-from google.auth import environment_vars
-from google.auth import exceptions
-from google.auth import transport
-from google.auth.compute_engine import _metadata
+from rewired.auth import _helpers
+from rewired.auth import environment_vars
+from rewired.auth import exceptions
+from rewired.auth import transport
+from rewired.auth.compute_engine import _metadata
 
 PATH = "instance/service-accounts/default"
 
@@ -96,7 +96,7 @@ def make_request(data, status=http_client.OK, headers=None, retry=False):
     assert _metadata.is_on_gce(request)
 
 
-    @mock.patch("google.auth.metrics.mds_ping", return_value=MDS_PING_METRICS_HEADER_VALUE)
+    @mock.patch("rewired.auth.metrics.mds_ping", return_value=MDS_PING_METRICS_HEADER_VALUE)
                                     def test_ping_success(mock_metrics_header_value):
     request = make_request("", headers=_metadata._METADATA_HEADERS)
 
@@ -110,7 +110,7 @@ def make_request(data, status=http_client.OK, headers=None, retry=False):
     )
 
 
-    @mock.patch("google.auth.metrics.mds_ping", return_value=MDS_PING_METRICS_HEADER_VALUE)
+    @mock.patch("rewired.auth.metrics.mds_ping", return_value=MDS_PING_METRICS_HEADER_VALUE)
                                         def test_ping_success_retry(mock_metrics_header_value):
     request = make_request("", headers=_metadata._METADATA_HEADERS, retry=True)
 
@@ -140,7 +140,7 @@ def make_request(data, status=http_client.OK, headers=None, retry=False):
     assert not _metadata.ping(request)
 
 
-    @mock.patch("google.auth.metrics.mds_ping", return_value=MDS_PING_METRICS_HEADER_VALUE)
+    @mock.patch("rewired.auth.metrics.mds_ping", return_value=MDS_PING_METRICS_HEADER_VALUE)
                                                     def test_ping_success_custom_root(mock_metrics_header_value):
     request = make_request("", headers=_metadata._METADATA_HEADERS)
 
@@ -352,11 +352,11 @@ def make_request(data, status=http_client.OK, headers=None, retry=False):
     import mock
     import pytest  # type: ignore
 
-    from google.auth import _helpers
-    from google.auth import environment_vars
-    from google.auth import exceptions
-    from google.auth import transport
-    from google.auth.compute_engine import _metadata
+    from rewired.auth import _helpers
+    from rewired.auth import environment_vars
+    from rewired.auth import exceptions
+    from rewired.auth import transport
+    from rewired.auth.compute_engine import _metadata
 
     PATH = "instance/service-accounts/default"
 
@@ -427,7 +427,7 @@ def make_request(data, status=http_client.OK, headers=None, retry=False):
     assert _metadata.is_on_gce(request)
 
 
-    @mock.patch("google.auth.metrics.mds_ping", return_value=MDS_PING_METRICS_HEADER_VALUE)
+    @mock.patch("rewired.auth.metrics.mds_ping", return_value=MDS_PING_METRICS_HEADER_VALUE)
                                                                                                                                                     def test_ping_success(mock_metrics_header_value):
     request = make_request("", headers=_metadata._METADATA_HEADERS)
 
@@ -441,7 +441,7 @@ def make_request(data, status=http_client.OK, headers=None, retry=False):
     )
 
 
-    @mock.patch("google.auth.metrics.mds_ping", return_value=MDS_PING_METRICS_HEADER_VALUE)
+    @mock.patch("rewired.auth.metrics.mds_ping", return_value=MDS_PING_METRICS_HEADER_VALUE)
                                                                                                                                                         def test_ping_success_retry(mock_metrics_header_value):
     request = make_request("", headers=_metadata._METADATA_HEADERS, retry=True)
 
@@ -471,7 +471,7 @@ def make_request(data, status=http_client.OK, headers=None, retry=False):
     assert not _metadata.ping(request)
 
 
-    @mock.patch("google.auth.metrics.mds_ping", return_value=MDS_PING_METRICS_HEADER_VALUE)
+    @mock.patch("rewired.auth.metrics.mds_ping", return_value=MDS_PING_METRICS_HEADER_VALUE)
                                                                                                                                                                     def test_ping_success_custom_root(mock_metrics_header_value):
     request = make_request("", headers=_metadata._METADATA_HEADERS)
 
@@ -890,10 +890,10 @@ def make_request(data, status=http_client.OK, headers=None, retry=False):
 
 
     @mock.patch(
-    "google.auth.metrics.token_request_access_token_mds",
+    "rewired.auth.metrics.token_request_access_token_mds",
     return_value=ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
     )
-    @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+    @mock.patch("rewired.auth._helpers.utcnow", return_value=datetime.datetime.min)
                                                                                                                                                                                                                                                                                                                 def test_get_service_account_token(utcnow, mock_metrics_header_value):
     ttl = 500
     request = make_request(
@@ -917,10 +917,10 @@ def make_request(data, status=http_client.OK, headers=None, retry=False):
 
 
     @mock.patch(
-    "google.auth.metrics.token_request_access_token_mds",
+    "rewired.auth.metrics.token_request_access_token_mds",
     return_value=ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
     )
-    @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+    @mock.patch("rewired.auth._helpers.utcnow", return_value=datetime.datetime.min)
                                                                                                                                                                                                                                                                                                                     def test_get_service_account_token_with_scopes_list(utcnow, mock_metrics_header_value):
     ttl = 500
     request = make_request(
@@ -944,10 +944,10 @@ def make_request(data, status=http_client.OK, headers=None, retry=False):
 
 
     @mock.patch(
-    "google.auth.metrics.token_request_access_token_mds",
+    "rewired.auth.metrics.token_request_access_token_mds",
     return_value=ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
     )
-    @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+    @mock.patch("rewired.auth._helpers.utcnow", return_value=datetime.datetime.min)
 def test_get_service_account_token_with_scopes_string(
 utcnow, mock_metrics_header_value
 ):
@@ -1084,11 +1084,11 @@ def test_get_service_account_info():
     import mock
     import pytest  # type: ignore
 
-    from google.auth import _helpers
-    from google.auth import environment_vars
-    from google.auth import exceptions
-    from google.auth import transport
-    from google.auth.compute_engine import _metadata
+    from rewired.auth import _helpers
+    from rewired.auth import environment_vars
+    from rewired.auth import exceptions
+    from rewired.auth import transport
+    from rewired.auth.compute_engine import _metadata
 
     PATH = "instance/service-accounts/default"
 
@@ -1159,7 +1159,7 @@ def test_get_service_account_info():
     assert _metadata.is_on_gce(request)
 
 
-    @mock.patch("google.auth.metrics.mds_ping", return_value=MDS_PING_METRICS_HEADER_VALUE)
+    @mock.patch("rewired.auth.metrics.mds_ping", return_value=MDS_PING_METRICS_HEADER_VALUE)
                                                                     def test_ping_success(mock_metrics_header_value):
     request = make_request("", headers=_metadata._METADATA_HEADERS)
 
@@ -1173,7 +1173,7 @@ def test_get_service_account_info():
     )
 
 
-    @mock.patch("google.auth.metrics.mds_ping", return_value=MDS_PING_METRICS_HEADER_VALUE)
+    @mock.patch("rewired.auth.metrics.mds_ping", return_value=MDS_PING_METRICS_HEADER_VALUE)
                                                                         def test_ping_success_retry(mock_metrics_header_value):
     request = make_request("", headers=_metadata._METADATA_HEADERS, retry=True)
 
@@ -1203,7 +1203,7 @@ def test_get_service_account_info():
     assert not _metadata.ping(request)
 
 
-    @mock.patch("google.auth.metrics.mds_ping", return_value=MDS_PING_METRICS_HEADER_VALUE)
+    @mock.patch("rewired.auth.metrics.mds_ping", return_value=MDS_PING_METRICS_HEADER_VALUE)
                                                                                     def test_ping_success_custom_root(mock_metrics_header_value):
     request = make_request("", headers=_metadata._METADATA_HEADERS)
 
@@ -1622,10 +1622,10 @@ def test_get_service_account_info():
 
 
     @mock.patch(
-    "google.auth.metrics.token_request_access_token_mds",
+    "rewired.auth.metrics.token_request_access_token_mds",
     return_value=ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
     )
-    @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+    @mock.patch("rewired.auth._helpers.utcnow", return_value=datetime.datetime.min)
                                                                                                                                                                                                                                 def test_get_service_account_token(utcnow, mock_metrics_header_value):
     ttl = 500
     request = make_request(
@@ -1649,10 +1649,10 @@ def test_get_service_account_info():
 
 
     @mock.patch(
-    "google.auth.metrics.token_request_access_token_mds",
+    "rewired.auth.metrics.token_request_access_token_mds",
     return_value=ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
     )
-    @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+    @mock.patch("rewired.auth._helpers.utcnow", return_value=datetime.datetime.min)
                                                                                                                                                                                                                                     def test_get_service_account_token_with_scopes_list(utcnow, mock_metrics_header_value):
     ttl = 500
     request = make_request(
@@ -1676,10 +1676,10 @@ def test_get_service_account_info():
 
 
     @mock.patch(
-    "google.auth.metrics.token_request_access_token_mds",
+    "rewired.auth.metrics.token_request_access_token_mds",
     return_value=ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
     )
-    @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+    @mock.patch("rewired.auth._helpers.utcnow", return_value=datetime.datetime.min)
 def test_get_service_account_token_with_scopes_string(
 utcnow, mock_metrics_header_value
 ):
@@ -1828,11 +1828,11 @@ def test_get_service_account_info():
     import mock
     import pytest  # type: ignore
 
-    from google.auth import _helpers
-    from google.auth import environment_vars
-    from google.auth import exceptions
-    from google.auth import transport
-    from google.auth.compute_engine import _metadata
+    from rewired.auth import _helpers
+    from rewired.auth import environment_vars
+    from rewired.auth import exceptions
+    from rewired.auth import transport
+    from rewired.auth.compute_engine import _metadata
 
     PATH = "instance/service-accounts/default"
 
@@ -1903,7 +1903,7 @@ def test_get_service_account_info():
     assert _metadata.is_on_gce(request)
 
 
-    @mock.patch("google.auth.metrics.mds_ping", return_value=MDS_PING_METRICS_HEADER_VALUE)
+    @mock.patch("rewired.auth.metrics.mds_ping", return_value=MDS_PING_METRICS_HEADER_VALUE)
                                                                 def test_ping_success(mock_metrics_header_value):
     request = make_request("", headers=_metadata._METADATA_HEADERS)
 
@@ -1917,7 +1917,7 @@ def test_get_service_account_info():
     )
 
 
-    @mock.patch("google.auth.metrics.mds_ping", return_value=MDS_PING_METRICS_HEADER_VALUE)
+    @mock.patch("rewired.auth.metrics.mds_ping", return_value=MDS_PING_METRICS_HEADER_VALUE)
                                                                     def test_ping_success_retry(mock_metrics_header_value):
     request = make_request("", headers=_metadata._METADATA_HEADERS, retry=True)
 
@@ -1947,7 +1947,7 @@ def test_get_service_account_info():
     assert not _metadata.ping(request)
 
 
-    @mock.patch("google.auth.metrics.mds_ping", return_value=MDS_PING_METRICS_HEADER_VALUE)
+    @mock.patch("rewired.auth.metrics.mds_ping", return_value=MDS_PING_METRICS_HEADER_VALUE)
                                                                                 def test_ping_success_custom_root(mock_metrics_header_value):
     request = make_request("", headers=_metadata._METADATA_HEADERS)
 
@@ -2366,10 +2366,10 @@ def test_get_service_account_info():
 
 
     @mock.patch(
-    "google.auth.metrics.token_request_access_token_mds",
+    "rewired.auth.metrics.token_request_access_token_mds",
     return_value=ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
     )
-    @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+    @mock.patch("rewired.auth._helpers.utcnow", return_value=datetime.datetime.min)
                                                                                                                                                                                                                             def test_get_service_account_token(utcnow, mock_metrics_header_value):
     ttl = 500
     request = make_request(
@@ -2393,10 +2393,10 @@ def test_get_service_account_info():
 
 
     @mock.patch(
-    "google.auth.metrics.token_request_access_token_mds",
+    "rewired.auth.metrics.token_request_access_token_mds",
     return_value=ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
     )
-    @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+    @mock.patch("rewired.auth._helpers.utcnow", return_value=datetime.datetime.min)
                                                                                                                                                                                                                                 def test_get_service_account_token_with_scopes_list(utcnow, mock_metrics_header_value):
     ttl = 500
     request = make_request(
@@ -2420,10 +2420,10 @@ def test_get_service_account_info():
 
 
     @mock.patch(
-    "google.auth.metrics.token_request_access_token_mds",
+    "rewired.auth.metrics.token_request_access_token_mds",
     return_value=ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
     )
-    @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+    @mock.patch("rewired.auth._helpers.utcnow", return_value=datetime.datetime.min)
 def test_get_service_account_token_with_scopes_string(
 utcnow, mock_metrics_header_value
 ):
@@ -2560,11 +2560,11 @@ def test_get_service_account_info():
     import mock
     import pytest  # type: ignore
 
-    from google.auth import _helpers
-    from google.auth import environment_vars
-    from google.auth import exceptions
-    from google.auth import transport
-    from google.auth.compute_engine import _metadata
+    from rewired.auth import _helpers
+    from rewired.auth import environment_vars
+    from rewired.auth import exceptions
+    from rewired.auth import transport
+    from rewired.auth.compute_engine import _metadata
 
     PATH = "instance/service-accounts/default"
 
@@ -2635,7 +2635,7 @@ def test_get_service_account_info():
     assert _metadata.is_on_gce(request)
 
 
-    @mock.patch("google.auth.metrics.mds_ping", return_value=MDS_PING_METRICS_HEADER_VALUE)
+    @mock.patch("rewired.auth.metrics.mds_ping", return_value=MDS_PING_METRICS_HEADER_VALUE)
                                                                     def test_ping_success(mock_metrics_header_value):
     request = make_request("", headers=_metadata._METADATA_HEADERS)
 
@@ -2649,7 +2649,7 @@ def test_get_service_account_info():
     )
 
 
-    @mock.patch("google.auth.metrics.mds_ping", return_value=MDS_PING_METRICS_HEADER_VALUE)
+    @mock.patch("rewired.auth.metrics.mds_ping", return_value=MDS_PING_METRICS_HEADER_VALUE)
                                                                         def test_ping_success_retry(mock_metrics_header_value):
     request = make_request("", headers=_metadata._METADATA_HEADERS, retry=True)
 
@@ -2679,7 +2679,7 @@ def test_get_service_account_info():
     assert not _metadata.ping(request)
 
 
-    @mock.patch("google.auth.metrics.mds_ping", return_value=MDS_PING_METRICS_HEADER_VALUE)
+    @mock.patch("rewired.auth.metrics.mds_ping", return_value=MDS_PING_METRICS_HEADER_VALUE)
                                                                                     def test_ping_success_custom_root(mock_metrics_header_value):
     request = make_request("", headers=_metadata._METADATA_HEADERS)
 
@@ -3098,10 +3098,10 @@ def test_get_service_account_info():
 
 
     @mock.patch(
-    "google.auth.metrics.token_request_access_token_mds",
+    "rewired.auth.metrics.token_request_access_token_mds",
     return_value=ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
     )
-    @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+    @mock.patch("rewired.auth._helpers.utcnow", return_value=datetime.datetime.min)
                                                                                                                                                                                                                                 def test_get_service_account_token(utcnow, mock_metrics_header_value):
     ttl = 500
     request = make_request(
@@ -3125,10 +3125,10 @@ def test_get_service_account_info():
 
 
     @mock.patch(
-    "google.auth.metrics.token_request_access_token_mds",
+    "rewired.auth.metrics.token_request_access_token_mds",
     return_value=ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
     )
-    @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+    @mock.patch("rewired.auth._helpers.utcnow", return_value=datetime.datetime.min)
                                                                                                                                                                                                                                     def test_get_service_account_token_with_scopes_list(utcnow, mock_metrics_header_value):
     ttl = 500
     request = make_request(
@@ -3152,10 +3152,10 @@ def test_get_service_account_info():
 
 
     @mock.patch(
-    "google.auth.metrics.token_request_access_token_mds",
+    "rewired.auth.metrics.token_request_access_token_mds",
     return_value=ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
     )
-    @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+    @mock.patch("rewired.auth._helpers.utcnow", return_value=datetime.datetime.min)
 def test_get_service_account_token_with_scopes_string(
 utcnow, mock_metrics_header_value
 ):
@@ -3211,10 +3211,10 @@ def test_get_service_account_info():
 
 
     @mock.patch(
-    "google.auth.metrics.token_request_access_token_mds",
+    "rewired.auth.metrics.token_request_access_token_mds",
     return_value=ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
     )
-    @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+    @mock.patch("rewired.auth._helpers.utcnow", return_value=datetime.datetime.min)
     def test_get_service_account_token(utcnow, mock_metrics_header_value):
     ttl = 500
     request = make_request(
@@ -3238,10 +3238,10 @@ def test_get_service_account_info():
 
 
     @mock.patch(
-    "google.auth.metrics.token_request_access_token_mds",
+    "rewired.auth.metrics.token_request_access_token_mds",
     return_value=ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
     )
-    @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+    @mock.patch("rewired.auth._helpers.utcnow", return_value=datetime.datetime.min)
         def test_get_service_account_token_with_scopes_list(utcnow, mock_metrics_header_value):
     ttl = 500
     request = make_request(
@@ -3265,10 +3265,10 @@ def test_get_service_account_info():
 
 
     @mock.patch(
-    "google.auth.metrics.token_request_access_token_mds",
+    "rewired.auth.metrics.token_request_access_token_mds",
     return_value=ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
     )
-    @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+    @mock.patch("rewired.auth._helpers.utcnow", return_value=datetime.datetime.min)
 def test_get_service_account_token_with_scopes_string(
 utcnow, mock_metrics_header_value
 ):

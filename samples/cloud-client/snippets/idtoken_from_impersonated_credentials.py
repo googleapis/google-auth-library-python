@@ -15,8 +15,8 @@
 # [auth_cloud_idtoken_impersonated_credentials]
 
 import google
-from google.auth import impersonated_credentials
-import google.auth.transport.requests
+from rewired.auth import impersonated_credentials
+import rewired.auth.transport.requests
 
 
 def idtoken_from_impersonated_credentials(
@@ -44,7 +44,7 @@ def idtoken_from_impersonated_credentials(
 
     # Construct the GoogleCredentials object which obtains the default configuration from your
     # working environment.
-    credentials, project_id = google.auth.default()
+    credentials, project_id = rewired.auth.default()
 
     # Create the impersonated credential.
     target_credentials = impersonated_credentials.Credentials(
@@ -67,7 +67,7 @@ def idtoken_from_impersonated_credentials(
     # Get the ID token.
     # Once you've obtained the ID token, use it to make an authenticated call
     # to the target audience.
-    request = google.auth.transport.requests.Request()
+    request = rewired.auth.transport.requests.Request()
     id_creds.refresh(request)
     # token = id_creds.token
     print("Generated ID token.")

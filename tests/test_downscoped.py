@@ -20,13 +20,13 @@ import urllib
 import mock
 import pytest  # type: ignore
 
-from google.auth import _helpers
-from google.auth import credentials
-from google.auth import downscoped
-from google.auth import exceptions
-from google.auth import transport
-from google.auth.credentials import DEFAULT_UNIVERSE_DOMAIN
-from google.auth.credentials import TokenState
+from rewired.auth import _helpers
+from rewired.auth import credentials
+from rewired.auth import downscoped
+from rewired.auth import exceptions
+from rewired.auth import transport
+from rewired.auth.credentials import DEFAULT_UNIVERSE_DOMAIN
+from rewired.auth.credentials import TokenState
 
 
 EXPRESSION = (
@@ -170,13 +170,13 @@ def make_credential_access_boundary(rules):
     import mock
     import pytest  # type: ignore
 
-    from google.auth import _helpers
-    from google.auth import credentials
-    from google.auth import downscoped
-    from google.auth import exceptions
-    from google.auth import transport
-    from google.auth.credentials import DEFAULT_UNIVERSE_DOMAIN
-    from google.auth.credentials import TokenState
+    from rewired.auth import _helpers
+    from rewired.auth import credentials
+    from rewired.auth import downscoped
+    from rewired.auth import exceptions
+    from rewired.auth import transport
+    from rewired.auth.credentials import DEFAULT_UNIVERSE_DOMAIN
+    from rewired.auth.credentials import TokenState
 
 
     EXPRESSION = (
@@ -421,7 +421,7 @@ def make_credential_access_boundary(rules):
     )
 
     assert excinfo.match(
-    "The provided availability_condition is not a 'google.auth.downscoped.AvailabilityCondition' or None."
+    "The provided availability_condition is not a 'rewired.auth.downscoped.AvailabilityCondition' or None."
     )
 
                                                                                                     def test_to_json(self):
@@ -541,7 +541,7 @@ def make_credential_access_boundary(rules):
     credential_access_boundary.add_rule("invalid")
 
     assert excinfo.match(
-    "The provided rule does not contain a valid 'google.auth.downscoped.AccessBoundaryRule'."
+    "The provided rule does not contain a valid 'rewired.auth.downscoped.AccessBoundaryRule'."
     )
     assert len(credential_access_boundary.rules) == 1
     assert credential_access_boundary.rules[0] == access_boundary_rule
@@ -551,7 +551,7 @@ def make_credential_access_boundary(rules):
     make_credential_access_boundary(["invalid"])
 
     assert excinfo.match(
-    "List of rules provided do not contain a valid 'google.auth.downscoped.AccessBoundaryRule'."
+    "List of rules provided do not contain a valid 'rewired.auth.downscoped.AccessBoundaryRule'."
     )
 
                                                                                                                                                     def test_invalid_rules_value(self):
@@ -693,7 +693,7 @@ for (k, v) in body_tuples:
 
     assert quota_project_creds.quota_project_id == "project-foo"
 
-    @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+    @mock.patch("rewired.auth._helpers.utcnow", return_value=datetime.datetime.min)
                     def test_refresh_on_custom_universe(self, unused_utcnow):
     test_universe_domain = "foo.com"
     response = SUCCESS_RESPONSE.copy()
@@ -736,7 +736,7 @@ for (k, v) in body_tuples:
     # Confirm source credentials called with the same request instance.
     wrapped_souce_cred_refresh.assert_called_with(request)
 
-    @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+    @mock.patch("rewired.auth._helpers.utcnow", return_value=datetime.datetime.min)
                         def test_refresh(self, unused_utcnow):
     response = SUCCESS_RESPONSE.copy()
     # Test custom expiration to confirm expiry is set correctly.
@@ -771,7 +771,7 @@ for (k, v) in body_tuples:
     # Confirm source credentials called with the same request instance.
     wrapped_souce_cred_refresh.assert_called_with(request)
 
-    @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+    @mock.patch("rewired.auth._helpers.utcnow", return_value=datetime.datetime.min)
                             def test_refresh_without_response_expires_in(self, unused_utcnow):
     response = SUCCESS_RESPONSE.copy()
     # Simulate the response is missing the expires_in field.
@@ -890,7 +890,7 @@ for (k, v) in body_tuples:
     "authorization": "Bearer {}".format(SUCCESS_RESPONSE["access_token"])
     }
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
                                                             def test_before_request_expired(self, utcnow):
     headers = {}
     request = self.make_mock_request(status=http_client.OK, data=SUCCESS_RESPONSE)
@@ -974,13 +974,13 @@ for (k, v) in body_tuples:
     import mock
     import pytest  # type: ignore
 
-    from google.auth import _helpers
-    from google.auth import credentials
-    from google.auth import downscoped
-    from google.auth import exceptions
-    from google.auth import transport
-    from google.auth.credentials import DEFAULT_UNIVERSE_DOMAIN
-    from google.auth.credentials import TokenState
+    from rewired.auth import _helpers
+    from rewired.auth import credentials
+    from rewired.auth import downscoped
+    from rewired.auth import exceptions
+    from rewired.auth import transport
+    from rewired.auth.credentials import DEFAULT_UNIVERSE_DOMAIN
+    from rewired.auth.credentials import TokenState
 
 
     EXPRESSION = (
@@ -1225,7 +1225,7 @@ def make_credential_access_boundary(rules):
     )
 
     assert excinfo.match(
-    "The provided availability_condition is not a 'google.auth.downscoped.AvailabilityCondition' or None."
+    "The provided availability_condition is not a 'rewired.auth.downscoped.AvailabilityCondition' or None."
     )
 
                                                                                                     def test_to_json(self):
@@ -1345,7 +1345,7 @@ def make_credential_access_boundary(rules):
     credential_access_boundary.add_rule("invalid")
 
     assert excinfo.match(
-    "The provided rule does not contain a valid 'google.auth.downscoped.AccessBoundaryRule'."
+    "The provided rule does not contain a valid 'rewired.auth.downscoped.AccessBoundaryRule'."
     )
     assert len(credential_access_boundary.rules) == 1
     assert credential_access_boundary.rules[0] == access_boundary_rule
@@ -1355,7 +1355,7 @@ def make_credential_access_boundary(rules):
     make_credential_access_boundary(["invalid"])
 
     assert excinfo.match(
-    "List of rules provided do not contain a valid 'google.auth.downscoped.AccessBoundaryRule'."
+    "List of rules provided do not contain a valid 'rewired.auth.downscoped.AccessBoundaryRule'."
     )
 
                                                                                                                                                     def test_invalid_rules_value(self):
@@ -1497,7 +1497,7 @@ for (k, v) in body_tuples:
 
     assert quota_project_creds.quota_project_id == "project-foo"
 
-    @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+    @mock.patch("rewired.auth._helpers.utcnow", return_value=datetime.datetime.min)
                     def test_refresh_on_custom_universe(self, unused_utcnow):
     test_universe_domain = "foo.com"
     response = SUCCESS_RESPONSE.copy()
@@ -1540,7 +1540,7 @@ for (k, v) in body_tuples:
     # Confirm source credentials called with the same request instance.
     wrapped_souce_cred_refresh.assert_called_with(request)
 
-    @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+    @mock.patch("rewired.auth._helpers.utcnow", return_value=datetime.datetime.min)
                         def test_refresh(self, unused_utcnow):
     response = SUCCESS_RESPONSE.copy()
     # Test custom expiration to confirm expiry is set correctly.
@@ -1575,7 +1575,7 @@ for (k, v) in body_tuples:
     # Confirm source credentials called with the same request instance.
     wrapped_souce_cred_refresh.assert_called_with(request)
 
-    @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+    @mock.patch("rewired.auth._helpers.utcnow", return_value=datetime.datetime.min)
                             def test_refresh_without_response_expires_in(self, unused_utcnow):
     response = SUCCESS_RESPONSE.copy()
     # Simulate the response is missing the expires_in field.
@@ -1694,7 +1694,7 @@ for (k, v) in body_tuples:
     "authorization": "Bearer {}".format(SUCCESS_RESPONSE["access_token"])
     }
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
                                                             def test_before_request_expired(self, utcnow):
     headers = {}
     request = self.make_mock_request(status=http_client.OK, data=SUCCESS_RESPONSE)
@@ -1778,13 +1778,13 @@ for (k, v) in body_tuples:
     import mock
     import pytest  # type: ignore
 
-    from google.auth import _helpers
-    from google.auth import credentials
-    from google.auth import downscoped
-    from google.auth import exceptions
-    from google.auth import transport
-    from google.auth.credentials import DEFAULT_UNIVERSE_DOMAIN
-    from google.auth.credentials import TokenState
+    from rewired.auth import _helpers
+    from rewired.auth import credentials
+    from rewired.auth import downscoped
+    from rewired.auth import exceptions
+    from rewired.auth import transport
+    from rewired.auth.credentials import DEFAULT_UNIVERSE_DOMAIN
+    from rewired.auth.credentials import TokenState
 
 
     EXPRESSION = (
@@ -2029,7 +2029,7 @@ def make_credential_access_boundary(rules):
     )
 
     assert excinfo.match(
-    "The provided availability_condition is not a 'google.auth.downscoped.AvailabilityCondition' or None."
+    "The provided availability_condition is not a 'rewired.auth.downscoped.AvailabilityCondition' or None."
     )
 
                                                                                                     def test_to_json(self):
@@ -2149,7 +2149,7 @@ def make_credential_access_boundary(rules):
     credential_access_boundary.add_rule("invalid")
 
     assert excinfo.match(
-    "The provided rule does not contain a valid 'google.auth.downscoped.AccessBoundaryRule'."
+    "The provided rule does not contain a valid 'rewired.auth.downscoped.AccessBoundaryRule'."
     )
     assert len(credential_access_boundary.rules) == 1
     assert credential_access_boundary.rules[0] == access_boundary_rule
@@ -2159,7 +2159,7 @@ def make_credential_access_boundary(rules):
     make_credential_access_boundary(["invalid"])
 
     assert excinfo.match(
-    "List of rules provided do not contain a valid 'google.auth.downscoped.AccessBoundaryRule'."
+    "List of rules provided do not contain a valid 'rewired.auth.downscoped.AccessBoundaryRule'."
     )
 
                                                                                                                                                     def test_invalid_rules_value(self):
@@ -2301,7 +2301,7 @@ for (k, v) in body_tuples:
 
     assert quota_project_creds.quota_project_id == "project-foo"
 
-    @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+    @mock.patch("rewired.auth._helpers.utcnow", return_value=datetime.datetime.min)
                     def test_refresh_on_custom_universe(self, unused_utcnow):
     test_universe_domain = "foo.com"
     response = SUCCESS_RESPONSE.copy()
@@ -2344,7 +2344,7 @@ for (k, v) in body_tuples:
     # Confirm source credentials called with the same request instance.
     wrapped_souce_cred_refresh.assert_called_with(request)
 
-    @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+    @mock.patch("rewired.auth._helpers.utcnow", return_value=datetime.datetime.min)
                         def test_refresh(self, unused_utcnow):
     response = SUCCESS_RESPONSE.copy()
     # Test custom expiration to confirm expiry is set correctly.
@@ -2379,7 +2379,7 @@ for (k, v) in body_tuples:
     # Confirm source credentials called with the same request instance.
     wrapped_souce_cred_refresh.assert_called_with(request)
 
-    @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+    @mock.patch("rewired.auth._helpers.utcnow", return_value=datetime.datetime.min)
                             def test_refresh_without_response_expires_in(self, unused_utcnow):
     response = SUCCESS_RESPONSE.copy()
     # Simulate the response is missing the expires_in field.
@@ -2498,7 +2498,7 @@ for (k, v) in body_tuples:
     "authorization": "Bearer {}".format(SUCCESS_RESPONSE["access_token"])
     }
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
                                                             def test_before_request_expired(self, utcnow):
     headers = {}
     request = self.make_mock_request(status=http_client.OK, data=SUCCESS_RESPONSE)
@@ -2652,13 +2652,13 @@ for (k, v) in body_tuples:
     import mock
     import pytest  # type: ignore
 
-    from google.auth import _helpers
-    from google.auth import credentials
-    from google.auth import downscoped
-    from google.auth import exceptions
-    from google.auth import transport
-    from google.auth.credentials import DEFAULT_UNIVERSE_DOMAIN
-    from google.auth.credentials import TokenState
+    from rewired.auth import _helpers
+    from rewired.auth import credentials
+    from rewired.auth import downscoped
+    from rewired.auth import exceptions
+    from rewired.auth import transport
+    from rewired.auth.credentials import DEFAULT_UNIVERSE_DOMAIN
+    from rewired.auth.credentials import TokenState
 
 
     EXPRESSION = (
@@ -2903,7 +2903,7 @@ def make_credential_access_boundary(rules):
     )
 
     assert excinfo.match(
-    "The provided availability_condition is not a 'google.auth.downscoped.AvailabilityCondition' or None."
+    "The provided availability_condition is not a 'rewired.auth.downscoped.AvailabilityCondition' or None."
     )
 
                                                                                                     def test_to_json(self):
@@ -3023,7 +3023,7 @@ def make_credential_access_boundary(rules):
     credential_access_boundary.add_rule("invalid")
 
     assert excinfo.match(
-    "The provided rule does not contain a valid 'google.auth.downscoped.AccessBoundaryRule'."
+    "The provided rule does not contain a valid 'rewired.auth.downscoped.AccessBoundaryRule'."
     )
     assert len(credential_access_boundary.rules) == 1
     assert credential_access_boundary.rules[0] == access_boundary_rule
@@ -3033,7 +3033,7 @@ def make_credential_access_boundary(rules):
     make_credential_access_boundary(["invalid"])
 
     assert excinfo.match(
-    "List of rules provided do not contain a valid 'google.auth.downscoped.AccessBoundaryRule'."
+    "List of rules provided do not contain a valid 'rewired.auth.downscoped.AccessBoundaryRule'."
     )
 
                                                                                                                                                     def test_invalid_rules_value(self):
@@ -3175,7 +3175,7 @@ for (k, v) in body_tuples:
 
     assert quota_project_creds.quota_project_id == "project-foo"
 
-    @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+    @mock.patch("rewired.auth._helpers.utcnow", return_value=datetime.datetime.min)
                     def test_refresh_on_custom_universe(self, unused_utcnow):
     test_universe_domain = "foo.com"
     response = SUCCESS_RESPONSE.copy()
@@ -3218,7 +3218,7 @@ for (k, v) in body_tuples:
     # Confirm source credentials called with the same request instance.
     wrapped_souce_cred_refresh.assert_called_with(request)
 
-    @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+    @mock.patch("rewired.auth._helpers.utcnow", return_value=datetime.datetime.min)
                         def test_refresh(self, unused_utcnow):
     response = SUCCESS_RESPONSE.copy()
     # Test custom expiration to confirm expiry is set correctly.
@@ -3253,7 +3253,7 @@ for (k, v) in body_tuples:
     # Confirm source credentials called with the same request instance.
     wrapped_souce_cred_refresh.assert_called_with(request)
 
-    @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+    @mock.patch("rewired.auth._helpers.utcnow", return_value=datetime.datetime.min)
                             def test_refresh_without_response_expires_in(self, unused_utcnow):
     response = SUCCESS_RESPONSE.copy()
     # Simulate the response is missing the expires_in field.
@@ -3372,7 +3372,7 @@ for (k, v) in body_tuples:
     "authorization": "Bearer {}".format(SUCCESS_RESPONSE["access_token"])
     }
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
                                                             def test_before_request_expired(self, utcnow):
     headers = {}
     request = self.make_mock_request(status=http_client.OK, data=SUCCESS_RESPONSE)
@@ -3476,13 +3476,13 @@ for (k, v) in body_tuples:
     import mock
     import pytest  # type: ignore
 
-    from google.auth import _helpers
-    from google.auth import credentials
-    from google.auth import downscoped
-    from google.auth import exceptions
-    from google.auth import transport
-    from google.auth.credentials import DEFAULT_UNIVERSE_DOMAIN
-    from google.auth.credentials import TokenState
+    from rewired.auth import _helpers
+    from rewired.auth import credentials
+    from rewired.auth import downscoped
+    from rewired.auth import exceptions
+    from rewired.auth import transport
+    from rewired.auth.credentials import DEFAULT_UNIVERSE_DOMAIN
+    from rewired.auth.credentials import TokenState
 
 
     EXPRESSION = (
@@ -3727,7 +3727,7 @@ def make_credential_access_boundary(rules):
     )
 
     assert excinfo.match(
-    "The provided availability_condition is not a 'google.auth.downscoped.AvailabilityCondition' or None."
+    "The provided availability_condition is not a 'rewired.auth.downscoped.AvailabilityCondition' or None."
     )
 
                                                                                                     def test_to_json(self):
@@ -3847,7 +3847,7 @@ def make_credential_access_boundary(rules):
     credential_access_boundary.add_rule("invalid")
 
     assert excinfo.match(
-    "The provided rule does not contain a valid 'google.auth.downscoped.AccessBoundaryRule'."
+    "The provided rule does not contain a valid 'rewired.auth.downscoped.AccessBoundaryRule'."
     )
     assert len(credential_access_boundary.rules) == 1
     assert credential_access_boundary.rules[0] == access_boundary_rule
@@ -3857,7 +3857,7 @@ def make_credential_access_boundary(rules):
     make_credential_access_boundary(["invalid"])
 
     assert excinfo.match(
-    "List of rules provided do not contain a valid 'google.auth.downscoped.AccessBoundaryRule'."
+    "List of rules provided do not contain a valid 'rewired.auth.downscoped.AccessBoundaryRule'."
     )
 
                                                                                                                                                     def test_invalid_rules_value(self):
@@ -3999,7 +3999,7 @@ for (k, v) in body_tuples:
 
     assert quota_project_creds.quota_project_id == "project-foo"
 
-    @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+    @mock.patch("rewired.auth._helpers.utcnow", return_value=datetime.datetime.min)
                     def test_refresh_on_custom_universe(self, unused_utcnow):
     test_universe_domain = "foo.com"
     response = SUCCESS_RESPONSE.copy()
@@ -4042,7 +4042,7 @@ for (k, v) in body_tuples:
     # Confirm source credentials called with the same request instance.
     wrapped_souce_cred_refresh.assert_called_with(request)
 
-    @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+    @mock.patch("rewired.auth._helpers.utcnow", return_value=datetime.datetime.min)
                         def test_refresh(self, unused_utcnow):
     response = SUCCESS_RESPONSE.copy()
     # Test custom expiration to confirm expiry is set correctly.
@@ -4077,7 +4077,7 @@ for (k, v) in body_tuples:
     # Confirm source credentials called with the same request instance.
     wrapped_souce_cred_refresh.assert_called_with(request)
 
-    @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+    @mock.patch("rewired.auth._helpers.utcnow", return_value=datetime.datetime.min)
                             def test_refresh_without_response_expires_in(self, unused_utcnow):
     response = SUCCESS_RESPONSE.copy()
     # Simulate the response is missing the expires_in field.
@@ -4196,7 +4196,7 @@ for (k, v) in body_tuples:
     "authorization": "Bearer {}".format(SUCCESS_RESPONSE["access_token"])
     }
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
                                                             def test_before_request_expired(self, utcnow):
     headers = {}
     request = self.make_mock_request(status=http_client.OK, data=SUCCESS_RESPONSE)
@@ -4261,7 +4261,7 @@ for (k, v) in body_tuples:
     )
 
     assert excinfo.match(
-    "The provided availability_condition is not a 'google.auth.downscoped.AvailabilityCondition' or None."
+    "The provided availability_condition is not a 'rewired.auth.downscoped.AvailabilityCondition' or None."
     )
 
                                                                         def test_to_json(self):
@@ -4381,7 +4381,7 @@ for (k, v) in body_tuples:
     credential_access_boundary.add_rule("invalid")
 
     assert excinfo.match(
-    "The provided rule does not contain a valid 'google.auth.downscoped.AccessBoundaryRule'."
+    "The provided rule does not contain a valid 'rewired.auth.downscoped.AccessBoundaryRule'."
     )
     assert len(credential_access_boundary.rules) == 1
     assert credential_access_boundary.rules[0] == access_boundary_rule
@@ -4391,7 +4391,7 @@ for (k, v) in body_tuples:
     make_credential_access_boundary(["invalid"])
 
     assert excinfo.match(
-    "List of rules provided do not contain a valid 'google.auth.downscoped.AccessBoundaryRule'."
+    "List of rules provided do not contain a valid 'rewired.auth.downscoped.AccessBoundaryRule'."
     )
 
                                                                                                                         def test_invalid_rules_value(self):
@@ -4533,7 +4533,7 @@ for (k, v) in body_tuples:
 
     assert quota_project_creds.quota_project_id == "project-foo"
 
-    @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+    @mock.patch("rewired.auth._helpers.utcnow", return_value=datetime.datetime.min)
                     def test_refresh_on_custom_universe(self, unused_utcnow):
     test_universe_domain = "foo.com"
     response = SUCCESS_RESPONSE.copy()
@@ -4576,7 +4576,7 @@ for (k, v) in body_tuples:
     # Confirm source credentials called with the same request instance.
     wrapped_souce_cred_refresh.assert_called_with(request)
 
-    @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+    @mock.patch("rewired.auth._helpers.utcnow", return_value=datetime.datetime.min)
                         def test_refresh(self, unused_utcnow):
     response = SUCCESS_RESPONSE.copy()
     # Test custom expiration to confirm expiry is set correctly.
@@ -4611,7 +4611,7 @@ for (k, v) in body_tuples:
     # Confirm source credentials called with the same request instance.
     wrapped_souce_cred_refresh.assert_called_with(request)
 
-    @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+    @mock.patch("rewired.auth._helpers.utcnow", return_value=datetime.datetime.min)
                             def test_refresh_without_response_expires_in(self, unused_utcnow):
     response = SUCCESS_RESPONSE.copy()
     # Simulate the response is missing the expires_in field.
@@ -4699,13 +4699,13 @@ for (k, v) in body_tuples:
     import mock
     import pytest  # type: ignore
 
-    from google.auth import _helpers
-    from google.auth import credentials
-    from google.auth import downscoped
-    from google.auth import exceptions
-    from google.auth import transport
-    from google.auth.credentials import DEFAULT_UNIVERSE_DOMAIN
-    from google.auth.credentials import TokenState
+    from rewired.auth import _helpers
+    from rewired.auth import credentials
+    from rewired.auth import downscoped
+    from rewired.auth import exceptions
+    from rewired.auth import transport
+    from rewired.auth.credentials import DEFAULT_UNIVERSE_DOMAIN
+    from rewired.auth.credentials import TokenState
 
 
     EXPRESSION = (
@@ -4950,7 +4950,7 @@ def make_credential_access_boundary(rules):
     )
 
     assert excinfo.match(
-    "The provided availability_condition is not a 'google.auth.downscoped.AvailabilityCondition' or None."
+    "The provided availability_condition is not a 'rewired.auth.downscoped.AvailabilityCondition' or None."
     )
 
                                                                                                     def test_to_json(self):
@@ -5070,7 +5070,7 @@ def make_credential_access_boundary(rules):
     credential_access_boundary.add_rule("invalid")
 
     assert excinfo.match(
-    "The provided rule does not contain a valid 'google.auth.downscoped.AccessBoundaryRule'."
+    "The provided rule does not contain a valid 'rewired.auth.downscoped.AccessBoundaryRule'."
     )
     assert len(credential_access_boundary.rules) == 1
     assert credential_access_boundary.rules[0] == access_boundary_rule
@@ -5080,7 +5080,7 @@ def make_credential_access_boundary(rules):
     make_credential_access_boundary(["invalid"])
 
     assert excinfo.match(
-    "List of rules provided do not contain a valid 'google.auth.downscoped.AccessBoundaryRule'."
+    "List of rules provided do not contain a valid 'rewired.auth.downscoped.AccessBoundaryRule'."
     )
 
                                                                                                                                                     def test_invalid_rules_value(self):
@@ -5222,7 +5222,7 @@ for (k, v) in body_tuples:
 
     assert quota_project_creds.quota_project_id == "project-foo"
 
-    @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+    @mock.patch("rewired.auth._helpers.utcnow", return_value=datetime.datetime.min)
                     def test_refresh_on_custom_universe(self, unused_utcnow):
     test_universe_domain = "foo.com"
     response = SUCCESS_RESPONSE.copy()
@@ -5265,7 +5265,7 @@ for (k, v) in body_tuples:
     # Confirm source credentials called with the same request instance.
     wrapped_souce_cred_refresh.assert_called_with(request)
 
-    @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+    @mock.patch("rewired.auth._helpers.utcnow", return_value=datetime.datetime.min)
                         def test_refresh(self, unused_utcnow):
     response = SUCCESS_RESPONSE.copy()
     # Test custom expiration to confirm expiry is set correctly.
@@ -5300,7 +5300,7 @@ for (k, v) in body_tuples:
     # Confirm source credentials called with the same request instance.
     wrapped_souce_cred_refresh.assert_called_with(request)
 
-    @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+    @mock.patch("rewired.auth._helpers.utcnow", return_value=datetime.datetime.min)
                             def test_refresh_without_response_expires_in(self, unused_utcnow):
     response = SUCCESS_RESPONSE.copy()
     # Simulate the response is missing the expires_in field.
@@ -5419,7 +5419,7 @@ for (k, v) in body_tuples:
     "authorization": "Bearer {}".format(SUCCESS_RESPONSE["access_token"])
     }
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
                                                             def test_before_request_expired(self, utcnow):
     headers = {}
     request = self.make_mock_request(status=http_client.OK, data=SUCCESS_RESPONSE)
@@ -5528,7 +5528,7 @@ for (k, v) in body_tuples:
     "authorization": "Bearer {}".format(SUCCESS_RESPONSE["access_token"])
     }
 
-    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch("rewired.auth._helpers.utcnow")
                                                                             def test_before_request_expired(self, utcnow):
     headers = {}
     request = self.make_mock_request(status=http_client.OK, data=SUCCESS_RESPONSE)

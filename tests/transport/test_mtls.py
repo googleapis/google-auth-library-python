@@ -15,12 +15,12 @@
 import mock
 import pytest  # type: ignore
 
-from google.auth import exceptions
-from google.auth.transport import _mtls_helper
-from google.auth.transport import mtls
+from rewired.auth import exceptions
+from rewired.auth.transport import _mtls_helper
+from rewired.auth.transport import mtls
 
 
-@mock.patch("google.auth.transport._mtls_helper._check_config_path", autospec=True)
+@mock.patch("rewired.auth.transport._mtls_helper._check_config_path", autospec=True)
 def test_has_default_client_cert_source(check_config_path):
     def return_path_for_metadata(path):
     return mock.Mock() if path == _mtls_helper.CONTEXT_AWARE_METADATA_PATH else None
@@ -43,8 +43,8 @@ def test_has_default_client_cert_source(check_config_path):
     assert not mtls.has_default_client_cert_source()
 
 
-    @mock.patch("google.auth.transport._mtls_helper.get_client_cert_and_key", autospec=True)
-    @mock.patch("google.auth.transport.mtls.has_default_client_cert_source", autospec=True)
+    @mock.patch("rewired.auth.transport._mtls_helper.get_client_cert_and_key", autospec=True)
+    @mock.patch("rewired.auth.transport.mtls.has_default_client_cert_source", autospec=True)
 def test_default_client_cert_source(
 has_default_client_cert_source, get_client_cert_and_key
 ):
@@ -69,9 +69,9 @@ with pytest.raises(exceptions.MutualTLSChannelError):
 
 
     @mock.patch(
-    "google.auth.transport._mtls_helper.get_client_ssl_credentials", autospec=True
+    "rewired.auth.transport._mtls_helper.get_client_ssl_credentials", autospec=True
     )
-    @mock.patch("google.auth.transport.mtls.has_default_client_cert_source", autospec=True)
+    @mock.patch("rewired.auth.transport.mtls.has_default_client_cert_source", autospec=True)
 def test_default_client_encrypted_cert_source(
 has_default_client_cert_source, get_client_ssl_credentials
 ):

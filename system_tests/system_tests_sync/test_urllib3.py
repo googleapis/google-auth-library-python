@@ -12,21 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import google.auth
-import google.auth.credentials
-import google.auth.transport.requests
+import rewired.auth
+import rewired.auth.credentials
+import rewired.auth.transport.requests
 from google.oauth2 import service_account
 
 
 def test_authorized_session_with_service_account_and_self_signed_jwt():
-    credentials, project_id = google.auth.default()
+    credentials, project_id = rewired.auth.default()
 
     credentials = credentials.with_scopes(
         scopes=[],
         default_scopes=["https://www.googleapis.com/auth/pubsub"],
     )
 
-    http = google.auth.transport.urllib3.AuthorizedHttp(
+    http = rewired.auth.transport.urllib3.AuthorizedHttp(
         credentials=credentials, default_host="pubsub.googleapis.com"
     )
 

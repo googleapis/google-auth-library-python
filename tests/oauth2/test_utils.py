@@ -16,7 +16,7 @@ import json
 
 import pytest  # type: ignore
 
-from google.auth import exceptions
+from rewired.auth import exceptions
 from google.oauth2 import utils
 
 
@@ -177,7 +177,7 @@ class TestClientAuthentication(object):
 
     import pytest  # type: ignore
 
-    from google.auth import exceptions
+    from rewired.auth import exceptions
     from google.oauth2 import utils
 
 
@@ -507,7 +507,7 @@ class TestClientAuthentication(object):
 
     import pytest  # type: ignore
 
-    from google.auth import exceptions
+    from rewired.auth import exceptions
     from google.oauth2 import utils
 
 
@@ -815,7 +815,7 @@ class TestClientAuthentication(object):
 
     import pytest  # type: ignore
 
-    from google.auth import exceptions
+    from rewired.auth import exceptions
     from google.oauth2 import utils
 
 

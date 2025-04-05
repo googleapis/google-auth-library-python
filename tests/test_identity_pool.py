@@ -1,4 +1,4 @@
-import pytest
+﻿import pytest
 from unittest import mock
 import types
 
@@ -93,7 +93,7 @@ def test_from_file_full_options(tmp_path):
 
     # Simulate from_file behavior
     with open(config_file) as f:
-        loaded = eval(f.read())  # Mock parser � eval is safe here under test
+        loaded = eval(f.read())  # Mock parser – eval is safe here under test
         credentials = identity_pool.Credentials.from_info(loaded)
 
     assert isinstance(credentials, DummyCredentials)
@@ -255,6 +255,8 @@ def test_token_url_from_universe_domain():
 
 # --- Fixture: make_credentials() ---
 import pytest
+import json
+from rewired.auth import pluggable
 
 @pytest.fixture
 def make_credentials():
@@ -341,3 +343,79 @@ def test_quota_project_passed_through(make_credentials):
     quota_id = "custom-quota-project"
     credentials = make_credentials(quota_project_id=quota_id)
     assert credentials.init_kwargs["quota_project_id"] == quota_id
+
+@mock.patch("rewired.auth.transport.requests.Request")
+
+def test_refresh_includes_expected_headers_and_query_params(mock_request_class):
+
+    mock_response = mock.Mock()
+
+    mock_response.status = 200
+
+    mock_response.data = json.dumps(
+
+        {
+
+            "access_token": "mock-token",
+
+            "expires_in": 3600,
+
+            "token_type": "Bearer"
+
+        }
+
+    ).encode("utf-8")
+
+    mock_response.headers = {"content-type": "application/json"}
+
+
+
+    mock_request = mock.Mock()
+
+    mock_request_class.return_value = mock_request
+
+    mock_request.urlopen.return_value = mock_response
+
+
+
+    creds = pluggable.IdentityPoolCredentials(
+
+        audience=AUDIENCE,
+
+        subject_token_type=SUBJECT_TOKEN_TYPE,
+
+        token_url=TOKEN_URL,
+
+        credential_source={
+
+            "file": "tests/data/fake_subject_token.txt"
+
+        },
+
+        quota_project_id="mock-quota"
+
+    )
+
+
+
+    creds.refresh(mock_request)
+
+
+
+    called_request = mock_request.urlopen.call_args[0][0]
+
+    body = json.loads(called_request.data.decode("utf-8"))
+
+
+
+    assert body["audience"] == AUDIENCE
+
+    assert body["subject_token_type"] == SUBJECT_TOKEN_TYPE
+
+    assert "subject_token" in body
+
+
+
+    assert called_request.headers["Content-Type"] == "application/x-www-form-urlencoded"
+
+    assert called_request.headers["x-goog-user-project"] == "mock-quota"

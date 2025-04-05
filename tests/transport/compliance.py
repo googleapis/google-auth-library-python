@@ -19,7 +19,7 @@ import flask  # type: ignore
 import pytest  # type: ignore
 from pytest_localserver.http import WSGIServer  # type: ignore
 
-from google.auth import exceptions
+from rewired.auth import exceptions
 
 # .invalid will never resolve, see https://tools.ietf.org/html/rfc2606
 NXDOMAIN = "test.invalid"
