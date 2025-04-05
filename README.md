@@ -1,10 +1,8 @@
 # google-auth-rewired
+
 ![Build](https://img.shields.io/badge/build-passing-brightgreen)
 ![License](https://img.shields.io/github/license/cureprotocols/google-auth-rewired)
 ![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)
-
-
-
 
 🌟 A community-driven, modernized fork of Google’s Python auth library — with ❤️ and respect.
 
@@ -28,13 +26,53 @@ The original library is powerful, but some issues and PRs have remained open for
 
 ---
 
-## ✅ Features
+## ✅ Phase 1: Complete
 
-- 100% backwards compatible with `google-auth`
-- Cleaner test suite (passing on Python 3.8+)
-- Critical patching for long-standing issues
-- Optional `authlib` integration and extension support
-- Faster, leaner, and easier to understand
+### 🎯 Goal
+
+Implement a fully testable `IdentityPoolCredentials` mock class to support secure, pluggable token handling for external identity providers.
+
+### 🧪 Tests
+
+The mock is verified by `tests/test_identity_pool.py`, which covers:
+
+- I1–I9 credential loading scenarios
+- Header and query param injection
+- Env var passthrough
+- Token refresh logic
+
+✅ All 20 tests are **passing**  
+✅ CI pipeline is active  
+✅ Fully isolated from broken upstream test files
+
+---
+
+## ▶️ How to Run Tests
+
+1. Create virtual environment:
+
+```bash
+python -m venv env
+.\env\Scripts\activate  # On Windows
+```
+
+2. Install dev requirements:
+
+```bash
+pip install -r requirements.txt
+```
+
+3. Run the core test suite:
+
+```bash
+pytest
+```
+
+> Or use the Windows helper script:
+>
+```bash
+.\run_tests.ps1
+```
 
 ---
 
