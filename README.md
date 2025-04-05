@@ -40,28 +40,31 @@ The mock is verified by [`tests/test_identity_pool.py`](tests/test_identity_pool
 - Token refresh logic  
 
 ### 🧠 Results
-- ✅ **All 20 tests passing**
-- ✅ **CI pipeline active**
-- ✅ **Upstream test failures isolated**
+
+- ✅ **All 20 tests passing**  
+- ✅ **CI pipeline active**  
+- ✅ **Upstream test failures isolated**  
 
 ---
 
-## ▶️ How to Run Tests (Windows / Linux)
+## ▶️ How to Run Tests (Windows & Linux)
 
-### 🔁 Setup (All OS):
+### 🔁 Setup (All OS)
 
 ```bash
 python -m venv env
 ```
 
-#### 🔹 Windows:
+#### 🔹 Windows
+
 ```bash
 .\env\Scripts\activate
 pip install -r requirements.txt
 .\run_tests.ps1
 ```
 
-#### 🔸 Linux/macOS:
+#### 🔸 Linux/macOS
+
 ```bash
 source env/bin/activate
 pip install -r requirements.txt
