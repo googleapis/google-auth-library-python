@@ -17,8 +17,8 @@ import pytest
 
 import google.oauth2.credentials
 from google.oauth2 import service_account
-import google.auth.impersonated_credentials
-from google.auth import _helpers
+import rewired.auth.impersonated_credentials
+from rewired.auth import _helpers
 
 
 GOOGLE_OAUTH2_TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token"
@@ -64,7 +64,7 @@ def test_refresh_with_user_credentials_as_source(
         "https://www.googleapis.com/auth/devstorage.read_only",
         "https://www.googleapis.com/auth/analytics",
     ]
-    target_credentials = google.auth.impersonated_credentials.Credentials(
+    target_credentials = rewired.auth.impersonated_credentials.Credentials(
         source_credentials=source_credentials,
         target_principal=impersonated_service_account_credentials.service_account_email,
         target_scopes=target_scopes,
@@ -89,7 +89,7 @@ def test_refresh_with_service_account_credentials_as_source(
         "https://www.googleapis.com/auth/devstorage.read_only",
         "https://www.googleapis.com/auth/analytics",
     ]
-    target_credentials = google.auth.impersonated_credentials.Credentials(
+    target_credentials = rewired.auth.impersonated_credentials.Credentials(
         source_credentials=source_credentials,
         target_principal=impersonated_service_account_credentials.service_account_email,
         target_scopes=target_scopes,

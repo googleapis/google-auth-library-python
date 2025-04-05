@@ -20,9 +20,9 @@ import urllib
 import mock
 import pytest  # type: ignore
 
-from google.auth import _helpers
-from google.auth import _jwt_async as jwt
-from google.auth import exceptions
+from rewired.auth import _helpers
+from rewired.auth import _jwt_async as jwt
+from rewired.auth import exceptions
 from google.oauth2 import _client as sync_client
 from google.oauth2 import _client_async as _client
 from tests.oauth2 import test__client as test_client
@@ -206,7 +206,7 @@ def verify_request_params(request, params):
 
 
 @pytest.mark.asyncio
-@mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+@mock.patch("rewired.auth._helpers.utcnow", return_value=datetime.datetime.min)
 async def test_jwt_grant(utcnow):
     request = make_request(
         {"access_token": "token", "expires_in": 500, "extra": "data"}
@@ -286,7 +286,7 @@ async def test_id_token_jwt_grant_no_access_token():
 
 
 @pytest.mark.asyncio
-@mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+@mock.patch("rewired.auth._helpers.utcnow", return_value=datetime.datetime.min)
 async def test_refresh_grant(unused_utcnow):
     request = make_request(
         {
@@ -326,7 +326,7 @@ async def test_refresh_grant(unused_utcnow):
 
 
 @pytest.mark.asyncio
-@mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+@mock.patch("rewired.auth._helpers.utcnow", return_value=datetime.datetime.min)
 async def test_refresh_grant_with_scopes(unused_utcnow):
     request = make_request(
         {
@@ -410,7 +410,7 @@ async def test_jwt_grant_retry_with_retry(
 
 
 @pytest.mark.asyncio
-@mock.patch("google.auth.jwt.decode", return_value={"exp": 0})
+@mock.patch("rewired.auth.jwt.decode", return_value={"exp": 0})
 @mock.patch.object(_client, "_token_endpoint_request", autospec=True)
 async def test_id_token_jwt_grant_retry_default(
     mock_token_endpoint_request, mock_jwt_decode
@@ -423,7 +423,7 @@ async def test_id_token_jwt_grant_retry_default(
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("can_retry", [True, False])
-@mock.patch("google.auth.jwt.decode", return_value={"exp": 0})
+@mock.patch("rewired.auth.jwt.decode", return_value={"exp": 0})
 @mock.patch.object(_client, "_token_endpoint_request", autospec=True)
 async def test_id_token_jwt_grant_retry_with_retry(
     mock_token_endpoint_request, mock_jwt_decode, can_retry

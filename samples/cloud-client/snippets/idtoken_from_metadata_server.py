@@ -16,8 +16,8 @@
 
 import google
 import google.oauth2.credentials
-from google.auth import compute_engine
-import google.auth.transport.requests
+from rewired.auth import compute_engine
+import rewired.auth.transport.requests
 
 
 def idtoken_from_metadata_server(url: str):
@@ -31,7 +31,7 @@ def idtoken_from_metadata_server(url: str):
             Examples: http://www.example.com
     """
 
-    request = google.auth.transport.requests.Request()
+    request = rewired.auth.transport.requests.Request()
     # Set the target audience.
     # Setting "use_metadata_identity_endpoint" to "True" will make the request use the default application
     # credentials. Optionally, you can also specify a specific service account to use by mentioning

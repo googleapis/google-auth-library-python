@@ -42,7 +42,7 @@ with io.open("README.rst", "r") as fh:
 package_root = os.path.abspath(os.path.dirname(__file__))
 
 version = {}
-with open(os.path.join(package_root, "google/auth/version.py")) as fp:
+with open(os.path.join(package_root, "rewired/auth/version.py")) as fp:
     exec(fp.read(), version)
 version = version["__version__"]
 
@@ -57,7 +57,7 @@ setup(
     packages=find_namespace_packages(
         exclude=("tests*", "system_tests*", "docs*", "samples*")
     ),
-    package_data={"google.auth": ["py.typed"], "google.oauth2": ["py.typed"]},
+    package_data={"rewired.auth": ["py.typed"], "google.oauth2": ["py.typed"]},
     install_requires=DEPENDENCIES,
     extras_require=extras,
     python_requires=">=3.7",
