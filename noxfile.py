@@ -94,7 +94,7 @@ def unit(session):
     session.run(
         "pytest",
         f"--junitxml=unit_{session.python}_sponge_log.xml",
-        "--cov=google.auth",
+        "--cov=rewired.auth",
         "--cov=google.oauth2",
         "--cov=tests",
         "--cov-report=term-missing",
@@ -109,7 +109,7 @@ def cover(session):
     session.install("-e", ".")
     session.run(
         "pytest",
-        "--cov=google.auth",
+        "--cov=rewired.auth",
         "--cov=google.oauth2",
         "--cov=tests",
         "--cov=tests_async",
@@ -149,7 +149,7 @@ def pypy(session):
     session.run(
         "pytest",
         f"--junitxml=unit_{session.python}_sponge_log.xml",
-        "--cov=google.auth",
+        "--cov=rewired.auth",
         "--cov=google.oauth2",
         "--cov=tests",
         "tests",

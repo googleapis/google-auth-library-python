@@ -15,9 +15,9 @@
 import json
 import os
 
-from google.auth import _helpers
-import google.auth.transport.requests
-import google.auth.transport.urllib3
+from rewired.auth import _helpers
+import rewired.auth.transport.requests
+import rewired.auth.transport.urllib3
 import pytest
 import requests
 import urllib3
@@ -62,9 +62,9 @@ def request_type(request):
 def http_request(request_type):
     """A transport.request object."""
     if request_type == "urllib3":
-        yield google.auth.transport.urllib3.Request(URLLIB3_HTTP)
+        yield rewired.auth.transport.urllib3.Request(URLLIB3_HTTP)
     elif request_type == "requests":
-        yield google.auth.transport.requests.Request(REQUESTS_SESSION)
+        yield rewired.auth.transport.requests.Request(REQUESTS_SESSION)
 
 
 @pytest.fixture
@@ -73,7 +73,7 @@ def authenticated_request(request_type):
     if request_type == "urllib3":
 
         def wrapper(credentials):
-            return google.auth.transport.urllib3.AuthorizedHttp(
+            return rewired.auth.transport.urllib3.AuthorizedHttp(
                 credentials, http=URLLIB3_HTTP
             ).request
 
@@ -81,9 +81,9 @@ def authenticated_request(request_type):
     elif request_type == "requests":
 
         def wrapper(credentials):
-            session = google.auth.transport.requests.AuthorizedSession(credentials)
+            session = rewired.auth.transport.requests.AuthorizedSession(credentials)
             session.verify = False
-            return google.auth.transport.requests.Request(session)
+            return rewired.auth.transport.requests.Request(session)
 
         yield wrapper
 

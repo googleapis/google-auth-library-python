@@ -17,7 +17,7 @@
 from google.cloud import storage
 
 import google.oauth2.credentials
-import google.auth
+import rewired.auth
 
 
 def authenticate_explicit_with_adc():
@@ -33,14 +33,14 @@ def authenticate_explicit_with_adc():
 
     # Construct the Google credentials object which obtains the default configuration from your
     # working environment.
-    # google.auth.default() will give you ComputeEngineCredentials
+    # rewired.auth.default() will give you ComputeEngineCredentials
     # if you are on a GCE (or other metadata server supported environments).
-    credentials, project_id = google.auth.default()
+    credentials, project_id = rewired.auth.default()
     # If you are authenticating to a Cloud API, you can let the library include the default scope,
     # https://www.googleapis.com/auth/cloud-platform, because IAM is used to provide fine-grained
     # permissions for Cloud.
     # If you need to provide a scope, specify it as follows:
-    # credentials = google.auth.default(scopes=scope)
+    # credentials = rewired.auth.default(scopes=scope)
     # For more information on scopes to use,
     # see: https://developers.google.com/identity/protocols/oauth2/scopes
 

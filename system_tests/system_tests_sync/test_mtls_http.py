@@ -19,24 +19,24 @@ import time
 from os import path
 
 
-import google.auth
-import google.auth.credentials
-from google.auth import environment_vars
-from google.auth.transport import mtls
-import google.auth.transport.requests
-import google.auth.transport.urllib3
+import rewired.auth
+import rewired.auth.credentials
+from rewired.auth import environment_vars
+from rewired.auth.transport import mtls
+import rewired.auth.transport.requests
+import rewired.auth.transport.urllib3
 
 MTLS_ENDPOINT = "https://pubsub.mtls.googleapis.com/v1/projects/{}/topics"
 REGULAR_ENDPOINT = "https://pubsub.googleapis.com/v1/projects/{}/topics"
 
 
 def test_requests():
-    credentials, project_id = google.auth.default()
-    credentials = google.auth.credentials.with_scopes_if_required(
+    credentials, project_id = rewired.auth.default()
+    credentials = rewired.auth.credentials.with_scopes_if_required(
         credentials, ["https://www.googleapis.com/auth/pubsub"]
     )
 
-    authed_session = google.auth.transport.requests.AuthorizedSession(credentials)
+    authed_session = rewired.auth.transport.requests.AuthorizedSession(credentials)
     with mock.patch.dict(os.environ, {environment_vars.GOOGLE_API_USE_CLIENT_CERTIFICATE: "true"}):
         authed_session.configure_mtls_channel()
 
@@ -56,12 +56,12 @@ def test_requests():
 
 
 def test_urllib3():
-    credentials, project_id = google.auth.default()
-    credentials = google.auth.credentials.with_scopes_if_required(
+    credentials, project_id = rewired.auth.default()
+    credentials = rewired.auth.credentials.with_scopes_if_required(
         credentials, ["https://www.googleapis.com/auth/pubsub"]
     )
 
-    authed_http = google.auth.transport.urllib3.AuthorizedHttp(credentials)
+    authed_http = rewired.auth.transport.urllib3.AuthorizedHttp(credentials)
     with mock.patch.dict(os.environ, {environment_vars.GOOGLE_API_USE_CLIENT_CERTIFICATE: "true"}):
         is_mtls = authed_http.configure_mtls_channel()
 
@@ -81,12 +81,12 @@ def test_urllib3():
 
 
 def test_requests_with_default_client_cert_source():
-    credentials, project_id = google.auth.default()
-    credentials = google.auth.credentials.with_scopes_if_required(
+    credentials, project_id = rewired.auth.default()
+    credentials = rewired.auth.credentials.with_scopes_if_required(
         credentials, ["https://www.googleapis.com/auth/pubsub"]
     )
 
-    authed_session = google.auth.transport.requests.AuthorizedSession(credentials)
+    authed_session = rewired.auth.transport.requests.AuthorizedSession(credentials)
 
     if mtls.has_default_client_cert_source():
         with mock.patch.dict(os.environ, {environment_vars.GOOGLE_API_USE_CLIENT_CERTIFICATE: "true"}):
@@ -104,12 +104,12 @@ def test_requests_with_default_client_cert_source():
 
 
 def test_urllib3_with_default_client_cert_source():
-    credentials, project_id = google.auth.default()
-    credentials = google.auth.credentials.with_scopes_if_required(
+    credentials, project_id = rewired.auth.default()
+    credentials = rewired.auth.credentials.with_scopes_if_required(
         credentials, ["https://www.googleapis.com/auth/pubsub"]
     )
 
-    authed_http = google.auth.transport.urllib3.AuthorizedHttp(credentials)
+    authed_http = rewired.auth.transport.urllib3.AuthorizedHttp(credentials)
 
     if mtls.has_default_client_cert_source():
         with mock.patch.dict(os.environ, {environment_vars.GOOGLE_API_USE_CLIENT_CERTIFICATE: "true"}):
