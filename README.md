@@ -58,9 +58,10 @@ python -m venv env
 #### 🔹 Windows
 
 ```bash
-.\env\Scripts\activate
+.\env\Scripts ctivate
 pip install -r requirements.txt
-.\run_tests.ps1
+.
+un_tests.ps1
 ```
 
 #### 🔸 Linux/macOS
@@ -124,4 +125,3 @@ Let’s move Python forward, together.
 ---
 
 > Let’s keep Python auth secure, simple, and moving forward 🚀
-```
