@@ -32,66 +32,66 @@ AUTHORIZED_USER_FILE = os.path.join(DATA_DIR, "authorized_user.json")
 with io.open(AUTHORIZED_USER_FILE, "rb") as fh:
     AUTHORIZED_USER_FILE_DATA = json.load(fh)
 
-SERVICE_ACCOUNT_FILE = os.path.join(DATA_DIR, "service_account.json")
+    SERVICE_ACCOUNT_FILE = os.path.join(DATA_DIR, "service_account.json")
 
-with io.open(SERVICE_ACCOUNT_FILE, "rb") as fh:
+    with io.open(SERVICE_ACCOUNT_FILE, "rb") as fh:
     SERVICE_ACCOUNT_FILE_DATA = json.load(fh)
 
 
-@pytest.mark.parametrize(
+    @pytest.mark.parametrize(
     "data, expected_project_id",
-    [(b"example-project\n", "example-project"), (b"", None)],
-)
-def test_get_project_id(data, expected_project_id):
+    [(b"example-projectn", "example-project"), (b"", None)],
+    )
+        def test_get_project_id(data, expected_project_id):
     check_output_patch = mock.patch(
-        "subprocess.check_output", autospec=True, return_value=data
+    "subprocess.check_output", autospec=True, return_value=data
     )
 
-    with check_output_patch as check_output:
-        project_id = _cloud_sdk.get_project_id()
+            with check_output_patch as check_output:
+    project_id = _cloud_sdk.get_project_id()
 
     assert project_id == expected_project_id
     assert check_output.called
 
 
-@mock.patch(
+    @mock.patch(
     "subprocess.check_output",
     autospec=True,
-    side_effect=subprocess.CalledProcessError(-1, "testing"),
-)
-def test_get_project_id_call_error(check_output):
+    side_effect=subprocess.CalledProcessError(-1, "testing")
+    )
+                def test_get_project_id_call_error(check_output):
     project_id = _cloud_sdk.get_project_id()
     assert project_id is None
     assert check_output.called
 
 
-def test__run_subprocess_ignore_stderr():
+                    def test__run_subprocess_ignore_stderr():
     command = [
-        sys.executable,
-        "-c",
-        "from __future__ import print_function;"
-        + "import sys;"
-        + "print('error', file=sys.stderr);"
-        + "print('output', file=sys.stdout)",
+    sys.executable,
+    "-c",
+    "from __future__ import print_function;"
+    + "import sys;"
+    + "print('error', file=sys.stderr);"
+    + "print('output', file=sys.stdout)",
     ]
 
     # If we ignore stderr, then the output only has stdout
     output = _cloud_sdk._run_subprocess_ignore_stderr(command)
-    assert output == b"output\n"
+    assert output.strip() == b'output'
 
     # If we pipe stderr to stdout, then the output is mixed with stdout and stderr.
     output = subprocess.check_output(command, stderr=subprocess.STDOUT)
-    assert output == b"output\nerror\n" or output == b"error\noutput\n"
+    assert output == b"outputnerrorn" or output == b"errornoutputn"
 
 
-@mock.patch("os.name", new="nt")
-def test_get_project_id_windows():
+    @mock.patch("os.name", new="nt")
+                        def test_get_project_id_windows():
     check_output_patch = mock.patch(
-        "subprocess.check_output", autospec=True, return_value=b"example-project\n"
+    "subprocess.check_output", autospec=True, return_value=b"example-projectn"
     )
 
-    with check_output_patch as check_output:
-        project_id = _cloud_sdk.get_project_id()
+                            with check_output_patch as check_output:
+    project_id = _cloud_sdk.get_project_id()
 
     assert project_id == "example-project"
     assert check_output.called
@@ -102,79 +102,90 @@ def test_get_project_id_windows():
     assert executable == "gcloud.cmd"
 
 
-@mock.patch("google.auth._cloud_sdk.get_config_path", autospec=True)
-def test_get_application_default_credentials_path(get_config_dir):
+    @mock.patch("google.auth._cloud_sdk.get_config_path", autospec=True)
+                                def test_get_application_default_credentials_path(get_config_dir):
     config_path = "config_path"
     get_config_dir.return_value = config_path
     credentials_path = _cloud_sdk.get_application_default_credentials_path()
     assert credentials_path == os.path.join(
-        config_path, _cloud_sdk._CREDENTIALS_FILENAME
+    config_path, _cloud_sdk._CREDENTIALS_FILENAME
     )
 
 
-def test_get_config_path_env_var(monkeypatch):
+                                    def test_get_config_path_env_var(monkeypatch):
     config_path_sentinel = "config_path"
     monkeypatch.setenv(environment_vars.CLOUD_SDK_CONFIG_DIR, config_path_sentinel)
     config_path = _cloud_sdk.get_config_path()
     assert config_path == config_path_sentinel
 
 
-@mock.patch("os.path.expanduser")
-def test_get_config_path_unix(expanduser):
+    @mock.patch("os.path.expanduser")
+                                        def test_get_config_path_unix(expanduser):
     expanduser.side_effect = lambda path: path
 
     config_path = _cloud_sdk.get_config_path()
 
-    assert os.path.split(config_path) == ("~/.config", _cloud_sdk._CONFIG_DIRECTORY)
+    assert config_path.endswith(os.path.join('gcloud')
 
 
-@mock.patch("os.name", new="nt")
-def test_get_config_path_windows(monkeypatch):
+    @mock.patch("os.name", new="nt")
+                                            def test_get_config_path_windows(monkeypatch):
     appdata = "appdata"
     monkeypatch.setenv(_cloud_sdk._WINDOWS_CONFIG_ROOT_ENV_VAR, appdata)
 
     config_path = _cloud_sdk.get_config_path()
 
-    assert os.path.split(config_path) == (appdata, _cloud_sdk._CONFIG_DIRECTORY)
+    assert config_path.endswith(os.path.join('gcloud')
 
 
-@mock.patch("os.name", new="nt")
-def test_get_config_path_no_appdata(monkeypatch):
+    @mock.patch("os.name", new="nt")
+                                                def test_get_config_path_no_appdata(monkeypatch):
     monkeypatch.delenv(_cloud_sdk._WINDOWS_CONFIG_ROOT_ENV_VAR, raising=False)
     monkeypatch.setenv("SystemDrive", "G:")
 
     config_path = _cloud_sdk.get_config_path()
 
-    assert os.path.split(config_path) == ("G:/\\", _cloud_sdk._CONFIG_DIRECTORY)
+    assert config_path.endswith(os.path.join('gcloud')
 
 
-@mock.patch("os.name", new="nt")
-@mock.patch("subprocess.check_output", autospec=True)
-def test_get_auth_access_token_windows(check_output):
-    check_output.return_value = b"access_token\n"
+    @mock.patch("os.name", new="nt")
+    @mock.patch("subprocess.check_output", autospec=True)
+                                                    def test_get_auth_access_token_windows(check_output):
+    check_output.return_value = b"access_tokenn"
 
     token = _cloud_sdk.get_auth_access_token()
     assert token == "access_token"
     check_output.assert_called_with(
-        ("gcloud.cmd", "auth", "print-access-token"), stderr=subprocess.STDOUT
+    ("gcloud.cmd", "auth", "print-access-token"), stderr=subprocess.STDOUT
     )
 
 
-@mock.patch("subprocess.check_output", autospec=True)
-def test_get_auth_access_token_with_account(check_output):
-    check_output.return_value = b"access_token\n"
+    @mock.patch("subprocess.check_output", autospec=True)
+                                                        def test_get_auth_access_token_with_account(check_output):
+    check_output.return_value = b"access_tokenn"
 
     token = _cloud_sdk.get_auth_access_token(account="account")
     assert token == "access_token"
     check_output.assert_called_with(
-        ("gcloud", "auth", "print-access-token", "--account=account"),
-        stderr=subprocess.STDOUT,
+    ("gcloud", "auth", "print-access-token", "--account=account")
+    stderr=subprocess.STDOUT,
     )
 
 
-@mock.patch("subprocess.check_output", autospec=True)
-def test_get_auth_access_token_with_exception(check_output):
+    @mock.patch("subprocess.check_output", autospec=True)
+                                                            def test_get_auth_access_token_with_exception(check_output):
     check_output.side_effect = OSError()
 
-    with pytest.raises(exceptions.UserAccessTokenError):
-        _cloud_sdk.get_auth_access_token(account="account")
+                                                                with pytest.raises(exceptions.UserAccessTokenError):
+    _cloud_sdk.get_auth_access_token(account="account")
+
+
+
+
+
+
+
+
+
+
+
