@@ -18,60 +18,54 @@ The original library is powerful, but some issues and PRs have remained open for
 
 **`google-auth-rewired` exists to:**
 
-- ✅ Fix known bugs and rough edges
-- 🚀 Modernize stale code paths
-- 🧪 Ensure tests pass across Python 3.x
-- 🔐 Enhance reliability for GCP, OIDC, service accounts, and JWT usage
-- 📦 Provide a drop-in alternative with zero config changes
+- ✅ Fix known bugs and rough edges  
+- 🚀 Modernize stale code paths  
+- 🧪 Ensure tests pass across Python 3.x  
+- 🔐 Enhance reliability for GCP, OIDC, service accounts, and JWT usage  
+- 📦 Provide a drop-in alternative with zero config changes  
 
 ---
 
 ## ✅ Phase 1: Complete
 
-### 🎯 Goal
-
+### 🎯 Goal  
 Implement a fully testable `IdentityPoolCredentials` mock class to support secure, pluggable token handling for external identity providers.
 
-### 🧪 Tests
+### 🧪 Test Coverage  
+The mock is verified by [`tests/test_identity_pool.py`](tests/test_identity_pool.py), which includes:
 
-The mock is verified by `tests/test_identity_pool.py`, which covers:
+- I1–I9 credential loading scenarios  
+- Header and query param injection  
+- Env var passthrough  
+- Token refresh logic  
 
-- I1–I9 credential loading scenarios
-- Header and query param injection
-- Env var passthrough
-- Token refresh logic
-
-✅ All 20 tests are **passing**  
-✅ CI pipeline is active  
-✅ Fully isolated from broken upstream test files
+### 🧠 Results
+- ✅ **All 20 tests passing**
+- ✅ **CI pipeline active**
+- ✅ **Upstream test failures isolated**
 
 ---
 
-## ▶️ How to Run Tests
+## ▶️ How to Run Tests (Windows / Linux)
 
-1. Create virtual environment:
+### 🔁 Setup (All OS):
 
 ```bash
 python -m venv env
-.\env\Scripts\activate  # On Windows
 ```
 
-2. Install dev requirements:
-
+#### 🔹 Windows:
 ```bash
+.\env\Scripts\activate
 pip install -r requirements.txt
-```
-
-3. Run the core test suite:
-
-```bash
-pytest
-```
-
-> Or use the Windows helper script:
->
-```bash
 .\run_tests.ps1
+```
+
+#### 🔸 Linux/macOS:
+```bash
+source env/bin/activate
+pip install -r requirements.txt
+./run_tests.sh  # Coming soon!
 ```
 
 ---
@@ -87,6 +81,13 @@ pip install google-auth-rewired
 
 ---
 
+## 🐧 Linux Support
+
+This project is being optimized cross-platform.  
+Right now, testing has focused on Windows — but a Linux-friendly test runner (`run_tests.sh`) and validation pipeline will be added after Phase 2. Stay tuned.
+
+---
+
 ## 🤝 Contributing
 
 We’re a community of builders, not critics.  
@@ -99,16 +100,16 @@ Let’s move Python forward, together.
 
 ## 🙏 Credits
 
-- Huge gratitude to the original authors and maintainers of [`google-auth-library-python`](https://github.com/googleapis/google-auth-library-python)
-- This project stands **with** the original — not in opposition
+- Huge gratitude to the original authors and maintainers of [`google-auth-library-python`](https://github.com/googleapis/google-auth-library-python)  
+- This project stands **with** the original — not in opposition  
 - All licensing, documentation, and credit remains respected
 
 ---
 
 ## 🔗 Resources
 
-- [Original Google Auth Library](https://github.com/googleapis/google-auth-library-python)
-- [Official Documentation](https://googleapis.dev/python/google-auth/latest/)
+- [Original Google Auth Library](https://github.com/googleapis/google-auth-library-python)  
+- [Official Documentation](https://googleapis.dev/python/google-auth/latest/)  
 - [OAuth 2.0 for Google](https://developers.google.com/identity/protocols/oauth2)
 
 ---
