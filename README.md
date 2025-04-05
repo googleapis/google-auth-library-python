@@ -69,7 +69,7 @@ un_tests.ps1
 ```bash
 source env/bin/activate
 pip install -r requirements.txt
-./run_tests.sh  # Coming soon!
+./run_tests.sh
 ```
 
 ---
