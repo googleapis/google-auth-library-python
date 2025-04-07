@@ -11,7 +11,9 @@ pyu2f
 pyjwt
 requests
 urllib3
-cryptography < 39.0.0
+# See https://github.com/googleapis/google-auth-library-python/issues/1440
+cryptography < 39.0.0; python_version == '3.7'
+cryptography; python_version >= '3.8'
 responses
 grpcio
 # Async Dependencies
