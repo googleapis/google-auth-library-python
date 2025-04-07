@@ -475,7 +475,7 @@ def _response_log_base(logger: logging.Logger, parsed_response: Any) -> None:
 def response_log(logger: logging.Logger, response: Any) -> None:
     """
     Logs an HTTP response at the DEBUG level if logging is enabled.
-    
+
     Args:
         logger: The logging.Logger instance to use.
         response: The HTTP response object to log.
