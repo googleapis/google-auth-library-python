@@ -192,7 +192,7 @@ class Request(transport.Request):
             response = await self.session.request(
                 method, url, data=body, headers=headers, timeout=timeout, **kwargs
             )
-            _helpers_async.response_log_async(_LOGGER, response)
+            await _helpers_async.response_log_async(_LOGGER, response)
             return _CombinedResponse(response)
 
         except aiohttp.ClientError as caught_exc:

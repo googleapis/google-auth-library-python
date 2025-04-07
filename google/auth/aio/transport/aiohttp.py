@@ -168,7 +168,7 @@ class Request(transport.Request):
                 timeout=client_timeout,
                 **kwargs,
             )
-            _helpers_async.response_log_async(_LOGGER, response)
+            await _helpers_async.response_log_async(_LOGGER, response)
             return Response(response)
 
         except aiohttp.ClientError as caught_exc:
