@@ -39,28 +39,34 @@ pyjwt_extra_require = [
     "cryptography < 39.0.0; python_version == '3.7'",
 ]
 
+reauth_extra_require = ["pyu2f>=0.1.5"]
+
 # Unit test requirements.
-testing_extra_require = [
-    "flask",
-    "freezegun",
-    "mock",
-    "pyopenssl",
-    "pytest",
-    "pytest-cov",
-    "pytest-localserver",
-    "pyu2f",
-    "responses",
-    # TODO(): Remove `grpcio` from testing requirements once an extra is added for `grpcio` dependency.
-    "grpcio",
-    # TODO(): Remove `oauth2client` from testing requirements once an extra is added for `grpcio` dependency.
-    "oauth2client",
-    # Async Dependencies
-    # TODO(https://github.com/googleapis/google-auth-library-python/issues/1722): `test_aiohttp_requests` depend on
-    # aiohttp < 3.10.0 which is a bug. Investigate and remove the pinned aiohttp version and use `aiohttp_extra_require`.
-    "aiohttp < 3.10.0",
-    "pytest-asyncio; python_version > '3.0'",
-    "aioresponses; python_version > '3.0'",
-]
+testing_extra_require = (
+    [
+        "flask",
+        "freezegun",
+        "mock",
+        "pyopenssl",
+        "pytest",
+        "pytest-cov",
+        "pytest-localserver",
+        "pyu2f",
+        "responses",
+        # TODO(): Remove `grpcio` from testing requirements once an extra is added for `grpcio` dependency.
+        "grpcio",
+        # TODO(): Remove `oauth2client` from testing requirements once an extra is added for `grpcio` dependency.
+        "oauth2client",
+        # Async Dependencies
+        # TODO(https://github.com/googleapis/google-auth-library-python/issues/1722): `test_aiohttp_requests` depend on
+        # aiohttp < 3.10.0 which is a bug. Investigate and remove the pinned aiohttp version and use `aiohttp_extra_require`.
+        "aiohttp < 3.10.0",
+        "pytest-asyncio",
+        "aioresponses",
+    ]
+    + pyjwt_extra_require
+    + reauth_extra_require
+)
 
 extras = {
     "aiohttp": aiohttp_extra_require,
