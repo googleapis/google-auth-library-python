@@ -422,7 +422,7 @@ class AuthorizedHttp(RequestMethods):  # type: ignore
                 body=body,
                 headers=headers,
                 _credential_refresh_attempt=_credential_refresh_attempt + 1,
-                **kwargs
+                **kwargs,
             )
 
         return response
