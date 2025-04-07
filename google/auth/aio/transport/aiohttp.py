@@ -29,6 +29,7 @@ except ImportError as caught_exc:  # pragma: NO COVER
 from google.auth import _helpers
 from google.auth import exceptions
 from google.auth.aio import transport
+from google.auth.aio import _helpers as _helpers_async
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -167,7 +168,7 @@ class Request(transport.Request):
                 timeout=client_timeout,
                 **kwargs,
             )
-            # TODO(https://github.com/googleapis/google-auth-library-python/issues/1697): Add response log.
+            _helpers_async.response_log_async(_LOGGER, response)
             return Response(response)
 
         except aiohttp.ClientError as caught_exc:

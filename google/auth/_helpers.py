@@ -454,15 +454,33 @@ def _parse_response(response: Any) -> Any:
         return response
 
 
+def _response_log_base(logger: logging.Logger, parsed_response: Any) -> None:
+    """
+    Logs a parsed HTTP response at the DEBUG level.
+
+    This internal helper function takes a parsed response and logs it
+    using the provided logger. It also applies a hashing function to
+    potentially sensitive information before logging.
+
+    Args:
+        logger: The logging.Logger instance to use for logging.
+        parsed_response: The parsed HTTP response object (e.g., a dictionary,
+            list, or the original response if parsing failed).
+    """
+
+    logged_response = _hash_sensitive_info(parsed_response)
+    logger.debug("Response received...", extra={"httpResponse": logged_response})
+
+
 def response_log(logger: logging.Logger, response: Any) -> None:
     """
     Logs an HTTP response at the DEBUG level if logging is enabled.
-
+    
     Args:
         logger: The logging.Logger instance to use.
         response: The HTTP response object to log.
     """
     if is_logging_enabled(logger):
         json_response = _parse_response(response)
-        logged_response = _hash_sensitive_info(json_response)
-        logger.debug("Response received...", extra={"httpResponse": logged_response})
+        _response_log_base(logger, json_response)
+

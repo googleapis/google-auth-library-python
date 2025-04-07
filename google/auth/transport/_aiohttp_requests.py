@@ -31,6 +31,7 @@ from google.auth import _helpers
 from google.auth import exceptions
 from google.auth import transport
 from google.auth.transport import requests
+from google.auth.aio import _helpers as _helpers_async
 
 
 _LOGGER = logging.getLogger(__name__)
@@ -191,7 +192,7 @@ class Request(transport.Request):
             response = await self.session.request(
                 method, url, data=body, headers=headers, timeout=timeout, **kwargs
             )
-            # TODO(https://github.com/googleapis/google-auth-library-python/issues/1697): Add response log.
+            _helpers_async.response_log_async(_LOGGER, response)
             return _CombinedResponse(response)
 
         except aiohttp.ClientError as caught_exc:
