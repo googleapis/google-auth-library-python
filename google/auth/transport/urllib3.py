@@ -37,9 +37,10 @@ try:
     from packaging import version  # type: ignore
 except ImportError as caught_exc:  # pragma: NO COVER
     raise ImportError(
-        "Error: Missing 'urllib3' dependency for 'google-auth'."
-        " The 'google-auth' library requires the 'urllib3' extra installed "
-        "for its default network transport."
+        ""
+        f"Error: {caught_exc}."
+        " The 'google-auth' library requires the extras installed "
+        "for urllib3 network transport."
         "\n"
         "Please install the necessary dependencies using pip:\n"
         "  pip install google-auth[urllib3]\n"
