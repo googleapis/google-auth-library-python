@@ -33,23 +33,30 @@ aiohttp_extra_require = [
     "aiohttp >= 3.6.2, < 4.0.0.dev0",
 ] + requests_extra_require
 
+pyjwt_extra_require = [
+    "pyjwt>=2.0",
+    "cryptography>=38.0.3",
+    "cryptography < 39.0.0; python_version == '3.7'",
+]
+
 # Unit test requirements.
 testing_extra_require = [
     "flask",
     "freezegun",
     "mock",
-    "cryptography < 39.0.0",
     "pyopenssl",
     "pytest",
     "pytest-cov",
     "pytest-localserver",
     "pyu2f",
-    "pyjwt",
     "responses",
+    # TODO(): Remove `grpcio` from testing requirements once an extra is added for `grpcio` dependency.
     "grpcio",
+    # TODO(): Remove `oauth2client` from testing requirements once an extra is added for `grpcio` dependency.
     "oauth2client",
     # Async Dependencies
-    # TODO(https://github.com/googleapis/google-auth-library-python/issues/1722): Remove the pinned aiohttp version and use `aiohttp_extra_require`.
+    # TODO(https://github.com/googleapis/google-auth-library-python/issues/1722): `test_aiohttp_requests` depend on
+    # aiohttp < 3.10.0 which is a bug. Investigate and remove the pinned aiohttp version and use `aiohttp_extra_require`.
     "aiohttp < 3.10.0",
     "pytest-asyncio; python_version > '3.0'",
     "aioresponses; python_version > '3.0'",
@@ -57,13 +64,24 @@ testing_extra_require = [
 
 extras = {
     "aiohttp": aiohttp_extra_require,
-    "pyopenssl": ["pyopenssl>=20.0.0", "cryptography>=38.0.3"],
+    "pyopenssl": [
+        "pyopenssl>=20.0.0",
+        "cryptography>=38.0.3",
+        "cryptography < 39.0.0; python_version == '3.7'",
+    ],
     "requests": requests_extra_require,
     "reauth": "pyu2f>=0.1.5",
-    "enterprise_cert": ["cryptography", "pyopenssl"],
-    "pyjwt": ["pyjwt>=2.0", "cryptography>=38.0.3"],
     "urllib3": ["urllib3", "packaging"],
+    "enterprise_cert": [
+        "cryptography",
+        "pyopenssl",
+        "cryptography < 39.0.0; python_version == '3.7'",
+    ],
+    "pyjwt": pyjwt_extra_require,
     "testing": testing_extra_require,
+    # TODO(): Add an extra for `grpcio` dependency.
+    # TODO(): Add an extra for `oauth2client` dependency.
+    # TODO(): Add an extra for `urllib3` dependency.
 }
 
 with io.open("README.rst", "r") as fh:
