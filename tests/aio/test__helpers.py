@@ -17,7 +17,6 @@ import logging
 from unittest import mock
 
 import pytest  # type: ignore
-import pytest_asyncio  # type: ignore
 
 from google.auth.aio import _helpers
 

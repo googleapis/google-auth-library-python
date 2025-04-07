@@ -28,8 +28,8 @@ except ImportError as caught_exc:  # pragma: NO COVER
 
 from google.auth import _helpers
 from google.auth import exceptions
-from google.auth.aio import transport
 from google.auth.aio import _helpers as _helpers_async
+from google.auth.aio import transport
 
 _LOGGER = logging.getLogger(__name__)
 
