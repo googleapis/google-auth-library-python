@@ -46,6 +46,8 @@ testing_extra_require = [
     "pyu2f",
     "pyjwt",
     "responses",
+    "grpcio",
+    "oauth2client",
     # Async Dependencies
     # TODO(https://github.com/googleapis/google-auth-library-python/issues/1722): Remove the pinned aiohttp version and use `aiohttp_extra_require`.
     "aiohttp < 3.10.0",
