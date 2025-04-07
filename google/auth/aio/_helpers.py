@@ -21,6 +21,7 @@ from typing import Any
 
 from google.auth import _helpers
 
+
 async def _parse_response_async(response: Any) -> Any:
     """
     Parses an async response, attempting to decode JSON.
@@ -55,4 +56,3 @@ async def response_log_async(logger: logging.Logger, response: Any) -> None:
     if _helpers.is_logging_enabled(logger):
         json_response = await _parse_response_async(response)
         _helpers._response_log_base(logger, json_response)
-

@@ -483,4 +483,3 @@ def response_log(logger: logging.Logger, response: Any) -> None:
     if is_logging_enabled(logger):
         json_response = _parse_response(response)
         _response_log_base(logger, json_response)
-

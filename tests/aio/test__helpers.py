@@ -51,7 +51,7 @@ async def test_response_log_debug_disabled(logger, caplog):
 async def test_response_log_debug_enabled_response_json(logger, caplog):
     class MockResponse:
         async def json(self):
-            return {"key1": "value1", "key2": "value2", "key3":"value3"}
+            return {"key1": "value1", "key2": "value2", "key3": "value3"}
 
     response = MockResponse()
     logger.setLevel(logging.DEBUG)
@@ -60,7 +60,7 @@ async def test_response_log_debug_enabled_response_json(logger, caplog):
     assert len(caplog.records) == 1
     record = caplog.records[0]
     assert record.message == "Response received..."
-    assert record.httpResponse == {"key1": "value1", "key2": "value2", "key3":"value3"}
+    assert record.httpResponse == {"key1": "value1", "key2": "value2", "key3": "value3"}
 
 
 @pytest.mark.asyncio
