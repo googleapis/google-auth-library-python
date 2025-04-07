@@ -40,7 +40,7 @@ def lint(session):
         "flake8", "flake8-import-order", "docutils", CLICK_VERSION, BLACK_VERSION
     )
     session.install("-e", ".")
-    session.run("black", "--check", *BLACK_PATHS)
+    session.run("black", "--check", "--diff", *BLACK_PATHS)
     session.run(
         "flake8",
         "--import-order-style=google",
