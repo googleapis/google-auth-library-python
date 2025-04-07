@@ -38,12 +38,14 @@ try:
 except ImportError as caught_exc:  # pragma: NO COVER
     raise ImportError(
         "Error: Missing 'urllib3' dependency for 'google-auth'."
-        " The 'google-auth' library requires 'urllib3' for its default network transport."
+        " The 'google-auth' library requires the 'urllib3' extra installed "
+        "for its default network transport."
         "\n"
-        "Please install the necessary dependency using pip:\n"
+        "Please install the necessary dependencies using pip:\n"
         "  pip install google-auth[urllib3]\n"
         "\n"
-        "(Note: Using 'google-auth[urllib3]' ensures all dependencies are installed. We recommend running this in your virtual environment.)"
+        "(Note: Using '[urllib3]' ensures the specific dependencies needed for this feature are installed. "
+        "We recommend running this command in your virtual environment.)"
     ) from caught_exc
 
 
