@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
 import logging
 from unittest import mock
 
@@ -60,3 +61,35 @@ async def test_response_log_debug_enabled_response_json(logger, caplog):
     record = caplog.records[0]
     assert record.message == "Response received..."
     assert record.httpResponse == {"key1": "value1", "key2": "value2", "key3":"value3"}
+
+
+@pytest.mark.asyncio
+async def test_parse_response_async_json_valid():
+    class MockResponse:
+        async def json(self):
+            return {"data": "test"}
+
+    response = MockResponse()
+    expected = {"data": "test"}
+    assert await _helpers._parse_response_async(response) == expected
+
+
+@pytest.mark.asyncio
+async def test_parse_response_async_json_invalid():
+    class MockResponse:
+        def json(self):
+            raise json.JSONDecodeError("msg", "doc", 0)
+
+    response = MockResponse()
+    assert await _helpers._parse_response_async(response) == response
+
+
+@pytest.mark.asyncio
+async def test_parse_response_async_no_json_method():
+    response = "plain text"
+    assert await _helpers._parse_response_async(response) == "plain text"
+
+
+@pytest.mark.asyncio
+async def test_parse_response_async_none():
+    assert await _helpers._parse_response_async(None) is None
