@@ -434,12 +434,12 @@ class Credentials(
         source_credentials_type = source_credentials_info.get("type")
         if source_credentials_type == _AUTHORIZED_USER_TYPE:
             from google.oauth2 import credentials
-            source_credentials, _ = credentials.Credentials.from_authorized_user_info(
-                info
+            source_credentials = credentials.Credentials.from_authorized_user_info(
+                source_credentials_info
             )
         elif source_credentials_type == _SERVICE_ACCOUNT_TYPE:
             from google.oauth2 import service_account
-            source_credentials, _ = service_account.Credentials.from_service_account_info(
+            source_credentials = service_account.Credentials.from_service_account_info(
                 source_credentials_info
             )
         elif source_credentials_type == _EXTERNAL_ACCOUNT_AUTHORIZED_USER_TYPE:
