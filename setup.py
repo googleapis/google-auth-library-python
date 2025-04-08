@@ -27,10 +27,19 @@ DEPENDENCIES = (
     "rsa>=3.1.4,<5",
 )
 
+# TODO(https://github.com/googleapis/google-auth-library-python/issues/1440): Unit test fails with
+#  No module named 'cryptography.hazmat.backends.openssl.x509' for Python 3.7.
+cryptography_base_require = [
+    "cryptography>=38.0.3",
+    "cryptography < 39.0.0; python_version < '3.8'",
+]
 
-base_cryptography_require = ["cryptography>=38.0.3"]
-
-python38_cryptography_require = ["cryptography < 39.0.0; python_version <= '3.8'"]
+# TODO(https://github.com/googleapis/google-auth-library-python/issues/1665): Remove `pyopenssl_testing_require` once
+# `TestDecryptPrivateKey::test_success` is updated to remove the deprecated `OpenSSL.crypto.sign` and
+# `OpenSSL.crypto.verify` methods. See: https://www.pyopenssl.org/en/latest/changelog.html#id3.
+pyopenssl_testing_require = [
+    "pyopenssl < 24.3.0",
+]
 
 requests_extra_require = ["requests >= 2.20.0, < 3.0.0.dev0"]
 
@@ -38,8 +47,7 @@ aiohttp_extra_require = ["aiohttp >= 3.6.2, < 4.0.0.dev0", *requests_extra_requi
 
 pyjwt_extra_require = [
     "pyjwt>=2.0",
-    *base_cryptography_require,
-    *python38_cryptography_require,
+    *cryptography_base_require,
 ]
 
 reauth_extra_require = ["pyu2f>=0.1.5"]
@@ -47,13 +55,11 @@ reauth_extra_require = ["pyu2f>=0.1.5"]
 enterprise_cert_extra_require = [
     "cryptography",
     "pyopenssl",
-    *python38_cryptography_require,
 ]
 
 pyopenssl_extra_require = [
     "pyopenssl>=20.0.0",
-    *base_cryptography_require,
-    *python38_cryptography_require,
+    cryptography_base_require,
 ]
 
 # Unit test requirements.
