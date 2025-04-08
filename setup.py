@@ -34,7 +34,7 @@ cryptography_base_require = [
     "cryptography < 39.0.0; python_version < '3.8'",
 ]
 
-requests_extra_require = ["requests >= 2.20.0, < 3.0.0.dev0"]
+requests_extra_require = ["requests >= 2.20.0, < 3.0.0"]
 
 aiohttp_extra_require = ["aiohttp >= 3.6.2, < 4.0.0.dev0", *requests_extra_require]
 
