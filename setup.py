@@ -27,7 +27,7 @@ DEPENDENCIES = (
     "rsa>=3.1.4,<5",
 )
 
-# TODO(https://github.com/googleapis/google-auth-library-python/issues/1440): Unit test fails with
+# TODO(https://github.com/googleapis/google-auth-library-python/issues/1737): Unit test fails with
 #  `No module named 'cryptography.hazmat.backends.openssl.x509' for Python 3.7``.
 cryptography_base_require = [
     "cryptography>=38.0.3",
