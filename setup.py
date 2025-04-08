@@ -38,22 +38,13 @@ requests_extra_require = ["requests >= 2.20.0, < 3.0.0.dev0"]
 
 aiohttp_extra_require = ["aiohttp >= 3.6.2, < 4.0.0.dev0", *requests_extra_require]
 
-pyjwt_extra_require = [
-    "pyjwt>=2.0",
-    *cryptography_base_require,
-]
+pyjwt_extra_require = ["pyjwt>=2.0", *cryptography_base_require]
 
 reauth_extra_require = ["pyu2f>=0.1.5"]
 
-enterprise_cert_extra_require = [
-    "cryptography",
-    "pyopenssl",
-]
+enterprise_cert_extra_require = ["cryptography", "pyopenssl"]
 
-pyopenssl_extra_require = [
-    "pyopenssl>=20.0.0",
-    cryptography_base_require,
-]
+pyopenssl_extra_require = ["pyopenssl>=20.0.0", cryptography_base_require]
 
 urllib3_extra_require = [["urllib3", "packaging"]]
 
