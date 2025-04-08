@@ -424,7 +424,7 @@ class Credentials(
 
         Raises:
             InvalidType: If the source_credentials are not a support impersonation type
-            ValueError: If the info is not in the expected format.
+            ValueError: If the source_credentials info is not in the expected format.
         """
         _AUTHORIZED_USER_TYPE = "authorized_user"
         _SERVICE_ACCOUNT_TYPE = "service_account"
