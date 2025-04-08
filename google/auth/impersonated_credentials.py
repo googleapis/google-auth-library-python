@@ -47,6 +47,12 @@ _DEFAULT_TOKEN_LIFETIME_SECS = 3600  # 1 hour in seconds
 
 _GOOGLE_OAUTH2_TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token"
 
+_SOURCE_CREDENTIAL_AUTHORIZED_USER_TYPE = "authorized_user"
+_SOURCE_CREDENTIAL_SERVICE_ACCOUNT_TYPE = "service_account"
+_SOURCE_CREDENTIAL_EXTERNAL_ACCOUNT_AUTHORIZED_USER_TYPE = (
+    "external_account_authorized_user"
+)
+
 
 def _make_iam_token_request(
     request,
@@ -411,39 +417,45 @@ class Credentials(
         return cred
 
     @classmethod
-    def _source_credentials_from_impersonated_account_info(cls, info):
-        """Creates a Credentials instance from parsed authorized user info.
+    def from_impersonated_service_account_info(cls, info, scopes=None):
+        """Creates a Credentials instance from parsed impersonated service account credentials info.
 
         Args:
-            info (Mapping[str, str]): The authorized user info in Google
+            info (Mapping[str, str]): The impersonated service account credentials info in Google
                 format.
+            scopes (Sequence[str]): Optional list of scopes to include in the
+                credentials.
 
         Returns:
             google.oauth2.credentials.Credentials: The constructed
                 credentials.
 
         Raises:
-            InvalidType: If the source_credentials are not a support impersonation type
-            ValueError: If the source_credentials info is not in the expected format.
+            InvalidType: If the info["source_credentials"] are not a supported impersonation type
+            InvalidValue: If the info["service_account_impersonation_url"] is not in the expected format.
+            ValueError: If the info is not in the expected format.
         """
-        _AUTHORIZED_USER_TYPE = "authorized_user"
-        _SERVICE_ACCOUNT_TYPE = "service_account"
-        _EXTERNAL_ACCOUNT_AUTHORIZED_USER_TYPE = "external_account_authorized_user"
 
         source_credentials_info = info.get("source_credentials")
         source_credentials_type = source_credentials_info.get("type")
-        if source_credentials_type == _AUTHORIZED_USER_TYPE:
+        if source_credentials_type == _SOURCE_CREDENTIAL_AUTHORIZED_USER_TYPE:
             from google.oauth2 import credentials
+
             source_credentials = credentials.Credentials.from_authorized_user_info(
                 source_credentials_info
             )
-        elif source_credentials_type == _SERVICE_ACCOUNT_TYPE:
+        elif source_credentials_type == _SOURCE_CREDENTIAL_SERVICE_ACCOUNT_TYPE:
             from google.oauth2 import service_account
+
             source_credentials = service_account.Credentials.from_service_account_info(
                 source_credentials_info
             )
-        elif source_credentials_type == _EXTERNAL_ACCOUNT_AUTHORIZED_USER_TYPE:
+        elif (
+            source_credentials_type
+            == _SOURCE_CREDENTIAL_EXTERNAL_ACCOUNT_AUTHORIZED_USER_TYPE
+        ):
             from google.auth import external_account_authorized_user
+
             source_credentials = external_account_authorized_user.Credentials.from_info(
                 source_credentials_info
             )
@@ -454,28 +466,6 @@ class Credentials(
                 )
             )
 
-        return source_credentials
-
-    @classmethod
-    def from_impersonated_account_info(cls, info, scopes=None):
-        """Creates a Credentials instance from parsed authorized user info.
-
-        Args:
-            info (Mapping[str, str]): The authorized user info in Google
-                format.
-            scopes (Sequence[str]): Optional list of scopes to include in the
-                credentials.
-
-        Returns:
-            google.oauth2.credentials.Credentials: The constructed
-                credentials.
-
-        Raises:
-            InvalidType: If the source_credentials are not a support impersonation type
-            ValueError: If the info is not in the expected format.
-        """
-        source_credentials = cls._source_credentials_from_impersonated_account_info(info)
-
         impersonation_url = info.get("service_account_impersonation_url")
         start_index = impersonation_url.rfind("/")
         end_index = impersonation_url.find(":generateAccessToken")
@@ -484,7 +474,6 @@ class Credentials(
                 "Cannot extract target principal from {}".format(impersonation_url)
             )
         target_principal = impersonation_url[start_index + 1 : end_index]
-
         delegates = info.get("delegates")
         quota_project_id = info.get("quota_project_id")
 
@@ -493,7 +482,7 @@ class Credentials(
             target_principal,
             scopes,
             delegates,
-            quota_project_id=quota_project_id
+            quota_project_id=quota_project_id,
         )
 
 

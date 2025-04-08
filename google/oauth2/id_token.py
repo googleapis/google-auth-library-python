@@ -287,16 +287,15 @@ def fetch_id_token_credentials(audience, request=None):
                 elif info.get("type") == "impersonated_service_account":
                     from google.auth import impersonated_credentials
 
-                    target_credentials =  impersonated_credentials.Credentials.from_impersonated_account_info(
+                    target_credentials = impersonated_credentials.Credentials.from_impersonated_service_account_info(
                         info
                     )
 
-                    id_creds = impersonated_credentials.IDTokenCredentials(
+                    return impersonated_credentials.IDTokenCredentials(
                         target_credentials=target_credentials,
                         target_audience=audience,
                         include_email=True,
                     )
-                    return id_creds
         except ValueError as caught_exc:
             new_exc = exceptions.DefaultCredentialsError(
                 "GOOGLE_APPLICATION_CREDENTIALS is not valid service account credentials.",

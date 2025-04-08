@@ -457,8 +457,6 @@ class Credentials(credentials.ReadOnlyScoped, credentials.CredentialsWithQuotaPr
         Raises:
             ValueError: If the info is not in the expected format.
         """
-        print("NTRACE: from_authorizer_user_info")
-        print(info)
         keys_needed = set(("refresh_token", "client_id", "client_secret"))
         missing = keys_needed.difference(info.keys())
 

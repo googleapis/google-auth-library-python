@@ -484,7 +484,7 @@ def _get_impersonated_service_account_credentials(filename, info, scopes):
     from google.auth import impersonated_credentials
 
     try:
-        credentials = impersonated_credentials.Credentials.from_impersonated_account_info(
+        credentials = impersonated_credentials.Credentials.from_impersonated_service_account_info(
             info, scopes=scopes
         )
     except ValueError as caught_exc:
