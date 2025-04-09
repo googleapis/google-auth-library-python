@@ -99,12 +99,10 @@ class TestCredentials(object):
     )
     @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
     def test_refresh_success_with_service_account_email(self, get, utcnow):
-        service_account_email = "service-account@example.com"
-        self.credentials.service_account_email = service_account_email
         get.side_effect = [
             {
                 # First request is for sevice account info.
-                "email": service_account_email,
+                "email": FAKE_SERVICE_ACCOUNT_EMAIL,
                 "scopes": ["one", "two"],
             },
             {
@@ -122,7 +120,7 @@ class TestCredentials(object):
         assert self.credentials.expiry == (utcnow() + datetime.timedelta(seconds=500))
 
         # Check the credential info
-        assert self.credentials.service_account_email == service_account_email
+        assert self.credentials.service_account_email == FAKE_SERVICE_ACCOUNT_EMAIL
         assert self.credentials._scopes == ["one", "two"]
 
         # Check that the credentials are valid (have a token and are not
