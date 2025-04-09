@@ -48,7 +48,7 @@ enterprise_cert_extra_require = ["cryptography", "pyopenssl"]
 pyopenssl_extra_require = ["pyopenssl>=20.0.0", cryptography_base_require]
 
 # TODO(https://github.com/googleapis/google-auth-library-python/issues/1739): Add bounds for urllib3 and packaging dependencies.
-urllib3_extra_require = [["urllib3", "packaging"]]
+urllib3_extra_require = ["urllib3", "packaging"]
 
 # Unit test requirements.
 testing_extra_require = [
