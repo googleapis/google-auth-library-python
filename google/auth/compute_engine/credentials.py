@@ -87,10 +87,10 @@ class Credentials(
             self._universe_domain = universe_domain
             self._universe_domain_cached = True
 
-    def _retrieve_info(self, request):
-        """Retrieve information about the service account.
+    def _retrieve_scopes(self, request):
+        """Retrieve scopes about the service account.
 
-        Updates the scopes and retrieves the full service account email.
+        Updates the scopes for the assosiated service account.
 
         Args:
             request (google.auth.transport.Request): The object used to make
@@ -100,9 +100,7 @@ class Credentials(
             request, service_account=self._service_account_email
         )
 
-        # Don't override scopes requested by the user.
-        if self._scopes is None:
-            self._scopes = info["scopes"]
+        self._scopes = info["scopes"]
 
     def _metric_header_for_usage(self):
         return metrics.CRED_TYPE_SA_MDS
@@ -121,7 +119,8 @@ class Credentials(
         """
         scopes = self._scopes if self._scopes is not None else self._default_scopes
         try:
-            self._retrieve_info(request)
+            if self._scopes is None:
+                self._retrieve_scopes(request)
             self.token, self.expiry = _metadata.get_service_account_token(
                 request, service_account=self._service_account_email, scopes=scopes
             )
