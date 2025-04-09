@@ -82,13 +82,13 @@ testing_extra_require = [
 
 extras = {
     "aiohttp": aiohttp_extra_require,
-    "pyopenssl": pyopenssl_extra_require,
-    "requests": requests_extra_require,
-    "urllib3": urllib3_extra_require,
-    "reauth": reauth_extra_require,
     "enterprise_cert": enterprise_cert_extra_require,
+    "pyopenssl": pyopenssl_extra_require,
     "pyjwt": pyjwt_extra_require,
+    "reauth": reauth_extra_require,
+    "requests": requests_extra_require,
     "testing": testing_extra_require,
+    "urllib3": urllib3_extra_require,
     # TODO(https://github.com/googleapis/google-auth-library-python/issues/1735): Add an extra for `grpcio` dependency.
     # TODO(https://github.com/googleapis/google-auth-library-python/issues/1736): Add an extra for `oauth2client` dependency.
 }
