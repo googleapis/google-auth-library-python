@@ -34,15 +34,15 @@ async def _parse_response_async(response: Any) -> Any:
         The parsed response. If the response contains valid JSON, the
         decoded JSON object (e.g., a dictionary) is returned.
         If the response does not have a `json()` method or if the JSON
-        decoding fails, the original response object is returned.
+        decoding fails, None is returned.
     """
     try:
         json_response = await response.json()
         return json_response
-    except AttributeError:
-        return response
-    except json.JSONDecodeError:
-        return response
+    except:
+        # TODO(https://github.com/googleapis/google-auth-library-python/issues/1745):
+        # Parse and return response payload as json based on different content types.
+        return None
 
 
 async def response_log_async(logger: logging.Logger, response: Any) -> None:

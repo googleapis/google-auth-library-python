@@ -35,7 +35,7 @@ async def test_response_log_debug_enabled(logger, caplog):
     assert len(caplog.records) == 1
     record = caplog.records[0]
     assert record.message == "Response received..."
-    assert record.httpResponse == {"payload": None}
+    assert record.httpResponse == "<class 'NoneType'>"
 
 
 @pytest.mark.asyncio
@@ -80,13 +80,13 @@ async def test_parse_response_async_json_invalid():
             raise json.JSONDecodeError("msg", "doc", 0)
 
     response = MockResponse()
-    assert await _helpers._parse_response_async(response) == response
+    assert await _helpers._parse_response_async(response) == None
 
 
 @pytest.mark.asyncio
 async def test_parse_response_async_no_json_method():
     response = "plain text"
-    assert await _helpers._parse_response_async(response) == "plain text"
+    assert await _helpers._parse_response_async(response) == None
 
 
 @pytest.mark.asyncio
