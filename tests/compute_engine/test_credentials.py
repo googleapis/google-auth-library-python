@@ -98,11 +98,11 @@ class TestCredentials(object):
         return_value=datetime.datetime.min + _helpers.REFRESH_THRESHOLD,
     )
     @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
-    def test_refresh_success(self, get, utcnow):
+    def test_refresh_success_with_service_account_email(self, get, utcnow):
         get.side_effect = [
             {
                 # First request is for sevice account info.
-                "email": "service-account@example.com",
+                "email": FAKE_SERVICE_ACCOUNT_EMAIL,
                 "scopes": ["one", "two"],
             },
             {
@@ -120,7 +120,42 @@ class TestCredentials(object):
         assert self.credentials.expiry == (utcnow() + datetime.timedelta(seconds=500))
 
         # Check the credential info
-        assert self.credentials.service_account_email == "service-account@example.com"
+        assert self.credentials.service_account_email == FAKE_SERVICE_ACCOUNT_EMAIL
+        assert self.credentials._scopes == ["one", "two"]
+
+        # Check that the credentials are valid (have a token and are not
+        # expired)
+        assert self.credentials.valid
+
+    @mock.patch(
+        "google.auth._helpers.utcnow",
+        return_value=datetime.datetime.min + _helpers.REFRESH_THRESHOLD,
+    )
+    @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
+    def test_refresh_success_with_default_email(self, get, utcnow):
+        service_account_email = "service-account@example.com"
+        get.side_effect = [
+            {
+                # First request is for sevice account info.
+                "email": service_account_email,
+                "scopes": ["one", "two"],
+            },
+            {
+                # Second request is for the token.
+                "access_token": "token",
+                "expires_in": 500,
+            },
+        ]
+
+        # Refresh credentials
+        self.credentials.refresh(None)
+
+        # Check that the credentials have the token and proper expiration
+        assert self.credentials.token == "token"
+        assert self.credentials.expiry == (utcnow() + datetime.timedelta(seconds=500))
+
+        # Check the credential info
+        assert self.credentials.service_account_email == "default"
         assert self.credentials._scopes == ["one", "two"]
 
         # Check that the credentials are valid (have a token and are not
@@ -160,7 +195,7 @@ class TestCredentials(object):
         assert self.credentials.expiry == (utcnow() + datetime.timedelta(seconds=500))
 
         # Check the credential info
-        assert self.credentials.service_account_email == "service-account@example.com"
+        assert self.credentials.service_account_email == "default"
         assert self.credentials._scopes == scopes
 
         # Check that the credentials are valid (have a token and are not
@@ -501,7 +536,7 @@ class TestIDTokenCredentials(object):
         responses.add(
             responses.GET,
             "http://metadata.google.internal/computeMetadata/v1/instance/"
-            "service-accounts/service-account@example.com/token",
+            "service-accounts/default/token",
             status=200,
             content_type="application/json",
             json={
@@ -659,7 +694,7 @@ class TestIDTokenCredentials(object):
         responses.add(
             responses.GET,
             "http://metadata.google.internal/computeMetadata/v1/instance/"
-            "service-accounts/service-account@example.com/token",
+            "service-accounts/default/token",
             status=200,
             content_type="application/json",
             json={
