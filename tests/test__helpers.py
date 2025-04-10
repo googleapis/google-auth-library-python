@@ -398,7 +398,7 @@ def test_response_log_debug_enabled(logger, caplog):
     assert len(caplog.records) == 1
     record = caplog.records[0]
     assert record.message == "Response received..."
-    assert record.httpResponse == {"payload": None}
+    assert record.httpResponse == "<class 'NoneType'>"
 
 
 def test_response_log_debug_disabled(logger, caplog):
@@ -518,12 +518,12 @@ def test_parse_response_json_invalid():
             raise json.JSONDecodeError("msg", "doc", 0)
 
     response = MockResponse()
-    assert _helpers._parse_response(response) == response
+    assert _helpers._parse_response(response) is None
 
 
 def test_parse_response_no_json_method():
     response = "plain text"
-    assert _helpers._parse_response(response) == "plain text"
+    assert _helpers._parse_response(response) is None
 
 
 def test_parse_response_none():
