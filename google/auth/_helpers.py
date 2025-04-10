@@ -449,7 +449,8 @@ def _parse_response(response: Any) -> Any:
         json_response = response.json()
         return json_response
     except Exception:
-        # TODO(): Parse and return response payload as json based on different content types.
+        # TODO(https://github.com/googleapis/google-auth-library-python/issues/1744):
+        # Parse and return response payload as json based on different content types.
         return None
 
 
