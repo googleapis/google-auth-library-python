@@ -11,7 +11,7 @@ pyu2f
 pyjwt
 requests
 urllib3
-cryptography < 39.0.0
+cryptography <42.0.3
 responses
 grpcio
 # Async Dependencies
