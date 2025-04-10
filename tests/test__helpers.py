@@ -518,12 +518,12 @@ def test_parse_response_json_invalid():
             raise json.JSONDecodeError("msg", "doc", 0)
 
     response = MockResponse()
-    assert _helpers._parse_response(response) == None
+    assert _helpers._parse_response(response) is None
 
 
 def test_parse_response_no_json_method():
     response = "plain text"
-    assert _helpers._parse_response(response) == None
+    assert _helpers._parse_response(response) is None
 
 
 def test_parse_response_none():

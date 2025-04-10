@@ -15,7 +15,6 @@
 """Helper functions for commonly used utilities."""
 
 
-import json
 import logging
 from typing import Any
 
@@ -39,7 +38,7 @@ async def _parse_response_async(response: Any) -> Any:
     try:
         json_response = await response.json()
         return json_response
-    except:
+    except Exception:
         # TODO(https://github.com/googleapis/google-auth-library-python/issues/1745):
         # Parse and return response payload as json based on different content types.
         return None
