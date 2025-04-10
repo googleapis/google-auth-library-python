@@ -32,84 +32,95 @@ def make_request(status, data=None):
     response.status = status
 
     if data is not None:
-        response.data = json.dumps(data).encode("utf-8")
+    response.data = json.dumps(data).encode("utf-8")
 
     request = mock.create_autospec(transport.Request)
     request.return_value = response
     return request
 
 
-def make_credentials():
-    class CredentialsImpl(google.auth.credentials.Credentials):
-        def __init__(self):
-            super(CredentialsImpl, self).__init__()
-            self.token = "token"
-            # Force refresh
-            self.expiry = datetime.datetime.min + _helpers.REFRESH_THRESHOLD
+        def make_credentials():
+            class CredentialsImpl(google.auth.credentials.Credentials):
+                def __init__(self):
+    super(CredentialsImpl, self).__init__()
+    self.token = "token"
+    # Force refresh
+    self.expiry = datetime.datetime.min + _helpers.REFRESH_THRESHOLD
 
-        def refresh(self, request):
-            pass
+                    def refresh(self, request):
+    pass
 
-        def with_quota_project(self, quota_project_id):
-            raise NotImplementedError()
+                        def with_quota_project(self, quota_project_id):
+    raise NotImplementedError()
 
     return CredentialsImpl()
 
 
-class TestSigner(object):
-    def test_constructor(self):
-        request = mock.sentinel.request
-        credentials = mock.create_autospec(
-            google.auth.credentials.Credentials, instance=True
-        )
+                            class TestSigner(object):
+                                def test_constructor(self):
+    request = mock.sentinel.request
+    credentials = mock.create_autospec(
+    google.auth.credentials.Credentials, instance=True
+    )
 
-        signer = iam.Signer(request, credentials, mock.sentinel.service_account_email)
+    signer = iam.Signer(request, credentials, mock.sentinel.service_account_email)
 
-        assert signer._request == mock.sentinel.request
-        assert signer._credentials == credentials
-        assert signer._service_account_email == mock.sentinel.service_account_email
+    assert signer._request == mock.sentinel.request
+    assert signer._credentials == credentials
+    assert signer._service_account_email == mock.sentinel.service_account_email
 
-    def test_key_id(self):
-        signer = iam.Signer(
-            mock.sentinel.request,
-            mock.sentinel.credentials,
-            mock.sentinel.service_account_email,
-        )
+                                    def test_key_id(self):
+    signer = iam.Signer(
+    mock.sentinel.request,
+    mock.sentinel.credentials,
+    mock.sentinel.service_account_email,
+    )
 
-        assert signer.key_id is None
+    assert signer.key_id is None
 
-    def test_sign_bytes(self):
-        signature = b"DEADBEEF"
-        encoded_signature = base64.b64encode(signature).decode("utf-8")
-        request = make_request(http_client.OK, data={"signedBlob": encoded_signature})
-        credentials = make_credentials()
+                                        def test_sign_bytes(self):
+    signature = b"DEADBEEF"
+    encoded_signature = base64.b64encode(signature).decode("utf-8")
+    request = make_request(http_client.OK, data={"signedBlob": encoded_signature})
+    credentials = make_credentials()
 
-        signer = iam.Signer(request, credentials, mock.sentinel.service_account_email)
+    signer = iam.Signer(request, credentials, mock.sentinel.service_account_email)
 
-        returned_signature = signer.sign("123")
+    returned_signature = signer.sign("123")
 
-        assert returned_signature == signature
-        kwargs = request.call_args[1]
-        assert kwargs["headers"]["Content-Type"] == "application/json"
-        request.call_count == 1
+    assert returned_signature == signature
+    kwargs = request.call_args[1]
+    assert kwargs["headers"]["Content-Type"] == "application/json"
+    request.call_count == 1
 
-    def test_sign_bytes_failure(self):
-        request = make_request(http_client.UNAUTHORIZED)
-        credentials = make_credentials()
+                                            def test_sign_bytes_failure(self):
+    request = make_request(http_client.UNAUTHORIZED)
+    credentials = make_credentials()
 
-        signer = iam.Signer(request, credentials, mock.sentinel.service_account_email)
+    signer = iam.Signer(request, credentials, mock.sentinel.service_account_email)
 
-        with pytest.raises(exceptions.TransportError):
-            signer.sign("123")
-        request.call_count == 1
+                                                with pytest.raises(exceptions.TransportError):
+    signer.sign("123")
+    request.call_count == 1
 
     @mock.patch("time.sleep", return_value=None)
-    def test_sign_bytes_retryable_failure(self, mock_time):
-        request = make_request(http_client.INTERNAL_SERVER_ERROR)
-        credentials = make_credentials()
+                                                    def test_sign_bytes_retryable_failure(self, mock_time):
+    request = make_request(http_client.INTERNAL_SERVER_ERROR)
+    credentials = make_credentials()
 
-        signer = iam.Signer(request, credentials, mock.sentinel.service_account_email)
+    signer = iam.Signer(request, credentials, mock.sentinel.service_account_email)
 
-        with pytest.raises(exceptions.TransportError):
-            signer.sign("123")
-        request.call_count == 3
+                                                        with pytest.raises(exceptions.TransportError):
+    signer.sign("123")
+    request.call_count == 3
+
+
+
+
+
+
+
+
+
+
+
