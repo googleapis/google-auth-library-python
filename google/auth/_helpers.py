@@ -27,16 +27,6 @@ import urllib
 
 from google.auth import exceptions
 
-try:
-    # TODO(https://github.com/googleapis/python-api-core/issues/813): Remove `# type: ignore` when
-    # `google-api-core` type hints issue is resolved.
-    from google.api_core import client_logging  # type: ignore # noqa: F401
-
-    CLIENT_LOGGING_SUPPORTED = True  # pragma: NO COVER
-# TODO(https://github.com/googleapis/google-auth-library-python/issues/1690): Remove `pragma: NO COVER` once
-# logging is supported in minimum version of google-api-core.
-except ImportError:  # pragma: NO COVER
-    CLIENT_LOGGING_SUPPORTED = False
 
 # The smallest MDS cache used by this library stores tokens until 4 minutes from
 # expiry.
@@ -354,7 +344,7 @@ def is_logging_enabled(logger: logging.Logger) -> bool:
     Returns:
         True if debug logging is enabled, False otherwise.
     """
-    return CLIENT_LOGGING_SUPPORTED and logger.isEnabledFor(logging.DEBUG)
+    return logger.isEnabledFor(logging.DEBUG)
 
 
 def request_log(
