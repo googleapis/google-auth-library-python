@@ -4,6 +4,13 @@
 
 [1]: https://pypi.org/project/google-auth/#history
 
+## [2.39.1](https://github.com/googleapis/google-auth-library-python/compare/v2.39.0...v2.39.1) (2025-04-14)
+
+
+### Bug Fixes
+
+* Correct webauthn JSON parsing to be compliant with standard. ([#1658](https://github.com/googleapis/google-auth-library-python/issues/1658)) ([0c5ef36](https://github.com/googleapis/google-auth-library-python/commit/0c5ef364fb13ca9d7d17100166de87732d752de8))
+
 ## [2.39.0](https://github.com/googleapis/google-auth-library-python/compare/v2.38.0...v2.39.0) (2025-04-14)
 
 
