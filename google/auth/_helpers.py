@@ -28,6 +28,14 @@ import urllib
 from google.auth import exceptions
 
 
+# _BASE_LOGGER_NAME is the base logger for all google-based loggers.
+_BASE_LOGGER_NAME = "google"
+
+# _LOGGING_INITIALIZED ensures that base logger is only configured once
+# (unless already configured by the end-user).
+_LOGGING_INITIALIZED = False
+
+
 # The smallest MDS cache used by this library stores tokens until 4 minutes from
 # expiry.
 REFRESH_THRESHOLD = datetime.timedelta(minutes=3, seconds=45)
@@ -334,6 +342,20 @@ def _hash_value(value, field_name: str) -> Optional[str]:
     return f"hashed_{field_name}-{hex_digest}"
 
 
+def _logger_configured(logger: logging.Logger) -> bool:
+    """Determines whether `logger` has non-default configuration
+
+    Args:
+      logger: The logger to check.
+
+    Returns:
+      bool: Whether the logger has any non-default configuration.
+    """
+    return (
+        logger.handlers != [] or logger.level != logging.NOTSET or not logger.propagate
+    )
+
+
 def is_logging_enabled(logger: logging.Logger) -> bool:
     """
     Checks if debug logging is enabled for the given logger.
@@ -344,6 +366,22 @@ def is_logging_enabled(logger: logging.Logger) -> bool:
     Returns:
         True if debug logging is enabled, False otherwise.
     """
+    # NOTE: Log propagation to the root logger is disabled unless
+    # the base logger i.e. logging.getLogger("google") is
+    # explicitly configured by the end user. Ideally this
+    # needs to happen in the client layer (already does for GAPICs).
+    # However, this is implemented here to avoid logging
+    # (if a root logger is configured) when a version of google-auth
+    # which supports logging is used with:
+    #  - an older version of a GAPIC which does not support logging.
+    #  - Apiary client which does not support logging.
+    global _LOGGING_INITIALIZED
+    if not _LOGGING_INITIALIZED:
+        base_logger = logging.getLogger(_BASE_LOGGER_NAME)
+        if not _logger_configured(base_logger):
+            base_logger.propagate = False
+        _LOGGING_INITIALIZED = True
+
     return logger.isEnabledFor(logging.DEBUG)
 
 

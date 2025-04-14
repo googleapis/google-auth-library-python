@@ -22,11 +22,40 @@ import pytest  # type: ignore
 
 from google.auth import _helpers
 
+# _MOCK_BASE_LOGGER_NAME is the base logger namespace used for testing.
+_MOCK_BASE_LOGGER_NAME = "foogle"
+
+# _MOCK_CHILD_LOGGER_NAME is the child logger namespace used for testing.
+_MOCK_CHILD_LOGGER_NAME = "foogle.bar"
+
 
 @pytest.fixture
 def logger():
-    """Provides a basic logger instance for testing."""
-    return logging.getLogger(__name__)
+    """Returns a child logger for testing."""
+    logger = logging.getLogger(_MOCK_CHILD_LOGGER_NAME)
+    logger.level = logging.NOTSET
+    logger.handlers = []
+    logger.propagate = True
+    return logger
+
+
+@pytest.fixture
+def base_logger():
+    """Returns a child logger for testing."""
+    logger = logging.getLogger(_MOCK_BASE_LOGGER_NAME)
+    logger.level = logging.NOTSET
+    logger.handlers = []
+    logger.propagate = True
+    return logger
+
+
+@pytest.fixture(autouse=True)
+def reset_logging_initialized():
+    """Resets the global _LOGGING_INITIALIZED variable before each test."""
+    original_state = _helpers._LOGGING_INITIALIZED
+    _helpers._LOGGING_INITIALIZED = False
+    yield
+    _helpers._LOGGING_INITIALIZED = original_state
 
 
 class SourceClass(object):
@@ -310,42 +339,106 @@ def test_hash_value_none():
     assert _helpers._hash_value(None, "test") is None
 
 
-def test_is_logging_enabled_with_no_level_set(logger):
+def test_logger_configured_default(logger):
+    assert not _helpers._logger_configured(logger)
 
-    with mock.patch("google.auth._helpers.CLIENT_LOGGING_SUPPORTED", True):
+
+def test_logger_configured_with_handler(logger):
+    mock_handler = logging.NullHandler()
+    logger.addHandler(mock_handler)
+    assert _helpers._logger_configured(logger)
+
+    # Cleanup
+    logger.removeHandler(mock_handler)
+
+
+def test_logger_configured_with_custom_level(logger):
+    original_level = logger.level
+    logger.level = logging.INFO
+    assert _helpers._logger_configured(logger)
+
+    # Cleanup
+    logging.level = original_level
+
+
+def test_logger_configured_with_propagate(logger):
+    original_propagate = logger.propagate
+    logger.propagate = False
+    assert _helpers._logger_configured(logger)
+
+    # Cleanup
+    logger.propagate = original_propagate
+
+
+def test_is_logging_enabled_with_no_level_set(logger, base_logger):
+    with mock.patch("google.auth._helpers._BASE_LOGGER_NAME", "foogle"):
         assert _helpers.is_logging_enabled(logger) is False
 
 
-def test_is_logging_enabled_with_client_logging_not_supported(caplog, logger):
-
-    with mock.patch("google.auth._helpers.CLIENT_LOGGING_SUPPORTED", False):
-        caplog.set_level(logging.DEBUG, logger=__name__)
+def test_is_logging_enabled_with_debug_disabled(caplog, logger, base_logger):
+    with mock.patch("google.auth._helpers._BASE_LOGGER_NAME", _MOCK_BASE_LOGGER_NAME):
+        caplog.set_level(logging.INFO, logger=_MOCK_CHILD_LOGGER_NAME)
         assert _helpers.is_logging_enabled(logger) is False
 
 
-def test_is_logging_enabled_with_debug_disabled(caplog, logger):
-
-    with mock.patch("google.auth._helpers.CLIENT_LOGGING_SUPPORTED", True):
-        caplog.set_level(logging.INFO, logger=__name__)
-        assert _helpers.is_logging_enabled(logger) is False
-
-
-def test_is_logging_enabled_with_debug_enabled(caplog, logger):
-    with mock.patch("google.auth._helpers.CLIENT_LOGGING_SUPPORTED", True):
-        caplog.set_level(logging.DEBUG, logger=__name__)
+def test_is_logging_enabled_with_debug_enabled(caplog, logger, base_logger):
+    with mock.patch("google.auth._helpers._BASE_LOGGER_NAME", _MOCK_BASE_LOGGER_NAME):
+        caplog.set_level(logging.DEBUG, logger=_MOCK_CHILD_LOGGER_NAME)
         assert _helpers.is_logging_enabled(logger)
 
 
-def test_request_log_debug_enabled(logger, caplog):
-    logger.setLevel(logging.DEBUG)
-    with mock.patch("google.auth._helpers.CLIENT_LOGGING_SUPPORTED", True):
-        _helpers.request_log(
-            logger,
-            "GET",
-            "http://example.com",
-            b'{"key": "value"}',
-            {"Authorization": "Bearer token"},
-        )
+def test_is_logging_enabled_with_base_logger_configured_with_info(
+    caplog, logger, base_logger
+):
+    with mock.patch("google.auth._helpers._BASE_LOGGER_NAME", _MOCK_BASE_LOGGER_NAME):
+        caplog.set_level(logging.INFO, logger=_MOCK_BASE_LOGGER_NAME)
+
+    base_logger = logging.getLogger(_MOCK_BASE_LOGGER_NAME)
+    assert not _helpers.is_logging_enabled(base_logger)
+    assert not _helpers.is_logging_enabled(logger)
+
+
+def test_is_logging_enabled_with_base_logger_configured_with_debug(
+    caplog, logger, base_logger
+):
+    with mock.patch("google.auth._helpers._BASE_LOGGER_NAME", _MOCK_BASE_LOGGER_NAME):
+        caplog.set_level(logging.DEBUG, logger=_MOCK_BASE_LOGGER_NAME)
+
+    assert _helpers.is_logging_enabled(base_logger)
+    assert _helpers.is_logging_enabled(logger)
+
+
+def test_is_logging_enabled_with_base_logger_info_child_logger_debug(
+    caplog, logger, base_logger
+):
+    with mock.patch("google.auth._helpers._BASE_LOGGER_NAME", _MOCK_BASE_LOGGER_NAME):
+        caplog.set_level(logging.INFO, logger=_MOCK_BASE_LOGGER_NAME)
+        caplog.set_level(logging.DEBUG, logger=_MOCK_CHILD_LOGGER_NAME)
+
+    assert not _helpers.is_logging_enabled(base_logger)
+    assert _helpers.is_logging_enabled(logger)
+
+
+def test_is_logging_enabled_with_base_logger_debug_child_logger_info(
+    caplog, logger, base_logger
+):
+    with mock.patch("google.auth._helpers._BASE_LOGGER_NAME", _MOCK_BASE_LOGGER_NAME):
+        caplog.set_level(logging.DEBUG, logger=_MOCK_BASE_LOGGER_NAME)
+        caplog.set_level(logging.INFO, logger=_MOCK_CHILD_LOGGER_NAME)
+
+    assert _helpers.is_logging_enabled(base_logger)
+    assert not _helpers.is_logging_enabled(logger)
+
+
+def test_request_log_debug_enabled(logger, caplog, base_logger):
+    caplog.set_level(logging.DEBUG, logger=_MOCK_CHILD_LOGGER_NAME)
+    _helpers.request_log(
+        logger,
+        "GET",
+        "http://example.com",
+        b'{"key": "value"}',
+        {"Authorization": "Bearer token"},
+    )
     assert len(caplog.records) == 1
     record = caplog.records[0]
     assert record.message == "Making request..."
@@ -357,16 +450,15 @@ def test_request_log_debug_enabled(logger, caplog):
     }
 
 
-def test_request_log_plain_text_debug_enabled(logger, caplog):
-    logger.setLevel(logging.DEBUG)
-    with mock.patch("google.auth._helpers.CLIENT_LOGGING_SUPPORTED", True):
-        _helpers.request_log(
-            logger,
-            "GET",
-            "http://example.com",
-            b"This is plain text.",
-            {"Authorization": "Bearer token", "Content-Type": "text/plain"},
-        )
+def test_request_log_plain_text_debug_enabled(logger, caplog, base_logger):
+    caplog.set_level(logging.DEBUG, logger=_MOCK_CHILD_LOGGER_NAME)
+    _helpers.request_log(
+        logger,
+        "GET",
+        "http://example.com",
+        b"This is plain text.",
+        {"Authorization": "Bearer token", "Content-Type": "text/plain"},
+    )
     assert len(caplog.records) == 1
     record = caplog.records[0]
     assert record.message == "Making request..."
@@ -378,23 +470,21 @@ def test_request_log_plain_text_debug_enabled(logger, caplog):
     }
 
 
-def test_request_log_debug_disabled(logger, caplog):
-    logger.setLevel(logging.INFO)
-    with mock.patch("google.auth._helpers.CLIENT_LOGGING_SUPPORTED", True):
-        _helpers.request_log(
-            logger,
-            "POST",
-            "https://api.example.com",
-            "data",
-            {"Content-Type": "application/json"},
-        )
+def test_request_log_debug_disabled(logger, caplog, base_logger):
+    caplog.set_level(logging.INFO, logger=_MOCK_CHILD_LOGGER_NAME)
+    _helpers.request_log(
+        logger,
+        "POST",
+        "https://api.example.com",
+        "data",
+        {"Content-Type": "application/json"},
+    )
     assert "Making request: POST https://api.example.com" not in caplog.text
 
 
-def test_response_log_debug_enabled(logger, caplog):
-    logger.setLevel(logging.DEBUG)
-    with mock.patch("google.auth._helpers.CLIENT_LOGGING_SUPPORTED", True):
-        _helpers.response_log(logger, {"payload": None})
+def test_response_log_debug_enabled(logger, caplog, base_logger):
+    caplog.set_level(logging.DEBUG, logger=_MOCK_CHILD_LOGGER_NAME)
+    _helpers.response_log(logger, {"payload": None})
     assert len(caplog.records) == 1
     record = caplog.records[0]
     assert record.message == "Response received..."
@@ -402,13 +492,18 @@ def test_response_log_debug_enabled(logger, caplog):
 
 
 def test_response_log_debug_disabled(logger, caplog):
-    logger.setLevel(logging.INFO)
-    with mock.patch("google.auth._helpers.CLIENT_LOGGING_SUPPORTED", True):
-        _helpers.response_log(logger, "another_response")
+    caplog.set_level(logging.INFO, logger=_MOCK_CHILD_LOGGER_NAME)
+    _helpers.response_log(logger, "another_response")
     assert "Response received..." not in caplog.text
 
 
-def test_response_log_debug_enabled_response_list(logger, caplog):
+def test_response_log_base_logger_configured(logger, caplog, base_logger):
+    caplog.set_level(logging.DEBUG, logger=_MOCK_BASE_LOGGER_NAME)
+    _helpers.response_log(logger, "another_response")
+    assert "Response received..." in caplog.text
+
+
+def test_response_log_debug_enabled_response_list(logger, caplog, base_logger):
     # NOTE: test the response log when response.json() returns a list as per
     #  https://requests.readthedocs.io/en/latest/api/#requests.Response.json.
     class MockResponse:
@@ -416,9 +511,8 @@ def test_response_log_debug_enabled_response_list(logger, caplog):
             return ["item1", "item2", "item3"]
 
     response = MockResponse()
-    logger.setLevel(logging.DEBUG)
-    with mock.patch("google.auth._helpers.CLIENT_LOGGING_SUPPORTED", True):
-        _helpers.response_log(logger, response)
+    caplog.set_level(logging.DEBUG, logger=_MOCK_CHILD_LOGGER_NAME)
+    _helpers.response_log(logger, response)
     assert len(caplog.records) == 1
     record = caplog.records[0]
     assert record.message == "Response received..."
