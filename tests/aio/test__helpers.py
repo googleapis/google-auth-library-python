@@ -20,18 +20,37 @@ import pytest  # type: ignore
 
 from google.auth.aio import _helpers
 
+# _MOCK_BASE_LOGGER_NAME is the base logger namespace used for testing.
+_MOCK_BASE_LOGGER_NAME = "foogle"
+
+# _MOCK_CHILD_LOGGER_NAME is the child logger namespace used for testing.
+_MOCK_CHILD_LOGGER_NAME = "foogle.bar"
+
 
 @pytest.fixture
 def logger():
-    """Provides a basic logger instance for testing."""
-    return logging.getLogger(__name__)
+    """Returns a child logger for testing."""
+    logger = logging.getLogger(_MOCK_CHILD_LOGGER_NAME)
+    logger.level = logging.NOTSET
+    logger.handlers = []
+    logger.propagate = True
+    return logger
+
+
+@pytest.fixture
+def base_logger():
+    """Returns a child logger for testing."""
+    logger = logging.getLogger(_MOCK_BASE_LOGGER_NAME)
+    logger.level = logging.NOTSET
+    logger.handlers = []
+    logger.propagate = True
+    return logger
 
 
 @pytest.mark.asyncio
-async def test_response_log_debug_enabled(logger, caplog):
-    logger.setLevel(logging.DEBUG)
-    with mock.patch("google.auth._helpers.CLIENT_LOGGING_SUPPORTED", True):
-        await _helpers.response_log_async(logger, {"payload": None})
+async def test_response_log_debug_enabled(logger, caplog, base_logger):
+    caplog.set_level(logging.DEBUG, logger=_MOCK_CHILD_LOGGER_NAME)
+    await _helpers.response_log_async(logger, {"payload": None})
     assert len(caplog.records) == 1
     record = caplog.records[0]
     assert record.message == "Response received..."
@@ -39,23 +58,21 @@ async def test_response_log_debug_enabled(logger, caplog):
 
 
 @pytest.mark.asyncio
-async def test_response_log_debug_disabled(logger, caplog):
-    logger.setLevel(logging.INFO)
-    with mock.patch("google.auth._helpers.CLIENT_LOGGING_SUPPORTED", True):
-        await _helpers.response_log_async(logger, "another_response")
+async def test_response_log_debug_disabled(logger, caplog, base_logger):
+    caplog.set_level(logging.INFO, logger=_MOCK_CHILD_LOGGER_NAME)
+    await _helpers.response_log_async(logger, "another_response")
     assert "Response received..." not in caplog.text
 
 
 @pytest.mark.asyncio
-async def test_response_log_debug_enabled_response_json(logger, caplog):
+async def test_response_log_debug_enabled_response_json(logger, caplog, base_logger):
     class MockResponse:
         async def json(self):
             return {"key1": "value1", "key2": "value2", "key3": "value3"}
 
     response = MockResponse()
-    logger.setLevel(logging.DEBUG)
-    with mock.patch("google.auth._helpers.CLIENT_LOGGING_SUPPORTED", True):
-        await _helpers.response_log_async(logger, response)
+    caplog.set_level(logging.DEBUG, logger=_MOCK_CHILD_LOGGER_NAME)
+    await _helpers.response_log_async(logger, response)
     assert len(caplog.records) == 1
     record = caplog.records[0]
     assert record.message == "Response received..."
