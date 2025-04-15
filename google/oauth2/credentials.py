@@ -484,7 +484,7 @@ class Credentials(credentials.ReadOnlyScoped, credentials.CredentialsWithQuotaPr
         return cls(
             token=info.get("token"),
             refresh_token=info.get("refresh_token"),
-            token_uri=_GOOGLE_OAUTH2_TOKEN_ENDPOINT,  # always overrides
+            token_uri=info.get("token_uri", _GOOGLE_OAUTH2_TOKEN_ENDPOINT),
             scopes=scopes,
             client_id=info.get("client_id"),
             client_secret=info.get("client_secret"),
