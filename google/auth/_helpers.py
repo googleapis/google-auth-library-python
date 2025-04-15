@@ -27,16 +27,14 @@ import urllib
 
 from google.auth import exceptions
 
-try:
-    # TODO(https://github.com/googleapis/python-api-core/issues/813): Remove `# type: ignore` when
-    # `google-api-core` type hints issue is resolved.
-    from google.api_core import client_logging  # type: ignore # noqa: F401
 
-    CLIENT_LOGGING_SUPPORTED = True  # pragma: NO COVER
-# TODO(https://github.com/googleapis/google-auth-library-python/issues/1690): Remove `pragma: NO COVER` once
-# logging is supported in minimum version of google-api-core.
-except ImportError:  # pragma: NO COVER
-    CLIENT_LOGGING_SUPPORTED = False
+# _BASE_LOGGER_NAME is the base logger for all google-based loggers.
+_BASE_LOGGER_NAME = "google"
+
+# _LOGGING_INITIALIZED ensures that base logger is only configured once
+# (unless already configured by the end-user).
+_LOGGING_INITIALIZED = False
+
 
 # The smallest MDS cache used by this library stores tokens until 4 minutes from
 # expiry.
@@ -344,6 +342,20 @@ def _hash_value(value, field_name: str) -> Optional[str]:
     return f"hashed_{field_name}-{hex_digest}"
 
 
+def _logger_configured(logger: logging.Logger) -> bool:
+    """Determines whether `logger` has non-default configuration
+
+    Args:
+      logger: The logger to check.
+
+    Returns:
+      bool: Whether the logger has any non-default configuration.
+    """
+    return (
+        logger.handlers != [] or logger.level != logging.NOTSET or not logger.propagate
+    )
+
+
 def is_logging_enabled(logger: logging.Logger) -> bool:
     """
     Checks if debug logging is enabled for the given logger.
@@ -354,7 +366,23 @@ def is_logging_enabled(logger: logging.Logger) -> bool:
     Returns:
         True if debug logging is enabled, False otherwise.
     """
-    return CLIENT_LOGGING_SUPPORTED and logger.isEnabledFor(logging.DEBUG)
+    # NOTE: Log propagation to the root logger is disabled unless
+    # the base logger i.e. logging.getLogger("google") is
+    # explicitly configured by the end user. Ideally this
+    # needs to happen in the client layer (already does for GAPICs).
+    # However, this is implemented here to avoid logging
+    # (if a root logger is configured) when a version of google-auth
+    # which supports logging is used with:
+    #  - an older version of a GAPIC which does not support logging.
+    #  - Apiary client which does not support logging.
+    global _LOGGING_INITIALIZED
+    if not _LOGGING_INITIALIZED:
+        base_logger = logging.getLogger(_BASE_LOGGER_NAME)
+        if not _logger_configured(base_logger):
+            base_logger.propagate = False
+        _LOGGING_INITIALIZED = True
+
+    return logger.isEnabledFor(logging.DEBUG)
 
 
 def request_log(
