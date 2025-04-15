@@ -26,6 +26,8 @@ for the return value of :class:`Request`.
 
 import abc
 import http.client as http_client
+from typing import Optional, Mapping, Any
+
 
 DEFAULT_RETRYABLE_STATUS_CODES = (
     http_client.INTERNAL_SERVER_ERROR,
@@ -35,7 +37,6 @@ DEFAULT_RETRYABLE_STATUS_CODES = (
 )
 """Sequence[int]:  HTTP status codes indicating a request can be retried.
 """
-
 
 DEFAULT_REFRESH_STATUS_CODES = (http_client.UNAUTHORIZED,)
 """Sequence[int]:  Which HTTP status code indicate that credentials should be
@@ -49,19 +50,22 @@ DEFAULT_MAX_REFRESH_ATTEMPTS = 2
 class Response(metaclass=abc.ABCMeta):
     """HTTP Response data."""
 
-    @abc.abstractproperty
-    def status(self):
-        """int: The HTTP status code."""
+    @property
+    @abc.abstractmethod
+    def status(self) -> int:
+        """The HTTP status code."""
         raise NotImplementedError("status must be implemented.")
 
-    @abc.abstractproperty
-    def headers(self):
-        """Mapping[str, str]: The HTTP response headers."""
+    @property
+    @abc.abstractmethod
+    def headers(self) -> Mapping[str, str]:
+        """The HTTP response headers."""
         raise NotImplementedError("headers must be implemented.")
 
-    @abc.abstractproperty
-    def data(self):
-        """bytes: The response body."""
+    @property
+    @abc.abstractmethod
+    def data(self) -> bytes:
+        """The response body."""
         raise NotImplementedError("data must be implemented.")
 
 
@@ -70,34 +74,29 @@ class Request(metaclass=abc.ABCMeta):
 
     Specific transport implementations should provide an implementation of
     this that adapts their specific request / response API.
-
-    .. automethod:: __call__
     """
 
     @abc.abstractmethod
     def __call__(
-        self, url, method="GET", body=None, headers=None, timeout=None, **kwargs
-    ):
+        self,
+        url: str,
+        method: str = "GET",
+        body: Optional[bytes] = None,
+        headers: Optional[Mapping[str, str]] = None,
+        timeout: Optional[int] = None,
+        **kwargs: Any,
+    ) -> Response:
         """Make an HTTP request.
 
         Args:
-            url (str): The URI to be requested.
-            method (str): The HTTP method to use for the request. Defaults
-                to 'GET'.
-            body (bytes): The payload / body in HTTP request.
-            headers (Mapping[str, str]): Request headers.
-            timeout (Optional[int]): The number of seconds to wait for a
-                response from the server. If not specified or if None, the
-                transport-specific default timeout will be used.
-            kwargs: Additionally arguments passed on to the transport's
-                request method.
+            url: The URI to be requested.
+            method: The HTTP method to use. Defaults to 'GET'.
+            body: The payload / body of the HTTP request.
+            headers: Request headers.
+            timeout: Timeout in seconds.
+            kwargs: Extra transport-specific request options.
 
         Returns:
             Response: The HTTP response.
-
-        Raises:
-            google.auth.exceptions.TransportError: If any exception occurred.
         """
-        # pylint: disable=redundant-returns-doc, missing-raises-doc
-        # (pylint doesn't play well with abstract docstrings.)
         raise NotImplementedError("__call__ must be implemented.")
