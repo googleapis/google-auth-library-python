@@ -45,7 +45,8 @@ def test_refresh(http_request, token_info):
 
     info = token_info(credentials.token)
     info_scopes = _helpers.string_to_scopes(info["scope"])
-    assert set(info_scopes) == set(credentials.scopes)
+    assert credentials.scopes is None
+    assert len(info_scopes) == 0
 
 
 def test_default(verify_refresh):
