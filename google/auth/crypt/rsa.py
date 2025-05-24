@@ -14,8 +14,7 @@
 
 """RSA cryptography signer and verifier."""
 
-from google.auth.crypt._cryptography_rsa import RSASigner
-from google.auth.crypt._cryptography_rsa import RSAVerifier
+from google.auth.crypt import _cryptography_rsa
 
-
-__all__ = ["RSASigner", "RSAVerifier"]
+RSASigner = _cryptography_rsa.RSASigner
+RSAVerifier = _cryptography_rsa.RSAVerifier
