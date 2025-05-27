@@ -386,11 +386,12 @@ def autodoc_skip_member_handler(app, what, name, obj, skip, options):
             # Check if it's also available via the public google.auth.crypt path
             try:
                 import google.auth.crypt
+
                 public_obj = getattr(google.auth.crypt, name, None)
                 if public_obj is obj:
-                    return True # Skip this internal one
+                    return True  # Skip this internal one
             except ImportError:
-                pass # Should not happen if the library is installed
+                pass  # Should not happen if the library is installed
     return None  # Default behavior (don't skip)
 
 
