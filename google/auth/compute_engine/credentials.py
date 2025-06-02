@@ -83,7 +83,7 @@ class Credentials(
         self._scopes = scopes
         self._default_scopes = default_scopes
         self._universe_domain_cached = False
-        # if service account email is provided, then do not cache that result
+        # if service account email is provided, then cache the result.
         self._service_account_info_cached = service_account_email != "default"
         if universe_domain:
             self._universe_domain = universe_domain
