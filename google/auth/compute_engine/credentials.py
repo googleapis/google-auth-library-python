@@ -83,7 +83,9 @@ class Credentials(
         self._scopes = scopes
         self._default_scopes = default_scopes
         self._universe_domain_cached = False
-        # if service account email is provided, then cache the result.
+        # If a specific service account email (i.e., not "default") is provided at
+        # initialization, we can skip fetching the full details from the metadata
+        # server.
         self._service_account_info_cached = service_account_email != "default"
         if universe_domain:
             self._universe_domain = universe_domain
@@ -138,7 +140,10 @@ class Credentials(
     def service_account_email(self):
         """The service account email.
 
-        Gets the service account email, if email is not present makes a network call.
+        .. note::
+            Accessing this property for the first time may trigger a network
+            request to the metadata server to retrieve the default service
+            account email.
         """
         self._retrieve_info()
         return self._service_account_email
