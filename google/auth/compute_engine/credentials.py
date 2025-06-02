@@ -83,12 +83,35 @@ class Credentials(
         self._scopes = scopes
         self._default_scopes = default_scopes
         self._universe_domain_cached = False
+        # if service account email is provided, then do not cache that result
+        self._service_account_info_cached = service_account_email != "default"
         if universe_domain:
             self._universe_domain = universe_domain
             self._universe_domain_cached = True
 
     def _metric_header_for_usage(self):
         return metrics.CRED_TYPE_SA_MDS
+
+    def _retrieve_info(self):
+        """Retrieve information about the service account.
+        Updates the scopes and retrieves the full service account email.
+        """
+        if self._service_account_info_cached:
+            return
+
+        from google.auth.transport import requests as google_auth_requests
+
+        request = google_auth_requests.Request()
+        info = _metadata.get_service_account_info(
+            request, service_account=self._service_account_email
+        )
+
+        self._service_account_email = info["email"]
+
+        # Don't override scopes requested by the user.
+        if self._scopes is None:
+            self._scopes = info["scopes"]
+        self._service_account_info_cached = True
 
     def refresh(self, request):
         """Refresh the access token and scopes.
@@ -115,13 +138,14 @@ class Credentials(
     def service_account_email(self):
         """The service account email.
 
-        .. note:: This is not guaranteed to be set until :meth:`refresh` has been
-            called.
+        Gets the service account email, if email is not present makes a network call.
         """
+        self._retrieve_info()
         return self._service_account_email
 
     @property
     def requires_scopes(self):
+        self._retrieve_info()
         return not self._scopes
 
     @property
