@@ -113,7 +113,7 @@ def test_before_request():
 def test_before_request_with_trust_boundary():
     DUMMY_BOUNDARY = "0xA30"
     credentials = CredentialsImpl()
-    credentials._trust_boundary = {"locations": [], "encoded_locations": DUMMY_BOUNDARY}
+    credentials._trust_boundary = {"locations": [], "encodedLocations": DUMMY_BOUNDARY}
     request = "token"
     headers = {}
 

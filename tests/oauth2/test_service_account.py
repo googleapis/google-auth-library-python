@@ -25,6 +25,7 @@ from google.auth import exceptions
 from google.auth import iam
 from google.auth import jwt
 from google.auth import transport
+from google.auth import credentials
 from google.auth.credentials import DEFAULT_UNIVERSE_DOMAIN
 from google.oauth2 import service_account
 
@@ -58,14 +59,23 @@ SIGNER = crypt.RSASigner.from_string(PRIVATE_KEY_BYTES, "1")
 class TestCredentials(object):
     SERVICE_ACCOUNT_EMAIL = "service-account@example.com"
     TOKEN_URI = "https://example.com/oauth2/token"
+    NO_OP_TRUST_BOUNDARY = {
+        "locations": credentials.NO_OP_TRUST_BOUNDARY_LOCATIONS,
+        "encodedLocations": credentials.NO_OP_TRUST_BOUNDARY_ENCODED_LOCATIONS,
+    }
 
     @classmethod
-    def make_credentials(cls, universe_domain=DEFAULT_UNIVERSE_DOMAIN):
+    def make_credentials(
+        cls,
+        universe_domain=DEFAULT_UNIVERSE_DOMAIN,
+        trust_boundary=NO_OP_TRUST_BOUNDARY,
+    ):
         return service_account.Credentials(
             SIGNER,
             cls.SERVICE_ACCOUNT_EMAIL,
             cls.TOKEN_URI,
             universe_domain=universe_domain,
+            trust_boundary=trust_boundary,
         )
 
     def test_get_cred_info(self):

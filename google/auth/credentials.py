@@ -17,7 +17,9 @@
 
 import abc
 from enum import Enum
+import json
 import os
+import typing
 
 from google.auth import _helpers, environment_vars
 from google.auth import exceptions
@@ -26,6 +28,8 @@ from google.auth._credentials_base import _BaseCredentials
 from google.auth._refresh_worker import RefreshThreadManager
 
 DEFAULT_UNIVERSE_DOMAIN = "googleapis.com"
+NO_OP_TRUST_BOUNDARY_LOCATIONS: "typing.Tuple[str]" = ()
+NO_OP_TRUST_BOUNDARY_ENCODED_LOCATIONS = "0x0"
 
 
 class Credentials(_BaseCredentials):
@@ -178,22 +182,7 @@ class Credentials(_BaseCredentials):
             token (Optional[str]): If specified, overrides the current access
                 token.
         """
-        self._apply(headers, token=token)
-        """Trust boundary value will be a cached value from global lookup.
-
-        The response of trust boundary will be a list of regions and a hex
-        encoded representation.
-
-        An example of global lookup response:
-        {
-          "locations": [
-            "us-central1", "us-east1", "europe-west1", "asia-east1"
-          ]
-          "encoded_locations": "0xA30"
-        }
-        """
-        if self._trust_boundary is not None:
-            headers["x-allowed-locations"] = self._trust_boundary["encoded_locations"]
+        self._apply(headers, token)
         if self.quota_project_id:
             headers["x-goog-user-project"] = self.quota_project_id
 
@@ -297,6 +286,100 @@ class CredentialsWithUniverseDomain(Credentials):
         raise NotImplementedError(
             "This credential does not support with_universe_domain."
         )
+
+
+class CredentialsWithTrustBoundary(Credentials):
+    """Abstract base for credentials supporting ``with_trust_boundary`` factory"""
+
+    def with_trust_boundary(self, trust_boundary):
+        """Returns a copy of these credentials with a modified trust boundary.
+
+        Args:
+            trust_boundary Mapping[str, str]: The trust boundary to use for the
+            credential. This should be a map with a "locations" key that maps to
+            a list of GCP regions, and a "encodedLocations" key that maps to a
+            hex string.
+
+        Returns:
+            google.auth.credentials.Credentials: A new credentials instance.
+        """
+        raise NotImplementedError("This credential does not support trust boundaries.")
+
+    def apply(self, headers, token=None):
+        """Apply the token to the authentication header."""
+        super().apply(headers, token)
+        if self._trust_boundary is not None:
+            headers["x-allowed-locations"] = self._trust_boundary["encodedLocations"]
+
+    def _refresh_trust_boundary(self, request):
+        """Triggers a refresh of the trust boundary and updates the cache if necessary.
+
+        Args:
+            request (google.auth.transport.Request): The object used to make
+                HTTP requests.
+
+        Raises:
+            google.auth.exceptions.RefreshError: If the trust boundary could
+                not be refreshed and no cached value is available.
+        """
+        # Do not trigger refresh if credential has a cached no-op trust boundary.
+        if self._has_no_op_trust_boundary():
+            return
+        new_trust_boundary = {}
+        try:
+            new_trust_boundary = self._lookup_trust_boundary(request)
+        except exceptions.RefreshError as error:
+            # If the call to the lookup API failed, check if there is a trust boundary
+            # already cached. If there is, do nothing. If not, then throw the error.
+            if self._trust_boundary is None:
+                raise (error)
+            return
+        else:
+            self._trust_boundary = new_trust_boundary
+
+    @abc.abstractmethod
+    def _lookup_trust_boundary(self, request):
+        """Calls the trust boundary lookup API to refresh the trust boundary cache.
+
+        Args:
+            request (google.auth.transport.Request): The object used to make
+                HTTP requests.
+
+        Returns:
+            trust_boundary (dict): The trust boundary object returned by the lookup API.
+
+        Raises:
+            google.auth.exceptions.RefreshError: If the trust boundary could not be
+                retrieved.
+        """
+        # pylint: disable=missing-raises-doc
+        # (pylint doesn't recognize that this is abstract)
+        raise NotImplementedError("_lookup_trust_boundary must be implemented")
+
+    @staticmethod
+    def _parse_trust_boundary(trust_boundary_string: str):
+        try:
+            trust_boundary = json.loads(trust_boundary_string)
+            if (
+                "locations" not in trust_boundary
+                or "encodedLocations" not in trust_boundary
+            ):
+                raise exceptions.MalformedError
+            return trust_boundary
+        except Exception:
+            raise exceptions.MalformedError(
+                "Cannot parse trust boundary {}".format(trust_boundary_string)
+            )
+
+    def _has_no_op_trust_boundary(self):
+        if (
+            self._trust_boundary != None
+            and self._trust_boundary["locations"] == NO_OP_TRUST_BOUNDARY_LOCATIONS
+            and self._trust_boundary["encodedLocations"]
+            == NO_OP_TRUST_BOUNDARY_ENCODED_LOCATIONS
+        ):
+            return True
+        return False
 
 
 class AnonymousCredentials(Credentials):
