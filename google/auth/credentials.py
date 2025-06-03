@@ -30,6 +30,7 @@ from google.auth._refresh_worker import RefreshThreadManager
 DEFAULT_UNIVERSE_DOMAIN = "googleapis.com"
 NO_OP_TRUST_BOUNDARY_LOCATIONS: "typing.Tuple[str]" = ()
 NO_OP_TRUST_BOUNDARY_ENCODED_LOCATIONS = "0x0"
+TRUST_BOUNDARY_ENV_VAR = "GOOGLE_AUTH_TRUST_BOUNDARY_ENABLED"
 
 
 class Credentials(_BaseCredentials):
@@ -337,7 +338,6 @@ class CredentialsWithTrustBoundary(Credentials):
         else:
             self._trust_boundary = new_trust_boundary
 
-    @abc.abstractmethod
     def _lookup_trust_boundary(self, request):
         """Calls the trust boundary lookup API to refresh the trust boundary cache.
 
@@ -352,9 +352,33 @@ class CredentialsWithTrustBoundary(Credentials):
             google.auth.exceptions.RefreshError: If the trust boundary could not be
                 retrieved.
         """
-        # pylint: disable=missing-raises-doc
-        # (pylint doesn't recognize that this is abstract)
-        raise NotImplementedError("_lookup_trust_boundary must be implemented")
+        from google.oauth2 import _client
+    
+         # Verify the trust boundary feature flag is enabled.
+        if os.getenv(TRUST_BOUNDARY_ENV_VAR, "").lower() != "true":
+            # Skip the lookup and return early if it's not explicitly enabled.
+            return
+
+        # Skip trust boundary flow for non-gdu universe domain.
+        if self.universe_domain != DEFAULT_UNIVERSE_DOMAIN:
+            return
+
+        url = self._build_trust_boundary_lookup_url()
+        return _client.lookup_trust_boundary(request, url, self.token)
+
+    @abc.abstractmethod
+    def _build_trust_boundary_lookup_url(self):
+        """
+        Builds and returns the URL for the trust boundary lookup API.
+
+        This method should be implemented by subclasses to provide the
+        specific URL based on the credential type and its properties.
+
+        Returns:
+            str: The URL for the trust boundary lookup endpoint, or None
+                 if lookup should be skipped (e.g., for non-applicable universe domains).
+        """
+        raise NotImplementedError("_build_trust_boundary_lookup_url must be implemented")
 
     @staticmethod
     def _parse_trust_boundary(trust_boundary_string: str):
@@ -372,9 +396,10 @@ class CredentialsWithTrustBoundary(Credentials):
             )
 
     def _has_no_op_trust_boundary(self):
+        # A no-op trust boundary is indicated by encodedLocations being "0x0".
+        # The "locations" list may or may not be present as an empty list.
         if (
-            self._trust_boundary != None
-            and self._trust_boundary["locations"] == NO_OP_TRUST_BOUNDARY_LOCATIONS
+            self._trust_boundary is not None
             and self._trust_boundary["encodedLocations"]
             == NO_OP_TRUST_BOUNDARY_ENCODED_LOCATIONS
         ):

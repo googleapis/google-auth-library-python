@@ -650,6 +650,20 @@ def test_lookup_trust_boundary():
     assert response["encodedLocations"] == "0x80080000000000"
     assert response["locations"] == ["us-central1", "us-east1"]
 
+def test_lookup_trust_boundary_no_op_response_without_locations():
+    response_data = {"encodedLocations": "0x0"}
+
+    mock_response = mock.create_autospec(transport.Response, instance=True)
+    mock_response.status = http_client.OK
+    mock_response.data = json.dumps(response_data).encode("utf-8")
+
+    mock_request = mock.create_autospec(transport.Request)
+    mock_request.return_value = mock_response
+
+    # for the response to be valid, we only need encodedLocations to be present.
+    response = _client.lookup_trust_boundary(mock_request, mock.Mock(), mock.Mock())
+    assert response["encodedLocations"] == "0x0"
+    assert "locations" not in response
 
 def test_lookup_trust_boundary_no_op_response():
     response_data = {"locations": [], "encodedLocations": "0x0"}
@@ -678,21 +692,6 @@ def test_lookup_trust_boundary_error():
     with pytest.raises(exceptions.RefreshError) as excinfo:
         _client.lookup_trust_boundary(mock_request, mock.Mock(), mock.Mock())
     assert excinfo.match("this is an error message")
-
-
-def test_lookup_trust_boundary_missing_location():
-    response_data = {"bad_field": [], "encodedLocations": "0x0"}
-
-    mock_response = mock.create_autospec(transport.Response, instance=True)
-    mock_response.status = http_client.OK
-    mock_response.data = json.dumps(response_data).encode("utf-8")
-
-    mock_request = mock.create_autospec(transport.Request)
-    mock_request.return_value = mock_response
-
-    with pytest.raises(exceptions.MalformedError) as excinfo:
-        _client.lookup_trust_boundary(mock_request, mock.Mock(), mock.Mock())
-    assert excinfo.match("Invalid trust boundary info")
 
 
 def test_lookup_trust_boundary_missing_encoded_locations():

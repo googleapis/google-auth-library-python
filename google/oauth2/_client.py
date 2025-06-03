@@ -549,7 +549,8 @@ def lookup_trust_boundary(request, url, access_token):
     """
 
     response_data = _lookup_trust_boundary_request(request, url, access_token, True)
-    if "locations" not in response_data or "encodedLocations" not in response_data:
+    #In case of no-op response, the "locations" list may or may not be present as an empty list.
+    if "encodedLocations" not in response_data:
         raise exceptions.MalformedError(
             "Invalid trust boundary info: {}".format(response_data)
         )

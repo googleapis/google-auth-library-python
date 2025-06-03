@@ -341,18 +341,27 @@ class Credentials(
             iam_endpoint_override=self._iam_endpoint_override,
         )
 
-    def _lookup_trust_boundary(self, request):
-        """Trust boundary lookup for service account using endpoint:
-            iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/{service_account_email}/allowedLocations
-            And we are using a fresh access token as basic auth.
+    def _build_trust_boundary_lookup_url(self):
+        """Builds and returns the URL for the trust boundary lookup API.
+
+        This method constructs the specific URL for the IAM Credentials API's
+        `allowedLocations` endpoint, using the credential's universe domain
+        and service account email.
+
+        Raises:
+            ValueError: If `self.service_account_email` is None or an empty
+                string, as it's required to form the URL.
+
+        Returns:
+            str: The URL for the trust boundary lookup endpoint.
         """
-        # Skip trust boundary flow for non-gdu universe domain.
-        if self.universe_domain == credentials.DEFAULT_UNIVERSE_DOMAIN:
-            return
-        url = _TRUST_BOUNDARY_LOOKUP_ENDPOINT.format(
+        if not self.service_account_email:
+            raise ValueError(
+                "Service account email is required to build the trust boundary lookup URL."
+            )
+        return _TRUST_BOUNDARY_LOOKUP_ENDPOINT.format(
             self.universe_domain, self.service_account_email
         )
-        return _client.lookup_trust_boundary(request, url, self.token)
 
     def sign_bytes(self, message):
         from google.auth.transport.requests import AuthorizedSession
