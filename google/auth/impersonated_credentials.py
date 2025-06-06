@@ -46,6 +46,9 @@ _REFRESH_ERROR = "Unable to acquire impersonated credentials"
 _DEFAULT_TOKEN_LIFETIME_SECS = 3600  # 1 hour in seconds
 
 _GOOGLE_OAUTH2_TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token"
+_TRUST_BOUNDARY_LOOKUP_ENDPOINT = (
+    "https://iamcredentials.{}/v1/projects/-/serviceAccounts/{}/allowedLocations"
+)
 
 _SOURCE_CREDENTIAL_AUTHORIZED_USER_TYPE = "authorized_user"
 _SOURCE_CREDENTIAL_SERVICE_ACCOUNT_TYPE = "service_account"
@@ -117,7 +120,10 @@ def _make_iam_token_request(
 
 
 class Credentials(
-    credentials.Scoped, credentials.CredentialsWithQuotaProject, credentials.Signing
+    credentials.Scoped,
+    credentials.CredentialsWithQuotaProject,
+    credentials.Signing,
+    credentials.CredentialsWithTrustBoundary,
 ):
     """This module defines impersonated credentials which are essentially
     impersonated identities.
@@ -190,6 +196,7 @@ class Credentials(
         lifetime=_DEFAULT_TOKEN_LIFETIME_SECS,
         quota_project_id=None,
         iam_endpoint_override=None,
+        trust_boundary=None,
     ):
         """
         Args:
@@ -220,6 +227,7 @@ class Credentials(
             subject (Optional[str]): sub field of a JWT. This field should only be set
                 if you wish to impersonate as a user. This feature is useful when
                 using domain wide delegation.
+            trust_boundary (Mapping[str,str]): A credential trust boundary.
         """
 
         super(Credentials, self).__init__()
@@ -251,6 +259,7 @@ class Credentials(
         self._quota_project_id = quota_project_id
         self._iam_endpoint_override = iam_endpoint_override
         self._cred_file_path = None
+        self._trust_boundary = trust_boundary
 
     def _metric_header_for_usage(self):
         return metrics.CRED_TYPE_SA_IMPERSONATE
@@ -258,6 +267,7 @@ class Credentials(
     @_helpers.copy_docstring(credentials.Credentials)
     def refresh(self, request):
         self._update_token(request)
+        self._refresh_trust_boundary(request)
 
     def _update_token(self, request):
         """Updates credentials with a new access_token representing
@@ -329,6 +339,28 @@ class Credentials(
             body=body,
             universe_domain=self.universe_domain,
             iam_endpoint_override=self._iam_endpoint_override,
+        )
+
+    def _build_trust_boundary_lookup_url(self):
+        """Builds and returns the URL for the trust boundary lookup API.
+
+        This method constructs the specific URL for the IAM Credentials API's
+        `allowedLocations` endpoint, using the credential's universe domain
+        and service account email.
+
+        Raises:
+            ValueError: If `self.service_account_email` is None or an empty
+                string, as it's required to form the URL.
+
+        Returns:
+            str: The URL for the trust boundary lookup endpoint.
+        """
+        if not self.service_account_email:
+            raise ValueError(
+                "Service account email is required to build the trust boundary lookup URL."
+            )
+        return _TRUST_BOUNDARY_LOOKUP_ENDPOINT.format(
+            self.universe_domain, self.service_account_email
         )
 
     def sign_bytes(self, message):
