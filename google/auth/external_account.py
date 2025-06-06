@@ -457,9 +457,9 @@ class Credentials(
 
             self.expiry = now + lifetime
 
-    def _lookup_trust_boundary(self, request):
-        """Trust boundary lookup for external account. Currently a no-op because the lookup
-            endpoint does not support external account lookup.
+    def _build_trust_boundary_lookup_url(self):
+        """Builds and returns the URL for the trust boundary lookup API.
+        Will be implemented in a follow up PR.
         """
         return
 
