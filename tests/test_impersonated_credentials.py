@@ -27,6 +27,7 @@ from google.auth import exceptions
 from google.auth import impersonated_credentials
 from google.auth import transport
 from google.auth import credentials as auth_credentials
+from google.auth import environment_vars
 from google.auth.impersonated_credentials import Credentials
 from google.oauth2 import credentials
 from google.oauth2 import service_account
@@ -132,6 +133,14 @@ class TestImpersonatedCredentials(object):
         "locations": auth_credentials.NO_OP_TRUST_BOUNDARY_LOCATIONS,
         "encodedLocations": auth_credentials.NO_OP_TRUST_BOUNDARY_ENCODED_LOCATIONS,
     }
+    VALID_TRUST_BOUNDARY = {
+        "locations": ["us-central1", "us-east1"],
+        "encodedLocations": "0xVALIDHEX",
+    }
+    EXPECTED_TRUST_BOUNDARY_LOOKUP_URL_DEFAULT_UNIVERSE = (
+        "https://iamcredentials.googleapis.com/v1/projects/-"
+        "/serviceAccounts/impersonated@project.iam.gserviceaccount.com/allowedLocations"
+    )
     SOURCE_CREDENTIALS = service_account.Credentials(
         SIGNER, SERVICE_ACCOUNT_EMAIL, TOKEN_URI, trust_boundary=NO_OP_TRUST_BOUNDARY
     )
@@ -148,7 +157,7 @@ class TestImpersonatedCredentials(object):
         target_principal=TARGET_PRINCIPAL,
         subject=None,
         iam_endpoint_override=None,
-        trust_boundary=NO_OP_TRUST_BOUNDARY,
+        trust_boundary=None,  # Align with Credentials class default
     ):
 
         return Credentials(
@@ -163,13 +172,15 @@ class TestImpersonatedCredentials(object):
         )
 
     def test_from_impersonated_service_account_info(self):
-        credentials = impersonated_credentials.Credentials.from_impersonated_service_account_info(
-            IMPERSONATED_SERVICE_ACCOUNT_AUTHORIZED_USER_SOURCE_INFO
+        credentials = (
+            impersonated_credentials.Credentials.from_impersonated_service_account_info(
+                IMPERSONATED_SERVICE_ACCOUNT_AUTHORIZED_USER_SOURCE_INFO
+            )
         )
         assert isinstance(credentials, impersonated_credentials.Credentials)
 
     def test_from_impersonated_service_account_info_with_invalid_source_credentials_type(
-        self
+        self,
     ):
         info = copy.deepcopy(IMPERSONATED_SERVICE_ACCOUNT_AUTHORIZED_USER_SOURCE_INFO)
         assert "source_credentials" in info
@@ -184,7 +195,7 @@ class TestImpersonatedCredentials(object):
         )
 
     def test_from_impersonated_service_account_info_with_invalid_impersonation_url(
-        self
+        self,
     ):
         info = copy.deepcopy(IMPERSONATED_SERVICE_ACCOUNT_AUTHORIZED_USER_SOURCE_INFO)
         info["service_account_impersonation_url"] = "invalid_url"
@@ -269,8 +280,12 @@ class TestImpersonatedCredentials(object):
         assert headers["x-goog-api-client"] == "cred-type/imp"
 
     @pytest.mark.parametrize("use_data_bytes", [True, False])
-    def test_refresh_success(self, use_data_bytes, mock_donor_credentials):
-        credentials = self.make_credentials(lifetime=None)
+    @mock.patch("google.oauth2._client.lookup_trust_boundary")
+    def test_refresh_success(
+        self, mock_lookup_trust_boundary, use_data_bytes, mock_donor_credentials
+    ):
+        # Start with no boundary.
+        credentials = self.make_credentials(lifetime=None, trust_boundary=None)
         token = "token"
 
         expire_time = (
@@ -284,7 +299,12 @@ class TestImpersonatedCredentials(object):
             use_data_bytes=use_data_bytes,
         )
 
-        with mock.patch(
+        # Mock the trust boundary lookup to return a valid value.
+        mock_lookup_trust_boundary.return_value = self.VALID_TRUST_BOUNDARY
+
+        with mock.patch.dict(
+            os.environ, {environment_vars.GOOGLE_AUTH_TRUST_BOUNDARY_ENABLED: "true"}
+        ), mock.patch(
             "google.auth.metrics.token_request_access_token_impersonate",
             return_value=ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
         ):
@@ -296,6 +316,125 @@ class TestImpersonatedCredentials(object):
             request.call_args.kwargs["headers"]["x-goog-api-client"]
             == ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE
         )
+
+        # Verify trust boundary was set.
+        assert credentials._trust_boundary == self.VALID_TRUST_BOUNDARY
+
+        # Verify the mock was called with the correct URL.
+        mock_lookup_trust_boundary.assert_called_once_with(
+            request, self.EXPECTED_TRUST_BOUNDARY_LOOKUP_URL_DEFAULT_UNIVERSE, mock.ANY
+        )
+
+        # Verify x-allowed-locations header is set correctly by apply().
+        headers_applied = {}
+        credentials.apply(headers_applied)
+        assert (
+            headers_applied["x-allowed-locations"]
+            == self.VALID_TRUST_BOUNDARY["encodedLocations"]
+        )
+
+    @mock.patch("google.oauth2._client.lookup_trust_boundary")
+    def test_refresh_trust_boundary_lookup_fails_no_cache(
+        self, mock_lookup_trust_boundary, mock_donor_credentials
+    ):
+        # Start with no trust boundary
+        credentials = self.make_credentials(lifetime=None, trust_boundary=None)
+        token = "token"
+
+        expire_time = (
+            _helpers.utcnow().replace(microsecond=0) + datetime.timedelta(seconds=500)
+        ).isoformat("T") + "Z"
+        response_body = {"accessToken": token, "expireTime": expire_time}
+
+        request = self.make_request(
+            data=json.dumps(response_body),
+            status=http_client.OK,
+        )
+
+        # Mock the trust boundary lookup to raise an error
+        mock_lookup_trust_boundary.side_effect = exceptions.RefreshError(
+            "Lookup failed"
+        )
+
+        with mock.patch.dict(
+            os.environ, {environment_vars.GOOGLE_AUTH_TRUST_BOUNDARY_ENABLED: "true"}
+        ), pytest.raises(exceptions.RefreshError) as excinfo:
+            credentials.refresh(request)
+
+        assert "Lookup failed" in str(excinfo.value)
+        assert credentials._trust_boundary is None  # Still no trust boundary
+        mock_lookup_trust_boundary.assert_called_once()
+
+    @mock.patch("google.oauth2._client.lookup_trust_boundary")
+    def test_refresh_fetches_no_op_trust_boundary(
+        self, mock_lookup_trust_boundary, mock_donor_credentials
+    ):
+        # Start with no trust boundary
+        credentials = self.make_credentials(lifetime=None, trust_boundary=None)
+        token = "token"
+        expire_time = (
+            _helpers.utcnow().replace(microsecond=0) + datetime.timedelta(seconds=500)
+        ).isoformat("T") + "Z"
+        response_body = {"accessToken": token, "expireTime": expire_time}
+        request = self.make_request(
+            data=json.dumps(response_body),
+            status=http_client.OK,
+        )
+
+        mock_lookup_trust_boundary.return_value = (
+            self.NO_OP_TRUST_BOUNDARY
+        )  # Mock returns NO_OP
+
+        with mock.patch.dict(
+            os.environ, {environment_vars.GOOGLE_AUTH_TRUST_BOUNDARY_ENABLED: "true"}
+        ), mock.patch(
+            "google.auth.metrics.token_request_access_token_impersonate",
+            return_value=ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
+        ):
+            credentials.refresh(request)
+
+        assert credentials._trust_boundary == self.NO_OP_TRUST_BOUNDARY
+        mock_lookup_trust_boundary.assert_called_once_with(
+            request, self.EXPECTED_TRUST_BOUNDARY_LOOKUP_URL_DEFAULT_UNIVERSE, mock.ANY
+        )
+        headers_applied = {}
+        credentials.apply(headers_applied)
+        assert headers_applied["x-allowed-locations"] == ""
+
+    @mock.patch("google.oauth2._client.lookup_trust_boundary")
+    def test_refresh_starts_with_no_op_trust_boundary_skips_lookup(
+        self, mock_lookup_trust_boundary, mock_donor_credentials
+    ):
+        credentials = self.make_credentials(
+            lifetime=None, trust_boundary=self.NO_OP_TRUST_BOUNDARY
+        )  # Start with NO_OP
+        token = "token"
+        expire_time = (
+            _helpers.utcnow().replace(microsecond=0) + datetime.timedelta(seconds=500)
+        ).isoformat("T") + "Z"
+        response_body = {"accessToken": token, "expireTime": expire_time}
+        request = self.make_request(
+            data=json.dumps(response_body),
+            status=http_client.OK,
+        )
+        with mock.patch.dict(
+            os.environ, {environment_vars.GOOGLE_AUTH_TRUST_BOUNDARY_ENABLED: "true"}
+        ), mock.patch(
+            "google.auth.metrics.token_request_access_token_impersonate",
+            return_value=ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
+        ):
+            credentials.refresh(request)
+
+        # Verify trust boundary remained NO_OP
+        assert credentials._trust_boundary == self.NO_OP_TRUST_BOUNDARY
+
+        # Lookup should be skipped
+        mock_lookup_trust_boundary.assert_not_called()
+
+        # Verify that an empty header was added.
+        headers_applied = {}
+        credentials.apply(headers_applied)
+        assert headers_applied["x-allowed-locations"] == ""
 
     @pytest.mark.parametrize("use_data_bytes", [True, False])
     def test_refresh_with_subject_success(self, use_data_bytes, mock_dwd_credentials):

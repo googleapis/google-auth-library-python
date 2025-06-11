@@ -256,15 +256,17 @@ def _token_endpoint_request(
             an error.
     """
 
-    response_status_ok, response_data, retryable_error = _token_endpoint_request_no_throw(
-        request,
-        token_uri,
-        body,
-        access_token=access_token,
-        use_json=use_json,
-        can_retry=can_retry,
-        headers=headers,
-        **kwargs
+    response_status_ok, response_data, retryable_error = (
+        _token_endpoint_request_no_throw(
+            request,
+            token_uri,
+            body,
+            access_token=access_token,
+            use_json=use_json,
+            can_retry=can_retry,
+            headers=headers,
+            **kwargs
+        )
     )
     if not response_status_ok:
         _handle_error_response(response_data, retryable_error)
@@ -509,7 +511,7 @@ def refresh_grant(
 
 
 def lookup_trust_boundary(request, url, access_token):
-    """ Implements the global lookup of a credential trust boundary.
+    """Implements the global lookup of a credential trust boundary.
     For the lookup, we send a request to the global lookup endpoint and then
     parse the response. Service account credentials, workload identity
     pools and workforce pools implementation may have trust boundaries configured.
@@ -549,7 +551,7 @@ def lookup_trust_boundary(request, url, access_token):
     """
 
     response_data = _lookup_trust_boundary_request(request, url, access_token, True)
-    #In case of no-op response, the "locations" list may or may not be present as an empty list.
+    # In case of no-op response, the "locations" list may or may not be present as an empty list.
     if "encodedLocations" not in response_data:
         raise exceptions.MalformedError(
             "Invalid trust boundary info: {}".format(response_data)
@@ -583,8 +585,10 @@ def _lookup_trust_boundary_request(
         google.auth.exceptions.RefreshError: If the token endpoint returned
             an error.
     """
-    response_status_ok, response_data, retryable_error = _lookup_trust_boundary_request_no_throw(
-        request, url, access_token=access_token, can_retry=can_retry, **kwargs
+    response_status_ok, response_data, retryable_error = (
+        _lookup_trust_boundary_request_no_throw(
+            request, url, access_token=access_token, can_retry=can_retry, **kwargs
+        )
     )
     if not response_status_ok:
         _handle_error_response(response_data, retryable_error)

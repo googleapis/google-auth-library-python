@@ -25,12 +25,12 @@ from google.auth import _helpers, environment_vars
 from google.auth import exceptions
 from google.auth import metrics
 from google.auth._credentials_base import _BaseCredentials
+from google.auth._default import _LOGGER
 from google.auth._refresh_worker import RefreshThreadManager
 
 DEFAULT_UNIVERSE_DOMAIN = "googleapis.com"
 NO_OP_TRUST_BOUNDARY_LOCATIONS: "typing.Tuple[str]" = ()
 NO_OP_TRUST_BOUNDARY_ENCODED_LOCATIONS = "0x0"
-TRUST_BOUNDARY_ENV_VAR = "GOOGLE_AUTH_TRUST_BOUNDARY_ENABLED"
 
 
 class Credentials(_BaseCredentials):
@@ -310,7 +310,16 @@ class CredentialsWithTrustBoundary(Credentials):
         """Apply the token to the authentication header."""
         super().apply(headers, token)
         if self._trust_boundary is not None:
-            headers["x-allowed-locations"] = self._trust_boundary["encodedLocations"]
+            if (
+                self._trust_boundary["encodedLocations"]
+                == NO_OP_TRUST_BOUNDARY_ENCODED_LOCATIONS
+            ):
+                # STS expects an empty string if the trust boundary value is no-op.
+                headers["x-allowed-locations"] = ""
+            else:
+                headers["x-allowed-locations"] = self._trust_boundary[
+                    "encodedLocations"
+                ]
 
     def _refresh_trust_boundary(self, request):
         """Triggers a refresh of the trust boundary and updates the cache if necessary.
@@ -333,7 +342,11 @@ class CredentialsWithTrustBoundary(Credentials):
             # If the call to the lookup API failed, check if there is a trust boundary
             # already cached. If there is, do nothing. If not, then throw the error.
             if self._trust_boundary is None:
-                raise (error)
+                raise error
+            if _helpers.is_logging_enabled(_LOGGER):
+                _LOGGER.debug(
+                    "Using cached trust boundary due to refresh error: %s", error
+                )
             return
         else:
             self._trust_boundary = new_trust_boundary
@@ -353,9 +366,12 @@ class CredentialsWithTrustBoundary(Credentials):
                 retrieved.
         """
         from google.oauth2 import _client
-    
-         # Verify the trust boundary feature flag is enabled.
-        if os.getenv(TRUST_BOUNDARY_ENV_VAR, "").lower() != "true":
+
+        # Verify the trust boundary feature flag is enabled.
+        if (
+            os.getenv(environment_vars.GOOGLE_AUTH_TRUST_BOUNDARY_ENABLED, "").lower()
+            != "true"
+        ):
             # Skip the lookup and return early if it's not explicitly enabled.
             return
 
@@ -364,6 +380,8 @@ class CredentialsWithTrustBoundary(Credentials):
             return
 
         url = self._build_trust_boundary_lookup_url()
+        if not url:
+            raise exceptions.InvalidValue("Failed to build trust boundary lookup URL.")
         return _client.lookup_trust_boundary(request, url, self.token)
 
     @abc.abstractmethod
@@ -378,22 +396,9 @@ class CredentialsWithTrustBoundary(Credentials):
             str: The URL for the trust boundary lookup endpoint, or None
                  if lookup should be skipped (e.g., for non-applicable universe domains).
         """
-        raise NotImplementedError("_build_trust_boundary_lookup_url must be implemented")
-
-    @staticmethod
-    def _parse_trust_boundary(trust_boundary_string: str):
-        try:
-            trust_boundary = json.loads(trust_boundary_string)
-            if (
-                "locations" not in trust_boundary
-                or "encodedLocations" not in trust_boundary
-            ):
-                raise exceptions.MalformedError
-            return trust_boundary
-        except Exception:
-            raise exceptions.MalformedError(
-                "Cannot parse trust boundary {}".format(trust_boundary_string)
-            )
+        raise NotImplementedError(
+            "_build_trust_boundary_lookup_url must be implemented"
+        )
 
     def _has_no_op_trust_boundary(self):
         # A no-op trust boundary is indicated by encodedLocations being "0x0".
@@ -490,8 +495,7 @@ class ReadOnlyScoped(metaclass=abc.ABCMeta):
 
     @abc.abstractproperty
     def requires_scopes(self):
-        """True if these credentials require scopes to obtain an access token.
-        """
+        """True if these credentials require scopes to obtain an access token."""
         return False
 
     def has_scopes(self, scopes):
