@@ -174,7 +174,7 @@ class TestCredentials(object):
             credentials.scopes, credentials._service_account_id
         )
         assert credentials.token == token
-        assert credentials.expiry == datetime.datetime(1990, 5, 29, 1, 2, 3)
+        assert credentials.expiry == datetime.datetime(1990, 5, 29, 1, 2, 3, tzinfo=datetime.timezone.utc)
         assert credentials.valid
         assert not credentials.expired
 
@@ -191,7 +191,7 @@ class TestCredentials(object):
             credentials.default_scopes, credentials._service_account_id
         )
         assert credentials.token == token
-        assert credentials.expiry == datetime.datetime(1990, 5, 29, 1, 2, 3)
+        assert credentials.expiry == datetime.datetime(1990, 5, 29, 1, 2, 3, tzinfo=datetime.timezone.utc)
         assert credentials.valid
         assert not credentials.expired
 

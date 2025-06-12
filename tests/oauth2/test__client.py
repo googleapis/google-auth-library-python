@@ -343,7 +343,7 @@ def test_call_iam_generate_id_token_endpoint():
     # Check result
     assert token == id_token
     # JWT does not store microseconds
-    now = now.replace(microsecond=0)
+    now = now.replace(microsecond=0, tzinfo=datetime.timezone.utc)
     assert expiry == now
 
 
@@ -385,7 +385,7 @@ def test_id_token_jwt_grant():
     # Check result
     assert token == id_token
     # JWT does not store microseconds
-    now = now.replace(microsecond=0)
+    now = now.replace(microsecond=0, tzinfo=datetime.timezone.utc)
     assert expiry == now
     assert extra_data["extra"] == "data"
 

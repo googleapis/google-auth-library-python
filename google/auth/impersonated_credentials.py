@@ -27,7 +27,7 @@ service account.
 
 import base64
 import copy
-from datetime import datetime
+import datetime
 import http.client as http_client
 import json
 
@@ -102,7 +102,7 @@ def _make_iam_token_request(
     try:
         token_response = json.loads(response_body)
         token = token_response["accessToken"]
-        expiry = datetime.strptime(token_response["expireTime"], "%Y-%m-%dT%H:%M:%SZ")
+        expiry = datetime.datetime.strptime(token_response["expireTime"], "%Y-%m-%dT%H:%M:%SZ")
 
         return token, expiry
 
@@ -591,8 +591,8 @@ class IDTokenCredentials(credentials.CredentialsWithQuotaProject):
 
         id_token = response.json()["token"]
         self.token = id_token
-        self.expiry = datetime.utcfromtimestamp(
-            jwt.decode(id_token, verify=False)["exp"]
+        self.expiry = datetime.datetime.fromtimestamp(
+            jwt.decode(id_token, verify=False)["exp"], datetime.timezone.utc
         )
 
 

@@ -16,6 +16,7 @@
 """Interfaces for credentials."""
 
 import abc
+import datetime
 from enum import Enum
 import os
 
@@ -79,10 +80,15 @@ class Credentials(_BaseCredentials):
         """
         if not self.expiry:
             return False
+
+        current_expiry = self.expiry
+        if current_expiry.tzinfo is None:
+            current_expiry = current_expiry.replace(tzinfo=datetime.timezone.utc)
+
         # Remove some threshold from expiry to err on the side of reporting
         # expiration early so that we avoid the 401-refresh-retry loop.
-        skewed_expiry = self.expiry - _helpers.REFRESH_THRESHOLD
-        return _helpers.utcnow() >= skewed_expiry
+        skewed_expiry = current_expiry - _helpers.REFRESH_THRESHOLD
+        return _helpers.utcnow().replace(tzinfo=datetime.timezone.utc) >= skewed_expiry
 
     @property
     def valid(self):
@@ -108,11 +114,16 @@ class Credentials(_BaseCredentials):
         if self.expiry is None:
             return TokenState.FRESH
 
-        expired = _helpers.utcnow() >= self.expiry
+        current_expiry = self.expiry
+        if current_expiry.tzinfo is None:
+            current_expiry = current_expiry.replace(tzinfo=datetime.timezone.utc)
+
+        now = _helpers.utcnow().replace(tzinfo=datetime.timezone.utc)
+        expired = now >= current_expiry
         if expired:
             return TokenState.INVALID
 
-        is_stale = _helpers.utcnow() >= (self.expiry - _helpers.REFRESH_THRESHOLD)
+        is_stale = now >= (current_expiry - _helpers.REFRESH_THRESHOLD)
         if is_stale:
             return TokenState.STALE
 

@@ -707,7 +707,7 @@ class TestImpersonatedCredentials(object):
         id_creds.refresh(request)
 
         assert id_creds.token == ID_TOKEN_DATA
-        assert id_creds.expiry == datetime.datetime.utcfromtimestamp(ID_TOKEN_EXPIRY)
+        assert id_creds.expiry == datetime.datetime.fromtimestamp(ID_TOKEN_EXPIRY, datetime.timezone.utc)
 
     def test_id_token_metrics(self, mock_donor_credentials):
         credentials = self.make_credentials(lifetime=None)
@@ -731,8 +731,8 @@ class TestImpersonatedCredentials(object):
                 id_creds.refresh(None)
 
                 assert id_creds.token == ID_TOKEN_DATA
-                assert id_creds.expiry == datetime.datetime.utcfromtimestamp(
-                    ID_TOKEN_EXPIRY
+                assert id_creds.expiry == datetime.datetime.fromtimestamp(
+                    ID_TOKEN_EXPIRY, datetime.timezone.utc
                 )
                 assert (
                     mock_post.call_args.kwargs["headers"]["x-goog-api-client"]
@@ -841,7 +841,7 @@ class TestImpersonatedCredentials(object):
         id_creds.refresh(request)
 
         assert id_creds.token == ID_TOKEN_DATA
-        assert id_creds.expiry == datetime.datetime.utcfromtimestamp(ID_TOKEN_EXPIRY)
+        assert id_creds.expiry == datetime.datetime.fromtimestamp(ID_TOKEN_EXPIRY, datetime.timezone.utc)
         assert id_creds._include_email is True
 
     def test_id_token_invalid_cred(
