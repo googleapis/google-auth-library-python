@@ -386,6 +386,13 @@ class Credentials(
         cred._token_uri = token_uri
         return cred
 
+    @_helpers.copy_docstring(credentials.CredentialsWithTrustBoundary)
+    def with_trust_boundary(self, trust_boundary):
+        """Returns a copy of these credentials with a modified trust boundary."""
+        cred = self._make_copy()
+        cred._trust_boundary = trust_boundary
+        return cred
+
     def _make_authorization_grant_assertion(self):
         """Create the OAuth 2.0 assertion.
 

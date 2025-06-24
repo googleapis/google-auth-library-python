@@ -622,7 +622,7 @@ def _lookup_trust_boundary_request_no_throw(
           is retryable.
     """
 
-    headers_to_use = {"Authorization", "Bearer {}".format(access_token)}
+    headers_to_use = {"Authorization": "Bearer {}".format(access_token)}
 
     response_data = {}
     retryable_error = False

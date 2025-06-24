@@ -432,8 +432,16 @@ class Credentials(
             lifetime=self._lifetime,
             quota_project_id=self._quota_project_id,
             iam_endpoint_override=self._iam_endpoint_override,
+            trust_boundary=self._trust_boundary,
         )
         cred._cred_file_path = self._cred_file_path
+        return cred
+
+    @_helpers.copy_docstring(credentials.CredentialsWithTrustBoundary)
+    def with_trust_boundary(self, trust_boundary):
+        """Returns a copy of these credentials with a modified trust boundary."""
+        cred = self._make_copy()
+        cred._trust_boundary = trust_boundary
         return cred
 
     @_helpers.copy_docstring(credentials.CredentialsWithQuotaProject)
@@ -519,9 +527,7 @@ class Credentials(
 
 
 class IDTokenCredentials(credentials.CredentialsWithQuotaProject):
-    """Open ID Connect ID Token-based service account credentials.
-
-    """
+    """Open ID Connect ID Token-based service account credentials."""
 
     def __init__(
         self,
