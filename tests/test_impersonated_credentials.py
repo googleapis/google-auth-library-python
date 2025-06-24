@@ -141,6 +141,7 @@ class TestImpersonatedCredentials(object):
         "https://iamcredentials.googleapis.com/v1/projects/-"
         "/serviceAccounts/impersonated@project.iam.gserviceaccount.com/allowedLocations"
     )
+    FAKE_UNIVERSE_DOMAIN = "universe.foo"
     SOURCE_CREDENTIALS = service_account.Credentials(
         SIGNER, SERVICE_ACCOUNT_EMAIL, TOKEN_URI, trust_boundary=NO_OP_TRUST_BOUNDARY
     )
@@ -400,6 +401,42 @@ class TestImpersonatedCredentials(object):
         headers_applied = {}
         credentials.apply(headers_applied)
         assert headers_applied["x-allowed-locations"] == ""
+
+    @mock.patch("google.oauth2._client.lookup_trust_boundary")
+    def test_refresh_skips_trust_boundary_lookup_non_default_universe(
+        self, mock_lookup_trust_boundary
+    ):
+        # Create source credentials with a non-default universe domain
+        source_credentials = service_account.Credentials(
+            SIGNER,
+            "some@email.com",
+            TOKEN_URI,
+            universe_domain=self.FAKE_UNIVERSE_DOMAIN,
+        )
+        # Create impersonated credentials using the non-default source credentials
+        credentials = self.make_credentials(source_credentials=source_credentials)
+
+        # Mock the IAM credentials API call for generateAccessToken
+        token = "token"
+        expire_time = (
+            _helpers.utcnow().replace(microsecond=0) + datetime.timedelta(seconds=500)
+        ).isoformat("T") + "Z"
+        response_body = {"accessToken": token, "expireTime": expire_time}
+        request = self.make_request(
+            data=json.dumps(response_body), status=http_client.OK
+        )
+
+        with mock.patch.dict(
+            os.environ, {environment_vars.GOOGLE_AUTH_TRUST_BOUNDARY_ENABLED: "true"}
+        ):
+            credentials.refresh(request)
+
+        # Ensure trust boundary lookup was not called
+        mock_lookup_trust_boundary.assert_not_called()
+        # Verify that x-allowed-locations header is not set by apply()
+        headers_applied = {}
+        credentials.apply(headers_applied)
+        assert "x-allowed-locations" not in headers_applied
 
     @mock.patch("google.oauth2._client.lookup_trust_boundary")
     def test_refresh_starts_with_no_op_trust_boundary_skips_lookup(

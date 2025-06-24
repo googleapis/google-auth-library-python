@@ -521,6 +521,35 @@ class TestCredentials(object):
         # boundary was provided.
         assert credentials._trust_boundary is None
 
+    @mock.patch("google.oauth2._client.lookup_trust_boundary")
+    @mock.patch("google.oauth2._client.jwt_grant", autospec=True)
+    def test_refresh_skips_trust_boundary_lookup_non_default_universe(
+        self, mock_jwt_grant, mock_lookup_trust_boundary
+    ):
+        # Create credentials with a non-default universe domain
+        credentials = self.make_credentials(universe_domain=FAKE_UNIVERSE_DOMAIN)
+        token = "token"
+        mock_jwt_grant.return_value = (
+            token,
+            _helpers.utcnow() + datetime.timedelta(seconds=500),
+            {},
+        )
+        request = mock.create_autospec(transport.Request, instance=True)
+
+        with mock.patch.dict(
+            os.environ, {environment_vars.GOOGLE_AUTH_TRUST_BOUNDARY_ENABLED: "true"}
+        ):
+            credentials.refresh(request)
+
+        # Ensure jwt_grant was called (token refresh happened)
+        mock_jwt_grant.assert_called_once()
+        # Ensure trust boundary lookup was not called
+        mock_lookup_trust_boundary.assert_not_called()
+        # Verify that x-allowed-locations header is not set by apply()
+        headers_applied = {}
+        credentials.apply(headers_applied)
+        assert "x-allowed-locations" not in headers_applied
+
     @mock.patch("google.oauth2._client.jwt_grant", autospec=True)
     def test_before_request_refreshes(self, jwt_grant):
         credentials = self.make_credentials()
