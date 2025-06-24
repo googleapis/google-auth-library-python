@@ -19,6 +19,7 @@ import calendar
 import datetime
 from email.message import Message
 import hashlib
+import os
 import json
 import logging
 import sys
@@ -285,6 +286,45 @@ def unpadded_urlsafe_b64encode(value):
         Union[str|bytes]: The encoded value
     """
     return base64.urlsafe_b64encode(value).rstrip(b"=")
+
+
+def get_bool_from_env(variable_name, default=False):
+    """Gets a boolean value from an environment variable.
+
+    The environment variable is interpreted as a boolean with the following
+    (case-insensitive) rules:
+    - "true", "1" are considered true.
+    - "false", "0" are considered false.
+
+    Args:
+        variable_name (str): The name of the environment variable.
+        default (bool): The default value if the environment variable is not
+            set.
+
+    Returns:
+        bool: The boolean value of the environment variable.
+
+    Raises:
+        google.auth.exceptions.InvalidValue: If the environment variable is
+            set to a value that can not be interpreted as a boolean.
+    """
+    value = os.environ.get(variable_name)
+
+    if value is None:
+        return default
+
+    value = value.lower()
+
+    if value in ("true", "1"):
+        return True
+    elif value in ("false", "0"):
+        return False
+    else:
+        raise exceptions.InvalidValue(
+            'Environment variable "{}" must be one of "true", "false", "1", or "0".'.format(
+                variable_name
+            )
+        )
 
 
 def is_python_3():

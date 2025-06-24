@@ -16,7 +16,8 @@ import datetime
 
 import mock
 import pytest  # type: ignore
-from google.auth import _client, exceptions
+from google.auth import exceptions
+from google.oauth2 import _client
 
 from google.auth import _helpers
 from google.auth import credentials
@@ -430,7 +431,6 @@ class TestCredentialsWithTrustBoundary(object):
         with mock.patch.dict(
             os.environ, {environment_vars.GOOGLE_AUTH_TRUST_BOUNDARY_ENABLED: "true"}
         ):
-            result = creds._lookup_trust_boundary(request)
             with pytest.raises(
                 exceptions.InvalidValue,
                 match="Failed to build trust boundary lookup URL.",

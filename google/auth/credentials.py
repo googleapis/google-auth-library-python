@@ -368,16 +368,15 @@ class CredentialsWithTrustBoundary(Credentials):
         from google.oauth2 import _client
 
         # Verify the trust boundary feature flag is enabled.
-        if (
-            os.getenv(environment_vars.GOOGLE_AUTH_TRUST_BOUNDARY_ENABLED, "").lower()
-            != "true"
+        if not _helpers.get_bool_from_env(
+            environment_vars.GOOGLE_AUTH_TRUST_BOUNDARY_ENABLED, default=False
         ):
             # Skip the lookup and return early if it's not explicitly enabled.
-            return
+            return None
 
         # Skip trust boundary flow for non-gdu universe domain.
         if self.universe_domain != DEFAULT_UNIVERSE_DOMAIN:
-            return
+            return None
 
         url = self._build_trust_boundary_lookup_url()
         if not url:

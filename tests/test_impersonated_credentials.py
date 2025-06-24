@@ -436,6 +436,54 @@ class TestImpersonatedCredentials(object):
         credentials.apply(headers_applied)
         assert headers_applied["x-allowed-locations"] == ""
 
+    @mock.patch("google.oauth2._client.lookup_trust_boundary")
+    def test_refresh_trust_boundary_lookup_fails_with_cached_data2(
+        self, mock_lookup_trust_boundary, mock_donor_credentials
+    ):
+        # Start with no trust boundary
+        credentials = self.make_credentials(lifetime=None, trust_boundary=None)
+        token = "token"
+
+        expire_time = (
+            _helpers.utcnow().replace(microsecond=0) + datetime.timedelta(seconds=500)
+        ).isoformat("T") + "Z"
+        response_body = {"accessToken": token, "expireTime": expire_time}
+
+        request = self.make_request(
+            data=json.dumps(response_body),
+            status=http_client.OK,
+        )
+
+        # First refresh: Successfully fetch a valid trust boundary.
+        mock_lookup_trust_boundary.return_value = self.VALID_TRUST_BOUNDARY
+        with mock.patch.dict(
+            os.environ, {environment_vars.GOOGLE_AUTH_TRUST_BOUNDARY_ENABLED: "true"}
+        ), mock.patch(
+            "google.auth.metrics.token_request_access_token_impersonate",
+            return_value=ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
+        ):
+            credentials.refresh(request)
+
+        assert credentials.valid
+        # Verify trust boundary was set.
+        assert credentials._trust_boundary == self.VALID_TRUST_BOUNDARY
+        mock_lookup_trust_boundary.assert_called_once()
+
+        # Second refresh: Mock lookup to fail, but expect cached data to be preserved.
+        mock_lookup_trust_boundary.reset_mock()
+        mock_lookup_trust_boundary.side_effect = exceptions.RefreshError(
+            "Lookup failed"
+        )
+
+        with mock.patch.dict(
+            os.environ, {environment_vars.GOOGLE_AUTH_TRUST_BOUNDARY_ENABLED: "true"}
+        ):
+            credentials.refresh(request)
+
+        assert credentials.valid
+        assert credentials._trust_boundary == self.VALID_TRUST_BOUNDARY
+        mock_lookup_trust_boundary.assert_called_once()
+
     @pytest.mark.parametrize("use_data_bytes", [True, False])
     def test_refresh_with_subject_success(self, use_data_bytes, mock_dwd_credentials):
         credentials = self.make_credentials(subject="test@email.com", lifetime=None)

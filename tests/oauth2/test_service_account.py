@@ -763,6 +763,52 @@ class TestCredentials(object):
         assert credentials._trust_boundary is None
         mock_lookup_trust_boundary.assert_called_once()
 
+    @mock.patch("google.oauth2._client.lookup_trust_boundary")
+    @mock.patch("google.oauth2._client.jwt_grant", autospec=True)
+    def test_refresh_trust_boundary_lookup_fails_with_cached_data(
+        self, mock_jwt_grant, mock_lookup_trust_boundary
+    ):
+        # Initial setup: Credentials with no trust boundary.
+        credentials = self.make_credentials(trust_boundary=None)
+        token = "token"
+        mock_jwt_grant.return_value = (
+            token,
+            _helpers.utcnow() + datetime.timedelta(seconds=500),
+            {},
+        )
+        request = mock.create_autospec(transport.Request, instance=True)
+
+        # First refresh: Successfully fetch a valid trust boundary.
+        mock_lookup_trust_boundary.return_value = self.VALID_TRUST_BOUNDARY
+        with mock.patch.dict(
+            os.environ, {environment_vars.GOOGLE_AUTH_TRUST_BOUNDARY_ENABLED: "true"}
+        ):
+            credentials.refresh(request)
+
+        assert credentials.valid
+        assert credentials.token == token
+        assert credentials._trust_boundary == self.VALID_TRUST_BOUNDARY
+        mock_lookup_trust_boundary.assert_called_once_with(
+            request, self.EXPECTED_TRUST_BOUNDARY_LOOKUP_URL_DEFAULT_UNIVERSE, mock.ANY
+        )
+
+        # Second refresh: Mock lookup to fail, but expect cached data to be preserved.
+        mock_lookup_trust_boundary.reset_mock()
+        mock_lookup_trust_boundary.side_effect = exceptions.RefreshError(
+            "Lookup failed"
+        )
+
+        with mock.patch.dict(
+            os.environ, {environment_vars.GOOGLE_AUTH_TRUST_BOUNDARY_ENABLED: "true"}
+        ):
+            credentials.refresh(request)  # This should NOT raise an exception
+
+        assert credentials.valid  # Credentials should still be valid
+        assert (
+            credentials._trust_boundary == self.VALID_TRUST_BOUNDARY
+        )  # Cached data should be preserved
+        mock_lookup_trust_boundary.assert_called_once()  # Lookup should have been attempted again
+
 
 class TestIDTokenCredentials(object):
     SERVICE_ACCOUNT_EMAIL = "service-account@example.com"

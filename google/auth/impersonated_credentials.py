@@ -439,7 +439,6 @@ class Credentials(
 
     @_helpers.copy_docstring(credentials.CredentialsWithTrustBoundary)
     def with_trust_boundary(self, trust_boundary):
-        """Returns a copy of these credentials with a modified trust boundary."""
         cred = self._make_copy()
         cred._trust_boundary = trust_boundary
         return cred
