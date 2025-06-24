@@ -310,10 +310,7 @@ class CredentialsWithTrustBoundary(Credentials):
         """Apply the token to the authentication header."""
         super().apply(headers, token)
         if self._trust_boundary is not None:
-            if (
-                self._trust_boundary["encodedLocations"]
-                == NO_OP_TRUST_BOUNDARY_ENCODED_LOCATIONS
-            ):
+            if self._has_no_op_trust_boundary:
                 # STS expects an empty string if the trust boundary value is no-op.
                 headers["x-allowed-locations"] = ""
             else:

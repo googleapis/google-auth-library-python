@@ -187,9 +187,9 @@ class Credentials(
             quota_project_id=quota_project_id,
             scopes=self._scopes,
             default_scopes=self._default_scopes,
+            universe_domain=self._universe_domain,
             trust_boundary=self._trust_boundary,
         )
-        creds._universe_domain = self._universe_domain
         creds._universe_domain_cached = self._universe_domain_cached
         return creds
 
@@ -203,9 +203,9 @@ class Credentials(
             default_scopes=default_scopes,
             service_account_email=self._service_account_email,
             quota_project_id=self._quota_project_id,
+            universe_domain=self._universe_domain,
             trust_boundary=self._trust_boundary,
         )
-        creds._universe_domain = self._universe_domain
         creds._universe_domain_cached = self._universe_domain_cached
         return creds
 
@@ -227,9 +227,9 @@ class Credentials(
             quota_project_id=self._quota_project_id,
             scopes=self._scopes,
             default_scopes=self._default_scopes,
+            universe_domain=self._universe_domain,
             trust_boundary=trust_boundary,
         )
-        creds._universe_domain = self._universe_domain
         creds._universe_domain_cached = self._universe_domain_cached
         return creds
 
