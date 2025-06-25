@@ -306,17 +306,19 @@ class CredentialsWithTrustBoundary(Credentials):
         """
         raise NotImplementedError("This credential does not support trust boundaries.")
 
-    def apply(self, headers, token=None):
-        """Apply the token to the authentication header."""
-        super().apply(headers, token)
+    def _get_trust_boundary_header(self):
         if self._trust_boundary is not None:
             if self._has_no_op_trust_boundary():
                 # STS expects an empty string if the trust boundary value is no-op.
-                headers["x-allowed-locations"] = ""
+                return {"x-allowed-locations": ""}
             else:
-                headers["x-allowed-locations"] = self._trust_boundary[
-                    "encodedLocations"
-                ]
+                return {"x-allowed-locations": self._trust_boundary["encodedLocations"]}
+        return {}
+
+    def apply(self, headers, token=None):
+        """Apply the token to the authentication header."""
+        super().apply(headers, token)
+        headers.update(self._get_trust_boundary_header())
 
     def _refresh_trust_boundary(self, request):
         """Triggers a refresh of the trust boundary and updates the cache if necessary.
@@ -378,7 +380,10 @@ class CredentialsWithTrustBoundary(Credentials):
         url = self._build_trust_boundary_lookup_url()
         if not url:
             raise exceptions.InvalidValue("Failed to build trust boundary lookup URL.")
-        return _client.lookup_trust_boundary(request, url, self.token)
+
+        headers = {}
+        self.apply(headers)
+        return _client.lookup_trust_boundary(request, url, headers=headers)
 
     @abc.abstractmethod
     def _build_trust_boundary_lookup_url(self):

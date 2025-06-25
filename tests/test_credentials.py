@@ -417,7 +417,10 @@ class TestCredentialsWithTrustBoundary(object):
 
         assert result == expected_boundary_info
         mock_build_url.assert_called_once()
-        mock_lookup_tb.assert_called_once_with(request, expected_url, creds.token)
+        expected_headers = {"authorization": "Bearer test_token"}
+        mock_lookup_tb.assert_called_once_with(
+            request, expected_url, headers=expected_headers
+        )
 
     @mock.patch.object(_client, "lookup_trust_boundary")
     def test_lookup_trust_boundary_build_url_returns_none(self, mock_lookup_tb):

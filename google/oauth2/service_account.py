@@ -554,6 +554,7 @@ class IDTokenCredentials(
     credentials.Signing,
     credentials.CredentialsWithQuotaProject,
     credentials.CredentialsWithTokenUri,
+    credentials.CredentialsWithTrustBoundary,
 ):
     """Open ID Connect ID Token-based service account credentials.
 
@@ -608,6 +609,7 @@ class IDTokenCredentials(
         additional_claims=None,
         quota_project_id=None,
         universe_domain=credentials.DEFAULT_UNIVERSE_DOMAIN,
+        trust_boundary=None,
     ):
         """
         Args:
@@ -625,6 +627,8 @@ class IDTokenCredentials(
                 token endponint is used for token refresh. Note that
                 iam.serviceAccountTokenCreator role is required to use the IAM
                 endpoint.
+            trust_boundary (Mapping[str,str]): A credential trust boundary.
+
         .. note:: Typically one of the helper constructors
             :meth:`from_service_account_file` or
             :meth:`from_service_account_info` are used instead of calling the
@@ -637,6 +641,7 @@ class IDTokenCredentials(
         self._target_audience = target_audience
         self._quota_project_id = quota_project_id
         self._use_iam_endpoint = False
+        self._trust_boundary = trust_boundary
 
         if not universe_domain:
             self._universe_domain = credentials.DEFAULT_UNIVERSE_DOMAIN
@@ -674,6 +679,8 @@ class IDTokenCredentials(
         kwargs.setdefault("token_uri", info["token_uri"])
         if "universe_domain" in info:
             kwargs["universe_domain"] = info["universe_domain"]
+        if "trust_boundary" in info:
+            kwargs["trust_boundary"] = info["trust_boundary"]
         return cls(signer, **kwargs)
 
     @classmethod
@@ -723,6 +730,7 @@ class IDTokenCredentials(
             additional_claims=self._additional_claims.copy(),
             quota_project_id=self.quota_project_id,
             universe_domain=self._universe_domain,
+            trust_boundary=self._trust_boundary,
         )
         # _use_iam_endpoint is not exposed in the constructor
         cred._use_iam_endpoint = self._use_iam_endpoint
@@ -784,6 +792,22 @@ class IDTokenCredentials(
         cred._token_uri = token_uri
         return cred
 
+    @_helpers.copy_docstring(credentials.CredentialsWithTrustBoundary)
+    def with_trust_boundary(self, trust_boundary):
+        cred = self._make_copy()
+        cred._trust_boundary = trust_boundary
+        return cred
+
+    def _build_trust_boundary_lookup_url(self):
+        """Builds and returns the URL for the trust boundary lookup API.
+
+        This is not used by IDTokenCredentials as it does not perform trust
+        boundary lookups. It is defined here to satisfy the abstract base class.
+        """
+        raise NotImplementedError(
+            "_build_trust_boundary_lookup_url is not implemented for IDTokenCredentials."
+        )
+
     def _make_authorization_grant_assertion(self):
         """Create the OAuth 2.0 assertion.
 
@@ -840,13 +864,17 @@ class IDTokenCredentials(
             additional_claims={"scope": "https://www.googleapis.com/auth/iam"},
         )
         jwt_credentials.refresh(request)
+
+        headers = self._get_trust_boundary_header()
+
         self.token, self.expiry = _client.call_iam_generate_id_token_endpoint(
             request,
             self._iam_id_token_endpoint,
             self.signer_email,
             self._target_audience,
             jwt_credentials.token.decode(),
-            self._universe_domain,
+            headers=headers,
+            universe_domain=self._universe_domain,
         )
 
     @_helpers.copy_docstring(credentials.Credentials)

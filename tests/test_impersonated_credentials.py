@@ -318,12 +318,22 @@ class TestImpersonatedCredentials(object):
             == ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE
         )
 
+        # Verify that the x-allowed-locations header from the source credential
+        # was applied. The source credential has a NO_OP boundary, so the
+        # header should be an empty string.
+        request_kwargs = request.call_args[1]
+        assert "headers" in request_kwargs
+        assert "x-allowed-locations" in request_kwargs["headers"]
+        assert request_kwargs["headers"]["x-allowed-locations"] == ""
+
         # Verify trust boundary was set.
         assert credentials._trust_boundary == self.VALID_TRUST_BOUNDARY
 
         # Verify the mock was called with the correct URL.
         mock_lookup_trust_boundary.assert_called_once_with(
-            request, self.EXPECTED_TRUST_BOUNDARY_LOOKUP_URL_DEFAULT_UNIVERSE, mock.ANY
+            request,
+            self.EXPECTED_TRUST_BOUNDARY_LOOKUP_URL_DEFAULT_UNIVERSE,
+            headers={"authorization": "Bearer token"},
         )
 
         # Verify x-allowed-locations header is set correctly by apply().
@@ -396,7 +406,9 @@ class TestImpersonatedCredentials(object):
 
         assert credentials._trust_boundary == self.NO_OP_TRUST_BOUNDARY
         mock_lookup_trust_boundary.assert_called_once_with(
-            request, self.EXPECTED_TRUST_BOUNDARY_LOOKUP_URL_DEFAULT_UNIVERSE, mock.ANY
+            request,
+            self.EXPECTED_TRUST_BOUNDARY_LOOKUP_URL_DEFAULT_UNIVERSE,
+            headers={"authorization": "Bearer token"},
         )
         headers_applied = {}
         credentials.apply(headers_applied)

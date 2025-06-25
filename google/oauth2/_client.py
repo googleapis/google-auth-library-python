@@ -327,6 +327,7 @@ def call_iam_generate_id_token_endpoint(
     signer_email,
     audience,
     access_token,
+    headers=None,
     universe_domain=credentials.DEFAULT_UNIVERSE_DOMAIN,
 ):
     """Call iam.generateIdToken endpoint to get ID token.
@@ -339,6 +340,9 @@ def call_iam_generate_id_token_endpoint(
             generateIdToken endpoint.
         audience (str): The audience for the ID token.
         access_token (str): The access token used to call the IAM endpoint.
+        headers (Optional[Mapping[str, str]]): The headers for the request.
+        universe_domain (str): The universe domain for the request. The
+            default is ``googleapis.com``.
 
     Returns:
         Tuple[str, datetime]: The ID token and expiration.
@@ -353,6 +357,7 @@ def call_iam_generate_id_token_endpoint(
         body,
         access_token=access_token,
         use_json=True,
+        headers=headers,
     )
 
     try:
@@ -510,7 +515,7 @@ def refresh_grant(
     return _handle_refresh_grant_response(response_data, refresh_token)
 
 
-def lookup_trust_boundary(request, url, access_token):
+def lookup_trust_boundary(request, url, headers=None):
     """Implements the global lookup of a credential trust boundary.
     For the lookup, we send a request to the global lookup endpoint and then
     parse the response. Service account credentials, workload identity
@@ -519,15 +524,7 @@ def lookup_trust_boundary(request, url, access_token):
         request (google.auth.transport.Request): A callable used to make
             HTTP requests.
         url (str): The trust boundary lookup url.
-        access_token (Optional(str)): The access token needed to make the request
         headers (Optional[Mapping[str, str]]): The headers for the request.
-        kwargs: Additional arguments passed on to the request method. The
-            kwargs will be passed to `requests.request` method, see:
-            https://docs.python-requests.org/en/latest/api/#requests.request.
-            For example, you can use `cert=("cert_pem_path", "key_pem_path")`
-            to set up client side SSL certificate, and use
-            `verify="ca_bundle_path"` to set up the CA certificates for sever
-            side SSL certificate verification.
     Returns:
         Mapping[str,list|str]: A dictionary containing
             "locations" as a list of allowed locations as strings and
@@ -550,7 +547,7 @@ def lookup_trust_boundary(request, url, access_token):
         exceptions.MalformedError: If the response is not in a valid format.
     """
 
-    response_data = _lookup_trust_boundary_request(request, url, access_token, True)
+    response_data = _lookup_trust_boundary_request(request, url, headers=headers)
     # In case of no-op response, the "locations" list may or may not be present as an empty list.
     if "encodedLocations" not in response_data:
         raise exceptions.MalformedError(
@@ -560,7 +557,7 @@ def lookup_trust_boundary(request, url, access_token):
 
 
 def _lookup_trust_boundary_request(
-    request, url, access_token, can_retry=True, **kwargs
+    request, url, can_retry=True, headers=None, **kwargs
 ):
     """Makes a request to the trust boundary lookup endpoint.
 
@@ -568,8 +565,8 @@ def _lookup_trust_boundary_request(
         request (google.auth.transport.Request): A callable used to make
             HTTP requests.
         url (str): The trust boundary lookup url.
-        access_token (Optional(str)): The access token needed to make the request
         can_retry (bool): Enable or disable request retry behavior. Defaults to true.
+        headers (Optional[Mapping[str, str]]): The headers for the request.
         kwargs: Additional arguments passed on to the request method. The
             kwargs will be passed to `requests.request` method, see:
             https://docs.python-requests.org/en/latest/api/#requests.request.
@@ -587,7 +584,7 @@ def _lookup_trust_boundary_request(
     """
     response_status_ok, response_data, retryable_error = (
         _lookup_trust_boundary_request_no_throw(
-            request, url, access_token=access_token, can_retry=can_retry, **kwargs
+            request, url, can_retry, headers, **kwargs
         )
     )
     if not response_status_ok:
@@ -596,7 +593,7 @@ def _lookup_trust_boundary_request(
 
 
 def _lookup_trust_boundary_request_no_throw(
-    request, url, access_token=None, can_retry=True, **kwargs
+    request, url, can_retry=True, headers=None, **kwargs
 ):
     """Makes a request to the trust boundary lookup endpoint. This
         function doesn't throw on response errors.
@@ -605,8 +602,8 @@ def _lookup_trust_boundary_request_no_throw(
         request (google.auth.transport.Request): A callable used to make
             HTTP requests.
         url (str): The trust boundary lookup url.
-        access_token (Optional(str)): The access token needed to make the request
         can_retry (bool): Enable or disable request retry behavior. Defaults to true.
+        headers (Optional[Mapping[str, str]]): The headers for the request.
         kwargs: Additional arguments passed on to the request method. The
             kwargs will be passed to `requests.request` method, see:
             https://docs.python-requests.org/en/latest/api/#requests.request.
@@ -622,14 +619,12 @@ def _lookup_trust_boundary_request_no_throw(
           is retryable.
     """
 
-    headers_to_use = {"Authorization": "Bearer {}".format(access_token)}
-
     response_data = {}
     retryable_error = False
 
     retries = _exponential_backoff.ExponentialBackoff()
     for _ in retries:
-        response = request(method="GET", url=url, headers=headers_to_use, **kwargs)
+        response = request(method="GET", url=url, headers=headers, **kwargs)
         response_body = (
             response.data.decode("utf-8")
             if hasattr(response.data, "decode")
