@@ -435,7 +435,7 @@ class Credentials(
             return metrics.CRED_TYPE_SA_JWT
         return metrics.CRED_TYPE_SA_ASSERTION
 
-    @_helpers.copy_docstring(credentials.Credentials)
+    @_helpers.copy_docstring(credentials.CredentialsWithTrustBoundary)
     def _refresh_token(self, request):
         if self._always_use_jwt_access and not self._jwt_credentials:
             # If self signed jwt should be used but jwt credential is not

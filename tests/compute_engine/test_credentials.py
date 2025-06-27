@@ -255,7 +255,7 @@ class TestCredentials(object):
         # domain endpoint.
         get_universe_domain.assert_not_called()
 
-    @mock.patch("google.oauth2._client.lookup_trust_boundary", autospec=True)
+    @mock.patch("google.oauth2._client._lookup_trust_boundary", autospec=True)
     @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
     def test_refresh_trust_boundary_lookup_skipped_if_env_var_not_true(
         self,
@@ -278,7 +278,7 @@ class TestCredentials(object):
         mock_lookup_tb.assert_not_called()
         assert creds._trust_boundary is None
 
-    @mock.patch("google.oauth2._client.lookup_trust_boundary", autospec=True)
+    @mock.patch("google.oauth2._client._lookup_trust_boundary", autospec=True)
     @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
     def test_refresh_trust_boundary_lookup_skipped_if_env_var_missing(
         self, mock_metadata_get, mock_lookup_tb
@@ -297,7 +297,7 @@ class TestCredentials(object):
         mock_lookup_tb.assert_not_called()
         assert creds._trust_boundary is None
 
-    @mock.patch.object(_client, "lookup_trust_boundary", autospec=True)
+    @mock.patch.object(_client, "_lookup_trust_boundary", autospec=True)
     @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
     def test_refresh_trust_boundary_lookup_success(
         self, mock_metadata_get, mock_lookup_tb
@@ -329,7 +329,7 @@ class TestCredentials(object):
         mock_lookup_tb.assert_called_once_with(
             request,
             "https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/resolved-email@example.com/allowedLocations",
-            "mock_token",
+            headers={"authorization": "Bearer mock_token"},
         )
         # Verify trust boundary was set
         assert creds._trust_boundary == {
@@ -343,7 +343,7 @@ class TestCredentials(object):
         assert headers_applied["x-allowed-locations"] == "0xABC"
 
     @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
-    @mock.patch.object(_client, "lookup_trust_boundary", autospec=True)
+    @mock.patch.object(_client, "_lookup_trust_boundary", autospec=True)
     def test_refresh_trust_boundary_lookup_fails_no_cache(
         self, mock_lookup_tb, mock_metadata_get
     ):
@@ -369,7 +369,7 @@ class TestCredentials(object):
         mock_lookup_tb.assert_called_once()
 
     @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
-    @mock.patch.object(_client, "lookup_trust_boundary", autospec=True)
+    @mock.patch.object(_client, "_lookup_trust_boundary", autospec=True)
     def test_refresh_trust_boundary_lookup_fails_with_cached_data(
         self, mock_lookup_tb, mock_metadata_get
     ):
@@ -420,7 +420,7 @@ class TestCredentials(object):
         mock_lookup_tb.assert_called_once()
 
     @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
-    @mock.patch.object(_client, "lookup_trust_boundary", autospec=True)
+    @mock.patch.object(_client, "_lookup_trust_boundary", autospec=True)
     def test_refresh_fetches_no_op_trust_boundary(
         self, mock_lookup_tb, mock_metadata_get
     ):
@@ -444,7 +444,7 @@ class TestCredentials(object):
         mock_lookup_tb.assert_called_once_with(
             request,
             "https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/resolved-email@example.com/allowedLocations",
-            "mock_token",
+            headers={"authorization": "Bearer mock_token"},
         )
         # Verify that an empty header was added.
         headers_applied = {}
@@ -452,11 +452,13 @@ class TestCredentials(object):
         assert headers_applied["x-allowed-locations"] == ""
 
     @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
-    @mock.patch.object(_client, "lookup_trust_boundary", autospec=True)
+    @mock.patch.object(_client, "_lookup_trust_boundary", autospec=True)
     def test_refresh_starts_with_no_op_trust_boundary_skips_lookup(
         self, mock_lookup_tb, mock_metadata_get
     ):
         creds = self.credentials
+        # Use pre-cache universe domain to avoid an extra metadata call.
+        creds._universe_domain_cached = True
         creds._trust_boundary = {"locations": [], "encodedLocations": "0x0"}
         request = mock.Mock()
 

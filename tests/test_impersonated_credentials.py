@@ -281,7 +281,7 @@ class TestImpersonatedCredentials(object):
         assert headers["x-goog-api-client"] == "cred-type/imp"
 
     @pytest.mark.parametrize("use_data_bytes", [True, False])
-    @mock.patch("google.oauth2._client.lookup_trust_boundary")
+    @mock.patch("google.oauth2._client._lookup_trust_boundary")
     def test_refresh_success(
         self, mock_lookup_trust_boundary, use_data_bytes, mock_donor_credentials
     ):
@@ -344,7 +344,7 @@ class TestImpersonatedCredentials(object):
             == self.VALID_TRUST_BOUNDARY["encodedLocations"]
         )
 
-    @mock.patch("google.oauth2._client.lookup_trust_boundary")
+    @mock.patch("google.oauth2._client._lookup_trust_boundary")
     def test_refresh_trust_boundary_lookup_fails_no_cache(
         self, mock_lookup_trust_boundary, mock_donor_credentials
     ):
@@ -376,7 +376,7 @@ class TestImpersonatedCredentials(object):
         assert credentials._trust_boundary is None  # Still no trust boundary
         mock_lookup_trust_boundary.assert_called_once()
 
-    @mock.patch("google.oauth2._client.lookup_trust_boundary")
+    @mock.patch("google.oauth2._client._lookup_trust_boundary")
     def test_refresh_fetches_no_op_trust_boundary(
         self, mock_lookup_trust_boundary, mock_donor_credentials
     ):
@@ -414,7 +414,7 @@ class TestImpersonatedCredentials(object):
         credentials.apply(headers_applied)
         assert headers_applied["x-allowed-locations"] == ""
 
-    @mock.patch("google.oauth2._client.lookup_trust_boundary")
+    @mock.patch("google.oauth2._client._lookup_trust_boundary")
     def test_refresh_skips_trust_boundary_lookup_non_default_universe(
         self, mock_lookup_trust_boundary
     ):
@@ -450,7 +450,7 @@ class TestImpersonatedCredentials(object):
         credentials.apply(headers_applied)
         assert "x-allowed-locations" not in headers_applied
 
-    @mock.patch("google.oauth2._client.lookup_trust_boundary")
+    @mock.patch("google.oauth2._client._lookup_trust_boundary")
     def test_refresh_starts_with_no_op_trust_boundary_skips_lookup(
         self, mock_lookup_trust_boundary, mock_donor_credentials
     ):
@@ -485,7 +485,7 @@ class TestImpersonatedCredentials(object):
         credentials.apply(headers_applied)
         assert headers_applied["x-allowed-locations"] == ""
 
-    @mock.patch("google.oauth2._client.lookup_trust_boundary")
+    @mock.patch("google.oauth2._client._lookup_trust_boundary")
     def test_refresh_trust_boundary_lookup_fails_with_cached_data2(
         self, mock_lookup_trust_boundary, mock_donor_credentials
     ):

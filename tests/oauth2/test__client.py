@@ -667,7 +667,7 @@ def test_lookup_trust_boundary():
 
     url = "http://example.com"
     headers = {"Authorization": "Bearer access_token"}
-    response = _client.lookup_trust_boundary(mock_request, url, headers=headers)
+    response = _client._lookup_trust_boundary(mock_request, url, headers=headers)
 
     assert response["encodedLocations"] == "0x80080000000000"
     assert response["locations"] == ["us-central1", "us-east1"]
@@ -688,7 +688,7 @@ def test_lookup_trust_boundary_no_op_response_without_locations():
     url = "http://example.com"
     headers = {"Authorization": "Bearer access_token"}
     # for the response to be valid, we only need encodedLocations to be present.
-    response = _client.lookup_trust_boundary(mock_request, url, headers=headers)
+    response = _client._lookup_trust_boundary(mock_request, url, headers=headers)
     assert response["encodedLocations"] == "0x0"
     assert "locations" not in response
 
@@ -707,7 +707,7 @@ def test_lookup_trust_boundary_no_op_response():
 
     url = "http://example.com"
     headers = {"Authorization": "Bearer access_token"}
-    response = _client.lookup_trust_boundary(mock_request, url, headers=headers)
+    response = _client._lookup_trust_boundary(mock_request, url, headers=headers)
 
     assert response["encodedLocations"] == "0x0"
     assert response["locations"] == []
@@ -726,7 +726,7 @@ def test_lookup_trust_boundary_error():
     url = "http://example.com"
     headers = {"Authorization": "Bearer access_token"}
     with pytest.raises(exceptions.RefreshError) as excinfo:
-        _client.lookup_trust_boundary(mock_request, url, headers=headers)
+        _client._lookup_trust_boundary(mock_request, url, headers=headers)
     assert excinfo.match("this is an error message")
 
     mock_request.assert_called_with(method="GET", url=url, headers=headers)
@@ -745,7 +745,7 @@ def test_lookup_trust_boundary_missing_encoded_locations():
     url = "http://example.com"
     headers = {"Authorization": "Bearer access_token"}
     with pytest.raises(exceptions.MalformedError) as excinfo:
-        _client.lookup_trust_boundary(mock_request, url, headers=headers)
+        _client._lookup_trust_boundary(mock_request, url, headers=headers)
     assert excinfo.match("Invalid trust boundary info")
 
     mock_request.assert_called_once_with(method="GET", url=url, headers=headers)
@@ -823,7 +823,7 @@ def test_lookup_trust_boundary_with_headers():
         "x-test-header": "test-value",
     }
 
-    _client.lookup_trust_boundary(mock_request, "http://example.com", headers=headers)
+    _client._lookup_trust_boundary(mock_request, "http://example.com", headers=headers)
 
     mock_request.assert_called_once_with(
         method="GET", url="http://example.com", headers=headers

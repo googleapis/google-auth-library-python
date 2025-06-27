@@ -521,7 +521,7 @@ class TestCredentials(object):
         # boundary was provided.
         assert credentials._trust_boundary is None
 
-    @mock.patch("google.oauth2._client.lookup_trust_boundary")
+    @mock.patch("google.oauth2._client._lookup_trust_boundary")
     @mock.patch("google.oauth2._client.jwt_grant", autospec=True)
     def test_refresh_skips_trust_boundary_lookup_non_default_universe(
         self, mock_jwt_grant, mock_lookup_trust_boundary
@@ -658,7 +658,7 @@ class TestCredentials(object):
             credentials.refresh(None)
         assert excinfo.match("domain wide delegation is not supported")
 
-    @mock.patch("google.oauth2._client.lookup_trust_boundary")
+    @mock.patch("google.oauth2._client._lookup_trust_boundary")
     @mock.patch("google.oauth2._client.jwt_grant", autospec=True)
     def test_refresh_success_with_valid_trust_boundary(
         self, mock_jwt_grant, mock_lookup_trust_boundary
@@ -702,7 +702,7 @@ class TestCredentials(object):
             == self.VALID_TRUST_BOUNDARY["encodedLocations"]
         )
 
-    @mock.patch("google.oauth2._client.lookup_trust_boundary")
+    @mock.patch("google.oauth2._client._lookup_trust_boundary")
     @mock.patch("google.oauth2._client.jwt_grant", autospec=True)
     def test_refresh_fetches_no_op_trust_boundary(
         self, mock_jwt_grant, mock_lookup_trust_boundary
@@ -736,7 +736,7 @@ class TestCredentials(object):
         credentials.apply(headers_applied)
         assert headers_applied["x-allowed-locations"] == ""
 
-    @mock.patch("google.oauth2._client.lookup_trust_boundary")
+    @mock.patch("google.oauth2._client._lookup_trust_boundary")
     @mock.patch("google.oauth2._client.jwt_grant", autospec=True)
     def test_refresh_starts_with_no_op_trust_boundary_skips_lookup(
         self, mock_jwt_grant, mock_lookup_trust_boundary
@@ -770,7 +770,7 @@ class TestCredentials(object):
         credentials.apply(headers_applied)
         assert headers_applied["x-allowed-locations"] == ""
 
-    @mock.patch("google.oauth2._client.lookup_trust_boundary")
+    @mock.patch("google.oauth2._client._lookup_trust_boundary")
     @mock.patch("google.oauth2._client.jwt_grant", autospec=True)
     def test_refresh_trust_boundary_lookup_fails_no_cache(
         self, mock_jwt_grant, mock_lookup_trust_boundary
@@ -796,7 +796,7 @@ class TestCredentials(object):
         assert credentials._trust_boundary is None
         mock_lookup_trust_boundary.assert_called_once()
 
-    @mock.patch("google.oauth2._client.lookup_trust_boundary")
+    @mock.patch("google.oauth2._client._lookup_trust_boundary")
     @mock.patch("google.oauth2._client.jwt_grant", autospec=True)
     def test_refresh_trust_boundary_lookup_fails_with_cached_data(
         self, mock_jwt_grant, mock_lookup_trust_boundary
