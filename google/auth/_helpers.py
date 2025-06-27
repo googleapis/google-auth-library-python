@@ -295,6 +295,7 @@ def get_bool_from_env(variable_name, default=False):
     (case-insensitive) rules:
     - "true", "1" are considered true.
     - "false", "0" are considered false.
+    Any other values will raise an exception.
 
     Args:
         variable_name (str): The name of the environment variable.

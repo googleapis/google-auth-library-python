@@ -515,7 +515,7 @@ def refresh_grant(
     return _handle_refresh_grant_response(response_data, refresh_token)
 
 
-def lookup_trust_boundary(request, url, headers=None):
+def _lookup_trust_boundary(request, url, headers=None):
     """Implements the global lookup of a credential trust boundary.
     For the lookup, we send a request to the global lookup endpoint and then
     parse the response. Service account credentials, workload identity
@@ -556,9 +556,7 @@ def lookup_trust_boundary(request, url, headers=None):
     return response_data
 
 
-def _lookup_trust_boundary_request(
-    request, url, can_retry=True, headers=None, **kwargs
-):
+def _lookup_trust_boundary_request(request, url, can_retry=True, headers=None):
     """Makes a request to the trust boundary lookup endpoint.
 
     Args:
@@ -567,13 +565,6 @@ def _lookup_trust_boundary_request(
         url (str): The trust boundary lookup url.
         can_retry (bool): Enable or disable request retry behavior. Defaults to true.
         headers (Optional[Mapping[str, str]]): The headers for the request.
-        kwargs: Additional arguments passed on to the request method. The
-            kwargs will be passed to `requests.request` method, see:
-            https://docs.python-requests.org/en/latest/api/#requests.request.
-            For example, you can use `cert=("cert_pem_path", "key_pem_path")`
-            to set up client side SSL certificate, and use
-            `verify="ca_bundle_path"` to set up the CA certificates for sever
-            side SSL certificate verification.
 
     Returns:
         Mapping[str, str]: The JSON-decoded response data.
@@ -583,18 +574,14 @@ def _lookup_trust_boundary_request(
             an error.
     """
     response_status_ok, response_data, retryable_error = (
-        _lookup_trust_boundary_request_no_throw(
-            request, url, can_retry, headers, **kwargs
-        )
+        _lookup_trust_boundary_request_no_throw(request, url, can_retry, headers)
     )
     if not response_status_ok:
         _handle_error_response(response_data, retryable_error)
     return response_data
 
 
-def _lookup_trust_boundary_request_no_throw(
-    request, url, can_retry=True, headers=None, **kwargs
-):
+def _lookup_trust_boundary_request_no_throw(request, url, can_retry=True, headers=None):
     """Makes a request to the trust boundary lookup endpoint. This
         function doesn't throw on response errors.
 
@@ -604,13 +591,6 @@ def _lookup_trust_boundary_request_no_throw(
         url (str): The trust boundary lookup url.
         can_retry (bool): Enable or disable request retry behavior. Defaults to true.
         headers (Optional[Mapping[str, str]]): The headers for the request.
-        kwargs: Additional arguments passed on to the request method. The
-            kwargs will be passed to `requests.request` method, see:
-            https://docs.python-requests.org/en/latest/api/#requests.request.
-            For example, you can use `cert=("cert_pem_path", "key_pem_path")`
-            to set up client side SSL certificate, and use
-            `verify="ca_bundle_path"` to set up the CA certificates for sever
-            side SSL certificate verification.
 
     Returns:
         Tuple(bool, Mapping[str, str], Optional[bool]): A boolean indicating
@@ -624,7 +604,7 @@ def _lookup_trust_boundary_request_no_throw(
 
     retries = _exponential_backoff.ExponentialBackoff()
     for _ in retries:
-        response = request(method="GET", url=url, headers=headers, **kwargs)
+        response = request(method="GET", url=url, headers=headers)
         response_body = (
             response.data.decode("utf-8")
             if hasattr(response.data, "decode")

@@ -264,12 +264,7 @@ class Credentials(
     def _metric_header_for_usage(self):
         return metrics.CRED_TYPE_SA_IMPERSONATE
 
-    @_helpers.copy_docstring(credentials.Credentials)
-    def refresh(self, request):
-        self._update_token(request)
-        self._refresh_trust_boundary(request)
-
-    def _update_token(self, request):
+    def _refresh_token(self, request):
         """Updates credentials with a new access_token representing
         the impersonated account.
 

@@ -436,7 +436,7 @@ class Credentials(
         return metrics.CRED_TYPE_SA_ASSERTION
 
     @_helpers.copy_docstring(credentials.Credentials)
-    def refresh(self, request):
+    def _refresh_token(self, request):
         if self._always_use_jwt_access and not self._jwt_credentials:
             # If self signed jwt should be used but jwt credential is not
             # created, try to create one with scopes
@@ -461,7 +461,50 @@ class Credentials(
             )
             self.token = access_token
             self.expiry = expiry
-        self._refresh_trust_boundary(request)
+
+    def refresh(self, request):
+        """Refreshes the credential's access token.
+
+        This method is overridden to provide special handling for credentials that
+        use a self-signed JWT and have a trust boundary configured. In this
+        scenario, it first generates a temporary, IAM-specific self-signed JWT
+        to perform the trust boundary lookup, and then generates the final
+        self-signed JWT for the target API.
+
+        For all other cases, it falls back to the standard refresh behavior
+        from the parent class.
+
+        Args:
+            request (google.auth.transport.Request): The object used to make
+                HTTP requests.
+
+        Raises:
+            google.auth.exceptions.RefreshError: If the credentials could
+                not be refreshed.
+        """
+        # Determine if we're going to use a self-signed JWT.
+        use_ssjwt = self._use_self_signed_jwt()
+
+        if use_ssjwt and self._is_trust_boundary_lookup_required():
+            # Special case: self-signed JWT with trust boundary.
+            # 1. Create a temporary self-signed JWT for the IAM API.
+            iam_audience = "https://iamcredentials.{}/".format(self._universe_domain)
+            iam_jwt_creds = jwt.Credentials.from_signing_credentials(self, iam_audience)
+            iam_jwt_creds.refresh(request)
+
+            # 2. Use this JWT to perform the trust boundary lookup.
+            # We temporarily set self.token for the base lookup method.
+            # The base lookup method will call self.apply() which adds the
+            # authorization header.
+            with _helpers.update_property(self, "token", iam_jwt_creds.token.decode()):
+                # This will call _lookup_trust_boundary and set self._trust_boundary
+                self._refresh_trust_boundary(request)
+
+            # 3. Now, refresh the original self-signed JWT for the target API.
+            self._refresh_token(request)
+        else:
+            # For all other cases, use the standard refresh mechanism.
+            super(Credentials, self).refresh(request)
 
     def _create_self_signed_jwt(self, audience):
         """Create a self-signed JWT from the credentials if requirements are met.
@@ -797,6 +840,12 @@ class IDTokenCredentials(
         cred = self._make_copy()
         cred._trust_boundary = trust_boundary
         return cred
+
+    def _refresh_token(self, request):
+        """Not used by this class, which overrides refresh() directly."""
+        # This is required to satisfy the abstract base class, but this
+        # class's refresh() method is called directly and does not use this.
+        pass
 
     def _build_trust_boundary_lookup_url(self):
         """Builds and returns the URL for the trust boundary lookup API.

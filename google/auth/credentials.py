@@ -292,6 +292,20 @@ class CredentialsWithUniverseDomain(Credentials):
 class CredentialsWithTrustBoundary(Credentials):
     """Abstract base for credentials supporting ``with_trust_boundary`` factory"""
 
+    @abc.abstractmethod
+    def _refresh_token(self, request):
+        """Refreshes the access token.
+
+        Args:
+            request (google.auth.transport.Request): The object used to make
+                HTTP requests.
+
+        Raises:
+            google.auth.exceptions.RefreshError: If the credentials could
+                not be refreshed.
+        """
+        raise NotImplementedError("_refresh_token must be implemented")
+
     def with_trust_boundary(self, trust_boundary):
         """Returns a copy of these credentials with a modified trust boundary.
 
@@ -305,6 +319,29 @@ class CredentialsWithTrustBoundary(Credentials):
             google.auth.credentials.Credentials: A new credentials instance.
         """
         raise NotImplementedError("This credential does not support trust boundaries.")
+
+    def _is_trust_boundary_lookup_required(self):
+        """Checks if a trust boundary lookup is required.
+
+        A lookup is required if the feature is enabled via an environment
+        variable, the universe domain is supported, and a no-op boundary
+        is not already cached.
+
+        Returns:
+            bool: True if a trust boundary lookup is required, False otherwise.
+        """
+        # 1. Check if the feature is enabled via environment variable.
+        if not _helpers.get_bool_from_env(
+            environment_vars.GOOGLE_AUTH_TRUST_BOUNDARY_ENABLED, default=False
+        ):
+            return False
+
+        # 2. Skip trust boundary flow for non-default universe domains.
+        if self.universe_domain != DEFAULT_UNIVERSE_DOMAIN:
+            return False
+
+        # 3. Do not trigger refresh if credential has a cached no-op trust boundary.
+        return not self._has_no_op_trust_boundary()
 
     def _get_trust_boundary_header(self):
         if self._trust_boundary is not None:
@@ -320,6 +357,15 @@ class CredentialsWithTrustBoundary(Credentials):
         super().apply(headers, token)
         headers.update(self._get_trust_boundary_header())
 
+    def refresh(self, request):
+        """Refreshes the access token and the trust boundary.
+
+        This method calls the subclass's token refresh logic and then
+        refreshes the trust boundary if applicable.
+        """
+        self._refresh_token(request)
+        self._refresh_trust_boundary(request)
+
     def _refresh_trust_boundary(self, request):
         """Triggers a refresh of the trust boundary and updates the cache if necessary.
 
@@ -331,12 +377,10 @@ class CredentialsWithTrustBoundary(Credentials):
             google.auth.exceptions.RefreshError: If the trust boundary could
                 not be refreshed and no cached value is available.
         """
-        # Do not trigger refresh if credential has a cached no-op trust boundary.
-        if self._has_no_op_trust_boundary():
+        if not self._is_trust_boundary_lookup_required():
             return
-        new_trust_boundary = {}
         try:
-            new_trust_boundary = self._lookup_trust_boundary(request)
+            self._trust_boundary = self._lookup_trust_boundary(request)
         except exceptions.RefreshError as error:
             # If the call to the lookup API failed, check if there is a trust boundary
             # already cached. If there is, do nothing. If not, then throw the error.
@@ -347,8 +391,6 @@ class CredentialsWithTrustBoundary(Credentials):
                     "Using cached trust boundary due to refresh error: %s", error
                 )
             return
-        else:
-            self._trust_boundary = new_trust_boundary
 
     def _lookup_trust_boundary(self, request):
         """Calls the trust boundary lookup API to refresh the trust boundary cache.
@@ -366,24 +408,13 @@ class CredentialsWithTrustBoundary(Credentials):
         """
         from google.oauth2 import _client
 
-        # Verify the trust boundary feature flag is enabled.
-        if not _helpers.get_bool_from_env(
-            environment_vars.GOOGLE_AUTH_TRUST_BOUNDARY_ENABLED, default=False
-        ):
-            # Skip the lookup and return early if it's not explicitly enabled.
-            return None
-
-        # Skip trust boundary flow for non-gdu universe domain.
-        if self.universe_domain != DEFAULT_UNIVERSE_DOMAIN:
-            return None
-
         url = self._build_trust_boundary_lookup_url()
         if not url:
             raise exceptions.InvalidValue("Failed to build trust boundary lookup URL.")
 
         headers = {}
         self.apply(headers)
-        return _client.lookup_trust_boundary(request, url, headers=headers)
+        return _client._lookup_trust_boundary(request, url, headers=headers)
 
     @abc.abstractmethod
     def _build_trust_boundary_lookup_url(self):

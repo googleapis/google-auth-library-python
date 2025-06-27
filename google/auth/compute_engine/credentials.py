@@ -98,7 +98,7 @@ class Credentials(
     def _metric_header_for_usage(self):
         return metrics.CRED_TYPE_SA_MDS
 
-    def refresh(self, request):
+    def _refresh_token(self, request):
         """Refresh the access token and scopes.
 
         Args:
@@ -118,8 +118,6 @@ class Credentials(
         except exceptions.TransportError as caught_exc:
             new_exc = exceptions.RefreshError(caught_exc)
             raise new_exc from caught_exc
-
-        self._refresh_trust_boundary(request)
 
     def _build_trust_boundary_lookup_url(self):
         """Builds and returns the URL for the trust boundary lookup API for GCE."""
