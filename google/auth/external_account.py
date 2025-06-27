@@ -59,18 +59,18 @@ _DEFAULT_TOKEN_URL = "https://sts.{universe_domain}/v1/token"
 @dataclass
 class SupplierContext:
     """A context class that contains information about the requested third party credential that is passed
-        to AWS security credential and subject token suppliers.
+    to AWS security credential and subject token suppliers.
 
-        Attributes:
-            subject_token_type (str): The requested subject token type based on the Oauth2.0 token exchange spec.
-                Expected values include::
+    Attributes:
+        subject_token_type (str): The requested subject token type based on the Oauth2.0 token exchange spec.
+            Expected values include::
 
-                    “urn:ietf:params:oauth:token-type:jwt”
-                    “urn:ietf:params:oauth:token-type:id-token”
-                    “urn:ietf:params:oauth:token-type:saml2”
-                    “urn:ietf:params:aws:token-type:aws4_request”
+                “urn:ietf:params:oauth:token-type:jwt”
+                “urn:ietf:params:oauth:token-type:id-token”
+                “urn:ietf:params:oauth:token-type:saml2”
+                “urn:ietf:params:aws:token-type:aws4_request”
 
-            audience (str): The requested audience for the subject token.
+        audience (str): The requested audience for the subject token.
     """
 
     subject_token_type: str
@@ -81,7 +81,6 @@ class Credentials(
     credentials.Scoped,
     credentials.CredentialsWithQuotaProject,
     credentials.CredentialsWithTokenUri,
-    credentials.CredentialsWithTrustBoundary,
     metaclass=abc.ABCMeta,
 ):
     """Base class for all external account credentials.
@@ -134,14 +133,14 @@ class Credentials(
                 authorization grant.
             default_scopes (Optional[Sequence[str]]): Default scopes passed by a
                 Google client library. Use 'scopes' for user-defined scopes.
-            workforce_pool_user_project (Optonal[str]): The optional workforce pool user
+            workforce_pool_user_project (Optona[str]): The optional workforce pool user
                 project number when the credential corresponds to a workforce pool and not
                 a workload identity pool. The underlying principal must still have
                 serviceusage.services.use IAM permission to use the project for
                 billing/quota.
             universe_domain (str): The universe domain. The default universe
                 domain is googleapis.com.
-            trust_boundary (str): String representation of trust boundary metadata.
+            trust_boundary (str): String representation of trust boundary meta.
         Raises:
             google.auth.exceptions.RefreshError: If the generateAccessToken
                 endpoint returned an error.
@@ -168,9 +167,9 @@ class Credentials(
         self._default_scopes = default_scopes
         self._workforce_pool_user_project = workforce_pool_user_project
         self._trust_boundary = {
-            "locations": credentials.NO_OP_TRUST_BOUNDARY_LOCATIONS,
-            "encodedLocations": credentials.NO_OP_TRUST_BOUNDARY_ENCODED_LOCATIONS,
-        }  # Sets a no-op trust boundary value.
+            "locations": [],
+            "encoded_locations": "0x0",
+        }  # expose a placeholder trust boundary value.
 
         if self._client_id:
             self._client_auth = utils.ClientAuthentication(
@@ -456,12 +455,6 @@ class Credentials(
             lifetime = datetime.timedelta(seconds=expires_in)
 
             self.expiry = now + lifetime
-
-    def _build_trust_boundary_lookup_url(self):
-        """Builds and returns the URL for the trust boundary lookup API.
-        Will be implemented in a follow up PR.
-        """
-        return
 
     def _make_copy(self):
         kwargs = self._constructor_args()
