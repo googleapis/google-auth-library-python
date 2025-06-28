@@ -21,7 +21,7 @@ import os
 import mock
 import pytest  # type: ignore
 
-from google.auth import _helpers
+from google.auth import _helpers, iam
 from google.auth import crypt
 from google.auth import exceptions
 from google.auth import impersonated_credentials
@@ -343,6 +343,29 @@ class TestImpersonatedCredentials(object):
             headers_applied["x-allowed-locations"]
             == self.VALID_TRUST_BOUNDARY["encodedLocations"]
         )
+
+    def test_refresh_source_creds_no_trust_boundary(self):
+        # Use a source credential that does not support trust boundaries.
+        source_credentials = credentials.Credentials(token="source_token")
+        creds = self.make_credentials(source_credentials=source_credentials)
+        token = "impersonated_token"
+
+        expire_time = (
+            _helpers.utcnow().replace(microsecond=0) + datetime.timedelta(seconds=500)
+        ).isoformat("T") + "Z"
+        response_body = {"accessToken": token, "expireTime": expire_time}
+
+        request = self.make_request(
+            data=json.dumps(response_body),
+            status=http_client.OK,
+        )
+
+        creds.refresh(request)
+
+        # Verify that the x-allowed-locations header was NOT applied because
+        # the source credential does not support trust boundaries.
+        request_kwargs = request.call_args[1]
+        assert "x-allowed-locations" not in request_kwargs["headers"]
 
     @mock.patch("google.oauth2._client._lookup_trust_boundary")
     def test_refresh_trust_boundary_lookup_fails_no_cache(
@@ -914,6 +937,29 @@ class TestImpersonatedCredentials(object):
         credentials = credentials.with_scopes(["fake_scope1", "fake_scope2"])
         assert credentials.requires_scopes is False
         assert credentials._target_scopes == ["fake_scope1", "fake_scope2"]
+
+    def test_with_trust_boundary(self):
+        credentials = self.make_credentials()
+        new_boundary = {"encodedLocations": "new_boundary"}
+        new_credentials = credentials.with_trust_boundary(new_boundary)
+
+        assert new_credentials is not credentials
+        assert new_credentials._trust_boundary == new_boundary
+        # The source credentials should be a copy, not the same object.
+        # But they should be functionally equivalent.
+        assert (
+            new_credentials._source_credentials is not credentials._source_credentials
+        )
+
+        assert (
+            new_credentials._source_credentials.service_account_email
+            == credentials._source_credentials.service_account_email
+        )
+        assert (
+            new_credentials._source_credentials._signer
+            == credentials._source_credentials._signer
+        )
+        assert new_credentials._target_principal == credentials._target_principal
 
     def test_with_scopes_provide_default_scopes(self):
         credentials = self.make_credentials()

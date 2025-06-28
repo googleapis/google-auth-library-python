@@ -482,10 +482,14 @@ class Credentials(
             google.auth.exceptions.RefreshError: If the credentials could
                 not be refreshed.
         """
-        # Determine if we're going to use a self-signed JWT.
-        use_ssjwt = self._use_self_signed_jwt()
-
-        if use_ssjwt and self._is_trust_boundary_lookup_required():
+        # This is a special path for self-signed JWTs that need to look up a trust boundary.
+        # The `_subject` check is to ensure we are not in a domain-wide
+        # delegation flow, which uses a different authentication mechanism.
+        if (
+            self._always_use_jwt_access
+            and self._subject is None
+            and self._is_trust_boundary_lookup_required()
+        ):
             # Special case: self-signed JWT with trust boundary.
             # 1. Create a temporary self-signed JWT for the IAM API.
             iam_audience = "https://iamcredentials.{}/".format(self._universe_domain)
@@ -496,9 +500,12 @@ class Credentials(
             # We temporarily set self.token for the base lookup method.
             # The base lookup method will call self.apply() which adds the
             # authorization header.
-            with _helpers.update_property(self, "token", iam_jwt_creds.token.decode()):
-                # This will call _lookup_trust_boundary and set self._trust_boundary
+            original_token = self.token
+            self.token = iam_jwt_creds.token.decode()
+            try:
                 self._refresh_trust_boundary(request)
+            finally:
+                self.token = original_token
 
             # 3. Now, refresh the original self-signed JWT for the target API.
             self._refresh_token(request)

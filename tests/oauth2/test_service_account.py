@@ -270,6 +270,18 @@ class TestCredentials(object):
             "always_use_jwt_access should be True for non-default universe domain"
         )
 
+    def test_with_trust_boundary(self):
+        credentials = self.make_credentials()
+        new_boundary = {"encodedLocations": "new_boundary"}
+        new_credentials = credentials.with_trust_boundary(new_boundary)
+
+        assert new_credentials is not credentials
+        assert new_credentials._trust_boundary == new_boundary
+        assert new_credentials._signer == credentials._signer
+        assert (
+            new_credentials.service_account_email == credentials.service_account_email
+        )
+
     def test__make_authorization_grant_assertion(self):
         credentials = self.make_credentials()
         token = credentials._make_authorization_grant_assertion()
@@ -851,6 +863,74 @@ class TestCredentials(object):
             },
         )  # Lookup should have been attempted again
 
+    @mock.patch("google.oauth2._client._lookup_trust_boundary")
+    def test_refresh_with_self_signed_jwt_and_trust_boundary(
+        self, mock_lookup_trust_boundary
+    ):
+        # --- Setup ---
+        # Create credentials that use self-signed JWT and have no initial boundary.
+        credentials = self.make_credentials(trust_boundary=None)
+        credentials._always_use_jwt_access = True
+        credentials._scopes = ["https://www.googleapis.com/auth/devstorage.read_only"]
+        request = mock.create_autospec(transport.Request, instance=True)
+
+        # Mock the trust boundary lookup to return a valid value.
+        mock_lookup_trust_boundary.return_value = self.VALID_TRUST_BOUNDARY
+
+        # Mock the two JWTs that will be created: one for the IAM lookup
+        # and one for the final token.
+        iam_jwt_creds_mock = mock.MagicMock(spec=jwt.Credentials, token=b"iam_token")
+        final_jwt_creds_mock = mock.MagicMock(
+            spec=jwt.Credentials,
+            token=b"final_token",
+            expiry=_helpers.utcnow() + datetime.timedelta(hours=1),
+        )
+        from_signing_credentials_mock = mock.patch(
+            "google.auth.jwt.Credentials.from_signing_credentials",
+            side_effect=[iam_jwt_creds_mock, final_jwt_creds_mock],
+        )
+        env_mock = mock.patch.dict(
+            os.environ, {environment_vars.GOOGLE_AUTH_TRUST_BOUNDARY_ENABLED: "true"}
+        )
+
+        # Refresh credential to trigger creating the self-signed jwt token and
+        # fetching the trust boundary data.
+        with from_signing_credentials_mock as mock_from_signing, env_mock:
+            credentials.refresh(request)
+
+        # --- Assert ---
+        # 1. Verify the temporary IAM JWT was created and used for the lookup.
+        iam_call = mock_from_signing.call_args_list[0]
+        assert iam_call.args[0] is credentials
+        assert iam_call.args[1] == "https://iamcredentials.googleapis.com/"
+        iam_jwt_creds_mock.refresh.assert_called_once_with(request)
+
+        mock_lookup_trust_boundary.assert_called_once()
+        _, lookup_kwargs = mock_lookup_trust_boundary.call_args
+        assert lookup_kwargs["headers"]["authorization"] == "Bearer iam_token"
+
+        # 2. Verify the final, audience-specific JWT was created and refreshed.
+        final_token_call = mock_from_signing.call_args_list[1]
+        assert final_token_call.args[0] is credentials
+        assert final_token_call.args[1] is None  # Audience is derived from scopes
+        assert final_token_call.kwargs["additional_claims"] == {
+            "scope": " ".join(credentials._scopes)
+        }
+        final_jwt_creds_mock.refresh.assert_called_once_with(request)
+
+        # 3. Verify the final state of the credentials object.
+        assert credentials.token == "final_token"
+        assert credentials._trust_boundary == self.VALID_TRUST_BOUNDARY
+
+    def test_build_trust_boundary_lookup_url_no_email(self):
+        credentials = self.make_credentials()
+        credentials._service_account_email = None
+
+        with pytest.raises(ValueError) as excinfo:
+            credentials._build_trust_boundary_lookup_url()
+
+        assert "Service account email is required" in str(excinfo.value)
+
 
 class TestIDTokenCredentials(object):
     SERVICE_ACCOUNT_EMAIL = "service-account@example.com"
@@ -980,6 +1060,19 @@ class TestIDTokenCredentials(object):
         assert credentials._token_uri == self.TOKEN_URI
         creds_with_new_token_uri = credentials.with_token_uri(new_token_uri)
         assert creds_with_new_token_uri._token_uri == new_token_uri
+
+    def test_with_trust_boundary(self):
+        credentials = self.make_credentials()
+        new_boundary = {"encodedLocations": "new_boundary"}
+        new_credentials = credentials.with_trust_boundary(new_boundary)
+
+        assert new_credentials is not credentials
+        assert new_credentials._trust_boundary == new_boundary
+        assert new_credentials._signer == credentials._signer
+        assert (
+            new_credentials.service_account_email == credentials.service_account_email
+        )
+        assert new_credentials._target_audience == credentials._target_audience
 
     def test__make_authorization_grant_assertion(self):
         credentials = self.make_credentials()

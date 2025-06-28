@@ -216,6 +216,18 @@ class TestCredentials(object):
         assert creds.universe_domain == "universe_domain"
         assert creds._universe_domain_cached
 
+    def test_with_trust_boundary(self):
+        creds = self.credentials_with_all_fields
+        new_boundary = {"encodedLocations": "new_boundary"}
+        new_creds = creds.with_trust_boundary(new_boundary)
+
+        assert new_creds is not creds
+        assert new_creds._trust_boundary == new_boundary
+        assert new_creds._service_account_email == creds._service_account_email
+        assert new_creds._quota_project_id == creds._quota_project_id
+        assert new_creds._scopes == creds._scopes
+        assert new_creds._default_scopes == creds._default_scopes
+
     def test_token_usage_metrics(self):
         self.credentials.token = "token"
         self.credentials.expiry = None

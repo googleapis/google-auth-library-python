@@ -26,7 +26,7 @@ import os
 
 
 class CredentialsImpl(credentials.CredentialsWithTrustBoundary):
-    def refresh(self, request):
+    def _refresh_token(self, request):
         self.token = request
         self.expiry = (
             datetime.datetime.utcnow()
@@ -354,7 +354,7 @@ def test_token_state_no_expiry():
 
 
 class TestCredentialsWithTrustBoundary(object):
-    @mock.patch.object(_client, "lookup_trust_boundary")
+    @mock.patch.object(_client, "_lookup_trust_boundary")
     def test_lookup_trust_boundary_env_var_not_true(self, mock_lookup_tb):
         creds = CredentialsImpl()
         request = mock.Mock()
@@ -363,12 +363,12 @@ class TestCredentialsWithTrustBoundary(object):
         with mock.patch.dict(
             os.environ, {environment_vars.GOOGLE_AUTH_TRUST_BOUNDARY_ENABLED: "false"}
         ):
-            result = creds._lookup_trust_boundary(request)
+            result = creds._refresh_trust_boundary(request)
 
         assert result is None
         mock_lookup_tb.assert_not_called()
 
-    @mock.patch.object(_client, "lookup_trust_boundary")
+    @mock.patch.object(_client, "_lookup_trust_boundary")
     def test_lookup_trust_boundary_env_var_missing(self, mock_lookup_tb):
         creds = CredentialsImpl()
         request = mock.Mock()
@@ -378,12 +378,12 @@ class TestCredentialsWithTrustBoundary(object):
             # Remove the var if it was set by other tests
             if environment_vars.GOOGLE_AUTH_TRUST_BOUNDARY_ENABLED in os.environ:
                 del os.environ[environment_vars.GOOGLE_AUTH_TRUST_BOUNDARY_ENABLED]
-            result = creds._lookup_trust_boundary(request)
+            result = creds._refresh_trust_boundary(request)
 
         assert result is None
         mock_lookup_tb.assert_not_called()
 
-    @mock.patch.object(_client, "lookup_trust_boundary")
+    @mock.patch.object(_client, "_lookup_trust_boundary")
     def test_lookup_trust_boundary_non_default_universe(self, mock_lookup_tb):
         creds = CredentialsImpl()
         creds._universe_domain = "my.universe.com"  # Non-GDU
@@ -392,12 +392,12 @@ class TestCredentialsWithTrustBoundary(object):
         with mock.patch.dict(
             os.environ, {environment_vars.GOOGLE_AUTH_TRUST_BOUNDARY_ENABLED: "true"}
         ):
-            result = creds._lookup_trust_boundary(request)
+            result = creds._refresh_trust_boundary(request)
 
         assert result is None
         mock_lookup_tb.assert_not_called()
 
-    @mock.patch.object(_client, "lookup_trust_boundary")
+    @mock.patch.object(_client, "_lookup_trust_boundary")
     def test_lookup_trust_boundary_calls_client_and_build_url(self, mock_lookup_tb):
         creds = CredentialsImpl()
         creds.token = "test_token"  # For _build_trust_boundary_lookup_url
@@ -422,7 +422,7 @@ class TestCredentialsWithTrustBoundary(object):
             request, expected_url, headers=expected_headers
         )
 
-    @mock.patch.object(_client, "lookup_trust_boundary")
+    @mock.patch.object(_client, "_lookup_trust_boundary")
     def test_lookup_trust_boundary_build_url_returns_none(self, mock_lookup_tb):
         creds = CredentialsImpl()
         request = mock.Mock()
