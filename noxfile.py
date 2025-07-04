@@ -33,8 +33,11 @@ BLACK_PATHS = [
     "docs/conf.py",
 ]
 
+DEFAULT_PYTHON_VERSION = "3.10"
+# Error if a python version is missing
+nox.options.error_on_missing_interpreters = True
 
-@nox.session(python="3.8")
+@nox.session(python=DEFAULT_PYTHON_VERSION)
 def lint(session):
     session.install(
         "flake8", "flake8-import-order", "docutils", CLICK_VERSION, BLACK_VERSION
@@ -54,7 +57,7 @@ def lint(session):
     )
 
 
-@nox.session(python="3.8")
+@nox.session(python=DEFAULT_PYTHON_VERSION)
 def blacken(session):
     """Run black.
     Format code to uniform standard.
@@ -67,7 +70,7 @@ def blacken(session):
     session.run("black", *BLACK_PATHS)
 
 
-@nox.session(python="3.8")
+@nox.session(python=DEFAULT_PYTHON_VERSION)
 def mypy(session):
     """Verify type hints are mypy compatible."""
     session.install("-e", ".")
@@ -84,7 +87,9 @@ def mypy(session):
     session.run("mypy", "-p", "google", "-p", "tests", "-p", "tests_async")
 
 
-@nox.session(python=["3.7", "3.8", "3.9", "3.10", "3.11", "3.12", "3.13"])
+# TODO(https://github.com/googleapis/google-auth-library-python-oauthlib/issues/410):
+# Remove or restore testing for Python 3.7/3.8
+@nox.session(python=["3.9", "3.10", "3.11", "3.12", "3.13"])
 def unit(session):
     constraints_path = str(
         CURRENT_DIRECTORY / "testing" / f"constraints-{session.python}.txt"
@@ -102,7 +107,7 @@ def unit(session):
     )
 
 
-@nox.session(python="3.8")
+@nox.session(python=DEFAULT_PYTHON_VERSION)
 def cover(session):
     session.install("-e", ".[testing]")
     session.run(
