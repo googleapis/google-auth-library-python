@@ -41,6 +41,23 @@ UNIT_TEST_PYTHON_VERSIONS = ["3.9", "3.10", "3.11", "3.12", "3.13"]
 # Error if a python version is missing
 nox.options.error_on_missing_interpreters = True
 
+# pypy will be run as a github action instead of through Kokoro
+nox.options.sessions = [
+    "lint",
+    "blacken",
+    "mypy",
+    # TODO(https://github.com/googleapis/python-storage/issues/1499):
+    # Remove or restore testing for Python 3.7/3.8
+    "unit-3.9",
+    "unit-3.10",
+    "unit-3.11",
+    "unit-3.12",
+    "unit-3.13",
+    # cover must be last to avoid error `No data to report`
+    "cover",
+    "docs",
+]
+
 
 @nox.session(python=DEFAULT_PYTHON_VERSION)
 def lint(session):
