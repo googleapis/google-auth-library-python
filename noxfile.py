@@ -37,6 +37,7 @@ DEFAULT_PYTHON_VERSION = "3.10"
 # Error if a python version is missing
 nox.options.error_on_missing_interpreters = True
 
+
 @nox.session(python=DEFAULT_PYTHON_VERSION)
 def lint(session):
     session.install(
