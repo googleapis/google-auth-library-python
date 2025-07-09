@@ -435,11 +435,11 @@ class _DefaultAwsSecurityCredentialsSupplier(AwsSecurityCredentialsSupplier):
             )
 
         imdsv2_session_token = self._get_imdsv2_session_token(request)
-        role_name = self._get_metadata_role_name(request, imdsv2_session_token)
+        # role_name = self._get_metadata_role_name(request, imdsv2_session_token)
 
         # Get security credentials.
         credentials = self._get_metadata_security_credentials(
-            request, role_name, imdsv2_session_token
+            request, imdsv2_session_token
         )
 
         return AwsSecurityCredentials(
@@ -509,7 +509,7 @@ class _DefaultAwsSecurityCredentialsSupplier(AwsSecurityCredentialsSupplier):
             return None
 
     def _get_metadata_security_credentials(
-        self, request, role_name, imdsv2_session_token
+        self, request, imdsv2_session_token
     ):
         """Retrieves the AWS security credentials required for signing AWS
         requests from the AWS metadata server.
@@ -536,7 +536,7 @@ class _DefaultAwsSecurityCredentialsSupplier(AwsSecurityCredentialsSupplier):
             headers["X-aws-ec2-metadata-token"] = imdsv2_session_token
 
         response = request(
-            url="{}/{}".format(self._security_credentials_url, role_name),
+            url=self._security_credentials_url,
             method="GET",
             headers=headers,
         )
