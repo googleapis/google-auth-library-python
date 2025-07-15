@@ -4,6 +4,13 @@
 
 [1]: https://pypi.org/project/google-auth/#history
 
+## [2.41.0](https://github.com/googleapis/google-auth-library-python/compare/v2.40.3...v2.41.0) (2025-07-15)
+
+
+### Features
+
+* Add support for cachetools 6.0 ([#1773](https://github.com/googleapis/google-auth-library-python/issues/1773)) ([af18060](https://github.com/googleapis/google-auth-library-python/commit/af18060d521baf86c219d66a26631decb3b28e79))
+
 ## [2.40.3](https://github.com/googleapis/google-auth-library-python/compare/v2.40.2...v2.40.3) (2025-06-04)
 
 
