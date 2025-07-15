@@ -34,7 +34,7 @@ BLACK_PATHS = [
 ]
 
 DEFAULT_PYTHON_VERSION = "3.10"
-# TODO(https://github.com/googleapis/google-auth-library-python-oauthlib/issues/410):
+# TODO(https://github.com/googleapis/google-auth-library-python/issues/1787):
 # Remove or restore testing for Python 3.7/3.8
 UNIT_TEST_PYTHON_VERSIONS = ["3.9", "3.10", "3.11", "3.12", "3.13"]
 
@@ -46,7 +46,7 @@ nox.options.sessions = [
     "lint",
     "blacken",
     "mypy",
-    # TODO(https://github.com/googleapis/python-storage/issues/1499):
+    # TODO(https://github.com/googleapis/google-auth-library-python/issues/1787):
     # Remove or restore testing for Python 3.7/3.8
     "unit-3.9",
     "unit-3.10",
