@@ -347,26 +347,6 @@ def test_call_iam_generate_id_token_endpoint():
     assert expiry == now
 
 
-def test_call_iam_generate_id_token_endpoint_with_headers():
-    now = _helpers.utcnow()
-    id_token_expiry = _helpers.datetime_to_secs(now)
-    id_token = jwt.encode(SIGNER, {"exp": id_token_expiry}).decode("utf-8")
-    request = make_request({"token": id_token})
-    headers = {"x-test-header": "test-value"}
-
-    _client.call_iam_generate_id_token_endpoint(
-        request,
-        iam._IAM_IDTOKEN_ENDPOINT,
-        "fake_email",
-        "fake_audience",
-        "fake_access_token",
-        headers=headers,
-        universe_domain="googleapis.com",
-    )
-
-    assert request.call_args[1]["headers"]["x-test-header"] == "test-value"
-
-
 def test_call_iam_generate_id_token_endpoint_no_id_token():
     request = make_request(
         {
@@ -382,7 +362,7 @@ def test_call_iam_generate_id_token_endpoint_no_id_token():
             "fake_email",
             "fake_audience",
             "fake_access_token",
-            universe_domain="googleapis.com",
+            "googleapis.com",
         )
     assert excinfo.match("No ID token in response")
 

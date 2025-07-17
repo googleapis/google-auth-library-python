@@ -327,7 +327,6 @@ def call_iam_generate_id_token_endpoint(
     signer_email,
     audience,
     access_token,
-    headers=None,
     universe_domain=credentials.DEFAULT_UNIVERSE_DOMAIN,
 ):
     """Call iam.generateIdToken endpoint to get ID token.
@@ -340,7 +339,6 @@ def call_iam_generate_id_token_endpoint(
             generateIdToken endpoint.
         audience (str): The audience for the ID token.
         access_token (str): The access token used to call the IAM endpoint.
-        headers (Optional[Mapping[str, str]]): The headers for the request.
         universe_domain (str): The universe domain for the request. The
             default is ``googleapis.com``.
 
@@ -357,7 +355,6 @@ def call_iam_generate_id_token_endpoint(
         body,
         access_token=access_token,
         use_json=True,
-        headers=headers,
     )
 
     try:

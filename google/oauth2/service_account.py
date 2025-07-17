@@ -921,16 +921,13 @@ class IDTokenCredentials(
         )
         jwt_credentials.refresh(request)
 
-        headers = self._get_trust_boundary_header()
-
         self.token, self.expiry = _client.call_iam_generate_id_token_endpoint(
             request,
             self._iam_id_token_endpoint,
             self.signer_email,
             self._target_audience,
             jwt_credentials.token.decode(),
-            headers=headers,
-            universe_domain=self._universe_domain,
+            self._universe_domain,
         )
 
     @_helpers.copy_docstring(credentials.Credentials)

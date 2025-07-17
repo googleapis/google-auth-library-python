@@ -602,7 +602,6 @@ class IDTokenCredentials(credentials.CredentialsWithQuotaProject):
             "Content-Type": "application/json",
             metrics.API_CLIENT_HEADER: metrics.token_request_id_token_impersonate(),
         }
-        headers.update(self._target_credentials._get_trust_boundary_header())
 
         authed_session = AuthorizedSession(
             self._target_credentials._source_credentials, auth_request=request
