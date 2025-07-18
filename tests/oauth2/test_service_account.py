@@ -863,65 +863,6 @@ class TestCredentials(object):
             },
         )  # Lookup should have been attempted again
 
-    @mock.patch("google.oauth2._client._lookup_trust_boundary")
-    def test_refresh_with_self_signed_jwt_and_trust_boundary(
-        self, mock_lookup_trust_boundary
-    ):
-        # --- Setup ---
-        # Create credentials that use self-signed JWT and have no initial boundary.
-        credentials = self.make_credentials(trust_boundary=None)
-        credentials._always_use_jwt_access = True
-        credentials._scopes = ["https://www.googleapis.com/auth/devstorage.read_only"]
-        request = mock.create_autospec(transport.Request, instance=True)
-
-        # Mock the trust boundary lookup to return a valid value.
-        mock_lookup_trust_boundary.return_value = self.VALID_TRUST_BOUNDARY
-
-        # Mock the two JWTs that will be created: one for the IAM lookup
-        # and one for the final token.
-        iam_jwt_creds_mock = mock.MagicMock(spec=jwt.Credentials, token=b"iam_token")
-        final_jwt_creds_mock = mock.MagicMock(
-            spec=jwt.Credentials,
-            token=b"final_token",
-            expiry=_helpers.utcnow() + datetime.timedelta(hours=1),
-        )
-        from_signing_credentials_mock = mock.patch(
-            "google.auth.jwt.Credentials.from_signing_credentials",
-            side_effect=[iam_jwt_creds_mock, final_jwt_creds_mock],
-        )
-        env_mock = mock.patch.dict(
-            os.environ, {environment_vars.GOOGLE_AUTH_TRUST_BOUNDARY_ENABLED: "true"}
-        )
-
-        # Refresh credential to trigger creating the self-signed jwt token and
-        # fetching the trust boundary data.
-        with from_signing_credentials_mock as mock_from_signing, env_mock:
-            credentials.refresh(request)
-
-        # --- Assert ---
-        # 1. Verify the temporary IAM JWT was created and used for the lookup.
-        iam_call = mock_from_signing.call_args_list[0]
-        assert iam_call.args[0] is credentials
-        assert iam_call.args[1] == "https://iamcredentials.googleapis.com/"
-        iam_jwt_creds_mock.refresh.assert_called_once_with(request)
-
-        mock_lookup_trust_boundary.assert_called_once()
-        _, lookup_kwargs = mock_lookup_trust_boundary.call_args
-        assert lookup_kwargs["headers"]["authorization"] == "Bearer iam_token"
-
-        # 2. Verify the final, audience-specific JWT was created and refreshed.
-        final_token_call = mock_from_signing.call_args_list[1]
-        assert final_token_call.args[0] is credentials
-        assert final_token_call.args[1] is None  # Audience is derived from scopes
-        assert final_token_call.kwargs["additional_claims"] == {
-            "scope": " ".join(credentials._scopes)
-        }
-        final_jwt_creds_mock.refresh.assert_called_once_with(request)
-
-        # 3. Verify the final state of the credentials object.
-        assert credentials.token == "final_token"
-        assert credentials._trust_boundary == self.VALID_TRUST_BOUNDARY
-
     def test_build_trust_boundary_lookup_url_no_email(self):
         credentials = self.make_credentials()
         credentials._service_account_email = None
@@ -1061,19 +1002,6 @@ class TestIDTokenCredentials(object):
         creds_with_new_token_uri = credentials.with_token_uri(new_token_uri)
         assert creds_with_new_token_uri._token_uri == new_token_uri
 
-    def test_with_trust_boundary(self):
-        credentials = self.make_credentials()
-        new_boundary = {"encodedLocations": "new_boundary"}
-        new_credentials = credentials.with_trust_boundary(new_boundary)
-
-        assert new_credentials is not credentials
-        assert new_credentials._trust_boundary == new_boundary
-        assert new_credentials._signer == credentials._signer
-        assert (
-            new_credentials.service_account_email == credentials.service_account_email
-        )
-        assert new_credentials._target_audience == credentials._target_audience
-
     def test__make_authorization_grant_assertion(self):
         credentials = self.make_credentials()
         token = credentials._make_authorization_grant_assertion()
@@ -1126,16 +1054,15 @@ class TestIDTokenCredentials(object):
         )
         request = mock.Mock()
         credentials.refresh(request)
-        call_args, call_kwargs = call_iam_generate_id_token_endpoint.call_args
-        req, iam_endpoint, signer_email, target_audience, access_token = call_args
+        req, iam_endpoint, signer_email, target_audience, access_token, universe_domain = call_iam_generate_id_token_endpoint.call_args[
+            0
+        ]
         assert req == request
         assert iam_endpoint == iam._IAM_IDTOKEN_ENDPOINT
         assert signer_email == "service-account@example.com"
         assert target_audience == "https://example.com"
         decoded_access_token = jwt.decode(access_token, verify=False)
         assert decoded_access_token["scope"] == "https://www.googleapis.com/auth/iam"
-        assert call_kwargs["headers"] == {}
-        assert call_kwargs["universe_domain"] == DEFAULT_UNIVERSE_DOMAIN
 
     @mock.patch(
         "google.oauth2._client.call_iam_generate_id_token_endpoint", autospec=True
@@ -1149,8 +1076,9 @@ class TestIDTokenCredentials(object):
         )
         request = mock.Mock()
         credentials.refresh(request)
-        call_args, call_kwargs = call_iam_generate_id_token_endpoint.call_args
-        req, iam_endpoint, signer_email, target_audience, access_token = call_args
+        req, iam_endpoint, signer_email, target_audience, access_token, universe_domain = call_iam_generate_id_token_endpoint.call_args[
+            0
+        ]
         assert req == request
         assert (
             iam_endpoint
@@ -1160,40 +1088,6 @@ class TestIDTokenCredentials(object):
         assert target_audience == "https://example.com"
         decoded_access_token = jwt.decode(access_token, verify=False)
         assert decoded_access_token["scope"] == "https://www.googleapis.com/auth/iam"
-        assert call_kwargs["headers"] == {}
-        assert call_kwargs["universe_domain"] == "fake-universe"
-
-    @pytest.mark.parametrize(
-        "trust_boundary, expected_header",
-        [
-            (
-                {"encodedLocations": "0xVALIDHEXSA"},
-                {"x-allowed-locations": "0xVALIDHEXSA"},
-            ),
-            ({"encodedLocations": "0x0"}, {"x-allowed-locations": ""}),
-        ],
-    )
-    @mock.patch(
-        "google.oauth2._client.call_iam_generate_id_token_endpoint", autospec=True
-    )
-    def test_refresh_iam_flow_with_trust_boundary(
-        self, call_iam_generate_id_token_endpoint, trust_boundary, expected_header
-    ):
-        credentials = self.make_credentials()
-        credentials._use_iam_endpoint = True
-        credentials._trust_boundary = trust_boundary
-        token = "id_token"
-        call_iam_generate_id_token_endpoint.return_value = (
-            token,
-            _helpers.utcnow() + datetime.timedelta(seconds=500),
-        )
-        request = mock.Mock()
-        credentials.refresh(request)
-
-        assert (
-            call_iam_generate_id_token_endpoint.call_args.kwargs["headers"]
-            == expected_header
-        )
 
     @mock.patch("google.oauth2._client.id_token_jwt_grant", autospec=True)
     def test_before_request_refreshes(self, id_token_jwt_grant):
