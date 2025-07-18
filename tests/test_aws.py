@@ -42,8 +42,10 @@ SERVICE_ACCOUNT_EMAIL = "service-1234@service-name.iam.gserviceaccount.com"
 SERVICE_ACCOUNT_IMPERSONATION_URL_BASE = (
     "https://us-east1-iamcredentials.googleapis.com"
 )
-SERVICE_ACCOUNT_IMPERSONATION_URL_ROUTE = "/v1/projects/-/serviceAccounts/{}:generateAccessToken".format(
-    SERVICE_ACCOUNT_EMAIL
+SERVICE_ACCOUNT_IMPERSONATION_URL_ROUTE = (
+    "/v1/projects/-/serviceAccounts/{}:generateAccessToken".format(
+        SERVICE_ACCOUNT_EMAIL
+    )
 )
 SERVICE_ACCOUNT_IMPERSONATION_URL = (
     SERVICE_ACCOUNT_IMPERSONATION_URL_BASE + SERVICE_ACCOUNT_IMPERSONATION_URL_ROUTE
@@ -920,7 +922,7 @@ class TestCredentials(object):
         assert request_kwargs["body"] is not None
         body_tuples = urllib.parse.parse_qsl(request_kwargs["body"])
         assert len(body_tuples) == len(request_data.keys())
-        for (k, v) in body_tuples:
+        for k, v in body_tuples:
             assert v.decode("utf-8") == request_data[k.decode("utf-8")]
 
     @classmethod
@@ -1344,9 +1346,9 @@ class TestCredentials(object):
             imdsv2_session_token_data=self.AWS_IMDSV2_SESSION_TOKEN,
         )
         credential_source_token_url = self.CREDENTIAL_SOURCE.copy()
-        credential_source_token_url[
-            "imdsv2_session_token_url"
-        ] = IMDSV2_SESSION_TOKEN_URL
+        credential_source_token_url["imdsv2_session_token_url"] = (
+            IMDSV2_SESSION_TOKEN_URL
+        )
         credentials = self.make_credentials(
             credential_source=credential_source_token_url
         )
@@ -1452,9 +1454,9 @@ class TestCredentials(object):
             imdsv2_session_token_data=self.AWS_IMDSV2_SESSION_TOKEN,
         )
         credential_source_token_url = self.CREDENTIAL_SOURCE.copy()
-        credential_source_token_url[
-            "imdsv2_session_token_url"
-        ] = IMDSV2_SESSION_TOKEN_URL
+        credential_source_token_url["imdsv2_session_token_url"] = (
+            IMDSV2_SESSION_TOKEN_URL
+        )
         credentials = self.make_credentials(
             credential_source=credential_source_token_url
         )
@@ -1509,9 +1511,9 @@ class TestCredentials(object):
             imdsv2_session_token_data=self.AWS_IMDSV2_SESSION_TOKEN,
         )
         credential_source_token_url = self.CREDENTIAL_SOURCE.copy()
-        credential_source_token_url[
-            "imdsv2_session_token_url"
-        ] = IMDSV2_SESSION_TOKEN_URL
+        credential_source_token_url["imdsv2_session_token_url"] = (
+            IMDSV2_SESSION_TOKEN_URL
+        )
         credentials = self.make_credentials(
             credential_source=credential_source_token_url
         )
@@ -1560,9 +1562,9 @@ class TestCredentials(object):
             imdsv2_session_token_data=self.AWS_IMDSV2_SESSION_TOKEN,
         )
         credential_source_token_url = self.CREDENTIAL_SOURCE.copy()
-        credential_source_token_url[
-            "imdsv2_session_token_url"
-        ] = IMDSV2_SESSION_TOKEN_URL
+        credential_source_token_url["imdsv2_session_token_url"] = (
+            IMDSV2_SESSION_TOKEN_URL
+        )
         credentials = self.make_credentials(
             credential_source=credential_source_token_url
         )
@@ -1611,9 +1613,9 @@ class TestCredentials(object):
             role_status=http_client.OK, role_name=self.AWS_ROLE
         )
         credential_source_token_url = self.CREDENTIAL_SOURCE.copy()
-        credential_source_token_url[
-            "imdsv2_session_token_url"
-        ] = IMDSV2_SESSION_TOKEN_URL
+        credential_source_token_url["imdsv2_session_token_url"] = (
+            IMDSV2_SESSION_TOKEN_URL
+        )
         credentials = self.make_credentials(
             credential_source=credential_source_token_url
         )
@@ -1692,9 +1694,9 @@ class TestCredentials(object):
             imdsv2_session_token_data="unauthorized",
         )
         credential_source_token_url = self.CREDENTIAL_SOURCE.copy()
-        credential_source_token_url[
-            "imdsv2_session_token_url"
-        ] = IMDSV2_SESSION_TOKEN_URL
+        credential_source_token_url["imdsv2_session_token_url"] = (
+            IMDSV2_SESSION_TOKEN_URL
+        )
         credentials = self.make_credentials(
             credential_source=credential_source_token_url
         )
@@ -2057,7 +2059,9 @@ class TestCredentials(object):
             "authorization": "Bearer {}".format(self.SUCCESS_RESPONSE["access_token"]),
             "x-goog-user-project": QUOTA_PROJECT_ID,
             "x-goog-api-client": IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
-            "x-allowed-locations": "0x0",
+            # TODO(negarb): Uncomment and update when trust boundary is supported
+            # for external account credentials.
+            # "x-allowed-locations": "0x0",
         }
         impersonation_request_data = {
             "delegates": None,
@@ -2150,7 +2154,7 @@ class TestCredentials(object):
             "authorization": "Bearer {}".format(self.SUCCESS_RESPONSE["access_token"]),
             "x-goog-user-project": QUOTA_PROJECT_ID,
             "x-goog-api-client": IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
-            "x-allowed-locations": "0x0",
+            # "x-allowed-locations": "0x0",
         }
         impersonation_request_data = {
             "delegates": None,
@@ -2345,7 +2349,7 @@ class TestCredentials(object):
             "authorization": "Bearer {}".format(self.SUCCESS_RESPONSE["access_token"]),
             "x-goog-user-project": QUOTA_PROJECT_ID,
             "x-goog-api-client": IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
-            "x-allowed-locations": "0x0",
+            # "x-allowed-locations": "0x0",
         }
         impersonation_request_data = {
             "delegates": None,
