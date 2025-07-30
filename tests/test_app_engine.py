@@ -159,7 +159,7 @@ class TestCredentials(object):
         assert credentials.service_account_email == mock.sentinel.service_account_email
         assert not app_identity.get_service_account_name.called
 
-    @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+    @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min.replace(tzinfo=datetime.timezone.utc))
     def test_refresh(self, utcnow, app_identity):
         token = "token"
         ttl = 643942923
@@ -174,11 +174,11 @@ class TestCredentials(object):
             credentials.scopes, credentials._service_account_id
         )
         assert credentials.token == token
-        assert credentials.expiry == datetime.datetime(1990, 5, 29, 1, 2, 3)
+        assert credentials.expiry == datetime.datetime(1990, 5, 29, 1, 2, 3, tzinfo=datetime.timezone.utc)
         assert credentials.valid
         assert not credentials.expired
 
-    @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+    @mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min.replace(tzinfo=datetime.timezone.utc))
     def test_refresh_with_default_scopes(self, utcnow, app_identity):
         token = "token"
         ttl = 643942923
@@ -191,7 +191,7 @@ class TestCredentials(object):
             credentials.default_scopes, credentials._service_account_id
         )
         assert credentials.token == token
-        assert credentials.expiry == datetime.datetime(1990, 5, 29, 1, 2, 3)
+        assert credentials.expiry == datetime.datetime(1990, 5, 29, 1, 2, 3, tzinfo=datetime.timezone.utc)
         assert credentials.valid
         assert not credentials.expired
 
