@@ -95,6 +95,25 @@ class Credentials(
             self._universe_domain_cached = True
         self._trust_boundary = trust_boundary
 
+    def _retrieve_info(self, request):
+        """Retrieve information about the service account.
+
+        Updates the scopes and retrieves the full service account email.
+
+        Args:
+            request (google.auth.transport.Request): The object used to make
+                HTTP requests.
+        """
+        info = _metadata.get_service_account_info(
+            request, service_account=self._service_account_email
+        )
+
+        self._service_account_email = info["email"]
+
+        # Don't override scopes requested by the user.
+        if self._scopes is None:
+            self._scopes = info["scopes"]
+
     def _metric_header_for_usage(self):
         return metrics.CRED_TYPE_SA_MDS
 
@@ -112,8 +131,10 @@ class Credentials(
         """
         scopes = self._scopes if self._scopes is not None else self._default_scopes
         try:
+            self._retrieve_info(request)
+            # Always fetch token with default service account email.
             self.token, self.expiry = _metadata.get_service_account_token(
-                request, service_account=self._service_account_email, scopes=scopes
+                request, service_account="default", scopes=scopes
             )
         except exceptions.TransportError as caught_exc:
             new_exc = exceptions.RefreshError(caught_exc)
