@@ -129,7 +129,11 @@ class Credentials(
             request = google_auth_requests.Request()
             try:
                 info = _metadata.get_service_account_info(request, "default")
-                # Cache the fetched email so we don't have to do this again.
+                if not info or "email" not in info:
+                    raise exceptions.RefreshError(
+                        "Unexpected response from metadata server: "
+                        "service account info is missing 'email' field."
+                    )
                 self._service_account_email = info["email"]
 
             except exceptions.TransportError as e:
@@ -137,7 +141,9 @@ class Credentials(
                 # it means we cannot build the trust boundary lookup URL.
                 # Wrap this in a RefreshError so it's caught by _refresh_trust_boundary.
                 raise exceptions.RefreshError(
-                    f"Failed to get service account email for trust boundary lookup: {e}"
+                    "Failed to get service account email for trust boundary lookup: {}".format(
+                        e
+                    )
                 ) from e
 
         return _TRUST_BOUNDARY_LOOKUP_ENDPOINT.format(
@@ -303,7 +309,7 @@ class IDTokenCredentials(
 
         if use_metadata_identity_endpoint:
             if token_uri or additional_claims or service_account_email or signer:
-                raise exceptions.MalformedError(
+                raise ValueError(
                     "If use_metadata_identity_endpoint is set, token_uri, "
                     "additional_claims, service_account_email, signer arguments"
                     " must not be set"
@@ -394,7 +400,7 @@ class IDTokenCredentials(
         # since the signer is already instantiated,
         # the request is not needed
         if self._use_metadata_identity_endpoint:
-            raise exceptions.MalformedError(
+            raise ValueError(
                 "If use_metadata_identity_endpoint is set, token_uri" " must not be set"
             )
         else:

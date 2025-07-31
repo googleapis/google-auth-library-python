@@ -413,7 +413,8 @@ class CredentialsWithTrustBoundary(Credentials):
             raise exceptions.InvalidValue("Failed to build trust boundary lookup URL.")
 
         headers = {}
-        self.apply(headers)
+        self._apply(headers)
+        headers.update(self._get_trust_boundary_header())
         return _client._lookup_trust_boundary(request, url, headers=headers)
 
     @abc.abstractmethod

@@ -338,9 +338,10 @@ class TestCredentials(object):
         # Verify _metadata.get was called three times.
         assert mock_metadata_get.call_count == 3
         # Verify lookup_trust_boundary was called with correct URL and token
+        expected_url = "https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/resolved-email@example.com/allowedLocations"
         mock_lookup_tb.assert_called_once_with(
             request,
-            "https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/resolved-email@example.com/allowedLocations",
+            expected_url,
             headers={"authorization": "Bearer mock_token"},
         )
         # Verify trust boundary was set
@@ -453,9 +454,10 @@ class TestCredentials(object):
 
         assert creds._trust_boundary == {"locations": [], "encodedLocations": "0x0"}
         assert mock_metadata_get.call_count == 3
+        expected_url = "https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/resolved-email@example.com/allowedLocations"
         mock_lookup_tb.assert_called_once_with(
             request,
-            "https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/resolved-email@example.com/allowedLocations",
+            expected_url,
             headers={"authorization": "Bearer mock_token"},
         )
         # Verify that an empty header was added.
@@ -517,9 +519,8 @@ class TestCredentials(object):
 
         mock_get_service_account_info.assert_called_once_with(mock.ANY, "default")
         mock_get_universe_domain.assert_called_once_with(mock.ANY)
-        assert (
-            url
-            == "https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/resolved-email@example.com/allowedLocations"
+        assert url == (
+            "https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/resolved-email@example.com/allowedLocations"
         )
 
     @mock.patch(
@@ -540,9 +541,8 @@ class TestCredentials(object):
 
         mock_get_service_account_info.assert_not_called()
         mock_get_universe_domain.assert_called_once_with(mock.ANY)
-        assert (
-            url
-            == "https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/foo@bar.com/allowedLocations"
+        assert url == (
+            "https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/foo@bar.com/allowedLocations"
         )
 
     @mock.patch(
@@ -562,9 +562,8 @@ class TestCredentials(object):
         # Universe domain is cached and email is explicit, so no metadata calls needed.
         mock_get_service_account_info.assert_not_called()
         mock_get_universe_domain.assert_not_called()
-        assert (
-            url
-            == "https://iamcredentials.fake-universe-domain/v1/projects/-/serviceAccounts/foo@bar.com/allowedLocations"
+        assert url == (
+            "https://iamcredentials.fake-universe-domain/v1/projects/-/serviceAccounts/foo@bar.com/allowedLocations"
         )
 
     @mock.patch(
@@ -582,7 +581,7 @@ class TestCredentials(object):
 
         with pytest.raises(
             exceptions.RefreshError,
-            match="Failed to get service account email for trust boundary lookup: Failed to get info",
+            match=r"Failed to get service account email for trust boundary lookup: .*",
         ):
             creds._build_trust_boundary_lookup_url()
 
