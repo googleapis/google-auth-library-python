@@ -20,12 +20,14 @@ import os
 
 import mock
 import pytest  # type: ignore
+import requests
 
 from google.auth import _helpers
 from google.auth import environment_vars
 from google.auth import exceptions
 from google.auth import transport
 from google.auth.compute_engine import _metadata
+from google.auth.transport import requests as google_auth_requests
 
 PATH = "instance/service-accounts/default"
 
@@ -104,7 +106,7 @@ def test_ping_success(mock_metrics_header_value):
 
     request.assert_called_once_with(
         method="GET",
-        url=_metadata._METADATA_IP_ROOT,
+        url="http://169.254.169.254",
         headers=MDS_PING_REQUEST_HEADER,
         timeout=_metadata._METADATA_DEFAULT_TIMEOUT,
     )
@@ -118,7 +120,7 @@ def test_ping_success_retry(mock_metrics_header_value):
 
     request.assert_called_with(
         method="GET",
-        url=_metadata._METADATA_IP_ROOT,
+        url="http://169.254.169.254",
         headers=MDS_PING_REQUEST_HEADER,
         timeout=_metadata._METADATA_DEFAULT_TIMEOUT,
     )
@@ -172,7 +174,7 @@ def test_get_success_json():
 
     request.assert_called_once_with(
         method="GET",
-        url=_metadata._METADATA_ROOT + PATH,
+        url="http://metadata.google.internal/computeMetadata/v1/" + PATH,
         headers=_metadata._METADATA_HEADERS,
         timeout=_metadata._METADATA_DEFAULT_TIMEOUT,
     )
@@ -191,7 +193,7 @@ def test_get_success_json_content_type_charset():
 
     request.assert_called_once_with(
         method="GET",
-        url=_metadata._METADATA_ROOT + PATH,
+        url="http://metadata.google.internal/computeMetadata/v1/" + PATH,
         headers=_metadata._METADATA_HEADERS,
         timeout=_metadata._METADATA_DEFAULT_TIMEOUT,
     )
@@ -211,7 +213,7 @@ def test_get_success_retry(mock_sleep):
 
     request.assert_called_with(
         method="GET",
-        url=_metadata._METADATA_ROOT + PATH,
+        url="http://metadata.google.internal/computeMetadata/v1/" + PATH,
         headers=_metadata._METADATA_HEADERS,
         timeout=_metadata._METADATA_DEFAULT_TIMEOUT,
     )
@@ -227,7 +229,7 @@ def test_get_success_text():
 
     request.assert_called_once_with(
         method="GET",
-        url=_metadata._METADATA_ROOT + PATH,
+        url="http://metadata.google.internal/computeMetadata/v1/" + PATH,
         headers=_metadata._METADATA_HEADERS,
         timeout=_metadata._METADATA_DEFAULT_TIMEOUT,
     )
@@ -243,7 +245,9 @@ def test_get_success_params():
 
     request.assert_called_once_with(
         method="GET",
-        url=_metadata._METADATA_ROOT + PATH + "?recursive=true",
+        url="http://metadata.google.internal/computeMetadata/v1/"
+        + PATH
+        + "?recursive=true",
         headers=_metadata._METADATA_HEADERS,
         timeout=_metadata._METADATA_DEFAULT_TIMEOUT,
     )
@@ -258,7 +262,9 @@ def test_get_success_recursive_and_params():
 
     request.assert_called_once_with(
         method="GET",
-        url=_metadata._METADATA_ROOT + PATH + "?recursive=true",
+        url="http://metadata.google.internal/computeMetadata/v1/"
+        + PATH
+        + "?recursive=true",
         headers=_metadata._METADATA_HEADERS,
         timeout=_metadata._METADATA_DEFAULT_TIMEOUT,
     )
@@ -273,7 +279,9 @@ def test_get_success_recursive():
 
     request.assert_called_once_with(
         method="GET",
-        url=_metadata._METADATA_ROOT + PATH + "?recursive=true",
+        url="http://metadata.google.internal/computeMetadata/v1/"
+        + PATH
+        + "?recursive=true",
         headers=_metadata._METADATA_HEADERS,
         timeout=_metadata._METADATA_DEFAULT_TIMEOUT,
     )
@@ -333,7 +341,7 @@ def test_get_failure(mock_sleep):
 
     request.assert_called_once_with(
         method="GET",
-        url=_metadata._METADATA_ROOT + PATH,
+        url="http://metadata.google.internal/computeMetadata/v1/" + PATH,
         headers=_metadata._METADATA_HEADERS,
         timeout=_metadata._METADATA_DEFAULT_TIMEOUT,
     )
@@ -346,7 +354,7 @@ def test_get_return_none_for_not_found_error():
 
     request.assert_called_once_with(
         method="GET",
-        url=_metadata._METADATA_ROOT + PATH,
+        url="http://metadata.google.internal/computeMetadata/v1/" + PATH,
         headers=_metadata._METADATA_HEADERS,
         timeout=_metadata._METADATA_DEFAULT_TIMEOUT,
     )
@@ -366,7 +374,7 @@ def test_get_failure_connection_failed(mock_sleep):
 
     request.assert_called_with(
         method="GET",
-        url=_metadata._METADATA_ROOT + PATH,
+        url="http://metadata.google.internal/computeMetadata/v1/" + PATH,
         headers=_metadata._METADATA_HEADERS,
         timeout=_metadata._METADATA_DEFAULT_TIMEOUT,
     )
@@ -385,7 +393,7 @@ def test_get_too_many_requests_retryable_error_failure():
 
     request.assert_called_with(
         method="GET",
-        url=_metadata._METADATA_ROOT + PATH,
+        url="http://metadata.google.internal/computeMetadata/v1/" + PATH,
         headers=_metadata._METADATA_HEADERS,
         timeout=_metadata._METADATA_DEFAULT_TIMEOUT,
     )
@@ -402,7 +410,7 @@ def test_get_failure_bad_json():
 
     request.assert_called_once_with(
         method="GET",
-        url=_metadata._METADATA_ROOT + PATH,
+        url="http://metadata.google.internal/computeMetadata/v1/" + PATH,
         headers=_metadata._METADATA_HEADERS,
         timeout=_metadata._METADATA_DEFAULT_TIMEOUT,
     )
@@ -416,7 +424,7 @@ def test_get_project_id():
 
     request.assert_called_once_with(
         method="GET",
-        url=_metadata._METADATA_ROOT + "project/project-id",
+        url="http://metadata.google.internal/computeMetadata/v1/project/project-id",
         headers=_metadata._METADATA_HEADERS,
         timeout=_metadata._METADATA_DEFAULT_TIMEOUT,
     )
@@ -432,7 +440,7 @@ def test_get_universe_domain_success():
 
     request.assert_called_once_with(
         method="GET",
-        url=_metadata._METADATA_ROOT + "universe/universe-domain",
+        url="http://metadata.google.internal/computeMetadata/v1/universe/universe-domain",
         headers=_metadata._METADATA_HEADERS,
         timeout=_metadata._METADATA_DEFAULT_TIMEOUT,
     )
@@ -446,7 +454,7 @@ def test_get_universe_domain_success_empty_response():
 
     request.assert_called_once_with(
         method="GET",
-        url=_metadata._METADATA_ROOT + "universe/universe-domain",
+        url="http://metadata.google.internal/computeMetadata/v1/universe/universe-domain",
         headers=_metadata._METADATA_HEADERS,
         timeout=_metadata._METADATA_DEFAULT_TIMEOUT,
     )
@@ -462,7 +470,7 @@ def test_get_universe_domain_not_found():
 
     request.assert_called_once_with(
         method="GET",
-        url=_metadata._METADATA_ROOT + "universe/universe-domain",
+        url="http://metadata.google.internal/computeMetadata/v1/universe/universe-domain",
         headers=_metadata._METADATA_HEADERS,
         timeout=_metadata._METADATA_DEFAULT_TIMEOUT,
     )
@@ -483,7 +491,7 @@ def test_get_universe_domain_retryable_error_failure():
 
     request.assert_called_with(
         method="GET",
-        url=_metadata._METADATA_ROOT + "universe/universe-domain",
+        url="http://metadata.google.internal/computeMetadata/v1/universe/universe-domain",
         headers=_metadata._METADATA_HEADERS,
         timeout=_metadata._METADATA_DEFAULT_TIMEOUT,
     )
@@ -526,13 +534,13 @@ def test_get_universe_domain_retryable_error_success():
 
     request_error.assert_called_once_with(
         method="GET",
-        url=_metadata._METADATA_ROOT + "universe/universe-domain",
+        url="http://metadata.google.internal/computeMetadata/v1/universe/universe-domain",
         headers=_metadata._METADATA_HEADERS,
         timeout=_metadata._METADATA_DEFAULT_TIMEOUT,
     )
     request_ok.assert_called_once_with(
         method="GET",
-        url=_metadata._METADATA_ROOT + "universe/universe-domain",
+        url="http://metadata.google.internal/computeMetadata/v1/universe/universe-domain",
         headers=_metadata._METADATA_HEADERS,
         timeout=_metadata._METADATA_DEFAULT_TIMEOUT,
     )
@@ -552,7 +560,7 @@ def test_get_universe_domain_other_error():
 
     request.assert_called_once_with(
         method="GET",
-        url=_metadata._METADATA_ROOT + "universe/universe-domain",
+        url="http://metadata.google.internal/computeMetadata/v1/universe/universe-domain",
         headers=_metadata._METADATA_HEADERS,
         timeout=_metadata._METADATA_DEFAULT_TIMEOUT,
     )
@@ -574,7 +582,7 @@ def test_get_service_account_token(utcnow, mock_metrics_header_value):
 
     request.assert_called_once_with(
         method="GET",
-        url=_metadata._METADATA_ROOT + PATH + "/token",
+        url="http://metadata.google.internal/computeMetadata/v1/" + PATH + "/token",
         headers={
             "metadata-flavor": "Google",
             "x-goog-api-client": ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
@@ -601,7 +609,10 @@ def test_get_service_account_token_with_scopes_list(utcnow, mock_metrics_header_
 
     request.assert_called_once_with(
         method="GET",
-        url=_metadata._METADATA_ROOT + PATH + "/token" + "?scopes=foo%2Cbar",
+        url="http://metadata.google.internal/computeMetadata/v1/"
+        + PATH
+        + "/token"
+        + "?scopes=foo%2Cbar",
         headers={
             "metadata-flavor": "Google",
             "x-goog-api-client": ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
@@ -630,7 +641,10 @@ def test_get_service_account_token_with_scopes_string(
 
     request.assert_called_once_with(
         method="GET",
-        url=_metadata._METADATA_ROOT + PATH + "/token" + "?scopes=foo%2Cbar",
+        url="http://metadata.google.internal/computeMetadata/v1/"
+        + PATH
+        + "/token"
+        + "?scopes=foo%2Cbar",
         headers={
             "metadata-flavor": "Google",
             "x-goog-api-client": ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
@@ -651,9 +665,99 @@ def test_get_service_account_info():
 
     request.assert_called_once_with(
         method="GET",
-        url=_metadata._METADATA_ROOT + PATH + "/?recursive=true",
+        url="http://metadata.google.internal/computeMetadata/v1/"
+        + PATH
+        + "/?recursive=true",
         headers=_metadata._METADATA_HEADERS,
         timeout=_metadata._METADATA_DEFAULT_TIMEOUT,
     )
 
     assert info[key] == value
+
+
+def test__get_metadata_root_mtls():
+    assert (
+        _metadata._get_metadata_root(use_mtls=True)
+        == "https://metadata.google.internal/computeMetadata/v1/"
+    )
+
+
+def test__get_metadata_root_no_mtls():
+    assert (
+        _metadata._get_metadata_root(use_mtls=False)
+        == "http://metadata.google.internal/computeMetadata/v1/"
+    )
+
+
+def test__get_metadata_ip_root_mtls():
+    assert _metadata._get_metadata_ip_root(use_mtls=True) == "https://169.254.169.254"
+
+
+def test__get_metadata_ip_root_no_mtls():
+    assert _metadata._get_metadata_ip_root(use_mtls=False) == "http://169.254.169.254"
+
+
+@mock.patch("google.auth.compute_engine._mtls.create_session")
+def test__prepare_request_for_mds_mtls(mock_create_session):
+    request = mock.Mock()
+    new_request = _metadata._prepare_request_for_mds(request, use_mtls=True)
+    mock_create_session.assert_called_once()
+    assert isinstance(new_request, google_auth_requests.Request)
+
+
+def test__prepare_request_for_mds_no_mtls():
+    request = mock.Mock()
+    new_request = _metadata._prepare_request_for_mds(request, use_mtls=False)
+    assert new_request is request
+
+
+@mock.patch("google.auth.compute_engine._mtls.should_use_mds_mtls", return_value=True)
+@mock.patch("google.auth.compute_engine._mtls.create_session")
+@mock.patch("google.auth.metrics.mds_ping", return_value=MDS_PING_METRICS_HEADER_VALUE)
+def test_ping_mtls(
+    mock_metrics_header_value, mock_create_session, mock_should_use_mtls
+):
+    response = mock.create_autospec(requests.Response, instance=True)
+    response.status_code = http_client.OK
+    response.headers = _metadata._METADATA_HEADERS
+    mock_session = mock.Mock()
+    mock_session.request.return_value = response
+    mock_create_session.return_value = mock_session
+
+    initial_request = mock.Mock()
+    assert _metadata.ping(initial_request)
+
+    mock_should_use_mtls.assert_called_once()
+    mock_create_session.assert_called_once()
+    mock_session.request.assert_called_once_with(
+        "GET",
+        "https://169.254.169.254",
+        headers=MDS_PING_REQUEST_HEADER,
+        timeout=_metadata._METADATA_DEFAULT_TIMEOUT,
+        data=None,
+    )
+
+
+@mock.patch("google.auth.compute_engine._mtls.should_use_mds_mtls", return_value=True)
+@mock.patch("google.auth.compute_engine._mtls.create_session")
+def test_get_mtls(mock_create_session, mock_should_use_mtls):
+    response = mock.create_autospec(requests.Response, instance=True)
+    response.status_code = http_client.OK
+    response.content = _helpers.to_bytes("{}")
+    response.headers = {"content-type": "application/json"}
+    mock_session = mock.Mock()
+    mock_session.request.return_value = response
+    mock_create_session.return_value = mock_session
+
+    initial_request = mock.Mock()
+    _metadata.get(initial_request, "some/path")
+
+    mock_should_use_mtls.assert_called_once()
+    mock_create_session.assert_called_once()
+    mock_session.request.assert_called_once_with(
+        "GET",
+        "https://metadata.google.internal/computeMetadata/v1/some/path",
+        data=None,
+        headers=_metadata._METADATA_HEADERS,
+        timeout=_metadata._METADATA_DEFAULT_TIMEOUT,
+    )
