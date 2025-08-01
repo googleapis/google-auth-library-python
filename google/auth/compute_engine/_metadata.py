@@ -30,6 +30,8 @@ from google.auth import exceptions
 from google.auth import metrics
 from google.auth import transport
 from google.auth._exponential_backoff import ExponentialBackoff
+from google.auth.compute_engine import _mtls
+from google.auth.transport import requests
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -42,13 +44,24 @@ if not _GCE_METADATA_HOST:
     _GCE_METADATA_HOST = os.getenv(
         environment_vars.GCE_METADATA_ROOT, "metadata.google.internal"
     )
-_METADATA_ROOT = "http://{}/computeMetadata/v1/".format(_GCE_METADATA_HOST)
 
-# This is used to ping the metadata server, it avoids the cost of a DNS
-# lookup.
-_METADATA_IP_ROOT = "http://{}".format(
-    os.getenv(environment_vars.GCE_METADATA_IP, "169.254.169.254")
-)
+GCE_MDS_HOSTS = ["metadata.google.internal", "169.254.169.254"]
+
+
+def _get_metadata_root(use_mtls):
+    """Returns the metadata server root URL."""
+    scheme = "https" if use_mtls else "http"
+    return "{}://{}/computeMetadata/v1/".format(scheme, _GCE_METADATA_HOST)
+
+
+def _get_metadata_ip_root(use_mtls):
+    """Returns the metadata server IP root URL."""
+    scheme = "https" if use_mtls else "http"
+    return "{}://{}".format(
+        scheme, os.getenv(environment_vars.GCE_METADATA_IP, "169.254.169.254")
+    )
+
+
 _METADATA_FLAVOR_HEADER = "metadata-flavor"
 _METADATA_FLAVOR_VALUE = "Google"
 _METADATA_HEADERS = {_METADATA_FLAVOR_HEADER: _METADATA_FLAVOR_VALUE}
@@ -102,6 +115,24 @@ def detect_gce_residency_linux():
     return content.startswith(_GOOGLE)
 
 
+def _prepare_request_for_mds(request, use_mtls=False):
+    """Prepares a request for the metadata server.
+
+    This will check if mTLS should be used and return a new request object if so.
+
+    Args:
+        request (google.auth.transport.Request): A callable used to make
+            HTTP requests.
+
+    Returns:
+        google.auth.transport.Request: Request
+            object to use.
+    """
+    if use_mtls:
+        request = requests.Request(_mtls.create_session())
+    return request
+
+
 def ping(request, timeout=_METADATA_DEFAULT_TIMEOUT, retry_count=3):
     """Checks to see if the metadata server is available.
 
@@ -115,6 +146,8 @@ def ping(request, timeout=_METADATA_DEFAULT_TIMEOUT, retry_count=3):
     Returns:
         bool: True if the metadata server is reachable, False otherwise.
     """
+    use_mtls = _mtls.should_use_mds_mtls()
+    request = _prepare_request_for_mds(request, use_mtls=use_mtls)
     # NOTE: The explicit ``timeout`` is a workaround. The underlying
     #       issue is that resolving an unknown host on some networks will take
     #       20-30 seconds; making this timeout short fixes the issue, but
@@ -129,7 +162,10 @@ def ping(request, timeout=_METADATA_DEFAULT_TIMEOUT, retry_count=3):
     for attempt in backoff:
         try:
             response = request(
-                url=_METADATA_IP_ROOT, method="GET", headers=headers, timeout=timeout
+                url=_get_metadata_ip_root(use_mtls),
+                method="GET",
+                headers=headers,
+                timeout=timeout,
             )
 
             metadata_flavor = response.headers.get(_METADATA_FLAVOR_HEADER)
@@ -153,7 +189,7 @@ def ping(request, timeout=_METADATA_DEFAULT_TIMEOUT, retry_count=3):
 def get(
     request,
     path,
-    root=_METADATA_ROOT,
+    root=None,
     params=None,
     recursive=False,
     retry_count=5,
@@ -190,6 +226,14 @@ def get(
         google.auth.exceptions.TransportError: if an error occurred while
             retrieving metadata.
     """
+    use_mtls = _mtls.should_use_mds_mtls()
+    # Prepare the request object for mTLS if needed.
+    # This will create a new request object with the mTLS session.
+    request = _prepare_request_for_mds(request, use_mtls=use_mtls)
+
+    if root is None:
+        root = _get_metadata_root(use_mtls)
+
     base_url = urljoin(root, path)
     query_params = {} if params is None else params
 
