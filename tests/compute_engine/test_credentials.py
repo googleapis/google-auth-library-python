@@ -310,10 +310,15 @@ class TestCredentials(object):
         creds = self.credentials
         request = mock.Mock()
 
-        mock_metadata_get.return_value = {
-            "access_token": "mock_token",
-            "expires_in": 3600,
-        }
+        mock_metadata_get.side_effect = [
+            # from _retrieve_info
+            {"email": "default", "scopes": ["scope1"]},
+            # from get_service_account_token
+            {
+                "access_token": "mock_token",
+                "expires_in": 3600,
+            },
+        ]
 
         with mock.patch.dict(
             os.environ, {environment_vars.GOOGLE_AUTH_TRUST_BOUNDARY_ENABLED: "false"}
@@ -331,10 +336,15 @@ class TestCredentials(object):
         creds = self.credentials
         request = mock.Mock()
 
-        mock_metadata_get.return_value = {
-            "access_token": "mock_token",
-            "expires_in": 3600,
-        }
+        mock_metadata_get.side_effect = [
+            # from _retrieve_info
+            {"email": "default", "scopes": ["scope1"]},
+            # from get_service_account_token
+            {
+                "access_token": "mock_token",
+                "expires_in": 3600,
+            },
+        ]
 
         with mock.patch.dict(os.environ, clear=True):
             creds.refresh(request)
@@ -354,13 +364,15 @@ class TestCredentials(object):
         creds = self.credentials
         request = mock.Mock()
 
-        # The first call to _metadata.get is for the token, the second for the
-        # universe domain, and the third is to get service account info to
-        # build the trust boundary URL.
+        # The first call to _metadata.get is for service account info, the second
+        # for the access token, and the third for the universe domain.
         mock_metadata_get.side_effect = [
-            {"access_token": "mock_token", "expires_in": 3600},
-            "",  # for universe_domain
+            # from _retrieve_info
             {"email": "resolved-email@example.com", "scopes": ["scope1"]},
+            # from get_service_account_token
+            {"access_token": "mock_token", "expires_in": 3600},
+            # from get_universe_domain
+            "",
         ]
 
         with mock.patch.dict(
@@ -399,9 +411,12 @@ class TestCredentials(object):
 
         # Mock metadata calls for token, universe domain, and service account info
         mock_metadata_get.side_effect = [
-            {"access_token": "mock_token", "expires_in": 3600},
-            "",  # for universe_domain
+            # from _retrieve_info
             {"email": "resolved-email@example.com", "scopes": ["scope1"]},
+            # from get_service_account_token
+            {"access_token": "mock_token", "expires_in": 3600},
+            # from get_universe_domain
+            "",
         ]
 
         with mock.patch.dict(
@@ -425,9 +440,12 @@ class TestCredentials(object):
             "encodedLocations": "0xABC",
         }
         mock_metadata_get.side_effect = [
-            {"access_token": "mock_token_1", "expires_in": 3600},
-            "",  # for universe_domain
+            # from _retrieve_info
             {"email": "resolved-email@example.com", "scopes": ["scope1"]},
+            # from get_service_account_token
+            {"access_token": "mock_token_1", "expires_in": 3600},
+            # from get_universe_domain
+            "",
         ]
         creds = self.credentials
         request = mock.Mock()
@@ -453,9 +471,12 @@ class TestCredentials(object):
             # This refresh should not raise an error because a cached value exists.
             mock_metadata_get.reset_mock()
             mock_metadata_get.side_effect = [
-                {"access_token": "mock_token_2", "expires_in": 3600},
-                "",  # for universe_domain
+                # from _retrieve_info
                 {"email": "resolved-email@example.com", "scopes": ["scope1"]},
+                # from get_service_account_token
+                {"access_token": "mock_token_2", "expires_in": 3600},
+                # from get_universe_domain
+                "",
             ]
             creds.refresh(request)
 
@@ -475,9 +496,12 @@ class TestCredentials(object):
         request = mock.Mock()
 
         mock_metadata_get.side_effect = [
-            {"access_token": "mock_token", "expires_in": 3600},
-            "",  # for universe_domain
+            # from _retrieve_info
             {"email": "resolved-email@example.com", "scopes": ["scope1"]},
+            # from get_service_account_token
+            {"access_token": "mock_token", "expires_in": 3600},
+            # from get_universe_domain
+            "",
         ]
 
         with mock.patch.dict(
@@ -509,10 +533,12 @@ class TestCredentials(object):
         creds._trust_boundary = {"locations": [], "encodedLocations": "0x0"}
         request = mock.Mock()
 
-        mock_metadata_get.return_value = {
-            "access_token": "mock_token",
-            "expires_in": 3600,
-        }
+        mock_metadata_get.side_effect = [
+            # from _retrieve_info
+            {"email": "resolved-email@example.com", "scopes": ["scope1"]},
+            # from get_service_account_token
+            {"access_token": "mock_token", "expires_in": 3600},
+        ]
 
         with mock.patch.dict(
             os.environ, {environment_vars.GOOGLE_AUTH_TRUST_BOUNDARY_ENABLED: "true"}
@@ -523,8 +549,8 @@ class TestCredentials(object):
         assert creds._trust_boundary == {"locations": [], "encodedLocations": "0x0"}
         # Lookup should be skipped
         mock_lookup_tb.assert_not_called()
-        # Only the token refresh metadata call should have happened.
-        mock_metadata_get.assert_called_once()
+        # Two metadata calls for token refresh should have happened.
+        assert mock_metadata_get.call_count == 2
 
         # Verify that an empty header was added.
         headers_applied = {}

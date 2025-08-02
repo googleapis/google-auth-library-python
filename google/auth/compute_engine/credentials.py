@@ -108,11 +108,17 @@ class Credentials(
             request, service_account=self._service_account_email
         )
 
+        if not info or "email" not in info:
+            raise exceptions.RefreshError(
+                "Unexpected response from metadata server: "
+                "service account info is missing 'email' field."
+            )
+
         self._service_account_email = info["email"]
 
         # Don't override scopes requested by the user.
         if self._scopes is None:
-            self._scopes = info["scopes"]
+            self._scopes = info.get("scopes")
 
     def _metric_header_for_usage(self):
         return metrics.CRED_TYPE_SA_MDS
