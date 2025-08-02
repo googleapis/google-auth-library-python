@@ -173,10 +173,8 @@ class TestImpersonatedCredentials(object):
         )
 
     def test_from_impersonated_service_account_info(self):
-        credentials = (
-            impersonated_credentials.Credentials.from_impersonated_service_account_info(
-                IMPERSONATED_SERVICE_ACCOUNT_AUTHORIZED_USER_SOURCE_INFO
-            )
+        credentials = impersonated_credentials.Credentials.from_impersonated_service_account_info(
+            IMPERSONATED_SERVICE_ACCOUNT_AUTHORIZED_USER_SOURCE_INFO
         )
         assert isinstance(credentials, impersonated_credentials.Credentials)
 
@@ -356,8 +354,7 @@ class TestImpersonatedCredentials(object):
         response_body = {"accessToken": token, "expireTime": expire_time}
 
         request = self.make_request(
-            data=json.dumps(response_body),
-            status=http_client.OK,
+            data=json.dumps(response_body), status=http_client.OK
         )
 
         creds.refresh(request)
@@ -381,8 +378,7 @@ class TestImpersonatedCredentials(object):
         response_body = {"accessToken": token, "expireTime": expire_time}
 
         request = self.make_request(
-            data=json.dumps(response_body),
-            status=http_client.OK,
+            data=json.dumps(response_body), status=http_client.OK
         )
 
         # Mock the trust boundary lookup to raise an error
@@ -411,8 +407,7 @@ class TestImpersonatedCredentials(object):
         ).isoformat("T") + "Z"
         response_body = {"accessToken": token, "expireTime": expire_time}
         request = self.make_request(
-            data=json.dumps(response_body),
-            status=http_client.OK,
+            data=json.dumps(response_body), status=http_client.OK
         )
 
         mock_lookup_trust_boundary.return_value = (
@@ -486,8 +481,7 @@ class TestImpersonatedCredentials(object):
         ).isoformat("T") + "Z"
         response_body = {"accessToken": token, "expireTime": expire_time}
         request = self.make_request(
-            data=json.dumps(response_body),
-            status=http_client.OK,
+            data=json.dumps(response_body), status=http_client.OK
         )
         with mock.patch.dict(
             os.environ, {environment_vars.GOOGLE_AUTH_TRUST_BOUNDARY_ENABLED: "true"}
@@ -522,8 +516,7 @@ class TestImpersonatedCredentials(object):
         response_body = {"accessToken": token, "expireTime": expire_time}
 
         request = self.make_request(
-            data=json.dumps(response_body),
-            status=http_client.OK,
+            data=json.dumps(response_body), status=http_client.OK
         )
 
         # First refresh: Successfully fetch a valid trust boundary.
@@ -960,6 +953,14 @@ class TestImpersonatedCredentials(object):
             == credentials._source_credentials._signer
         )
         assert new_credentials._target_principal == credentials._target_principal
+
+    def test_build_trust_boundary_lookup_url_no_email(self):
+        credentials = self.make_credentials(target_principal=None)
+
+        with pytest.raises(ValueError) as excinfo:
+            credentials._build_trust_boundary_lookup_url()
+
+        assert "Service account email is required" in str(excinfo.value)
 
     def test_with_scopes_provide_default_scopes(self):
         credentials = self.make_credentials()

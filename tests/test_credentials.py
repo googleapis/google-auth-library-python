@@ -27,7 +27,7 @@ import os
 
 class CredentialsImpl(credentials.CredentialsWithTrustBoundary):
     def _refresh_token(self, request):
-        self.token = request
+        self.token = "refreshed-token"
         self.expiry = (
             datetime.datetime.utcnow()
             + _helpers.REFRESH_THRESHOLD
@@ -97,24 +97,24 @@ def test_expired_and_valid():
 
 def test_before_request():
     credentials = CredentialsImpl()
-    request = "token"
+    request = mock.Mock()
     headers = {}
 
     # First call should call refresh, setting the token.
     credentials.before_request(request, "http://example.com", "GET", headers)
     assert credentials.valid
-    assert credentials.token == "token"
-    assert headers["authorization"] == "Bearer token"
+    assert credentials.token == "refreshed-token"
+    assert headers["authorization"] == "Bearer refreshed-token"
     assert "x-allowed-locations" not in headers
 
-    request = "token2"
+    request = mock.Mock()
     headers = {}
 
     # Second call shouldn't call refresh.
     credentials.before_request(request, "http://example.com", "GET", headers)
     assert credentials.valid
-    assert credentials.token == "token"
-    assert headers["authorization"] == "Bearer token"
+    assert credentials.token == "refreshed-token"
+    assert headers["authorization"] == "Bearer refreshed-token"
     assert "x-allowed-locations" not in headers
 
 
@@ -122,24 +122,24 @@ def test_before_request_with_trust_boundary():
     DUMMY_BOUNDARY = "0xA30"
     credentials = CredentialsImpl()
     credentials._trust_boundary = {"locations": [], "encodedLocations": DUMMY_BOUNDARY}
-    request = "token"
+    request = mock.Mock()
     headers = {}
 
     # First call should call refresh, setting the token.
     credentials.before_request(request, "http://example.com", "GET", headers)
     assert credentials.valid
-    assert credentials.token == "token"
-    assert headers["authorization"] == "Bearer token"
+    assert credentials.token == "refreshed-token"
+    assert headers["authorization"] == "Bearer refreshed-token"
     assert headers["x-allowed-locations"] == DUMMY_BOUNDARY
 
-    request = "token2"
+    request = mock.Mock()
     headers = {}
 
     # Second call shouldn't call refresh.
     credentials.before_request(request, "http://example.com", "GET", headers)
     assert credentials.valid
-    assert credentials.token == "token"
-    assert headers["authorization"] == "Bearer token"
+    assert credentials.token == "refreshed-token"
+    assert headers["authorization"] == "Bearer refreshed-token"
     assert headers["x-allowed-locations"] == DUMMY_BOUNDARY
 
 
@@ -206,6 +206,18 @@ def test_readonly_scoped_credentials_scopes():
     assert credentials.has_scopes(["one", "two"])
     assert not credentials.has_scopes(["three"])
 
+    # Test with default scopes
+    credentials_with_default = ReadOnlyScopedCredentialsImpl()
+    credentials_with_default._default_scopes = ["one", "two"]
+    assert credentials_with_default.has_scopes(["one", "two"])
+    assert not credentials_with_default.has_scopes(["three"])
+
+    # Test with no scopes
+    credentials_no_scopes = ReadOnlyScopedCredentialsImpl()
+    assert not credentials_no_scopes.has_scopes(["one"])
+
+    assert credentials_no_scopes.has_scopes([])
+
 
 def test_readonly_scoped_credentials_requires_scopes():
     credentials = ReadOnlyScopedCredentialsImpl()
@@ -253,7 +265,7 @@ def test_nonblocking_refresh_fresh_credentials():
 
     c._refresh_worker = mock.MagicMock()
 
-    request = "token"
+    request = mock.Mock()
 
     c.refresh(request)
     assert c.token_state == credentials.TokenState.FRESH
@@ -266,7 +278,7 @@ def test_nonblocking_refresh_invalid_credentials():
     c = CredentialsImpl()
     c.with_non_blocking_refresh()
 
-    request = "token"
+    request = mock.Mock()
     headers = {}
 
     assert c.token_state == credentials.TokenState.INVALID
@@ -274,8 +286,8 @@ def test_nonblocking_refresh_invalid_credentials():
     c.before_request(request, "http://example.com", "GET", headers)
     assert c.token_state == credentials.TokenState.FRESH
     assert c.valid
-    assert c.token == "token"
-    assert headers["authorization"] == "Bearer token"
+    assert c.token == "refreshed-token"
+    assert headers["authorization"] == "Bearer refreshed-token"
     assert "x-identity-trust-boundary" not in headers
 
 
@@ -283,7 +295,7 @@ def test_nonblocking_refresh_stale_credentials():
     c = CredentialsImpl()
     c.with_non_blocking_refresh()
 
-    request = "token"
+    request = mock.Mock()
     headers = {}
 
     # Invalid credentials MUST require a blocking refresh.
@@ -304,8 +316,8 @@ def test_nonblocking_refresh_stale_credentials():
 
     assert c.token_state == credentials.TokenState.FRESH
     assert c.valid
-    assert c.token == "token"
-    assert headers["authorization"] == "Bearer token"
+    assert c.token == "refreshed-token"
+    assert headers["authorization"] == "Bearer refreshed-token"
     assert "x-identity-trust-boundary" not in headers
 
 
@@ -313,7 +325,7 @@ def test_nonblocking_refresh_failed_credentials():
     c = CredentialsImpl()
     c.with_non_blocking_refresh()
 
-    request = "token"
+    request = mock.Mock()
     headers = {}
 
     # Invalid credentials MUST require a blocking refresh.
@@ -336,15 +348,15 @@ def test_nonblocking_refresh_failed_credentials():
 
     assert c.token_state == credentials.TokenState.FRESH
     assert c.valid
-    assert c.token == "token"
-    assert headers["authorization"] == "Bearer token"
+    assert c.token == "refreshed-token"
+    assert headers["authorization"] == "Bearer refreshed-token"
     assert "x-identity-trust-boundary" not in headers
 
 
 def test_token_state_no_expiry():
     c = CredentialsImpl()
 
-    request = "token"
+    request = mock.Mock()
     c.refresh(request)
 
     c.expiry = None
@@ -442,3 +454,27 @@ class TestCredentialsWithTrustBoundary(object):
 
         mock_build_url.assert_called_once()  # Ensure _build_trust_boundary_lookup_url was called
         mock_lookup_tb.assert_not_called()  # Ensure _client.lookup_trust_boundary was not called
+
+    @mock.patch("google.auth.credentials._LOGGER")
+    @mock.patch("google.auth._helpers.is_logging_enabled", return_value=True)
+    @mock.patch.object(_client, "_lookup_trust_boundary")
+    def test_refresh_trust_boundary_fails_with_cached_data_and_logging(
+        self, mock_lookup_tb, mock_is_logging_enabled, mock_logger
+    ):
+        creds = CredentialsImpl()
+        creds._trust_boundary = {"encodedLocations": "0xABC"}
+        request = mock.Mock()
+
+        refresh_error = exceptions.RefreshError("Lookup failed")
+        mock_lookup_tb.side_effect = refresh_error
+
+        with mock.patch.dict(
+            os.environ, {environment_vars.GOOGLE_AUTH_TRUST_BOUNDARY_ENABLED: "true"}
+        ):
+            creds.refresh(request)
+
+        mock_lookup_tb.assert_called_once()
+        mock_is_logging_enabled.assert_called_once_with(mock_logger)
+        mock_logger.debug.assert_called_once_with(
+            "Using cached trust boundary due to refresh error: %s", refresh_error
+        )

@@ -42,10 +42,8 @@ SERVICE_ACCOUNT_EMAIL = "service-1234@service-name.iam.gserviceaccount.com"
 SERVICE_ACCOUNT_IMPERSONATION_URL_BASE = (
     "https://us-east1-iamcredentials.googleapis.com"
 )
-SERVICE_ACCOUNT_IMPERSONATION_URL_ROUTE = (
-    "/v1/projects/-/serviceAccounts/{}:generateAccessToken".format(
-        SERVICE_ACCOUNT_EMAIL
-    )
+SERVICE_ACCOUNT_IMPERSONATION_URL_ROUTE = "/v1/projects/-/serviceAccounts/{}:generateAccessToken".format(
+    SERVICE_ACCOUNT_EMAIL
 )
 SERVICE_ACCOUNT_IMPERSONATION_URL = (
     SERVICE_ACCOUNT_IMPERSONATION_URL_BASE + SERVICE_ACCOUNT_IMPERSONATION_URL_ROUTE
@@ -1346,9 +1344,9 @@ class TestCredentials(object):
             imdsv2_session_token_data=self.AWS_IMDSV2_SESSION_TOKEN,
         )
         credential_source_token_url = self.CREDENTIAL_SOURCE.copy()
-        credential_source_token_url["imdsv2_session_token_url"] = (
-            IMDSV2_SESSION_TOKEN_URL
-        )
+        credential_source_token_url[
+            "imdsv2_session_token_url"
+        ] = IMDSV2_SESSION_TOKEN_URL
         credentials = self.make_credentials(
             credential_source=credential_source_token_url
         )
@@ -1454,9 +1452,9 @@ class TestCredentials(object):
             imdsv2_session_token_data=self.AWS_IMDSV2_SESSION_TOKEN,
         )
         credential_source_token_url = self.CREDENTIAL_SOURCE.copy()
-        credential_source_token_url["imdsv2_session_token_url"] = (
-            IMDSV2_SESSION_TOKEN_URL
-        )
+        credential_source_token_url[
+            "imdsv2_session_token_url"
+        ] = IMDSV2_SESSION_TOKEN_URL
         credentials = self.make_credentials(
             credential_source=credential_source_token_url
         )
@@ -1511,9 +1509,9 @@ class TestCredentials(object):
             imdsv2_session_token_data=self.AWS_IMDSV2_SESSION_TOKEN,
         )
         credential_source_token_url = self.CREDENTIAL_SOURCE.copy()
-        credential_source_token_url["imdsv2_session_token_url"] = (
-            IMDSV2_SESSION_TOKEN_URL
-        )
+        credential_source_token_url[
+            "imdsv2_session_token_url"
+        ] = IMDSV2_SESSION_TOKEN_URL
         credentials = self.make_credentials(
             credential_source=credential_source_token_url
         )
@@ -1562,9 +1560,9 @@ class TestCredentials(object):
             imdsv2_session_token_data=self.AWS_IMDSV2_SESSION_TOKEN,
         )
         credential_source_token_url = self.CREDENTIAL_SOURCE.copy()
-        credential_source_token_url["imdsv2_session_token_url"] = (
-            IMDSV2_SESSION_TOKEN_URL
-        )
+        credential_source_token_url[
+            "imdsv2_session_token_url"
+        ] = IMDSV2_SESSION_TOKEN_URL
         credentials = self.make_credentials(
             credential_source=credential_source_token_url
         )
@@ -1613,9 +1611,9 @@ class TestCredentials(object):
             role_status=http_client.OK, role_name=self.AWS_ROLE
         )
         credential_source_token_url = self.CREDENTIAL_SOURCE.copy()
-        credential_source_token_url["imdsv2_session_token_url"] = (
-            IMDSV2_SESSION_TOKEN_URL
-        )
+        credential_source_token_url[
+            "imdsv2_session_token_url"
+        ] = IMDSV2_SESSION_TOKEN_URL
         credentials = self.make_credentials(
             credential_source=credential_source_token_url
         )
@@ -1694,9 +1692,9 @@ class TestCredentials(object):
             imdsv2_session_token_data="unauthorized",
         )
         credential_source_token_url = self.CREDENTIAL_SOURCE.copy()
-        credential_source_token_url["imdsv2_session_token_url"] = (
-            IMDSV2_SESSION_TOKEN_URL
-        )
+        credential_source_token_url[
+            "imdsv2_session_token_url"
+        ] = IMDSV2_SESSION_TOKEN_URL
         credentials = self.make_credentials(
             credential_source=credential_source_token_url
         )

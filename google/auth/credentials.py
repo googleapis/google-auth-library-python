@@ -29,7 +29,7 @@ from google.auth._default import _LOGGER
 from google.auth._refresh_worker import RefreshThreadManager
 
 DEFAULT_UNIVERSE_DOMAIN = "googleapis.com"
-NO_OP_TRUST_BOUNDARY_LOCATIONS: "typing.Tuple[str]" = ()
+NO_OP_TRUST_BOUNDARY_LOCATIONS: list[str] = []
 NO_OP_TRUST_BOUNDARY_ENCODED_LOCATIONS = "0x0"
 
 

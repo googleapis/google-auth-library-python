@@ -67,7 +67,6 @@ class TestCredentials(object):
     VALID_TRUST_BOUNDARY = {"encodedLocations": "valid-encoded-locations"}
     NO_OP_TRUST_BOUNDARY = {"encodedLocations": ""}
     EXPECTED_TRUST_BOUNDARY_LOOKUP_URL_DEFAULT_UNIVERSE = "https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/default/allowedLocations"
-    ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE = "gl-python/3.7 auth/1.1 auth-request-type/at cred-type/mds"  # Adjust version if needed
 
     @pytest.fixture(autouse=True)
     def credentials_fixture(self):
@@ -180,6 +179,18 @@ class TestCredentials(object):
         assert kwargs["headers"] == {
             "x-goog-api-client": ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE
         }
+
+    @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
+    def test_refresh_no_email(self, get):
+        get.return_value = {
+            # No "email" field.
+            "scopes": ["one", "two"]
+        }
+
+        with pytest.raises(exceptions.RefreshError) as excinfo:
+            self.credentials.refresh(None)
+
+        assert excinfo.match(r"missing 'email' field")
 
     @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
     def test_refresh_error(self, get):
@@ -303,9 +314,7 @@ class TestCredentials(object):
     @mock.patch("google.oauth2._client._lookup_trust_boundary", autospec=True)
     @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
     def test_refresh_trust_boundary_lookup_skipped_if_env_var_not_true(
-        self,
-        mock_metadata_get,
-        mock_lookup_tb,
+        self, mock_metadata_get, mock_lookup_tb
     ):
         creds = self.credentials
         request = mock.Mock()
@@ -314,10 +323,7 @@ class TestCredentials(object):
             # from _retrieve_info
             {"email": "default", "scopes": ["scope1"]},
             # from get_service_account_token
-            {
-                "access_token": "mock_token",
-                "expires_in": 3600,
-            },
+            {"access_token": "mock_token", "expires_in": 3600},
         ]
 
         with mock.patch.dict(
@@ -340,10 +346,7 @@ class TestCredentials(object):
             # from _retrieve_info
             {"email": "default", "scopes": ["scope1"]},
             # from get_service_account_token
-            {
-                "access_token": "mock_token",
-                "expires_in": 3600,
-            },
+            {"access_token": "mock_token", "expires_in": 3600},
         ]
 
         with mock.patch.dict(os.environ, clear=True):
@@ -385,9 +388,7 @@ class TestCredentials(object):
         # Verify lookup_trust_boundary was called with correct URL and token
         expected_url = "https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/resolved-email@example.com/allowedLocations"
         mock_lookup_tb.assert_called_once_with(
-            request,
-            expected_url,
-            headers={"authorization": "Bearer mock_token"},
+            request, expected_url, headers={"authorization": "Bearer mock_token"}
         )
         # Verify trust boundary was set
         assert creds._trust_boundary == {
@@ -513,9 +514,7 @@ class TestCredentials(object):
         assert mock_metadata_get.call_count == 3
         expected_url = "https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/resolved-email@example.com/allowedLocations"
         mock_lookup_tb.assert_called_once_with(
-            request,
-            expected_url,
-            headers={"authorization": "Bearer mock_token"},
+            request, expected_url, headers={"authorization": "Bearer mock_token"}
         )
         # Verify that an empty header was added.
         headers_applied = {}
@@ -643,6 +642,23 @@ class TestCredentials(object):
             match=r"Failed to get service account email for trust boundary lookup: .*",
         ):
             creds._build_trust_boundary_lookup_url()
+
+    @mock.patch(
+        "google.auth.compute_engine._metadata.get_service_account_info", autospec=True
+    )
+    def test_build_trust_boundary_lookup_url_no_email(
+        self, mock_get_service_account_info
+    ):
+        # Test with default service account email, which needs resolution, but metadata
+        # returns no email.
+        creds = self.credentials
+        creds._service_account_email = "default"
+        mock_get_service_account_info.return_value = {"scopes": ["one", "two"]}
+
+        with pytest.raises(exceptions.RefreshError) as excinfo:
+            creds._build_trust_boundary_lookup_url()
+
+        assert excinfo.match(r"missing 'email' field")
 
 
 class TestIDTokenCredentials(object):

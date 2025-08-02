@@ -798,10 +798,7 @@ def test_lookup_trust_boundary_with_headers():
 
     mock_request = mock.create_autospec(transport.Request)
     mock_request.return_value = mock_response
-    headers = {
-        "Authorization": "Bearer access_token",
-        "x-test-header": "test-value",
-    }
+    headers = {"Authorization": "Bearer access_token", "x-test-header": "test-value"}
 
     _client._lookup_trust_boundary(mock_request, "http://example.com", headers=headers)
 

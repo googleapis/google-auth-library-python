@@ -256,17 +256,15 @@ def _token_endpoint_request(
             an error.
     """
 
-    response_status_ok, response_data, retryable_error = (
-        _token_endpoint_request_no_throw(
-            request,
-            token_uri,
-            body,
-            access_token=access_token,
-            use_json=use_json,
-            can_retry=can_retry,
-            headers=headers,
-            **kwargs
-        )
+    response_status_ok, response_data, retryable_error = _token_endpoint_request_no_throw(
+        request,
+        token_uri,
+        body,
+        access_token=access_token,
+        use_json=use_json,
+        can_retry=can_retry,
+        headers=headers,
+        **kwargs
     )
     if not response_status_ok:
         _handle_error_response(response_data, retryable_error)
@@ -570,8 +568,8 @@ def _lookup_trust_boundary_request(request, url, can_retry=True, headers=None):
         google.auth.exceptions.RefreshError: If the token endpoint returned
             an error.
     """
-    response_status_ok, response_data, retryable_error = (
-        _lookup_trust_boundary_request_no_throw(request, url, can_retry, headers)
+    response_status_ok, response_data, retryable_error = _lookup_trust_boundary_request_no_throw(
+        request, url, can_retry, headers
     )
     if not response_status_ok:
         _handle_error_response(response_data, retryable_error)
