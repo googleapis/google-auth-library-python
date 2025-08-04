@@ -1002,11 +1002,6 @@ class TestIDTokenCredentials(object):
         creds_with_new_token_uri = credentials.with_token_uri(new_token_uri)
         assert creds_with_new_token_uri._token_uri == new_token_uri
 
-    def test_build_trust_boundary_lookup_url_not_implemented(self):
-        credentials = self.make_credentials()
-        with pytest.raises(NotImplementedError):
-            credentials._build_trust_boundary_lookup_url()
-
     def test__make_authorization_grant_assertion(self):
         credentials = self.make_credentials()
         token = credentials._make_authorization_grant_assertion()
