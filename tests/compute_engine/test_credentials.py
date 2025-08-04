@@ -18,15 +18,15 @@ import os
 import mock
 import pytest  # type: ignore
 import responses  # type: ignore
-from google.oauth2 import _client
 
 from google.auth import _helpers
+from google.auth import environment_vars
 from google.auth import exceptions
 from google.auth import jwt
 from google.auth import transport
 from google.auth.compute_engine import credentials
-from google.auth.compute_engine import _metadata
 from google.auth.transport import requests
+from google.oauth2 import _client
 
 SAMPLE_ID_TOKEN_EXP = 1584393400
 
@@ -52,8 +52,6 @@ ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE = (
 ID_TOKEN_REQUEST_METRICS_HEADER_VALUE = (
     "gl-python/3.7 auth/1.1 auth-request-type/it cred-type/mds"
 )
-from google.auth import environment_vars
-
 FAKE_SERVICE_ACCOUNT_EMAIL = "foo@bar.com"
 FAKE_QUOTA_PROJECT_ID = "fake-quota-project"
 FAKE_SCOPES = ["scope1", "scope2"]

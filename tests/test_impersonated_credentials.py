@@ -21,13 +21,13 @@ import os
 import mock
 import pytest  # type: ignore
 
-from google.auth import _helpers, iam
+from google.auth import _helpers
+from google.auth import credentials as auth_credentials
 from google.auth import crypt
+from google.auth import environment_vars
 from google.auth import exceptions
 from google.auth import impersonated_credentials
 from google.auth import transport
-from google.auth import credentials as auth_credentials
-from google.auth import environment_vars
 from google.auth.impersonated_credentials import Credentials
 from google.oauth2 import credentials
 from google.oauth2 import service_account

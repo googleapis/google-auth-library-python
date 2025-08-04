@@ -17,9 +17,7 @@
 
 import abc
 from enum import Enum
-import json
 import os
-import typing
 
 from google.auth import _helpers, environment_vars
 from google.auth import exceptions
