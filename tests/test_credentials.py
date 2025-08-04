@@ -387,9 +387,6 @@ class TestCredentialsWithTrustBoundary(object):
 
         # Ensure env var is missing
         with mock.patch.dict(os.environ, clear=True):
-            # Remove the var if it was set by other tests
-            if environment_vars.GOOGLE_AUTH_TRUST_BOUNDARY_ENABLED in os.environ:
-                del os.environ[environment_vars.GOOGLE_AUTH_TRUST_BOUNDARY_ENABLED]
             result = creds._refresh_trust_boundary(request)
 
         assert result is None
