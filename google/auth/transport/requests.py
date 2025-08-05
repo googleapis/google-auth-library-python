@@ -34,11 +34,11 @@ from requests.packages.urllib3.util.ssl_ import (  # type: ignore
     create_urllib3_context,
 )  # pylint: disable=ungrouped-imports
 
+from google.auth import _helpers
 from google.auth import environment_vars
 from google.auth import exceptions
 from google.auth import transport
 import google.auth.transport._mtls_helper
-from google.auth.transport._requests_base import _BaseAuthorizedSession
 from google.oauth2 import service_account
 
 _LOGGER = logging.getLogger(__name__)
@@ -183,10 +183,11 @@ class Request(transport.Request):
             google.auth.exceptions.TransportError: If any exception occurred.
         """
         try:
-            _LOGGER.debug("Making request: %s %s", method, url)
+            _helpers.request_log(_LOGGER, method, url, body, headers)
             response = self.session.request(
                 method, url, data=body, headers=headers, timeout=timeout, **kwargs
             )
+            _helpers.response_log(_LOGGER, response)
             return _Response(response)
         except requests.exceptions.RequestException as caught_exc:
             new_exc = exceptions.TransportError(caught_exc)
@@ -293,7 +294,7 @@ class _MutualTlsOffloadAdapter(requests.adapters.HTTPAdapter):
         return super(_MutualTlsOffloadAdapter, self).proxy_manager_for(*args, **kwargs)
 
 
-class AuthorizedSession(requests.Session, _BaseAuthorizedSession):
+class AuthorizedSession(requests.Session):
     """A Requests Session class with credentials.
 
     This class is used to perform requests to API endpoints that require
@@ -390,7 +391,7 @@ class AuthorizedSession(requests.Session, _BaseAuthorizedSession):
         default_host=None,
     ):
         super(AuthorizedSession, self).__init__()
-        _BaseAuthorizedSession.__init__(self, credentials)
+        self.credentials = credentials
         self._refresh_status_codes = refresh_status_codes
         self._max_refresh_attempts = max_refresh_attempts
         self._refresh_timeout = refresh_timeout
@@ -535,6 +536,7 @@ class AuthorizedSession(requests.Session, _BaseAuthorizedSession):
         remaining_time = guard.remaining_timeout
 
         with TimeoutGuard(remaining_time) as guard:
+            _helpers.request_log(_LOGGER, method, url, data, headers)
             response = super(AuthorizedSession, self).request(
                 method,
                 url,
