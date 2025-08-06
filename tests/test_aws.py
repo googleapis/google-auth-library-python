@@ -17,8 +17,8 @@ import http.client as http_client
 import json
 import os
 import urllib.parse
+from unittest import mock
 
-import mock
 import pytest  # type: ignore
 
 from google.auth import _helpers, external_account
