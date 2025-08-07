@@ -21,10 +21,14 @@ import io
 import json
 import logging
 import os
+from collections.abc import Sequence
+from typing import Optional
 import warnings
 
 from google.auth import environment_vars
 from google.auth import exceptions
+from google.auth.credentials import Credentials
+from google.auth.transport import Request
 import google.auth.transport._http_client
 
 _LOGGER = logging.getLogger(__name__)
@@ -532,7 +536,12 @@ def _apply_quota_project_id(credentials, quota_project_id):
     return credentials
 
 
-def default(scopes=None, request=None, quota_project_id=None, default_scopes=None):
+def default(
+        scopes: Optional[Sequence[str]] = None,
+        request: Optional[Request] = None,
+        quota_project_id: Optional[str] = None,
+        default_scopes: Optional[Sequence[str]] = None,
+        ) -> tuple[Credentials, Optional[str]]:
     """Gets the default credentials for the current environment.
 
     `Application Default Credentials`_ provides an easy way to obtain
