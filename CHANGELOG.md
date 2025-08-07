@@ -4,6 +4,14 @@
 
 [1]: https://pypi.org/project/google-auth/#history
 
+## [2.41.0](https://github.com/googleapis/google-auth-library-python/compare/v2.40.3...v2.41.0) (2025-08-07)
+
+
+### Features
+
+* Add support for cachetools 6.0 ([#1773](https://github.com/googleapis/google-auth-library-python/issues/1773)) ([af18060](https://github.com/googleapis/google-auth-library-python/commit/af18060d521baf86c219d66a26631decb3b28e79))
+* Add trust boundary support for service accounts and impersonation. ([#1778](https://github.com/googleapis/google-auth-library-python/issues/1778)) ([99be2ce](https://github.com/googleapis/google-auth-library-python/commit/99be2ce19401296718f880c7a80cd2e841df78bf))
+
 ## [2.40.3](https://github.com/googleapis/google-auth-library-python/compare/v2.40.2...v2.40.3) (2025-06-04)
 
 
