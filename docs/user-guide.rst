@@ -294,7 +294,7 @@ Follow the detailed instructions on how to
 
 Accessing resources using X.509 certificate-sourced credentials
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-For `X.509 certificate-sourced credentials <https://cloud.google.com/iam/docs/workload-identity-federation-with-x509-certificates>`_, the authentication library uses an X.509 certificate and private key to prove your application's identity. The certificate has a built-in expiration date and must be renewed to maintain access.
+For `X.509 certificate-sourced credentials`_, the authentication library uses an X.509 certificate and private key to prove your application's identity. The certificate has a built-in expiration date and must be renewed to maintain access.
 
 The library constructs a subject token by creating a JSON array containing the base64-encoded leaf certificate, followed by any intermediate certificates from a provided trust chain.
 
@@ -322,7 +322,7 @@ If you omit the ``--credential-cert-configuration-output-file`` flag, gcloud cre
 
 Where the following variables need to be substituted:
 
-* ``$PROJECT_NUMBER``: The Google Cloud project number.
+* ``$PROJECT_NUMBER``: The unique, numerical identifier for your Google Cloud project. This is not the Project ID string.
 * ``$POOL_ID``: The workload identity pool ID.
 * ``$PROVIDER_ID``: The provider ID.
 * ``$SERVICE_ACCOUNT_EMAIL``: The email of the service account to impersonate.
@@ -360,6 +360,9 @@ This command results in:
 * ``cert_config.json``: Created at ``/custom/path/cert_config.json``, as specified by the flag.
 
 You can now use the Auth library to call Google Cloud resources with X.509 certificate-sourced credentials.
+
+.. _X.509 certificate-sourced credentials: https://cloud.google.com/iam/docs/workload-identity-federation-with-x509-certificates
+
 
 Using Executable-sourced credentials with OIDC and SAML
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
