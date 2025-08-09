@@ -31,11 +31,12 @@ Authorization Code grant flow.
 .. _rfc6749 section 4.1: https://tools.ietf.org/html/rfc6749#section-4.1
 """
 
-from datetime import datetime
+from datetime import datetime, timedelta
 import io
 import json
 import logging
 import warnings
+import requests
 
 from google.auth import _cloud_sdk
 from google.auth import _helpers
@@ -439,6 +440,52 @@ class Credentials(credentials.ReadOnlyScoped, credentials.CredentialsWithQuotaPr
                         ", ".join(scopes_requested_but_not_granted)
                     )
                 )
+
+    @classmethod
+    def from_temporary_access_token(cls, token, scopes=None):
+        """Creates a Credentials instance from temporary access token info.
+
+        Args:
+            token (Mapping[str, str]): The authorized token in Google
+                format.
+            scopes (Sequence[str]): Optional list of scopes to include in the
+                credentials.
+
+        Returns:
+            google.oauth2.credentials.Credentials: The constructed
+                credentials.
+
+        Raises:
+            ValueError: If the info is not in the expected format.
+        """
+
+        token_validation_response = requests.get(
+            "https://www.googleapis.com/oauth2/v1/tokeninfo",
+            params={"access_token": token},
+        )
+        info = token_validation_response.json()
+        if info.get("error"):
+            raise ValueError(
+                "Authorized access token was not in the expected format, error {}".format(
+                    info.get("error")
+                )
+            )
+
+        # access token expiry (datetime obj); auto-expire if not saved
+        expiry = datetime.now() + timedelta(seconds=info["expires_in"])
+
+        # process scopes, which needs to be a seq
+        if scopes is None and "scope" in info:
+            scopes = info.get("scope")
+            if isinstance(scopes, str):
+                scopes = scopes.split(" ")
+
+        return cls(
+            token=token,
+            token_uri=_GOOGLE_OAUTH2_TOKEN_ENDPOINT,  # always overrides
+            scopes=scopes,
+            expiry=expiry,
+        )
 
     @classmethod
     def from_authorized_user_info(cls, info, scopes=None):
