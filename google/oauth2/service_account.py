@@ -74,6 +74,7 @@ import copy
 import datetime
 
 from google.auth import _helpers
+from google.auth import _constants
 from google.auth import _service_account_info
 from google.auth import credentials
 from google.auth import exceptions
@@ -84,9 +85,6 @@ from google.oauth2 import _client
 
 _DEFAULT_TOKEN_LIFETIME_SECS = 3600  # 1 hour in seconds
 _GOOGLE_OAUTH2_TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token"
-_TRUST_BOUNDARY_LOOKUP_ENDPOINT = (
-    "https://iamcredentials.{}/v1/projects/-/serviceAccounts/{}/allowedLocations"
-)
 
 
 class Credentials(
@@ -520,7 +518,7 @@ class Credentials(
             raise ValueError(
                 "Service account email is required to build the trust boundary lookup URL."
             )
-        return _TRUST_BOUNDARY_LOOKUP_ENDPOINT.format(
+        return _constants._SERVICE_ACCOUNT_TRUST_BOUNDARY_LOOKUP_ENDPOINT.format(
             self._universe_domain, self._service_account_email
         )
 
