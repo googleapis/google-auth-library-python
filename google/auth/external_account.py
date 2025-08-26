@@ -37,6 +37,7 @@ import json
 import re
 
 from google.auth import _helpers
+from google.auth import _constants
 from google.auth import credentials
 from google.auth import exceptions
 from google.auth import impersonated_credentials
@@ -54,9 +55,6 @@ _STS_REQUESTED_TOKEN_TYPE = "urn:ietf:params:oauth:token-type:access_token"
 _CLOUD_RESOURCE_MANAGER = "https://cloudresourcemanager.googleapis.com/v1/projects/"
 # Default Google sts token url.
 _DEFAULT_TOKEN_URL = "https://sts.{universe_domain}/v1/token"
-
-_WORKFORCE_POOL_TRUST_BOUNDARY_LOOKUP_ENDPOINT = "https://iamcredentials.{universe_domain}/v1/locations/global/workforcePools/{pool_id}/allowedLocations"
-_WORKLOAD_IDENTITY_POOL_TRUST_BOUNDARY_LOOKUP_ENDPOINT = "https://iamcredentials.{universe_domain}/v1/projects/{project_number}/locations/global/workloadIdentityPools/{pool_id}/allowedLocations"
 
 
 @dataclass
@@ -486,7 +484,7 @@ class Credentials(
 
             pool_id = match.groups()[0]
 
-            return _WORKFORCE_POOL_TRUST_BOUNDARY_LOOKUP_ENDPOINT.format(
+            return _constants._WORKFORCE_POOL_TRUST_BOUNDARY_LOOKUP_ENDPOINT.format(
                 universe_domain=self._universe_domain, pool_id=pool_id
             )
 
@@ -505,7 +503,7 @@ class Credentials(
 
         project_number, pool_id = match.groups()
 
-        return _WORKLOAD_IDENTITY_POOL_TRUST_BOUNDARY_LOOKUP_ENDPOINT.format(
+        return _constants._WORKLOAD_IDENTITY_POOL_TRUST_BOUNDARY_LOOKUP_ENDPOINT.format(
             universe_domain=self._universe_domain,
             project_number=project_number,
             pool_id=pool_id,
