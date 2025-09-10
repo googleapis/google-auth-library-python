@@ -73,8 +73,8 @@ specific subject using :meth:`~Credentials.with_subject`.
 import copy
 import datetime
 
-from google.auth import _helpers
 from google.auth import _constants
+from google.auth import _helpers
 from google.auth import _service_account_info
 from google.auth import credentials
 from google.auth import exceptions
@@ -519,7 +519,8 @@ class Credentials(
                 "Service account email is required to build the trust boundary lookup URL."
             )
         return _constants._SERVICE_ACCOUNT_TRUST_BOUNDARY_LOOKUP_ENDPOINT.format(
-            self._universe_domain, self._service_account_email
+            universe_domain=self._universe_domain,
+            service_account_email=self._service_account_email,
         )
 
     @_helpers.copy_docstring(credentials.Signing)

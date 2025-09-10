@@ -36,8 +36,8 @@ import io
 import json
 import re
 
-from google.auth import _helpers
 from google.auth import _constants
+from google.auth import _helpers
 from google.auth import credentials
 from google.auth import exceptions
 from google.auth import impersonated_credentials
