@@ -71,6 +71,48 @@ def test_with_non_blocking_refresh():
     assert c._use_non_blocking_refresh
 
 
+def test_with_headers():
+    credentials = CredentialsImpl()
+    request = mock.Mock()
+
+    # 1. Add a new custom header
+    creds_with_header = credentials.with_headers({"X-Custom-Header": "value1"})
+    headers = {}
+    creds_with_header.before_request(request, "http://example.com", "GET", headers)
+    assert headers["X-Custom-Header"] == "value1"
+    assert "authorization" in headers  # Ensure base apply logic ran
+    assert creds_with_header is not credentials
+    assert not hasattr(credentials, "_custom_headers") or not credentials._custom_headers
+
+    # 2. Update an existing custom header
+    creds_updated = creds_with_header.with_headers({"X-Custom-Header": "value2"})
+    headers = {}
+    creds_updated.before_request(request, "http://example.com", "GET", headers)
+    assert headers["X-Custom-Header"] == "value2"
+
+    # 3. Chaining with_headers calls
+    creds_chained = credentials.with_headers({"X-Header-1": "v1"}).with_headers(
+        {"X-Header-2": "v2"}
+    )
+    headers = {}
+    creds_chained.before_request(request, "http://example.com", "GET", headers)
+    assert headers["X-Header-1"] == "v1"
+    assert headers["X-Header-2"] == "v2"
+
+    # 4. Ensure protected headers cannot be set
+    with pytest.raises(ValueError):
+        credentials.with_headers({"Authorization": "Bearer token"})
+    with pytest.raises(ValueError):
+        credentials.with_headers({"X-Goog-User-Project": "test"})
+    with pytest.raises(ValueError):
+        credentials.with_headers({"authorization": "Bearer token"})  # Case-insensitive
+
+    # 5. Check original credentials are not modified
+    headers = {}
+    credentials.before_request(request, "http://example.com", "GET", headers)
+    assert "X-Custom-Header" not in headers
+
+
 def test_expired_and_valid():
     credentials = CredentialsImpl()
     credentials.token = "token"
