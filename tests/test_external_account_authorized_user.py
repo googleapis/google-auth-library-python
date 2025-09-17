@@ -32,8 +32,10 @@ REVOKE_URL = "https://sts.googleapis.com/v1/revoke"
 QUOTA_PROJECT_ID = "654321"
 POOL_ID = "POOL_ID"
 PROVIDER_ID = "PROVIDER_ID"
-AUDIENCE = "//iam.googleapis.com/locations/global/workforcePools/{}/providers/{}".format(
-    POOL_ID, PROVIDER_ID
+AUDIENCE = (
+    "//iam.googleapis.com/locations/global/workforcePools/{}/providers/{}".format(
+        POOL_ID, PROVIDER_ID
+    )
 )
 REFRESH_TOKEN = "REFRESH_TOKEN"
 NEW_REFRESH_TOKEN = "NEW_REFRESH_TOKEN"
@@ -620,7 +622,21 @@ class TestCredentials(object):
         expected_url = "https://iamcredentials.googleapis.com/v1/locations/global/workforcePools/POOL_ID/allowedLocations"
         assert credentials._build_trust_boundary_lookup_url() == expected_url
 
-    def test_build_trust_boundary_lookup_url_invalid_audience(self):
-        credentials = self.make_credentials(audience="invalid")
+    @pytest.mark.parametrize(
+        "audience",
+        [
+            "invalid",
+            "//iam.googleapis.com/locations/global/workforcePools/",
+            "//iam.googleapis.com/locations/global/providers/",
+            "//iam.googleapis.com/workforcePools/POOL_ID/providers/PROVIDER_ID",
+        ],
+    )
+    def test_build_trust_boundary_lookup_url_invalid_audience(self, audience):
+        credentials = self.make_credentials(audience=audience)
         with pytest.raises(exceptions.InvalidValue):
             credentials._build_trust_boundary_lookup_url()
+
+    def test_build_trust_boundary_lookup_url_different_universe(self):
+        credentials = self.make_credentials(universe_domain=FAKE_UNIVERSE_DOMAIN)
+        expected_url = "https://iamcredentials.fake-universe-domain/v1/locations/global/workforcePools/POOL_ID/allowedLocations"
+        assert credentials._build_trust_boundary_lookup_url() == expected_url
