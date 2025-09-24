@@ -94,6 +94,7 @@ for more details.
 # The subject token type used for AWS external_account credentials.
 _AWS_SUBJECT_TOKEN_TYPE = "urn:ietf:params:aws:token-type:aws4_request"
 
+
 def _warn_about_problematic_credentials(credentials):
     """Determines if the credentials are problematic.
 
