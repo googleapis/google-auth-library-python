@@ -94,15 +94,6 @@ for more details.
 # The subject token type used for AWS external_account credentials.
 _AWS_SUBJECT_TOKEN_TYPE = "urn:ietf:params:aws:token-type:aws4_request"
 
-
-class GenericLoadMethodWarning(DeprecationWarning):  # pragma: NO COVER
-    """
-    Deprecation warning raised when a generic load method is used.
-    """
-
-    pass
-
-
 def _warn_about_problematic_credentials(credentials):
     """Determines if the credentials are problematic.
 
@@ -129,7 +120,7 @@ def _warn_about_generic_load_method(method_name):  # pragma: NO COVER
     
     warnings.warn(
         _GENERIC_LOAD_METHOD_WARNING.format(method_name),
-        GenericLoadMethodWarning,
+        DeprecationWarning,
     )
 
 
