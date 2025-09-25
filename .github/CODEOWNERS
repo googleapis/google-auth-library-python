@@ -4,8 +4,8 @@
 # For syntax help see:
 # https://help.github.com/en/github/creating-cloning-and-archiving-repositories/about-code-owners#codeowners-syntax
 
-# The @googleapis/googleapis-auth and @googleapis/yoshi-python is the default owner for changes in this repo
-*                                                           @googleapis/googleapis-auth @googleapis/yoshi-python @googleapis/python-core-client-libraries
+# The @googleapis/googleapis-auth and @googleapis/python-core-client-libraries is the default owner for changes in this repo
+*                                                           @googleapis/googleapis-auth @googleapis/python-core-client-libraries
 google/auth/_default.py                                     @googleapis/googleapis-auth @googleapis/aion-sdk @googleapis/python-core-client-libraries
 google/auth/aws.py                                          @googleapis/googleapis-auth @googleapis/aion-sdk @googleapis/python-core-client-libraries
 google/auth/credentials.py                                  @googleapis/googleapis-auth @googleapis/aion-sdk @googleapis/python-core-client-libraries
