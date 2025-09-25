@@ -60,7 +60,7 @@ https://cloud.google.com/docs/authentication/adc-troubleshooting/user-creds. \
 """
 
 _GENERIC_LOAD_METHOD_WARNING = """\
-The {} method is being deprecated because of a potential security risk.
+The {} method is deprecated because of a potential security risk.
 
 This method does not validate the credential configuration. The security
 risk occurs when a credential configuration is accepted from a source that
