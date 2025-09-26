@@ -253,7 +253,15 @@ def _parse_token_data(token_content, format_type="text", subject_token_field_nam
 
 
 class Credentials(external_account.Credentials):
-    """External account credentials sourced from files and URLs."""
+    """External account credentials sourced from files and URLs.
+
+    **IMPORTANT**:
+    This class does not validate the credential configuration. A security
+    risk occurs when a credential configuration configured with malicious urls
+    is used.
+    When the credential configuration is accepted from an
+    untrusted source, you should validate it before using.
+    Refer https://cloud.google.com/docs/authentication/external/externally-sourced-credentials for more details."""
 
     def __init__(
         self,
