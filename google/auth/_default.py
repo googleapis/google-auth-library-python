@@ -107,6 +107,7 @@ def _warn_about_problematic_credentials(credentials):
     if credentials.client_id == _cloud_sdk.CLOUD_SDK_CLIENT_ID:
         warnings.warn(_CLOUD_SDK_CREDENTIALS_WARNING)
 
+
 def _warn_about_generic_load_method(method_name):  # pragma: NO COVER
     """Warns that a generic load method is being used.
 
@@ -118,11 +119,7 @@ def _warn_about_generic_load_method(method_name):  # pragma: NO COVER
         method_name (str): The name of the method being used.
     """
 
-    
-    warnings.warn(
-        _GENERIC_LOAD_METHOD_WARNING.format(method_name),
-        DeprecationWarning,
-    )
+    warnings.warn(_GENERIC_LOAD_METHOD_WARNING.format(method_name), DeprecationWarning)
 
 
 def load_credentials_from_file(
