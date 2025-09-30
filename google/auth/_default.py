@@ -344,7 +344,8 @@ def _get_explicit_environ_credentials(quota_project_id=None):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", DeprecationWarning)
             credentials, project_id = load_credentials_from_file(
-                os.environ[environment_vars.CREDENTIALS], quota_project_id=quota_project_id
+                os.environ[environment_vars.CREDENTIALS],
+                quota_project_id=quota_project_id,
             )
             credentials._cred_file_path = f"{explicit_file} file via the GOOGLE_APPLICATION_CREDENTIALS environment variable"
 
