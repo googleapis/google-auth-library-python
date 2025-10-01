@@ -154,9 +154,11 @@ IMPERSONATED_SERVICE_ACCOUNT_SERVICE_ACCOUNT_SOURCE_FILE = os.path.join(
     DATA_DIR, "impersonated_service_account_service_account_source.json"
 )
 
-IMPERSONATED_SERVICE_ACCOUNT_EXTERNAL_ACCOUNT_AUTHORIZED_USER_SOURCE_FILE = os.path.join(
-    DATA_DIR,
-    "impersonated_service_account_external_account_authorized_user_source.json",
+IMPERSONATED_SERVICE_ACCOUNT_EXTERNAL_ACCOUNT_AUTHORIZED_USER_SOURCE_FILE = (
+    os.path.join(
+        DATA_DIR,
+        "impersonated_service_account_external_account_authorized_user_source.json",
+    )
 )
 
 EXTERNAL_ACCOUNT_AUTHORIZED_USER_FILE = os.path.join(
@@ -399,7 +401,6 @@ def test_load_credentials_from_file_impersonated_passing_scopes():
 
 
 def test_load_credentials_from_file_impersonated_wrong_target_principal(tmpdir):
-
     with open(IMPERSONATED_SERVICE_ACCOUNT_AUTHORIZED_USER_SOURCE_FILE) as fh:
         impersonated_credentials_info = json.load(fh)
     impersonated_credentials_info[
@@ -415,7 +416,6 @@ def test_load_credentials_from_file_impersonated_wrong_target_principal(tmpdir):
 
 
 def test_load_credentials_from_file_impersonated_wrong_source_type(tmpdir):
-
     with open(IMPERSONATED_SERVICE_ACCOUNT_AUTHORIZED_USER_SOURCE_FILE) as fh:
         impersonated_credentials_info = json.load(fh)
     impersonated_credentials_info["source_credentials"]["type"] = "external_account"
@@ -1326,7 +1326,7 @@ def test_default_impersonated_service_account_set_default_scopes(get_adc_path):
     "google.auth._cloud_sdk.get_application_default_credentials_path", autospec=True
 )
 def test_default_impersonated_service_account_set_both_scopes_and_default_scopes(
-    get_adc_path
+    get_adc_path,
 ):
     get_adc_path.return_value = IMPERSONATED_SERVICE_ACCOUNT_AUTHORIZED_USER_SOURCE_FILE
     scopes = ["scope1", "scope2"]
@@ -1411,6 +1411,8 @@ def test_quota_gce_credentials(unused_get, unused_ping):
         quota_project_id=explicit_quota
     )
     assert credentials.quota_project_id == explicit_quota
+
+
 def test_load_credentials_from_file_deprecation_warning():
     with pytest.warns(
         DeprecationWarning, match="The load_credentials_from_file method is deprecated"
