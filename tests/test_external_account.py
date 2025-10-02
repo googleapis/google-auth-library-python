@@ -929,6 +929,14 @@ class TestCredentials(object):
         with pytest.raises(exceptions.InvalidValue):
             credentials._build_trust_boundary_lookup_url()
 
+
+    def test_build_trust_boundary_lookup_url_invalid_workforce_audience(self):
+        credentials = self.make_workforce_pool_credentials()
+        credentials._audience = "invalid"
+        with pytest.raises(exceptions.InvalidValue):
+            credentials._build_trust_boundary_lookup_url()
+
+
     def test_refresh_fetches_trust_boundary_workload(self):
         request = self.make_mock_request(
             status=http_client.OK, data=self.SUCCESS_RESPONSE
@@ -2345,6 +2353,25 @@ class TestCredentials(object):
         assert project_id is None
         # Only 2 requests to STS and cloud resource manager should be sent.
         assert len(request.call_args_list) == 2
+
+
+    def test_refresh_with_existing_impersonated_credentials(self):
+        credentials = self.make_credentials(
+            service_account_impersonation_url=self.SERVICE_ACCOUNT_IMPERSONATION_URL
+        )
+        credentials._impersonated_credentials = mock.Mock()
+        request = self.make_mock_request()
+
+        credentials.refresh(request)
+
+        credentials._impersonated_credentials.refresh.assert_called_once_with(request)
+
+
+    def test_get_mtls_cert_and_key_paths(self):
+        credentials = self.make_credentials()
+        with pytest.raises(NotImplementedError):
+            credentials._get_mtls_cert_and_key_paths()
+
 
 
 def test_supplier_context():
