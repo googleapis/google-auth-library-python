@@ -245,7 +245,7 @@ async def test_jwt_grant_no_access_token():
 
 @pytest.mark.asyncio
 async def test_id_token_jwt_grant():
-    now = _helpers.utcnow()
+    now = _helpers.utcnow().astimezone(datetime.timezone.utc)
     id_token_expiry = _helpers.datetime_to_secs(now)
     id_token = jwt.encode(test_client.SIGNER, {"exp": id_token_expiry}).decode("utf-8")
     request = make_request({"id_token": id_token, "extra": "data"})
@@ -263,7 +263,7 @@ async def test_id_token_jwt_grant():
     # Check result
     assert token == id_token
     # JWT does not store microseconds
-    now = now.replace(microsecond=0)
+    now = now.replace(microsecond=0).astimezone(datetime.timezone.utc)
     assert expiry == now
     assert extra_data["extra"] == "data"
 
