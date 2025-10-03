@@ -416,8 +416,7 @@ class Credentials(
         # If we are impersonating, the trust boundary is handled by the
         # impersonated credentials object. We need to get it from there.
         if self._service_account_impersonation_url:
-            if self._impersonated_credentials:
-                self._trust_boundary = self._impersonated_credentials._trust_boundary
+            self._trust_boundary = self._impersonated_credentials._trust_boundary
         else:
             # Otherwise, refresh the trust boundary for the external account.
             self._refresh_trust_boundary(request)
@@ -474,40 +473,37 @@ class Credentials(
 
     def _build_trust_boundary_lookup_url(self):
         """Builds and returns the URL for the trust boundary lookup API."""
-        # If it's a workforce pool, use the workforce-specific endpoint.
-        if self.is_workforce_pool:
-            # Audience format: //iam.googleapis.com/locations/global/workforcePools/POOL_ID/providers/PROVIDER_ID
-            match = re.search(r"locations/[^/]+/workforcePools/([^/]+)", self._audience)
-
-            if not match:
-                raise exceptions.InvalidValue("Invalid workforce pool audience format.")
-
-            pool_id = match.groups()[0]
-
-            return _constants._WORKFORCE_POOL_TRUST_BOUNDARY_LOOKUP_ENDPOINT.format(
-                universe_domain=self._universe_domain, pool_id=pool_id
-            )
-
-        # For workload identity pools, parse the project number and pool ID from
-        # the audience.
-        # Audience format: //iam.googleapis.com/projects/123456/locations/global/workloadIdentityPools/POOL_ID/providers/PROVIDER_ID
-        match = re.search(
+        url = None
+        # Try to parse as a workload identity pool.
+        # Audience format: //iam.googleapis.com/projects/PROJECT_NUMBER/locations/global/workloadIdentityPools/POOL_ID/providers/PROVIDER_ID
+        workload_match = re.search(
             r"projects/([^/]+)/locations/global/workloadIdentityPools/([^/]+)",
             self._audience,
         )
-
-        if not match:
-            raise exceptions.InvalidValue(
-                "Invalid workload identity pool audience format."
+        if workload_match:
+            project_number, pool_id = workload_match.groups()
+            url = _constants._WORKLOAD_IDENTITY_POOL_TRUST_BOUNDARY_LOOKUP_ENDPOINT.format(
+                universe_domain=self._universe_domain,
+                project_number=project_number,
+                pool_id=pool_id,
             )
+        else:
+            # If that fails, try to parse as a workforce pool.
+            # Audience format: //iam.googleapis.com/locations/global/workforcePools/POOL_ID/providers/PROVIDER_ID
+            workforce_match = re.search(
+                r"locations/[^/]+/workforcePools/([^/]+)", self._audience
+            )
+            if workforce_match:
+                pool_id = workforce_match.groups()[0]
+                url = _constants._WORKFORCE_POOL_TRUST_BOUNDARY_LOOKUP_ENDPOINT.format(
+                    universe_domain=self._universe_domain, pool_id=pool_id
+                )
 
-        project_number, pool_id = match.groups()
-
-        return _constants._WORKLOAD_IDENTITY_POOL_TRUST_BOUNDARY_LOOKUP_ENDPOINT.format(
-            universe_domain=self._universe_domain,
-            project_number=project_number,
-            pool_id=pool_id,
-        )
+        if url:
+            return url
+        else:
+            # If both fail, the audience format is invalid.
+            raise exceptions.InvalidValue("Invalid audience format.")
 
     def _make_copy(self):
         kwargs = self._constructor_args()

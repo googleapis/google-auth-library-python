@@ -333,7 +333,7 @@ class TestCredentials(object):
         assert not credentials.token_info_url
 
     def test_nonworkforce_with_workforce_pool_user_project(self):
-        with pytest.raises(ValueError) as excinfo:
+        with pytest.raises(exceptions.InvalidValue) as excinfo:
             CredentialsImpl(
                 audience=self.AUDIENCE,
                 subject_token_type=self.SUBJECT_TOKEN_TYPE,
@@ -911,31 +911,19 @@ class TestCredentials(object):
         expected_url = "https://iamcredentials.googleapis.com/v1/locations/global/workforcePools/POOL_ID/allowedLocations"
         assert credentials._build_trust_boundary_lookup_url() == expected_url
 
-    def test_build_trust_boundary_lookup_url_invalid_workload(self):
+    @pytest.mark.parametrize(
+        "audience",
+        [
+            "invalid",
+            "//iam.googleapis.com/projects/locations/global/workloadIdentityPools/POOL_ID/providers/PROVIDER_ID",
+            "//iam.googleapis.com/locations/global/workforcsePools//providers/provider-id",
+        ],
+    )
+    def test_build_trust_boundary_lookup_url_invalid_audience(self, audience):
         credentials = self.make_credentials()
-        credentials._audience = "invalid"
-        with pytest.raises(exceptions.InvalidValue):
+        credentials._audience = audience
+        with pytest.raises(exceptions.InvalidValue, match="Invalid audience format."):
             credentials._build_trust_boundary_lookup_url()
-
-    def test_build_trust_boundary_lookup_url_invalid_workforce(self):
-        credentials = self.make_workforce_pool_credentials()
-        credentials._audience = "invalid"
-        with pytest.raises(exceptions.InvalidValue):
-            credentials._build_trust_boundary_lookup_url()
-
-    def test_build_trust_boundary_lookup_url_invalid_workload_no_project_number(self):
-        credentials = self.make_credentials()
-        credentials._audience = "//iam.googleapis.com/projects/locations/global/workloadIdentityPools/POOL_ID/providers/PROVIDER_ID"
-        with pytest.raises(exceptions.InvalidValue):
-            credentials._build_trust_boundary_lookup_url()
-
-
-    def test_build_trust_boundary_lookup_url_invalid_workforce_audience(self):
-        credentials = self.make_workforce_pool_credentials()
-        credentials._audience = "invalid"
-        with pytest.raises(exceptions.InvalidValue):
-            credentials._build_trust_boundary_lookup_url()
-
 
     def test_refresh_fetches_trust_boundary_workload(self):
         request = self.make_mock_request(
@@ -1534,6 +1522,21 @@ class TestCredentials(object):
         assert not credentials.expired
         assert credentials.token is None
 
+    def test_refresh_impersonation_invalid_url_format_error(self):
+        credentials = self.make_credentials(
+            service_account_impersonation_url="https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/:generateAccessToken/invalid",
+            scopes=self.SCOPES,
+        )
+
+        with pytest.raises(exceptions.RefreshError) as excinfo:
+            credentials.refresh(None)
+
+        assert excinfo.match(
+            r"Unable to determine target principal from service account impersonation URL."
+        )
+        assert not credentials.expired
+        assert credentials.token is None
+
     @mock.patch(
         "google.auth.metrics.python_and_auth_lib_version",
         return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
@@ -1969,6 +1972,35 @@ class TestCredentials(object):
             "authorization": "Bearer {}".format(self.SUCCESS_RESPONSE["access_token"])
         }
 
+    def test_refresh_impersonation_trust_boundary(self):
+        request = self.make_mock_request(
+            status=http_client.OK,
+            data=self.SUCCESS_RESPONSE,
+            impersonation_status=http_client.OK,
+            impersonation_data={
+                "accessToken": "SA_ACCESS_TOKEN",
+                "expireTime": "2025-01-01T00:00:00Z",
+            },
+        )
+        credentials = self.make_credentials(
+            service_account_impersonation_url=self.SERVICE_ACCOUNT_IMPERSONATION_URL
+        )
+        impersonated_creds_mock = mock.Mock()
+        impersonated_creds_mock._trust_boundary = self.VALID_TRUST_BOUNDARY
+
+        with mock.patch(
+            "google.auth.external_account.impersonated_credentials.Credentials",
+            return_value=impersonated_creds_mock,
+        ):
+            credentials.refresh(request)
+
+        assert credentials._trust_boundary == self.VALID_TRUST_BOUNDARY
+
+    def test_with_trust_boundary(self):
+        credentials = self.make_credentials()
+        new_credentials = credentials.with_trust_boundary(self.VALID_TRUST_BOUNDARY)
+        assert new_credentials._trust_boundary == self.VALID_TRUST_BOUNDARY
+
     @mock.patch("google.auth._helpers.utcnow")
     def test_before_request_impersonation_expired(self, utcnow):
         headers = {}
@@ -2354,7 +2386,6 @@ class TestCredentials(object):
         # Only 2 requests to STS and cloud resource manager should be sent.
         assert len(request.call_args_list) == 2
 
-
     def test_refresh_with_existing_impersonated_credentials(self):
         credentials = self.make_credentials(
             service_account_impersonation_url=self.SERVICE_ACCOUNT_IMPERSONATION_URL
@@ -2366,12 +2397,10 @@ class TestCredentials(object):
 
         credentials._impersonated_credentials.refresh.assert_called_once_with(request)
 
-
     def test_get_mtls_cert_and_key_paths(self):
         credentials = self.make_credentials()
         with pytest.raises(NotImplementedError):
             credentials._get_mtls_cert_and_key_paths()
-
 
 
 def test_supplier_context():
