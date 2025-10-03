@@ -531,7 +531,7 @@ class _DefaultAwsSecurityCredentialsSupplier(AwsSecurityCredentialsSupplier):
             google.auth.exceptions.RefreshError: If an error occurs while
                 retrieving the AWS security credentials.
         """
-        headers = {"Content-Type": "application/json"}
+        headers = {}
         if imdsv2_session_token is not None:
             headers["X-aws-ec2-metadata-token"] = imdsv2_session_token
 
