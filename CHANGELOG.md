@@ -4,6 +4,13 @@
 
 [1]: https://pypi.org/project/google-auth/#history
 
+## [2.42.0](https://github.com/googleapis/google-auth-library-python/compare/v2.41.1...v2.42.0) (2025-10-07)
+
+
+### Features
+
+* Add trust boundary support for external accounts. ([#1809](https://github.com/googleapis/google-auth-library-python/issues/1809)) ([36ecb1d](https://github.com/googleapis/google-auth-library-python/commit/36ecb1d65883477d27faf9c2281fc289659b9903))
+
 ## [2.41.1](https://github.com/googleapis/google-auth-library-python/compare/v2.41.0...v2.41.1) (2025-09-30)
 
 
