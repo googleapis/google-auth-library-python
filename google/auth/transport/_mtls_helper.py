@@ -20,11 +20,11 @@ from os import environ, path
 import re
 import subprocess
 
+from google.auth import environment_vars
 from google.auth import exceptions
 
 CONTEXT_AWARE_METADATA_PATH = "~/.secureConnect/context_aware_metadata.json"
 CERTIFICATE_CONFIGURATION_DEFAULT_PATH = "~/.config/gcloud/certificate_config.json"
-_CERTIFICATE_CONFIGURATION_ENV = "GOOGLE_API_CERTIFICATE_CONFIG"
 _CERT_PROVIDER_COMMAND = "cert_provider_command"
 _CERT_REGEX = re.compile(
     b"-----BEGIN CERTIFICATE-----.+-----END CERTIFICATE-----\r?\n?", re.DOTALL
@@ -132,7 +132,7 @@ def _get_cert_config_path(certificate_config_path=None):
     """
 
     if certificate_config_path is None:
-        env_path = environ.get(_CERTIFICATE_CONFIGURATION_ENV, None)
+        env_path = environ.get(environment_vars.GOOGLE_API_CERTIFICATE_CONFIG, None)
         if env_path is not None and env_path != "":
             certificate_config_path = env_path
         else:

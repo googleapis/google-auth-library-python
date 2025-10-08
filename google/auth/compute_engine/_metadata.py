@@ -360,12 +360,26 @@ def get_service_account_token(request, service_account="default", scopes=None):
         google.auth.exceptions.TransportError: if an error occurred while
             retrieving metadata.
     """
+    from google.auth import _agent_identity_utils
+
+    params = {}
     if scopes:
         if not isinstance(scopes, str):
             scopes = ",".join(scopes)
-        params = {"scopes": scopes}
-    else:
-        params = None
+        params["scopes"] = scopes
+
+    try:
+        cert_path = _agent_identity_utils.get_agent_identity_certificate_path()
+        if cert_path:
+            with open(cert_path, "rb") as cert_file:
+                cert_bytes = cert_file.read()
+            if _agent_identity_utils.should_request_bound_token(cert_bytes):
+                fingerprint = _agent_identity_utils.calculate_certificate_fingerprint(
+                    cert_bytes
+                )
+                params["bindCertificateFingerprint"] = fingerprint
+    except exceptions.RefreshError as e:
+        _LOGGER.warning("Could not load agent identity certificate: %s", e)
 
     metrics_header = {
         metrics.API_CLIENT_HEADER: metrics.token_request_access_token_mds()
