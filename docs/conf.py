@@ -372,4 +372,4 @@ intersphinx_mapping = {
 # Autodoc config
 autoclass_content = "both"
 autodoc_member_order = "bysource"
-autodoc_mock_imports = ["grpc"]
+autodoc_mock_imports = ["grpc", "rsa"]
