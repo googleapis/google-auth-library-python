@@ -14,7 +14,7 @@
 
 """RSA verifier and signer that use the ``cryptography`` library.
 
-This is a much faster implementation than the default (in
+This is a much faster implementation than the alternative (in
 ``google.auth.crypt._python_rsa``), which depends on the pure-Python
 ``rsa`` library.
 """
