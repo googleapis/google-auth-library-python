@@ -103,7 +103,7 @@ class CustomAwsSupplier:
 
 def main():
     """Main function to demonstrate the custom AWS supplier.
-    
+
     TODO(Developer):
     1. Before running this sample, set up your environment variables. You can do
        this by creating a .env file in the same directory as this script and
@@ -154,7 +154,7 @@ def main():
         print("\n--- SUCCESS! ---")
         print("Successfully authenticated and retrieved bucket data:")
         print(json.dumps(res.json(), indent=2))
-    except requests.exceptions.RequestException as e:
+    except res.exceptions.RequestException as e:
         print("\n--- FAILED ---")
         print(f"Request failed: {e}")
         if e.response:

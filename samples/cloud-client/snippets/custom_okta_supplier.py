@@ -156,7 +156,7 @@ def main():
         subject_token_type=SUBJECT_TOKEN_TYPE,
         token_url=TOKEN_URL,
         subject_token_supplier=okta_supplier,
-        # If you choose to provide explicit scopes: use the `scopes` parameter. 
+        # If you choose to provide explicit scopes: use the `scopes` parameter.
         default_scopes=['https://www.googleapis.com/auth/cloud-platform'],
         service_account_impersonation_url=SERVICE_ACCOUNT_IMPERSONATION_URL,
     )
