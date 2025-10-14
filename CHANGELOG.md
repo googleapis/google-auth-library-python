@@ -4,6 +4,13 @@
 
 [1]: https://pypi.org/project/google-auth/#history
 
+## [2.41.2](https://github.com/googleapis/google-auth-library-python/compare/v2.41.1...v2.41.2) (2025-10-14)
+
+
+### Bug Fixes
+
+* Testing changes
+
 ## [2.41.1](https://github.com/googleapis/google-auth-library-python/compare/v2.41.0...v2.41.1) (2025-09-30)
 
 
