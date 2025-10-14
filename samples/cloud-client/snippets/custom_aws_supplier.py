@@ -13,6 +13,7 @@
 
 import json
 import os
+import requests
 
 import boto3
 from botocore.exceptions import NoRegionError
@@ -154,7 +155,7 @@ def main():
         print("\n--- SUCCESS! ---")
         print("Successfully authenticated and retrieved bucket data:")
         print(json.dumps(res.json(), indent=2))
-    except res.exceptions.RequestException as e:
+    except requests.exceptions.RequestException as e:
         print("\n--- FAILED ---")
         print(f"Request failed: {e}")
         if e.response:
