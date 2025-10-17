@@ -145,17 +145,19 @@ class TestAuthorizedSession(object):
     TEST_URL = "http://example.com/"
     method = "GET"
 
-    def test_constructor(self):
-        authed_session = aiohttp_requests.AuthorizedSession(mock.sentinel.credentials)
+    @pytest.mark.asyncio
+    async def test_constructor(self):
+        authed_session = await aiohttp_requests.AuthorizedSession(mock.sentinel.credentials)
         assert authed_session.credentials == mock.sentinel.credentials
 
-    def test_constructor_with_auth_request(self):
+    @pytest.mark.asyncio
+    async def test_constructor_with_auth_request(self):
         http = mock.create_autospec(
             aiohttp.ClientSession, instance=True, _auto_decompress=False
         )
         auth_request = aiohttp_requests.Request(http)
 
-        authed_session = aiohttp_requests.AuthorizedSession(
+        authed_session = await aiohttp_requests.AuthorizedSession(
             mock.sentinel.credentials, auth_request=auth_request
         )
 
