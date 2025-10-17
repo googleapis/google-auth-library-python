@@ -54,6 +54,8 @@ from google.auth import _helpers
 from google.auth import environment_vars
 from google.auth import exceptions
 from google.auth import transport
+from google.auth.transport import _mtls_helper
+from google.auth import _agent_identity_utils
 from google.oauth2 import service_account
 
 if version.parse(urllib3.__version__) >= version.parse("2.0.0"):  # pragma: NO COVER
@@ -301,6 +303,7 @@ class AuthorizedHttp(RequestMethods):  # type: ignore
         # Request instance used by internal methods (for example,
         # credentials.refresh).
         self._request = Request(self.http)
+        self._is_mtls = False
 
         # https://google.aip.dev/auth/4111
         # Attempt to use self-signed JWTs when a service account is used.
@@ -339,7 +342,10 @@ class AuthorizedHttp(RequestMethods):  # type: ignore
             environment_vars.GOOGLE_API_USE_CLIENT_CERTIFICATE, "false"
         )
         if use_client_cert != "true":
+            self._is_mtls = False
             return False
+        else:
+            self._is_mtls = True
 
         try:
             import OpenSSL
@@ -354,6 +360,7 @@ class AuthorizedHttp(RequestMethods):  # type: ignore
 
             if found_cert_key:
                 self.http = _make_mutual_tls_http(cert, key)
+                self._cached_cert = lambda: (cert)
             else:
                 self.http = _make_default_http()
         except (
@@ -386,6 +393,11 @@ class AuthorizedHttp(RequestMethods):  # type: ignore
         if headers is None:
             headers = self.headers
 
+        use_mtls = False
+        if self._is_mtls==True:
+            if "mtls.googleapis.com" in url or "mtls.sandbox.googleapis.com" in url:
+                use_mtls = True
+
         # Make a copy of the headers. They will be modified by the credentials
         # and we want to pass the original headers if we recurse.
         request_headers = headers.copy()
@@ -407,18 +419,39 @@ class AuthorizedHttp(RequestMethods):  # type: ignore
             response.status in self._refresh_status_codes
             and _credential_refresh_attempt < self._max_refresh_attempts
         ):
-
-            _LOGGER.info(
+          if response.status == 401:
+           if use_mtls:
+             current_cert_fingerprint = (
+                _agent_identity_utils.calculate_certificate_fingerprint(
+                    self.call_client_cert_callback()[0]
+                )
+             )
+             cached_fingerprint = self.get_cached_cert_fingerprint()
+             if cached_fingerprint != current_cert_fingerprint:
+                try:
+                    _LOGGER.info(
+                        "Client certificate has changed, reconfiguring mTLS channel."
+                    )
+                    self.configure_mtls_channel(self.call_client_cert_callback)
+                except Exception as e:
+                    _LOGGER.error("Failed to reconfigure mTLS channel: %s", e)
+                    raise e
+             else:
+                _LOGGER.info(
+                    "Skipping reconfiguration of mTLS channel because the client"
+                    " certificate has not changed."
+                )
+          _LOGGER.info(
                 "Refreshing credentials due to a %s response. Attempt %s/%s.",
                 response.status,
                 _credential_refresh_attempt + 1,
                 self._max_refresh_attempts,
             )
 
-            self.credentials.refresh(self._request)
+          self.credentials.refresh(self._request)
 
             # Recurse. Pass in the original headers, not our modified set.
-            return self.urlopen(
+          return self.urlopen(
                 method,
                 url,
                 body=body,
@@ -444,6 +477,11 @@ class AuthorizedHttp(RequestMethods):  # type: ignore
             self.http.clear()
 
     @property
+    def is_mtls(self):
+        """Indicates if the created SSL channel is mutual TLS."""
+        return self._is_mtls
+
+    @property
     def headers(self):
         """Proxy to ``self.http``."""
         return self.http.headers
@@ -452,3 +490,23 @@ class AuthorizedHttp(RequestMethods):  # type: ignore
     def headers(self, value):
         """Proxy to ``self.http``."""
         self.http.headers = value
+
+    def call_client_cert_callback(self):
+        """Calls the current client cert callback and returns the certificate and key."""
+        _, cert_bytes, key_bytes, passphrase = (
+            _mtls_helper.get_client_ssl_credentials(generate_encrypted_key=True)
+        )
+        return cert_bytes, key_bytes
+
+    def get_cached_cert_fingerprint(self):
+        """Returns the fingerprint of the cached certificate."""
+        if self._cached_cert:
+            cached_cert_fingerprint = (
+            _agent_identity_utils.calculate_certificate_fingerprint(
+                self._cached_cert()
+            )
+        )
+        else:
+            raise ValueError("mTLS connection is not configured.")
+        return cached_cert_fingerprint
+
