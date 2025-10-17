@@ -115,10 +115,11 @@ class TestRequestResponse(async_compliance.RequestResponseTests):
         http = aiohttp.ClientSession(auto_decompress=False)
         return aiohttp_requests.Request(http)
 
-    def test_unsupported_session(self):
+    @pytest.mark.asyncio
+    async def test_unsupported_session(self):
         http = aiohttp.ClientSession(auto_decompress=True)
         with pytest.raises(ValueError):
-            aiohttp_requests.Request(http)
+            await aiohttp_requests.Request(http)
 
     def test_timeout(self):
         http = mock.create_autospec(
