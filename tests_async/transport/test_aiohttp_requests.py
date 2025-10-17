@@ -147,7 +147,7 @@ class TestAuthorizedSession(object):
 
     @pytest.mark.asyncio
     async def test_constructor(self):
-        authed_session = await aiohttp_requests.AuthorizedSession(mock.sentinel.credentials)
+        authed_session = aiohttp_requests.AuthorizedSession(mock.sentinel.credentials)
         assert authed_session.credentials == mock.sentinel.credentials
 
     @pytest.mark.asyncio
@@ -157,7 +157,7 @@ class TestAuthorizedSession(object):
         )
         auth_request = aiohttp_requests.Request(http)
 
-        authed_session = await aiohttp_requests.AuthorizedSession(
+        authed_session = aiohttp_requests.AuthorizedSession(
             mock.sentinel.credentials, auth_request=auth_request
         )
 
