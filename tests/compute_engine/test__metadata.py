@@ -641,6 +641,23 @@ def test_get_service_account_token_with_scopes_string(
     assert expiry == utcnow() + datetime.timedelta(seconds=ttl)
 
 
+@mock.patch("google.auth.compute_engine._metadata.get")
+@mock.patch("google.auth.compute_engine._metadata._LOGGER")
+@mock.patch("google.auth._agent_identity_utils.get_agent_identity_certificate_path")
+def test_get_service_account_token_agent_identity_refresh_error(
+    mock_get_agent_path, mock_logger, mock_get
+):
+    mock_get_agent_path.side_effect = exceptions.RefreshError("Test error")
+    mock_get.return_value = {"access_token": "token", "expires_in": 500}
+
+    _metadata.get_service_account_token(mock.sentinel.request)
+
+    mock_logger.warning.assert_called_once_with(
+        "Could not load agent identity certificate: %s", mock.ANY
+    )
+    mock_get.assert_called_once()
+
+
 def test_get_service_account_info():
     key, value = "foo", "bar"
     request = make_request(

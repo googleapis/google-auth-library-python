@@ -13,6 +13,8 @@
 # limitations under the License.
 
 import json
+import base64
+import hashlib
 
 import mock
 import pytest
@@ -46,8 +48,17 @@ NON_AGENT_IDENTITY_CERT_BYTES = (
 
 
 @pytest.fixture
-def mock_cryptography(monkeypatch):
-    pass
+def mock_cryptography_x509():
+    with mock.patch("cryptography.x509") as mock_x509:
+        mock_cert = mock.MagicMock()
+        mock_ext = mock.MagicMock()
+        mock_san_value = mock.MagicMock()
+
+        mock_x509.load_pem_x509_certificate.return_value = mock_cert
+        mock_cert.extensions.get_extension_for_oid.return_value = mock_ext
+        mock_ext.value = mock_san_value
+
+        yield mock_x509, mock_cert, mock_san_value
 
 
 class TestAgentIdentityUtils:
@@ -58,20 +69,49 @@ class TestAgentIdentityUtils:
             cert_path.read_binary()
         )
 
-    # TODO(negarb): get a mock agent identity certificate and update these unit tests.
-    # def test__is_agent_identity_certificate_valid(self, tmpdir):
-    #     cert_path = tmpdir.join("agent_cert.pem")
-    #     cert_path.write(AGENT_IDENTITY_CERT_BYTES)
-    #     assert _agent_identity_utils._is_agent_identity_certificate(cert_path.read_binary())
+    def test__is_agent_identity_certificate_valid_spiffe(self, mock_cryptography_x509):
+        _, _, mock_san_value = mock_cryptography_x509
+        mock_san_value.get_values_for_type.return_value = [
+            "spiffe://agents.global.proj-12345.system.id.goog/workload"
+        ]
+        assert _agent_identity_utils._is_agent_identity_certificate(b"cert_bytes")
 
-    # def test_calculate_certificate_fingerprint(self, tmpdir):
-    #     cert_path = tmpdir.join("agent_cert.pem")
-    #     cert_path.write(AGENT_IDENTITY_CERT_BYTES)
-    #     fingerprint = _agent_identity_utils.calculate_certificate_fingerprint(
-    #         cert_path.read_binary()
-    #     )
-    #     # base64(sha256(DER-encoded-cert))
-    #     assert fingerprint == ""
+    def test__is_agent_identity_certificate_non_matching_spiffe(
+        self, mock_cryptography_x509
+    ):
+        _, _, mock_san_value = mock_cryptography_x509
+        mock_san_value.get_values_for_type.return_value = [
+            "spiffe://other.domain.com/workload"
+        ]
+        assert not _agent_identity_utils._is_agent_identity_certificate(b"cert_bytes")
+
+    def test__is_agent_identity_certificate_no_san(self, mock_cryptography_x509):
+        mock_x509, mock_cert, _ = mock_cryptography_x509
+        mock_cert.extensions.get_extension_for_oid.side_effect = (
+            mock_x509.ExtensionNotFound
+        )
+        assert not _agent_identity_utils._is_agent_identity_certificate(b"cert_bytes")
+
+    def test__is_agent_identity_certificate_not_spiffe_uri(
+        self, mock_cryptography_x509
+    ):
+        _, _, mock_san_value = mock_cryptography_x509
+        mock_san_value.get_values_for_type.return_value = ["https://example.com"]
+        assert not _agent_identity_utils._is_agent_identity_certificate(b"cert_bytes")
+
+    def test_calculate_certificate_fingerprint(self, mock_cryptography_x509):
+        _, mock_cert, _ = mock_cryptography_x509
+        mock_cert.public_bytes.return_value = b"der-bytes"
+
+        expected_fingerprint = base64.b64encode(
+            hashlib.sha256(b"der-bytes").digest()
+        ).decode("utf-8")
+
+        fingerprint = _agent_identity_utils.calculate_certificate_fingerprint(
+            b"pem-bytes"
+        )
+
+        assert fingerprint == expected_fingerprint
 
     @mock.patch("google.auth._agent_identity_utils._is_agent_identity_certificate")
     def test_should_request_bound_token(self, mock_is_agent, monkeypatch):
@@ -130,7 +170,10 @@ class TestAgentIdentityUtils:
 
         assert mock_sleep.call_count == 4
 
-    def test_get_agent_identity_certificate_path_failure(self, tmpdir, monkeypatch):
+    @mock.patch("time.sleep")
+    def test_get_agent_identity_certificate_path_failure(
+        self, mock_sleep, tmpdir, monkeypatch
+    ):
         config_path = tmpdir.join("non_existent_config.json")
         monkeypatch.setenv(
             environment_vars.GOOGLE_API_CERTIFICATE_CONFIG, str(config_path)
@@ -140,3 +183,27 @@ class TestAgentIdentityUtils:
             _agent_identity_utils.get_agent_identity_certificate_path()
 
         assert "not found after multiple retries" in str(excinfo.value)
+
+    @mock.patch("time.sleep")
+    @mock.patch("os.path.exists")
+    def test_get_agent_identity_certificate_path_cert_not_found(
+        self, mock_exists, mock_sleep, tmpdir, monkeypatch
+    ):
+        cert_path_str = str(tmpdir.join("cert.pem"))
+        config_path = tmpdir.join("config.json")
+        config_path.write(
+            json.dumps({"cert_configs": {"workload": {"cert_path": cert_path_str}}})
+        )
+        monkeypatch.setenv(
+            environment_vars.GOOGLE_API_CERTIFICATE_CONFIG, str(config_path)
+        )
+
+        def exists_side_effect(path):
+            return path == str(config_path)
+
+        mock_exists.side_effect = exists_side_effect
+
+        with pytest.raises(exceptions.RefreshError):
+            _agent_identity_utils.get_agent_identity_certificate_path()
+
+        assert mock_sleep.call_count > 0
