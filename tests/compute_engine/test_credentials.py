@@ -660,6 +660,7 @@ class TestCredentials(object):
 
     @mock.patch("google.auth.compute_engine._metadata.get")
     @mock.patch("google.auth._agent_identity_utils.get_agent_identity_certificate_path")
+    @mock.patch("google.auth._agent_identity_utils.parse_certificate")
     @mock.patch(
         "google.auth._agent_identity_utils.should_request_bound_token",
         return_value=True,
@@ -672,6 +673,7 @@ class TestCredentials(object):
         self,
         mock_calculate_fingerprint,
         mock_should_request,
+        mock_parse_certificate,
         mock_get_path,
         mock_metadata_get,
         tmpdir,
@@ -688,7 +690,8 @@ class TestCredentials(object):
         self.credentials.refresh(None)
 
         assert self.credentials.token == "token"
-        mock_should_request.assert_called_once_with(b"cert_content")
+        mock_parse_certificate.assert_called_once_with(b"cert_content")
+        mock_should_request.assert_called_once_with(mock_parse_certificate.return_value)
         kwargs = mock_metadata_get.call_args[1]
         assert kwargs["params"] == {
             "scopes": "one,two",
@@ -697,12 +700,18 @@ class TestCredentials(object):
 
     @mock.patch("google.auth.compute_engine._metadata.get")
     @mock.patch("google.auth._agent_identity_utils.get_agent_identity_certificate_path")
+    @mock.patch("google.auth._agent_identity_utils.parse_certificate")
     @mock.patch(
         "google.auth._agent_identity_utils.should_request_bound_token",
         return_value=False,
     )
     def test_refresh_with_agent_identity_opt_out_or_not_agent(
-        self, mock_should_request, mock_get_path, mock_metadata_get, tmpdir
+        self,
+        mock_should_request,
+        mock_parse_certificate,
+        mock_get_path,
+        mock_metadata_get,
+        tmpdir,
     ):
         cert_path = tmpdir.join("cert.pem")
         cert_path.write(b"cert_content")
@@ -716,7 +725,8 @@ class TestCredentials(object):
         self.credentials.refresh(None)
 
         assert self.credentials.token == "token"
-        mock_should_request.assert_called_once_with(b"cert_content")
+        mock_parse_certificate.assert_called_once_with(b"cert_content")
+        mock_should_request.assert_called_once_with(mock_parse_certificate.return_value)
         kwargs = mock_metadata_get.call_args[1]
         assert "bindCertificateFingerprint" not in kwargs.get("params", {})
 

@@ -90,3 +90,8 @@ The default value is false. Users have to explicitly set this value to true."""
 GOOGLE_API_CERTIFICATE_CONFIG = "GOOGLE_API_CERTIFICATE_CONFIG"
 """Environment variable defining the location of Google API certificate config
 file."""
+
+GOOGLE_API_PREVENT_AGENT_TOKEN_SHARING_FOR_GCP_SERVICES = (
+    "GOOGLE_API_PREVENT_AGENT_TOKEN_SHARING_FOR_GCP_SERVICES"
+)
+"""Environment variable to prevent agent token sharing for GCP services."""

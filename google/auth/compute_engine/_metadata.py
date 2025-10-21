@@ -368,18 +368,14 @@ def get_service_account_token(request, service_account="default", scopes=None):
             scopes = ",".join(scopes)
         params["scopes"] = scopes
 
-    try:
-        cert_path = _agent_identity_utils.get_agent_identity_certificate_path()
-        if cert_path:
-            with open(cert_path, "rb") as cert_file:
-                cert_bytes = cert_file.read()
-            if _agent_identity_utils.should_request_bound_token(cert_bytes):
-                fingerprint = _agent_identity_utils.calculate_certificate_fingerprint(
-                    cert_bytes
-                )
-                params["bindCertificateFingerprint"] = fingerprint
-    except exceptions.RefreshError as e:
-        _LOGGER.warning("Could not load agent identity certificate: %s", e)
+    cert_path = _agent_identity_utils.get_agent_identity_certificate_path()
+    if cert_path:
+        with open(cert_path, "rb") as cert_file:
+            cert_bytes = cert_file.read()
+        cert = _agent_identity_utils.parse_certificate(cert_bytes)
+        if _agent_identity_utils.should_request_bound_token(cert):
+            fingerprint = _agent_identity_utils.calculate_certificate_fingerprint(cert)
+            params["bindCertificateFingerprint"] = fingerprint
 
     metrics_header = {
         metrics.API_CLIENT_HEADER: metrics.token_request_access_token_mds()

@@ -1773,6 +1773,7 @@ class TestCredentials(object):
             'The credential is not configured to use mtls requests. The credential should include a "certificate" section in the credential source.'
         )
 
+    @mock.patch("google.auth._agent_identity_utils.parse_certificate")
     @mock.patch(
         "google.auth._agent_identity_utils.should_request_bound_token",
         return_value=True,
@@ -1791,14 +1792,19 @@ class TestCredentials(object):
         mock_get_cert_bytes,
         mock_calculate_fingerprint,
         mock_should_request,
+        mock_parse_certificate,
     ):
+        mock_parse_certificate.return_value = mock.sentinel.cert
         credentials = self.make_credentials(
             credential_source=self.CREDENTIAL_SOURCE_CERTIFICATE.copy()
         )
         credentials.refresh(None)
-        mock_should_request.assert_called_once_with(b"cert")
+        mock_parse_certificate.assert_called_once_with(b"cert")
+        mock_should_request.assert_called_once_with(mock.sentinel.cert)
+        mock_calculate_fingerprint.assert_called_once_with(mock.sentinel.cert)
         mock_refresh_token.assert_called_once_with(None, cert_fingerprint="fingerprint")
 
+    @mock.patch("google.auth._agent_identity_utils.parse_certificate")
     @mock.patch(
         "google.auth._agent_identity_utils.should_request_bound_token",
         return_value=False,
@@ -1808,11 +1814,17 @@ class TestCredentials(object):
     )
     @mock.patch.object(external_account.Credentials, "_refresh_token")
     def test_refresh_with_agent_identity_opt_out_or_not_agent(
-        self, mock_refresh_token, mock_get_cert_bytes, mock_should_request
+        self,
+        mock_refresh_token,
+        mock_get_cert_bytes,
+        mock_should_request,
+        mock_parse_certificate,
     ):
+        mock_parse_certificate.return_value = mock.sentinel.cert
         credentials = self.make_credentials(
             credential_source=self.CREDENTIAL_SOURCE_CERTIFICATE.copy()
         )
         credentials.refresh(None)
-        mock_should_request.assert_called_once_with(b"cert")
+        mock_parse_certificate.assert_called_once_with(b"cert")
+        mock_should_request.assert_called_once_with(mock.sentinel.cert)
         mock_refresh_token.assert_called_once_with(None, cert_fingerprint=None)

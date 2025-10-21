@@ -12,12 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import json
 import base64
 import hashlib
+import json
 
 import mock
 import pytest
+from cryptography import x509
 
 from google.auth import _agent_identity_utils
 from google.auth import environment_vars
@@ -47,69 +48,66 @@ NON_AGENT_IDENTITY_CERT_BYTES = (
 )
 
 
-@pytest.fixture
-def mock_cryptography_x509():
-    with mock.patch("cryptography.x509") as mock_x509:
+class TestAgentIdentityUtils:
+    @mock.patch("cryptography.x509.load_pem_x509_certificate")
+    def test_parse_certificate(self, mock_load_cert):
+        result = _agent_identity_utils.parse_certificate(b"cert_bytes")
+        mock_load_cert.assert_called_once_with(b"cert_bytes")
+        assert result == mock_load_cert.return_value
+
+    def test__is_agent_identity_certificate_invalid(self):
+        cert = _agent_identity_utils.parse_certificate(NON_AGENT_IDENTITY_CERT_BYTES)
+        assert not _agent_identity_utils._is_agent_identity_certificate(cert)
+
+    def test__is_agent_identity_certificate_valid_spiffe(self):
         mock_cert = mock.MagicMock()
         mock_ext = mock.MagicMock()
         mock_san_value = mock.MagicMock()
-
-        mock_x509.load_pem_x509_certificate.return_value = mock_cert
         mock_cert.extensions.get_extension_for_oid.return_value = mock_ext
         mock_ext.value = mock_san_value
-
-        yield mock_x509, mock_cert, mock_san_value
-
-
-class TestAgentIdentityUtils:
-    def test__is_agent_identity_certificate_invalid(self, tmpdir):
-        cert_path = tmpdir.join("non_agent_cert.pem")
-        cert_path.write(NON_AGENT_IDENTITY_CERT_BYTES)
-        assert not _agent_identity_utils._is_agent_identity_certificate(
-            cert_path.read_binary()
-        )
-
-    def test__is_agent_identity_certificate_valid_spiffe(self, mock_cryptography_x509):
-        _, _, mock_san_value = mock_cryptography_x509
         mock_san_value.get_values_for_type.return_value = [
             "spiffe://agents.global.proj-12345.system.id.goog/workload"
         ]
-        assert _agent_identity_utils._is_agent_identity_certificate(b"cert_bytes")
+        assert _agent_identity_utils._is_agent_identity_certificate(mock_cert)
 
-    def test__is_agent_identity_certificate_non_matching_spiffe(
-        self, mock_cryptography_x509
-    ):
-        _, _, mock_san_value = mock_cryptography_x509
+    def test__is_agent_identity_certificate_non_matching_spiffe(self):
+        mock_cert = mock.MagicMock()
+        mock_ext = mock.MagicMock()
+        mock_san_value = mock.MagicMock()
+        mock_cert.extensions.get_extension_for_oid.return_value = mock_ext
+        mock_ext.value = mock_san_value
         mock_san_value.get_values_for_type.return_value = [
             "spiffe://other.domain.com/workload"
         ]
-        assert not _agent_identity_utils._is_agent_identity_certificate(b"cert_bytes")
+        assert not _agent_identity_utils._is_agent_identity_certificate(mock_cert)
 
-    def test__is_agent_identity_certificate_no_san(self, mock_cryptography_x509):
-        mock_x509, mock_cert, _ = mock_cryptography_x509
-        mock_cert.extensions.get_extension_for_oid.side_effect = (
-            mock_x509.ExtensionNotFound
+    def test__is_agent_identity_certificate_no_san(self):
+        mock_cert = mock.MagicMock()
+        mock_cert.extensions.get_extension_for_oid.side_effect = x509.ExtensionNotFound(
+            "Test extension not found", None
         )
-        assert not _agent_identity_utils._is_agent_identity_certificate(b"cert_bytes")
+        assert not _agent_identity_utils._is_agent_identity_certificate(mock_cert)
 
-    def test__is_agent_identity_certificate_not_spiffe_uri(
-        self, mock_cryptography_x509
-    ):
-        _, _, mock_san_value = mock_cryptography_x509
+    def test__is_agent_identity_certificate_not_spiffe_uri(self):
+        mock_cert = mock.MagicMock()
+        mock_ext = mock.MagicMock()
+        mock_san_value = mock.MagicMock()
+        mock_cert.extensions.get_extension_for_oid.return_value = mock_ext
+        mock_ext.value = mock_san_value
         mock_san_value.get_values_for_type.return_value = ["https://example.com"]
-        assert not _agent_identity_utils._is_agent_identity_certificate(b"cert_bytes")
+        assert not _agent_identity_utils._is_agent_identity_certificate(mock_cert)
 
-    def test_calculate_certificate_fingerprint(self, mock_cryptography_x509):
-        _, mock_cert, _ = mock_cryptography_x509
+    def test_calculate_certificate_fingerprint(self):
+        mock_cert = mock.MagicMock()
         mock_cert.public_bytes.return_value = b"der-bytes"
 
-        expected_fingerprint = base64.b64encode(
-            hashlib.sha256(b"der-bytes").digest()
-        ).decode("utf-8")
-
-        fingerprint = _agent_identity_utils.calculate_certificate_fingerprint(
-            b"pem-bytes"
+        expected_fingerprint = (
+            base64.urlsafe_b64encode(hashlib.sha256(b"der-bytes").digest())
+            .rstrip(b"=")
+            .decode("utf-8")
         )
+
+        fingerprint = _agent_identity_utils.calculate_certificate_fingerprint(mock_cert)
 
         assert fingerprint == expected_fingerprint
 
@@ -118,28 +116,32 @@ class TestAgentIdentityUtils:
         # Agent cert, default env var (opt-in)
         mock_is_agent.return_value = True
         monkeypatch.delenv(
-            "GOOGLE_API_PREVENT_AGENT_TOKEN_SHARING_FOR_GCP_SERVICES", raising=False
+            environment_vars.GOOGLE_API_PREVENT_AGENT_TOKEN_SHARING_FOR_GCP_SERVICES,
+            raising=False,
         )
-        assert _agent_identity_utils.should_request_bound_token(b"cert")
+        assert _agent_identity_utils.should_request_bound_token(mock.sentinel.cert)
 
         # Agent cert, explicit opt-in
         monkeypatch.setenv(
-            "GOOGLE_API_PREVENT_AGENT_TOKEN_SHARING_FOR_GCP_SERVICES", "true"
+            environment_vars.GOOGLE_API_PREVENT_AGENT_TOKEN_SHARING_FOR_GCP_SERVICES,
+            "true",
         )
-        assert _agent_identity_utils.should_request_bound_token(b"cert")
+        assert _agent_identity_utils.should_request_bound_token(mock.sentinel.cert)
 
         # Agent cert, explicit opt-out
         monkeypatch.setenv(
-            "GOOGLE_API_PREVENT_AGENT_TOKEN_SHARING_FOR_GCP_SERVICES", "false"
+            environment_vars.GOOGLE_API_PREVENT_AGENT_TOKEN_SHARING_FOR_GCP_SERVICES,
+            "false",
         )
-        assert not _agent_identity_utils.should_request_bound_token(b"cert")
+        assert not _agent_identity_utils.should_request_bound_token(mock.sentinel.cert)
 
         # Non-agent cert, opt-in
         mock_is_agent.return_value = False
         monkeypatch.setenv(
-            "GOOGLE_API_PREVENT_AGENT_TOKEN_SHARING_FOR_GCP_SERVICES", "true"
+            environment_vars.GOOGLE_API_PREVENT_AGENT_TOKEN_SHARING_FOR_GCP_SERVICES,
+            "true",
         )
-        assert not _agent_identity_utils.should_request_bound_token(b"cert")
+        assert not _agent_identity_utils.should_request_bound_token(mock.sentinel.cert)
 
     def test_get_agent_identity_certificate_path_success(self, tmpdir, monkeypatch):
         cert_path = tmpdir.join("cert.pem")
@@ -168,7 +170,7 @@ class TestAgentIdentityUtils:
         with pytest.raises(exceptions.RefreshError):
             _agent_identity_utils.get_agent_identity_certificate_path()
 
-        assert mock_sleep.call_count == 4
+        assert mock_sleep.call_count == 100
 
     @mock.patch("time.sleep")
     def test_get_agent_identity_certificate_path_failure(
@@ -183,6 +185,7 @@ class TestAgentIdentityUtils:
             _agent_identity_utils.get_agent_identity_certificate_path()
 
         assert "not found after multiple retries" in str(excinfo.value)
+        assert mock_sleep.call_count == 100
 
     @mock.patch("time.sleep")
     @mock.patch("os.path.exists")
@@ -206,4 +209,4 @@ class TestAgentIdentityUtils:
         with pytest.raises(exceptions.RefreshError):
             _agent_identity_utils.get_agent_identity_certificate_path()
 
-        assert mock_sleep.call_count > 0
+        assert mock_sleep.call_count == 100

@@ -18,8 +18,8 @@ import base64
 import hashlib
 import os
 import re
+import time
 
-from google.auth import _exponential_backoff
 from google.auth import environment_vars
 from google.auth import exceptions
 
@@ -51,11 +51,10 @@ def get_agent_identity_certificate_path():
     if not cert_config_path:
         return None
 
-    # Use exponential backoff to retry loading the certificate config file.
-    # This is to handle the race condition where the env var is set before the file exists.
-    backoff = _exponential_backoff.ExponentialBackoff(total_attempts=5)
-
-    for _ in backoff:
+    # Poll for the config file and the certificate file to be available.
+    # Phase 1: Poll rapidly for 5 seconds (50 * 0.1s).
+    # Phase 2: Slow down polling for the next 25 seconds (50 * 0.5s).
+    for i in range(100):
         if os.path.exists(cert_config_path):
             with open(cert_config_path, "r") as f:
                 cert_config = json.load(f)
@@ -66,20 +65,41 @@ def get_agent_identity_certificate_path():
                 )
                 if cert_path and os.path.exists(cert_path):
                     return cert_path
+        if i < 50:
+            time.sleep(0.1)
+        else:
+            time.sleep(0.5)
 
     raise exceptions.RefreshError(
-        "Certificate config or certificate file not found after multiple retries."
+        "Certificate config or certificate file not found after multiple retries. "
+        f"If you are using Agent Engine, you can export "
+        f"{environment_vars.GOOGLE_API_PREVENT_AGENT_TOKEN_SHARING_FOR_GCP_SERVICES} to false to "
+        "disable cert bound tokens to fall back to unbound tokens."
     )
 
 
-def _is_agent_identity_certificate(cert_bytes):
+def parse_certificate(cert_bytes):
+    """Parses a PEM-encoded certificate.
+
+    Args:
+        cert_bytes (bytes): The PEM-encoded certificate bytes.
+
+    Returns:
+        cryptography.x509.Certificate: The parsed certificate object.
+    """
+    from cryptography import x509
+
+    return x509.load_pem_x509_certificate(cert_bytes)
+
+
+def _is_agent_identity_certificate(cert):
     """Checks if a certificate is an Agent Identity certificate.
 
     This is determined by checking the Subject Alternative Name (SAN) for a
     SPIFFE ID with a trust domain matching Agent Identity patterns.
 
     Args:
-        cert_bytes (bytes): The PEM-encoded certificate bytes.
+        cert (cryptography.x509.Certificate): The parsed certificate object.
 
     Returns:
         bool: True if the certificate is an Agent Identity certificate,
@@ -88,7 +108,6 @@ def _is_agent_identity_certificate(cert_bytes):
     from cryptography import x509
     from cryptography.x509.oid import ExtensionOID
 
-    cert = x509.load_pem_x509_certificate(cert_bytes)
     try:
         ext = cert.extensions.get_extension_for_oid(
             ExtensionOID.SUBJECT_ALTERNATIVE_NAME
@@ -107,37 +126,39 @@ def _is_agent_identity_certificate(cert_bytes):
     return False
 
 
-def calculate_certificate_fingerprint(cert_bytes):
+def calculate_certificate_fingerprint(cert):
     """Calculates the base64-encoded SHA256 hash of a DER-encoded certificate.
 
     Args:
-        cert_bytes (bytes): The PEM-encoded certificate bytes.
+        cert (cryptography.x509.Certificate): The parsed certificate object.
 
     Returns:
         str: The base64-encoded SHA256 fingerprint.
     """
-    from cryptography import x509
     from cryptography.hazmat.primitives import serialization
 
-    cert = x509.load_pem_x509_certificate(cert_bytes)
     der_cert = cert.public_bytes(serialization.Encoding.DER)
     fingerprint = hashlib.sha256(der_cert).digest()
-    return base64.b64encode(fingerprint).decode("utf-8")
+    return base64.urlsafe_b64encode(fingerprint).rstrip(b"=").decode("utf-8")
 
 
-def should_request_bound_token(cert_bytes):
+def should_request_bound_token(cert):
     """Determines if a bound token should be requested.
 
     This is based on the GOOGLE_API_PREVENT_AGENT_TOKEN_SHARING_FOR_GCP_SERVICES
     environment variable and whether the certificate is an agent identity cert.
 
+    Args:
+        cert (cryptography.x509.Certificate): The parsed certificate object.
+
     Returns:
         bool: True if a bound token should be requested, False otherwise.
     """
-    is_agent_cert = _is_agent_identity_certificate(cert_bytes)
+    is_agent_cert = _is_agent_identity_certificate(cert)
     is_opted_in = (
         os.environ.get(
-            "GOOGLE_API_PREVENT_AGENT_TOKEN_SHARING_FOR_GCP_SERVICES", "true"
+            environment_vars.GOOGLE_API_PREVENT_AGENT_TOKEN_SHARING_FOR_GCP_SERVICES,
+            "true",
         ).lower()
         == "true"
     )

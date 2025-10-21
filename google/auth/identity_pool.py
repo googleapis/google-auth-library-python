@@ -564,9 +564,10 @@ class Credentials(external_account.Credentials):
         # Check if the credential is X.509 based.
         if self._credential_source_certificate is not None:
             cert_bytes = self._get_cert_bytes()
-            if _agent_identity_utils.should_request_bound_token(cert_bytes):
+            cert = _agent_identity_utils.parse_certificate(cert_bytes)
+            if _agent_identity_utils.should_request_bound_token(cert):
                 cert_fingerprint = _agent_identity_utils.calculate_certificate_fingerprint(
-                    cert_bytes
+                    cert
                 )
 
         self._refresh_token(request, cert_fingerprint=cert_fingerprint)

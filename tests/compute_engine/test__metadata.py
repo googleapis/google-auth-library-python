@@ -21,6 +21,7 @@ import os
 import mock
 import pytest  # type: ignore
 
+from google.auth import _agent_identity_utils
 from google.auth import _helpers
 from google.auth import environment_vars
 from google.auth import exceptions
@@ -36,6 +37,29 @@ SMBIOS_PRODUCT_NAME_NONEXISTENT_FILE = os.path.join(
 )
 SMBIOS_PRODUCT_NAME_NON_GOOGLE = os.path.join(
     DATA_DIR, "smbios_product_name_non_google"
+)
+
+# A mock PEM-encoded certificate without an Agent Identity SPIFFE ID.
+NON_AGENT_IDENTITY_CERT_BYTES = (
+    b"-----BEGIN CERTIFICATE-----\n"
+    b"MIIDIzCCAgugAwIBAgIJAMfISuBQ5m+5MA0GCSqGSIb3DQEBBQUAMBUxEzARBgNV\n"
+    b"BAMTCnVuaXQtdGVzdHMwHhcNMTExMjA2MTYyNjAyWhcNMjExMjAzMTYyNjAyWjAV\n"
+    b"MRMwEQYDVQQDEwp1bml0LXRlc3RzMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIB\n"
+    b"CgKCAQEA4ej0p7bQ7L/r4rVGUz9RN4VQWoej1Bg1mYWIDYslvKrk1gpj7wZgkdmM\n"
+    b"7oVK2OfgrSj/FCTkInKPqaCR0gD7K80q+mLBrN3PUkDrJQZpvRZIff3/xmVU1Wer\n"
+    b"uQLFJjnFb2dqu0s/FY/2kWiJtBCakXvXEOb7zfbINuayL+MSsCGSdVYsSliS5qQp\n"
+    b"gyDap+8b5fpXZVJkq92hrcNtbkg7hCYUJczt8n9hcCTJCfUpApvaFQ18pe+zpyl4\n"
+    b"+WzkP66I28hniMQyUlA1hBiskT7qiouq0m8IOodhv2fagSZKjOTTU2xkSBc//fy3\n"
+    b"ZpsL7WqgsZS7Q+0VRK8gKfqkxg5OYQIDAQABo3YwdDAdBgNVHQ4EFgQU2RQ8yO+O\n"
+    b"gN8oVW2SW7RLrfYd9jEwRQYDVR0jBD4wPIAU2RQ8yO+OgN8oVW2SW7RLrfYd9jGh\n"
+    b"GaQXMBUxEzARBgNVBAMTCnVuaXQtdGVzdHOCCQDHyErgUOZvuTAMBgNVHRMEBTAD\n"
+    b"AQH/MA0GCSqGSIb3DQEBBQUAA4IBAQBRv+M/6+FiVu7KXNjFI5pSN17OcW5QUtPr\n"
+    b"odJMlWrJBtynn/TA1oJlYu3yV5clc/71Vr/AxuX5xGP+IXL32YDF9lTUJXG/uUGk\n"
+    b"+JETpKmQviPbRsvzYhz4pf6ZIOZMc3/GIcNq92ECbseGO+yAgyWUVKMmZM0HqXC9\n"
+    b"ovNslqe0M8C1sLm1zAR5z/h/litE7/8O2ietija3Q/qtl2TOXJdCA6sgjJX2WUql\n"
+    b"ybrC55ct18NKf3qhpcEkGQvFU40rVYApJpi98DiZPYFdx1oBDp/f4uZ3ojpxRVFT\n"
+    b"cDwcJLfNRCPUhormsY7fDS9xSyThiHsW9mjJYdcaKQkwYZ0F11yB\n"
+    b"-----END CERTIFICATE-----\n"
 )
 
 ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE = (
@@ -641,21 +665,40 @@ def test_get_service_account_token_with_scopes_string(
     assert expiry == utcnow() + datetime.timedelta(seconds=ttl)
 
 
-@mock.patch("google.auth.compute_engine._metadata.get")
-@mock.patch("google.auth.compute_engine._metadata._LOGGER")
-@mock.patch("google.auth._agent_identity_utils.get_agent_identity_certificate_path")
-def test_get_service_account_token_agent_identity_refresh_error(
-    mock_get_agent_path, mock_logger, mock_get
-):
-    mock_get_agent_path.side_effect = exceptions.RefreshError("Test error")
-    mock_get.return_value = {"access_token": "token", "expires_in": 500}
-
-    _metadata.get_service_account_token(mock.sentinel.request)
-
-    mock_logger.warning.assert_called_once_with(
-        "Could not load agent identity certificate: %s", mock.ANY
+@mock.patch(
+    "google.auth._agent_identity_utils._is_agent_identity_certificate",
+    return_value=True,
+)
+def test_get_service_account_token_with_bound_token(mock_is_agent, tmpdir, monkeypatch):
+    # Create a mock certificate and a config file that points to it.
+    cert_path = tmpdir.join("cert.pem")
+    cert_path.write_binary(NON_AGENT_IDENTITY_CERT_BYTES)
+    config_path = tmpdir.join("config.json")
+    config_path.write(
+        json.dumps({"cert_configs": {"workload": {"cert_path": str(cert_path)}}})
     )
-    mock_get.assert_called_once()
+    monkeypatch.setenv(environment_vars.GOOGLE_API_CERTIFICATE_CONFIG, str(config_path))
+    monkeypatch.setenv(
+        environment_vars.GOOGLE_API_PREVENT_AGENT_TOKEN_SHARING_FOR_GCP_SERVICES, "true"
+    )
+
+    # Create a mock request to simulate the metadata server response.
+    token_response = json.dumps({"access_token": "token", "expires_in": 3600})
+    request = make_request(token_response, headers={"content-type": "application/json"})
+
+    # Call the function under test.
+    _metadata.get_service_account_token(request)
+
+    # Verify the request URL contains the correct fingerprint.
+    request.assert_called_once()
+    _, kwargs = request.call_args
+    url = kwargs["url"]
+
+    # Calculate the expected fingerprint.
+    cert = _agent_identity_utils.parse_certificate(NON_AGENT_IDENTITY_CERT_BYTES)
+    expected_fingerprint = _agent_identity_utils.calculate_certificate_fingerprint(cert)
+
+    assert f"bindCertificateFingerprint={expected_fingerprint}" in url
 
 
 def test_get_service_account_info():
