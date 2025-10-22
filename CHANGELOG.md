@@ -4,6 +4,32 @@
 
 [1]: https://pypi.org/project/google-auth/#history
 
+## [2.42.0](https://github.com/googleapis/google-cloud-python/compare/google-auth-v2.41.1...google-auth-v2.42.0) (2025-10-22)
+
+
+### Features
+
+* wip  ([1fd1f0e905ba6455b25a2bd000a1d45a6c0ee2f9](https://github.com/googleapis/google-cloud-python/commit/1fd1f0e905ba6455b25a2bd000a1d45a6c0ee2f9))
+* onboard `google-auth` to librarian  ([434a4f29cc1b94100a3b3811224abb8feab72b8d](https://github.com/googleapis/google-cloud-python/commit/434a4f29cc1b94100a3b3811224abb8feab72b8d))
+* Add trust boundary support for external accounts. (#1809) * feat: Add trust boundary support for external accounts.
+* Add trust boundary support to external account authorized users.
+* Fix lint issues
+* Implement additional unit tests for external account authorized user.
+* fix formatting issue
+* Add a unit test with invalid audiance
+* add missing unit tests ([36ecb1d65883477d27faf9c2281fc289659b9903](https://github.com/googleapis/google-cloud-python/commit/36ecb1d65883477d27faf9c2281fc289659b9903))
+
+
+### Bug Fixes
+
+* Read scopes from ADC json for impersoanted cred (#1820) * fix: Read scopes from ADC json for impersoanted cred
+* secret
+* secret update
+* secret update
+* 🦉 Updates from OwlBot post-processor
+See https://github.com/googleapis/repo-automation-bots/blob/main/packages/owl-bot/README.md
+--------- ([62c0fc82a3625542381f85c698595446fc99ddae](https://github.com/googleapis/google-cloud-python/commit/62c0fc82a3625542381f85c698595446fc99ddae))
+
 ## [2.41.1](https://github.com/googleapis/google-auth-library-python/compare/v2.41.0...v2.41.1) (2025-09-30)
 
 
