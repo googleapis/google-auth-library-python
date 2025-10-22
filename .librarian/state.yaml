@@ -6,7 +6,6 @@ libraries:
     apis: []
     source_roots:
       - .
-    preserve_regex:
-      - .*
+    preserve_regex: []
     remove_regex: []
-    tag_format: 'v{version}'
+    tag_format: v{version}
