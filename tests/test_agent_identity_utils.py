@@ -17,8 +17,8 @@ import hashlib
 import json
 
 import mock
-import pytest
 from cryptography import x509
+import pytest
 
 from google.auth import _agent_identity_utils
 from google.auth import environment_vars

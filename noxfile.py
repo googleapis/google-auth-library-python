@@ -105,6 +105,7 @@ def mypy(session):
         "types-requests",
         "types-setuptools",
         "types-mock",
+        "types-pytest",
     )
     session.run("mypy", "-p", "google", "-p", "tests", "-p", "tests_async")
 
