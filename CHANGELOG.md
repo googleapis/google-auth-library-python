@@ -4,6 +4,21 @@
 
 [1]: https://pypi.org/project/google-auth/#history
 
+## [2.42.0](https://github.com/googleapis/google-cloud-python/compare/google-auth-v2.41.1...google-auth-v2.42.0) (2025-10-22)
+
+
+### Features
+
+* wip  ([9bde45833a2aa095c0f0ddb8a4aaaf5e2ea28453](https://github.com/googleapis/google-cloud-python/commit/9bde45833a2aa095c0f0ddb8a4aaaf5e2ea28453))
+* onboard `google-auth` to librarian  ([4059a5d33a5d5c66776adddbb0eeea373a66dffb](https://github.com/googleapis/google-cloud-python/commit/4059a5d33a5d5c66776adddbb0eeea373a66dffb))
+* Add trust boundary support for external accounts. (#1809) * feat: Add trust boundary support for external accounts.
+* Add trust boundary support to external account authorized users.
+* Fix lint issues
+* Implement additional unit tests for external account authorized user.
+* fix formatting issue
+* Add a unit test with invalid audiance
+* add missing unit tests ([36ecb1d65883477d27faf9c2281fc289659b9903](https://github.com/googleapis/google-cloud-python/commit/36ecb1d65883477d27faf9c2281fc289659b9903))
+
 ## [2.41.1](https://github.com/googleapis/google-auth-library-python/compare/v2.41.0...v2.41.1) (2025-09-30)
 
 
