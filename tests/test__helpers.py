@@ -628,9 +628,8 @@ def test_parse_request_body_json_type_error():
     with mock.patch("json.loads", side_effect=TypeError):
         # json.loads should raise a TypeError, and the function should return the
         # original string
-        assert (
-            _helpers._parse_request_body(body, "application/json")
-            == body.decode("utf-8")
+        assert _helpers._parse_request_body(body, "application/json") == body.decode(
+            "utf-8"
         )
 
 
