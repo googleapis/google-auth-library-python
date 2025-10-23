@@ -355,7 +355,7 @@ class AuthorizedHttp(RequestMethods):  # type: ignore
 
             if found_cert_key:
                 self.http = _make_mutual_tls_http(cert, key)
-                self._cached_cert = lambda: (cert)
+                self._cached_cert = cert
             else:
                 self.http = _make_default_http()
         except (
@@ -389,7 +389,7 @@ class AuthorizedHttp(RequestMethods):  # type: ignore
             headers = self.headers
 
         use_mtls = False
-        if self._is_mtls==True:
+        if self._is_mtls == True:
             if "mtls.googleapis.com" in url or "mtls.sandbox.googleapis.com" in url:
                 use_mtls = True
 
@@ -414,28 +414,45 @@ class AuthorizedHttp(RequestMethods):  # type: ignore
             response.status in self._refresh_status_codes
             and _credential_refresh_attempt < self._max_refresh_attempts
         ):
-          if response.status == 401:
-           if use_mtls:
-             current_cert_fingerprint = (
-                _agent_identity_utils.calculate_certificate_fingerprint(
-                    self.call_client_cert_callback()[0]
+	  if response.status == 401:
+            if use_mtls:
+                call_cert_callback_result = (
+                    _agent_identity_utils.call_client_cert_callback()
                 )
-             )
-             cached_fingerprint = self.get_cached_cert_fingerprint()
-             if cached_fingerprint != current_cert_fingerprint:
-                try:
-                    _LOGGER.info(
-                        "Client certificate has changed, reconfiguring mTLS channel."
+                cert_obj = _agent_identity_utils.parse_certificate(
+                    call_cert_callback_result[0]
+                )
+                current_cert_fingerprint = (
+                    _agent_identity_utils.calculate_certificate_fingerprint(
+                        cert_obj
                     )
-                    self.configure_mtls_channel(self.call_client_cert_callback)
-                except Exception as e:
-                    _LOGGER.error("Failed to reconfigure mTLS channel: %s", e)
-                    raise e
-             else:
-                _LOGGER.info(
-                    "Skipping reconfiguration of mTLS channel because the client"
-                    " certificate has not changed."
                 )
+                if self._cached_cert:
+                    cached_fingerprint = (
+                        _agent_identity_utils.get_cached_cert_fingerprint(
+                            self._cached_cert
+                        )
+                    )
+                    if cached_fingerprint != current_cert_fingerprint:
+                        try:
+                            _LOGGER.info(
+                                "Client certificate has changed, reconfiguring mTLS "
+                                "channel."
+                            )
+                            self.configure_mtls_channel(
+                                lambda: call_cert_callback_result
+                            )
+                        except Exception as e:
+                            _LOGGER.error(
+                                "Failed to reconfigure mTLS channel: %s", e
+                            )
+                            raise e
+                    else:
+                        _LOGGER.info(
+                            "Skipping reconfiguration of mTLS channel because the "
+                            "client certificate has not changed."
+                        )
+
           _LOGGER.info(
                 "Refreshing credentials due to a %s response. Attempt %s/%s.",
                 response.status,
@@ -445,18 +462,17 @@ class AuthorizedHttp(RequestMethods):  # type: ignore
 
           self.credentials.refresh(self._request)
 
-            # Recurse. Pass in the original headers, not our modified set.
+          # Recurse. Pass in the original headers, not our modified set.
           return self.urlopen(
-                method,
-                url,
-                body=body,
-                headers=headers,
-                _credential_refresh_attempt=_credential_refresh_attempt + 1,
-                **kwargs,
-            )
+            method,
+            url,
+            body=body,
+            headers=headers,
+            _credential_refresh_attempt=_credential_refresh_attempt + 1,
+            **kwargs,
+          )
 
         return response
-
     # Proxy methods for compliance with the urllib3.PoolManager interface
 
     def __enter__(self):
@@ -486,22 +502,4 @@ class AuthorizedHttp(RequestMethods):  # type: ignore
         """Proxy to ``self.http``."""
         self.http.headers = value
 
-    def call_client_cert_callback(self):
-        """Calls the current client cert callback and returns the certificate and key."""
-        _, cert_bytes, key_bytes, passphrase = (
-            _mtls_helper.get_client_ssl_credentials(generate_encrypted_key=True)
-        )
-        return cert_bytes, key_bytes
-
-    def get_cached_cert_fingerprint(self):
-        """Returns the fingerprint of the cached certificate."""
-        if self._cached_cert:
-            cached_cert_fingerprint = (
-            _agent_identity_utils.calculate_certificate_fingerprint(
-                self._cached_cert()
-            )
-        )
-        else:
-            raise ValueError("mTLS connection is not configured.")
-        return cached_cert_fingerprint
 

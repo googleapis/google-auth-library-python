@@ -465,7 +465,7 @@ class AuthorizedSession(requests.Session):
 
             if self._is_mtls:
                 mtls_adapter = _MutualTlsAdapter(cert, key)
-		self._cached_cert = lambda: (cert)
+		self._cached_cert = cert
                 self.mount("https://", mtls_adapter)
         except (
             exceptions.ClientCertError,
@@ -554,19 +554,41 @@ class AuthorizedSession(requests.Session):
             response.status_code in self._refresh_status_codes
             and _credential_refresh_attempt < self._max_refresh_attempts
         ):
-	    if response.status_code == 401:
+            if response.status_code == 401:
                 if self.is_mtls:
-                    current_cert_fingerprint = _agent_identity_utils.calculate_certificate_fingerprint(self.call_client_cert_callback()[0])
-                    cached_fingerprint = self.get_cached_cert_fingerprint()
+                    call_cert_callback_result = (
+                        _agent_identity_utils.call_client_cert_callback()
+                    )
+                    cert_obj = _agent_identity_utils.parse_certificate(
+                        call_cert_callback_result[0]
+                    )
+                    current_cert_fingerprint = (
+                            _agent_identity_utils.calculate_certificate_fingerprint(
+                                cert_obj
+                            )
+                        )
+                    cached_fingerprint = (
+                        _agent_identity_utils.get_cached_cert_fingerprint(
+                            self._cached_cert
+                        )
+                    )
                     if cached_fingerprint != current_cert_fingerprint:
-			try:
-                            _LOGGER.info("Client certificate has changed, reconfiguring mTLS channel.")
-                            self.configure_mtls_channel(self.call_client_cert_callback)
-			except Exception as e:
-			    _LOGGER.error("Failed to reconfigure mTLS channel: %s", e)
+                        try:
+                            _LOGGER.info(
+                                "Client certificate has changed, reconfiguring mTLS "
+                                "channel."
+                            )
+                            self.configure_mtls_channel(
+                                lambda: call_cert_callback_result
+                            )
+                        except Exception as e:
+                            _LOGGER.error("Failed to reconfigure mTLS channel: %s", e)
                             raise e
                     else:
-                        _LOGGER.info("Skipping reconfiguration of mTLS channel because the client certificate has not changed.")
+                        _LOGGER.info(
+                            "Skipping reconfiguration of mTLS channel because the client"
+                            " certificate has not changed."
+                        )
             _LOGGER.info(
                 "Refreshing credentials due to a %s response. Attempt %s/%s.",
                 response.status_code,
@@ -616,21 +638,3 @@ class AuthorizedSession(requests.Session):
             self._auth_request_session.close()
         super(AuthorizedSession, self).close()
 
-    def call_client_cert_callback(self):
-        """Calls the client cert callback and returns the certificate and key."""
-        _, cert_bytes, key_bytes, passphrase = (
-        _mtls_helper.get_client_ssl_credentials(generate_encrypted_key=True)
-    )
-        return cert_bytes, key_bytes
-
-    def get_cached_cert_fingerprint(self):
-        """Returns the fingerprint of the cached certificate."""
-        if self._cached_cert:
-            cached_cert_fingerprint = (
-            _agent_identity_utils.calculate_certificate_fingerprint(
-                self._cached_cert()
-            )
-        )
-        else:
-            raise ValueError("mTLS connection is not configured.")
-        return cached_cert_fingerprint
