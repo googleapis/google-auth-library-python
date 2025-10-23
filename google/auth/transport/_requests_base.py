@@ -17,9 +17,10 @@
 # since it is currently unused.
 
 import abc
+from typing import Any, Dict, Optional, Union
 
 
-_DEFAULT_TIMEOUT = 120  # in second
+_DEFAULT_TIMEOUT: Union[int, float] = 120  # in seconds
 
 
 class _BaseAuthorizedSession(metaclass=abc.ABCMeta):
@@ -32,22 +33,24 @@ class _BaseAuthorizedSession(metaclass=abc.ABCMeta):
             add to the request.
     """
 
-    def __init__(self, credentials):
+    def __init__(self, credentials: Any) -> None:
         self.credentials = credentials
 
     @abc.abstractmethod
     def request(
         self,
-        method,
-        url,
-        data=None,
-        headers=None,
-        max_allowed_time=None,
-        timeout=_DEFAULT_TIMEOUT,
-        **kwargs
-    ):
+        method: str,
+        url: str,
+        data: Optional[bytes] = None,
+        headers: Optional[Dict[str, str]] = None,
+        max_allowed_time: Optional[Union[int, float]] = None,
+        timeout: Union[int, float] = _DEFAULT_TIMEOUT,
+        **kwargs: Any,
+    ) -> Any:
+        """Abstract request method to be implemented by subclasses."""
         raise NotImplementedError("Request must be implemented")
 
     @abc.abstractmethod
-    def close(self):
+    def close(self) -> None:
+        """Abstract close method to be implemented by subclasses."""
         raise NotImplementedError("Close must be implemented")
