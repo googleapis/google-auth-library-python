@@ -465,7 +465,7 @@ class AuthorizedSession(requests.Session):
 
             if self._is_mtls:
                 mtls_adapter = _MutualTlsAdapter(cert, key)
-		self._cached_cert = cert
+                self._cached_cert = cert
                 self.mount("https://", mtls_adapter)
         except (
             exceptions.ClientCertError,

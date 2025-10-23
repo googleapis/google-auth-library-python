@@ -414,7 +414,7 @@ class AuthorizedHttp(RequestMethods):  # type: ignore
             response.status in self._refresh_status_codes
             and _credential_refresh_attempt < self._max_refresh_attempts
         ):
-	  if response.status == 401:
+          if response.status == 401:
             if use_mtls:
                 call_cert_callback_result = (
                     _agent_identity_utils.call_client_cert_callback()
