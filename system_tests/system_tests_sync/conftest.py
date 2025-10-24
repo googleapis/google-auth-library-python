@@ -33,7 +33,6 @@ URLLIB3_HTTP = urllib3.PoolManager(retries=False)
 REQUESTS_SESSION = requests.Session()
 REQUESTS_SESSION.verify = False
 TOKEN_INFO_URL = "https://www.googleapis.com/oauth2/v3/tokeninfo"
-AUTHORIZED_USER_FILE = os.path.join(DATA_DIR, "authorized_user.json")
 
 
 @pytest.fixture
