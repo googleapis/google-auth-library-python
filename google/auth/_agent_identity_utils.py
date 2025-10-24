@@ -16,18 +16,38 @@
 
 import base64
 import hashlib
+import logging
 import os
 import re
 import time
+from urllib.parse import urlparse
 
 from google.auth import environment_vars
 from google.auth import exceptions
+
+
+_LOGGER = logging.getLogger(__name__)
 
 # SPIFFE trust domain patterns for Agent Identities.
 _AGENT_IDENTITY_SPIFFE_TRUST_DOMAIN_PATTERNS = [
     r"^agents\.global\.org-\d+\.system\.id\.goog$",
     r"^agents\.global\.proj-\d+\.system\.id\.goog$",
 ]
+
+# Constants for polling the certificate file.
+_FAST_POLL_CYCLES = 50
+_FAST_POLL_INTERVAL = 0.1  # 100ms
+_SLOW_POLL_INTERVAL = 0.5  # 500ms
+_TOTAL_TIMEOUT = 30  # seconds
+
+# Calculate the number of slow poll cycles based on the total timeout.
+_SLOW_POLL_CYCLES = int(
+    (_TOTAL_TIMEOUT - (_FAST_POLL_CYCLES * _FAST_POLL_INTERVAL)) / _SLOW_POLL_INTERVAL
+)
+
+_POLLING_INTERVALS = ([_FAST_POLL_INTERVAL] * _FAST_POLL_CYCLES) + (
+    [_SLOW_POLL_INTERVAL] * _SLOW_POLL_CYCLES
+)
 
 
 def get_agent_identity_certificate_path():
@@ -51,11 +71,10 @@ def get_agent_identity_certificate_path():
     if not cert_config_path:
         return None
 
-    # Poll for the config file and the certificate file to be available.
-    # Phase 1: Poll rapidly for 5 seconds (50 * 0.1s).
-    # Phase 2: Slow down polling for the next 25 seconds (50 * 0.5s).
-    for i in range(100):
-        if os.path.exists(cert_config_path):
+    has_logged_warning = False
+
+    for interval in _POLLING_INTERVALS:
+        try:
             with open(cert_config_path, "r") as f:
                 cert_config = json.load(f)
                 cert_path = (
@@ -65,10 +84,19 @@ def get_agent_identity_certificate_path():
                 )
                 if cert_path and os.path.exists(cert_path):
                     return cert_path
-        if i < 50:
-            time.sleep(0.1)
-        else:
-            time.sleep(0.5)
+        except (IOError, ValueError, KeyError):
+            if not has_logged_warning:
+                _LOGGER.warning(
+                    "Certificate config file not found at %s (from %s environment "
+                    "variable). Retrying for up to %s seconds.",
+                    cert_config_path,
+                    environment_vars.GOOGLE_API_CERTIFICATE_CONFIG,
+                    _TOTAL_TIMEOUT,
+                )
+                has_logged_warning = True
+            pass
+
+        time.sleep(interval)
 
     raise exceptions.RefreshError(
         "Certificate config or certificate file not found after multiple retries. "
@@ -87,7 +115,13 @@ def parse_certificate(cert_bytes):
     Returns:
         cryptography.x509.Certificate: The parsed certificate object.
     """
-    from cryptography import x509
+    try:
+        from cryptography import x509
+    except ImportError:
+        raise ImportError(
+            "The cryptography library is required for certificate-based authentication."
+            "Please install it with `pip install google-auth[cryptography]`."
+        )
 
     return x509.load_pem_x509_certificate(cert_bytes)
 
@@ -105,8 +139,14 @@ def _is_agent_identity_certificate(cert):
         bool: True if the certificate is an Agent Identity certificate,
             False otherwise.
     """
-    from cryptography import x509
-    from cryptography.x509.oid import ExtensionOID
+    try:
+        from cryptography import x509
+        from cryptography.x509.oid import ExtensionOID
+    except ImportError:
+        raise ImportError(
+            "The cryptography library is required for certificate-based authentication."
+            "Please install it with `pip install google-auth[cryptography]`."
+        )
 
     try:
         ext = cert.extensions.get_extension_for_oid(
@@ -117,9 +157,9 @@ def _is_agent_identity_certificate(cert):
     uris = ext.value.get_values_for_type(x509.UniformResourceIdentifier)
 
     for uri in uris:
-        if uri.startswith("spiffe://"):
-            spiffe_id = uri[len("spiffe://") :]
-            trust_domain = spiffe_id.split("/", 1)[0]
+        parsed_uri = urlparse(uri)
+        if parsed_uri.scheme == "spiffe":
+            trust_domain = parsed_uri.netloc
             for pattern in _AGENT_IDENTITY_SPIFFE_TRUST_DOMAIN_PATTERNS:
                 if re.match(pattern, trust_domain):
                     return True
@@ -135,7 +175,13 @@ def calculate_certificate_fingerprint(cert):
     Returns:
         str: The base64-encoded SHA256 fingerprint.
     """
-    from cryptography.hazmat.primitives import serialization
+    try:
+        from cryptography.hazmat.primitives import serialization
+    except ImportError:
+        raise ImportError(
+            "The cryptography library is required for certificate-based authentication."
+            "Please install it with `pip install google-auth[cryptography]`."
+        )
 
     der_cert = cert.public_bytes(serialization.Encoding.DER)
     fingerprint = hashlib.sha256(der_cert).digest()

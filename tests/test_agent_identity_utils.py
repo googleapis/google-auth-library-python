@@ -185,6 +185,10 @@ class TestAgentIdentityUtils:
             _agent_identity_utils.get_agent_identity_certificate_path()
 
         assert "not found after multiple retries" in str(excinfo.value)
+        assert (
+            environment_vars.GOOGLE_API_PREVENT_AGENT_TOKEN_SHARING_FOR_GCP_SERVICES
+            in str(excinfo.value)
+        )
         assert mock_sleep.call_count == 100
 
     @mock.patch("time.sleep")
