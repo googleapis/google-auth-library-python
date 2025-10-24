@@ -208,6 +208,8 @@ class Credentials(credentials.ReadOnlyScoped, credentials.CredentialsWithQuotaPr
     @property
     def scopes(self):
         """Optional[str]: The OAuth 2.0 permission scopes."""
+        if isinstance(self._scopes, set):
+            return list(self._scopes)
         return self._scopes
 
     @property
