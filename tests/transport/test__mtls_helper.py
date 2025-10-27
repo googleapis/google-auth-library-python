@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
 import os
 import re
 
@@ -638,3 +639,28 @@ class TestDecryptPrivateKey(object):
             _mtls_helper.decrypt_private_key(
                 ENCRYPTED_EC_PRIVATE_KEY, b"wrong_password"
             )
+
+    def test_check_use_client_cert_for_workload(self):
+        use_client_cert = _mtls_helper.check_use_client_cert_for_workload("")
+        assert use_client_cert == False
+
+    def test_check_use_client_cert_for_workload_with_config_file(self):
+        config_data = {
+            "version": 1,
+            "cert_configs": {
+                "workload": {
+                    "cert_path": "path/to/cert/file",
+                    "key_path": "path/to/key/file",
+                }
+            },
+        }
+        config_filename = "mock_certificate_config.json"
+        config_file_content = json.dumps(config_data)
+        # Use mock_open to simulate the file in memory
+        m = mock.mock_open(read_data=config_file_content)
+        with mock.patch("builtins.open", m):
+            os.environ["GOOGLE_API_CERTIFICATE_CONFIG"] = config_filename
+            use_client_cert = _mtls_helper.check_use_client_cert_for_workload(
+                ""
+            )
+            assert use_client_cert == True
