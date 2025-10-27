@@ -17,6 +17,7 @@
 import json
 import logging
 from os import environ, path
+import os
 import re
 import subprocess
 
@@ -405,3 +406,14 @@ def decrypt_private_key(key, passphrase):
 
     # Then dump the decrypted key bytes
     return crypto.dump_privatekey(crypto.FILETYPE_PEM, pkey)
+
+def check_use_client_cert_for_workload(use_client_cert):
+  """Checks if the workload should use client cert for mutual TLS."""
+  if use_client_cert == "":
+    cert_path = os.getenv("GOOGLE_API_CERTIFICATE_CONFIG")
+    if cert_path:
+      with open(cert_path, "r") as f:
+        content = f.read()
+        if "workload" in content:
+          return True
+    return False
