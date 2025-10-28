@@ -642,6 +642,15 @@ def test_parse_request_body_json_value_error():
         assert _helpers._parse_request_body(body, content_type) == body.decode("utf-8")
 
 
+def test_parse_request_body_json_decode_error():
+    body = b'{"key": "value"}'
+    content_type = "application/json"
+    with mock.patch("json.loads", side_effect=json.JSONDecodeError("msg", "doc", 0)):
+        # json.loads should raise a JSONDecodeError, and the function should return the
+        # original string
+        assert _helpers._parse_request_body(body, content_type) == body.decode("utf-8")
+
+
 def test_parse_response_json_valid():
     class MockResponse:
         def json(self):
