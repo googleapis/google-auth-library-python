@@ -407,13 +407,42 @@ def decrypt_private_key(key, passphrase):
     # Then dump the decrypted key bytes
     return crypto.dump_privatekey(crypto.FILETYPE_PEM, pkey)
 
-def check_use_client_cert_for_workload(use_client_cert):
-  """Checks if the workload should use client cert for mutual TLS."""
-  if use_client_cert == "":
+def check_use_client_cert():
+  """Returns the effective value of use_client_cert to be used.
+
+  Returns:
+      str:
+          A boolean indicating if client certificate should be used.
+          The value is "true" or "false" or unset.
+          If unset, the function checks if the GOOGLE_API_CERTIFICATE_CONFIG
+          environment variable is set. If it is set, the function returns
+          "true" if the certificate config file contains "workload" section
+          and "false" otherwise.
+
+  Raises:
+      ValueError: if GOOGLE_API_USE_CLIENT_CERTIFICATE is set to unsupported
+      value, which is not "true" or "false".
+  """
+  use_client_cert = os.getenv("GOOGLE_API_USE_CLIENT_CERTIFICATE")
+  ### Check if the value of GOOGLE_API_USE_CLIENT_CERTIFICATE is unset.
+  if use_client_cert == "" or use_client_cert is None:
     cert_path = os.getenv("GOOGLE_API_CERTIFICATE_CONFIG")
     if cert_path:
       with open(cert_path, "r") as f:
         content = f.read()
         if "workload" in content:
-          return True
-    return False
+          return "true"
+    return "false"
+  else:
+    ### Check if the value of GOOGLE_API_USE_CLIENT_CERTIFICATE is set but to an
+    ### invalid value.
+    use_client_cert = use_client_cert.lower()
+    if use_client_cert not in ("true", "false"):
+      raise ValueError(
+          "Environment variable `GOOGLE_API_USE_CLIENT_CERTIFICATE` must be"
+          " either `true` or `false`"
+      )
+    else:
+    ### Return the value of GOOGLE_API_USE_CLIENT_CERTIFICATE which is set.
+      return use_client_cert
+

@@ -335,22 +335,9 @@ class AuthorizedHttp(RequestMethods):  # type: ignore
             google.auth.exceptions.MutualTLSChannelError: If mutual TLS channel
                 creation failed for any reason.
         """
-        use_client_cert = os.getenv(
-            environment_vars.GOOGLE_API_USE_CLIENT_CERTIFICATE)
-        if use_client_cert != "true":
-            ## Check if workload is present in the certificate config file 
-            ## and GOOGLE_API_USE_CLIENT_CERTIFICATE is unset.
-            if _mtls_helper.check_use_client_cert_for_workload(
-                use_client_cert
-            ):
-                os.putenv(
-                    environment_vars.GOOGLE_API_USE_CLIENT_CERTIFICATE, "true"
-                )
-                use_client_cert = "true"
-            else:
-                use_client_cert = "false"
-                return False
-
+	use_client_cert = _mtls_helper.check_use_client_cert()
+	if use_client_cert != "true":
+            return False
         try:
             import OpenSSL
         except ImportError as caught_exc:

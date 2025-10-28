@@ -640,9 +640,10 @@ class TestDecryptPrivateKey(object):
                 ENCRYPTED_EC_PRIVATE_KEY, b"wrong_password"
             )
 
-    def test_check_use_client_cert_for_workload(self):
-        use_client_cert = _mtls_helper.check_use_client_cert_for_workload("")
-        assert use_client_cert == False
+    def test_check_use_client_cert(self):
+        os.environ["GOOGLE_API_USE_CLIENT_CERTIFICATE"] = "true"
+        use_client_cert = _mtls_helper.check_use_client_cert()
+        assert use_client_cert == "true"
 
     def test_check_use_client_cert_for_workload_with_config_file(self):
         config_data = {
@@ -660,7 +661,7 @@ class TestDecryptPrivateKey(object):
         m = mock.mock_open(read_data=config_file_content)
         with mock.patch("builtins.open", m):
             os.environ["GOOGLE_API_CERTIFICATE_CONFIG"] = config_filename
-            use_client_cert = _mtls_helper.check_use_client_cert_for_workload(
-                ""
-            )
-            assert use_client_cert == True
+            os.environ["GOOGLE_API_USE_CLIENT_CERTIFICATE"] = ""
+            use_client_cert = _mtls_helper.check_use_client_cert()
+            assert use_client_cert == "true"
+
