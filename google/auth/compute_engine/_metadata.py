@@ -368,11 +368,8 @@ def get_service_account_token(request, service_account="default", scopes=None):
             scopes = ",".join(scopes)
         params["scopes"] = scopes
 
-    cert_path = _agent_identity_utils.get_agent_identity_certificate_path()
-    if cert_path:
-        with open(cert_path, "rb") as cert_file:
-            cert_bytes = cert_file.read()
-        cert = _agent_identity_utils.parse_certificate(cert_bytes)
+    cert = _agent_identity_utils.get_and_parse_agent_identity_certificate()
+    if cert:
         if _agent_identity_utils.should_request_bound_token(cert):
             fingerprint = _agent_identity_utils.calculate_certificate_fingerprint(cert)
             params["bindCertificateFingerprint"] = fingerprint

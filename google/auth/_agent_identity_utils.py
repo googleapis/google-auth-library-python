@@ -28,6 +28,11 @@ from google.auth import exceptions
 
 _LOGGER = logging.getLogger(__name__)
 
+CRYPTOGRAPHY_NOT_FOUND_ERROR = (
+    "The cryptography library is required for certificate-based authentication."
+    "Please install it with `pip install google-auth[cryptography]`."
+)
+
 # SPIFFE trust domain patterns for Agent Identities.
 _AGENT_IDENTITY_SPIFFE_TRUST_DOMAIN_PATTERNS = [
     r"^agents\.global\.org-\d+\.system\.id\.goog$",
@@ -56,7 +61,7 @@ def get_agent_identity_certificate_path():
     The path to the certificate config file is read from the
     GOOGLE_API_CERTIFICATE_CONFIG environment variable. This function
     implements a retry mechanism to handle cases where the environment
-    variable is set before the file is available on the filesystem.
+    variable is set before the files are available on the filesystem.
 
     Returns:
         str: The path to the leaf certificate file.
@@ -96,14 +101,50 @@ def get_agent_identity_certificate_path():
                 has_logged_warning = True
             pass
 
+        # A sleep is required in two cases:
+        # 1. The config file is not found (the except block).
+        # 2. The config file is found, but the certificate is not yet available.
+        # In both cases, we need to poll, so we sleep on every iteration
+        # that doesn't return a certificate.
         time.sleep(interval)
 
     raise exceptions.RefreshError(
         "Certificate config or certificate file not found after multiple retries. "
-        f"If you are using Agent Engine, you can export "
-        f"{environment_vars.GOOGLE_API_PREVENT_AGENT_TOKEN_SHARING_FOR_GCP_SERVICES} to false to "
-        "disable cert bound tokens to fall back to unbound tokens."
+        f"Token binding protection is failing. You can turn off this protection by setting "
+        f"{environment_vars.GOOGLE_API_PREVENT_AGENT_TOKEN_SHARING_FOR_GCP_SERVICES} to false "
+        "to fall back to unbound tokens."
     )
+
+
+def get_and_parse_agent_identity_certificate():
+    """Gets and parses the agent identity certificate if not opted out.
+
+    Checks if the user has opted out of certificate-bound tokens. If not,
+    it gets the certificate path, reads the file, and parses it.
+
+    Returns:
+        The parsed certificate object if found and not opted out, otherwise None.
+    """
+    # If the user has opted out of cert bound tokens, there is no need to
+    # look up the certificate.
+    is_opted_out = (
+        os.environ.get(
+            environment_vars.GOOGLE_API_PREVENT_AGENT_TOKEN_SHARING_FOR_GCP_SERVICES,
+            "true",
+        ).lower()
+        == "false"
+    )
+    if is_opted_out:
+        return None
+
+    cert_path = get_agent_identity_certificate_path()
+    if not cert_path:
+        return None
+
+    with open(cert_path, "rb") as cert_file:
+        cert_bytes = cert_file.read()
+
+    return parse_certificate(cert_bytes)
 
 
 def parse_certificate(cert_bytes):
@@ -117,13 +158,10 @@ def parse_certificate(cert_bytes):
     """
     try:
         from cryptography import x509
-    except ImportError:
-        raise ImportError(
-            "The cryptography library is required for certificate-based authentication."
-            "Please install it with `pip install google-auth[cryptography]`."
-        )
 
-    return x509.load_pem_x509_certificate(cert_bytes)
+        return x509.load_pem_x509_certificate(cert_bytes)
+    except ImportError as e:
+        raise ImportError(CRYPTOGRAPHY_NOT_FOUND_ERROR) from e
 
 
 def _is_agent_identity_certificate(cert):
@@ -142,28 +180,25 @@ def _is_agent_identity_certificate(cert):
     try:
         from cryptography import x509
         from cryptography.x509.oid import ExtensionOID
-    except ImportError:
-        raise ImportError(
-            "The cryptography library is required for certificate-based authentication."
-            "Please install it with `pip install google-auth[cryptography]`."
-        )
 
-    try:
-        ext = cert.extensions.get_extension_for_oid(
-            ExtensionOID.SUBJECT_ALTERNATIVE_NAME
-        )
-    except x509.ExtensionNotFound:
+        try:
+            ext = cert.extensions.get_extension_for_oid(
+                ExtensionOID.SUBJECT_ALTERNATIVE_NAME
+            )
+        except x509.ExtensionNotFound:
+            return False
+        uris = ext.value.get_values_for_type(x509.UniformResourceIdentifier)
+
+        for uri in uris:
+            parsed_uri = urlparse(uri)
+            if parsed_uri.scheme == "spiffe":
+                trust_domain = parsed_uri.netloc
+                for pattern in _AGENT_IDENTITY_SPIFFE_TRUST_DOMAIN_PATTERNS:
+                    if re.match(pattern, trust_domain):
+                        return True
         return False
-    uris = ext.value.get_values_for_type(x509.UniformResourceIdentifier)
-
-    for uri in uris:
-        parsed_uri = urlparse(uri)
-        if parsed_uri.scheme == "spiffe":
-            trust_domain = parsed_uri.netloc
-            for pattern in _AGENT_IDENTITY_SPIFFE_TRUST_DOMAIN_PATTERNS:
-                if re.match(pattern, trust_domain):
-                    return True
-    return False
+    except ImportError as e:
+        raise ImportError(CRYPTOGRAPHY_NOT_FOUND_ERROR) from e
 
 
 def calculate_certificate_fingerprint(cert):
@@ -177,15 +212,12 @@ def calculate_certificate_fingerprint(cert):
     """
     try:
         from cryptography.hazmat.primitives import serialization
-    except ImportError:
-        raise ImportError(
-            "The cryptography library is required for certificate-based authentication."
-            "Please install it with `pip install google-auth[cryptography]`."
-        )
 
-    der_cert = cert.public_bytes(serialization.Encoding.DER)
-    fingerprint = hashlib.sha256(der_cert).digest()
-    return base64.urlsafe_b64encode(fingerprint).rstrip(b"=").decode("utf-8")
+        der_cert = cert.public_bytes(serialization.Encoding.DER)
+        fingerprint = hashlib.sha256(der_cert).digest()
+        return base64.urlsafe_b64encode(fingerprint).rstrip(b"=").decode("utf-8")
+    except ImportError as e:
+        raise ImportError(CRYPTOGRAPHY_NOT_FOUND_ERROR) from e
 
 
 def should_request_bound_token(cert):

@@ -214,3 +214,74 @@ class TestAgentIdentityUtils:
             _agent_identity_utils.get_agent_identity_certificate_path()
 
         assert mock_sleep.call_count == 100
+
+    @mock.patch("google.auth._agent_identity_utils.get_agent_identity_certificate_path")
+    def test_get_and_parse_agent_identity_certificate_opted_out(
+        self, mock_get_path, monkeypatch
+    ):
+        monkeypatch.setenv(
+            environment_vars.GOOGLE_API_PREVENT_AGENT_TOKEN_SHARING_FOR_GCP_SERVICES,
+            "false",
+        )
+        result = _agent_identity_utils.get_and_parse_agent_identity_certificate()
+        assert result is None
+        mock_get_path.assert_not_called()
+
+    @mock.patch("google.auth._agent_identity_utils.get_agent_identity_certificate_path")
+    def test_get_and_parse_agent_identity_certificate_no_path(
+        self, mock_get_path, monkeypatch
+    ):
+        monkeypatch.setenv(
+            environment_vars.GOOGLE_API_PREVENT_AGENT_TOKEN_SHARING_FOR_GCP_SERVICES,
+            "true",
+        )
+        mock_get_path.return_value = None
+        result = _agent_identity_utils.get_and_parse_agent_identity_certificate()
+        assert result is None
+        mock_get_path.assert_called_once()
+
+    @mock.patch("google.auth._agent_identity_utils.parse_certificate")
+    @mock.patch("google.auth._agent_identity_utils.get_agent_identity_certificate_path")
+    def test_get_and_parse_agent_identity_certificate_success(
+        self, mock_get_path, mock_parse_certificate, monkeypatch
+    ):
+        monkeypatch.setenv(
+            environment_vars.GOOGLE_API_PREVENT_AGENT_TOKEN_SHARING_FOR_GCP_SERVICES,
+            "true",
+        )
+        mock_get_path.return_value = "/fake/cert.pem"
+        mock_open = mock.mock_open(read_data=b"cert_bytes")
+
+        with mock.patch("builtins.open", mock_open):
+            result = _agent_identity_utils.get_and_parse_agent_identity_certificate()
+
+        mock_open.assert_called_once_with("/fake/cert.pem", "rb")
+        mock_parse_certificate.assert_called_once_with(b"cert_bytes")
+        assert result == mock_parse_certificate.return_value
+
+
+class TestAgentIdentityUtilsNoCryptography:
+    @pytest.fixture(autouse=True)
+    def mock_cryptography_import(self):
+        with mock.patch.dict(
+            "sys.modules",
+            {
+                "cryptography": None,
+                "cryptography.hazmat": None,
+                "cryptography.hazmat.primitives": None,
+                "cryptography.hazmat.primitives.serialization": None,
+            },
+        ):
+            yield
+
+    def test_parse_certificate_raises_import_error(self):
+        with pytest.raises(ImportError, match="The cryptography library is required"):
+            _agent_identity_utils.parse_certificate(b"cert_bytes")
+
+    def test_is_agent_identity_certificate_raises_import_error(self):
+        with pytest.raises(ImportError, match="The cryptography library is required"):
+            _agent_identity_utils._is_agent_identity_certificate(mock.sentinel.cert)
+
+    def test_calculate_certificate_fingerprint_raises_import_error(self):
+        with pytest.raises(ImportError, match="The cryptography library is required"):
+            _agent_identity_utils.calculate_certificate_fingerprint(mock.sentinel.cert)

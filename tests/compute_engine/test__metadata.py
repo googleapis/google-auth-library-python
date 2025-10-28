@@ -21,7 +21,6 @@ import os
 import mock
 import pytest  # type: ignore
 
-from google.auth import _agent_identity_utils
 from google.auth import _helpers
 from google.auth import environment_vars
 from google.auth import exceptions
@@ -665,40 +664,81 @@ def test_get_service_account_token_with_scopes_string(
     assert expiry == utcnow() + datetime.timedelta(seconds=ttl)
 
 
+@mock.patch("google.auth._agent_identity_utils.calculate_certificate_fingerprint")
+@mock.patch("google.auth._agent_identity_utils.should_request_bound_token")
 @mock.patch(
-    "google.auth._agent_identity_utils._is_agent_identity_certificate",
-    return_value=True,
+    "google.auth._agent_identity_utils.get_and_parse_agent_identity_certificate"
 )
-def test_get_service_account_token_with_bound_token(mock_is_agent, tmpdir, monkeypatch):
-    # Create a mock certificate and a config file that points to it.
-    cert_path = tmpdir.join("cert.pem")
-    cert_path.write_binary(NON_AGENT_IDENTITY_CERT_BYTES)
-    config_path = tmpdir.join("config.json")
-    config_path.write(
-        json.dumps({"cert_configs": {"workload": {"cert_path": str(cert_path)}}})
-    )
-    monkeypatch.setenv(environment_vars.GOOGLE_API_CERTIFICATE_CONFIG, str(config_path))
-    monkeypatch.setenv(
-        environment_vars.GOOGLE_API_PREVENT_AGENT_TOKEN_SHARING_FOR_GCP_SERVICES, "true"
-    )
+@mock.patch(
+    "google.auth.metrics.token_request_access_token_mds",
+    return_value=ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
+)
+@mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
+def test_get_service_account_token_with_bound_token(
+    utcnow,
+    mock_metrics_header_value,
+    mock_get_and_parse,
+    mock_should_request,
+    mock_calculate_fingerprint,
+):
+    # Test the successful path where a certificate is found and a bound token
+    # is requested.
+    mock_cert = mock.sentinel.cert
+    mock_get_and_parse.return_value = mock_cert
+    mock_should_request.return_value = True
+    mock_calculate_fingerprint.return_value = "fake_fingerprint"
 
-    # Create a mock request to simulate the metadata server response.
     token_response = json.dumps({"access_token": "token", "expires_in": 3600})
     request = make_request(token_response, headers={"content-type": "application/json"})
 
-    # Call the function under test.
     _metadata.get_service_account_token(request)
 
-    # Verify the request URL contains the correct fingerprint.
+    mock_get_and_parse.assert_called_once()
+    mock_should_request.assert_called_once_with(mock_cert)
+    mock_calculate_fingerprint.assert_called_once_with(mock_cert)
+
     request.assert_called_once()
     _, kwargs = request.call_args
     url = kwargs["url"]
+    assert "bindCertificateFingerprint=fake_fingerprint" in url
 
-    # Calculate the expected fingerprint.
-    cert = _agent_identity_utils.parse_certificate(NON_AGENT_IDENTITY_CERT_BYTES)
-    expected_fingerprint = _agent_identity_utils.calculate_certificate_fingerprint(cert)
 
-    assert f"bindCertificateFingerprint={expected_fingerprint}" in url
+@mock.patch(
+    "google.auth._agent_identity_utils.get_and_parse_agent_identity_certificate"
+)
+def test_get_service_account_token_no_cert(mock_get_and_parse):
+    # Test that no fingerprint is added when no certificate is found.
+    mock_get_and_parse.return_value = None
+    token_response = json.dumps({"access_token": "token", "expires_in": 3600})
+    request = make_request(token_response, headers={"content-type": "application/json"})
+
+    _metadata.get_service_account_token(request)
+
+    request.assert_called_once()
+    _, kwargs = request.call_args
+    url = kwargs["url"]
+    assert "bindCertificateFingerprint" not in url
+
+
+@mock.patch("google.auth._agent_identity_utils.should_request_bound_token")
+@mock.patch(
+    "google.auth._agent_identity_utils.get_and_parse_agent_identity_certificate"
+)
+def test_get_service_account_token_should_not_bind(
+    mock_get_and_parse, mock_should_request
+):
+    # Test that no fingerprint is added when a cert is found but should not be used.
+    mock_get_and_parse.return_value = mock.sentinel.cert
+    mock_should_request.return_value = False
+    token_response = json.dumps({"access_token": "token", "expires_in": 3600})
+    request = make_request(token_response, headers={"content-type": "application/json"})
+
+    _metadata.get_service_account_token(request)
+
+    request.assert_called_once()
+    _, kwargs = request.call_args
+    url = kwargs["url"]
+    assert "bindCertificateFingerprint" not in url
 
 
 def test_get_service_account_info():
