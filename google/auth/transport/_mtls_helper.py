@@ -430,20 +430,10 @@ def check_use_client_cert():
     if cert_path:
       with open(cert_path, "r") as f:
         content = json.load(f)
-        print("content: ", content)
-        if "workload" in str(content):
+        if "cert_configs" in content and "workload" in content['cert_configs']:
           return "true"
     return "false"
   else:
-    ### Check if the value of GOOGLE_API_USE_CLIENT_CERTIFICATE is set but to an
-    ### invalid value.
-    use_client_cert = use_client_cert.lower()
-    if use_client_cert not in ("true", "false"):
-      raise ValueError(
-          "Environment variable `GOOGLE_API_USE_CLIENT_CERTIFICATE` must be"
-          " either `true` or `false`"
-      )
-    else:
     ### Return the value of GOOGLE_API_USE_CLIENT_CERTIFICATE which is set.
       return use_client_cert
 
