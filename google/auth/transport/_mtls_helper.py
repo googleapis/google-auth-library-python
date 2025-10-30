@@ -431,5 +431,5 @@ def check_use_client_cert():
     return "false"
   else:
     ### Return the value of GOOGLE_API_USE_CLIENT_CERTIFICATE which is set.
-      return use_client_cert
+    return use_client_cert
 
