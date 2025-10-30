@@ -408,7 +408,7 @@ def decrypt_private_key(key, passphrase):
     return crypto.dump_privatekey(crypto.FILETYPE_PEM, pkey)
 
 def check_use_client_cert():
-  """Returns the effective value of use_client_cert to be used.
+  """Returns whether the client certificate should to be used for mTLS.
 
   Returns:
       str:
@@ -429,8 +429,9 @@ def check_use_client_cert():
     cert_path = os.getenv("GOOGLE_API_CERTIFICATE_CONFIG")
     if cert_path:
       with open(cert_path, "r") as f:
-        content = f.read()
-        if "workload" in content:
+        content = json.load(f)
+        print("content: ", content)
+        if "workload" in str(content):
           return "true"
     return "false"
   else:
