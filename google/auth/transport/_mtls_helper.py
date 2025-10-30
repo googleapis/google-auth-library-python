@@ -418,10 +418,6 @@ def check_use_client_cert():
           environment variable is set. If it is set, the function returns
           "true" if the certificate config file contains "workload" section
           and "false" otherwise.
-
-  Raises:
-      ValueError: if GOOGLE_API_USE_CLIENT_CERTIFICATE is set to unsupported
-      value, which is not "true" or "false".
   """
   use_client_cert = os.getenv("GOOGLE_API_USE_CLIENT_CERTIFICATE")
   ### Check if the value of GOOGLE_API_USE_CLIENT_CERTIFICATE is unset.
