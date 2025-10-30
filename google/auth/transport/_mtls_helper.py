@@ -421,7 +421,7 @@ def check_use_client_cert():
   """
   use_client_cert = os.getenv("GOOGLE_API_USE_CLIENT_CERTIFICATE")
   ### Check if the value of GOOGLE_API_USE_CLIENT_CERTIFICATE is unset.
-  if use_client_cert == "" or use_client_cert is None:
+  if not use_client_cert:
     cert_path = os.getenv("GOOGLE_API_CERTIFICATE_CONFIG")
     if cert_path:
       with open(cert_path, "r") as f:
