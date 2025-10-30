@@ -17,6 +17,7 @@
 import json
 import logging
 from os import environ, path
+import os
 import re
 import subprocess
 
@@ -405,3 +406,30 @@ def decrypt_private_key(key, passphrase):
 
     # Then dump the decrypted key bytes
     return crypto.dump_privatekey(crypto.FILETYPE_PEM, pkey)
+
+def check_use_client_cert():
+  """Returns whether the client certificate should to be used for mTLS.
+
+  Returns:
+      str:
+          A boolean indicating if client certificate should be used.
+          The value is "true" or "false" or unset.
+          If unset, the function checks if the GOOGLE_API_CERTIFICATE_CONFIG
+          environment variable is set. If it is set, the function returns
+          "true" if the certificate config file contains "workload" section
+          and "false" otherwise.
+  """
+  use_client_cert = os.getenv("GOOGLE_API_USE_CLIENT_CERTIFICATE")
+  ### Check if the value of GOOGLE_API_USE_CLIENT_CERTIFICATE is unset.
+  if not use_client_cert:
+    cert_path = os.getenv("GOOGLE_API_CERTIFICATE_CONFIG")
+    if cert_path:
+      with open(cert_path, "r") as f:
+        content = json.load(f)
+        if "cert_configs" in content and "workload" in content['cert_configs']:
+          return "true"
+    return "false"
+  else:
+    ### Return the value of GOOGLE_API_USE_CLIENT_CERTIFICATE which is set.
+    return use_client_cert
+
