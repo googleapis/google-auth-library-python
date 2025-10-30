@@ -241,6 +241,8 @@ def secure_authorized_channel(
     Raises:
         google.auth.exceptions.MutualTLSChannelError: If mutual TLS channel
             creation failed for any reason.
+        google.auth.exceptions.ValueError: If invalid value is 
+        set for `GOOGLE_API_USE_CLIENT_CERTIFICATE`, i.e. not "true" or "false".
     """
     # Create the metadata plugin for inserting the authorization header.
     metadata_plugin = AuthMetadataPlugin(credentials, request)
@@ -256,7 +258,7 @@ def secure_authorized_channel(
 
     # If SSL credentials are not explicitly set, try client_cert_callback and ADC.
     if not ssl_credentials:
-	use_client_cert = _mtls_helper.check_use_client_cert()
+        use_client_cert = _mtls_helper.check_use_client_cert()
         if use_client_cert == "true" and client_cert_callback:
             # Use the callback if provided.
             cert, key = client_cert_callback()
@@ -293,7 +295,7 @@ class SslCredentials:
     """
 
     def __init__(self):
-	use_client_cert = _mtls_helper.check_use_client_cert()
+        use_client_cert = _mtls_helper.check_use_client_cert()
         if use_client_cert != "true":
             self._is_mtls = False
         else:
