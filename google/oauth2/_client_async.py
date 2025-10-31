@@ -223,7 +223,7 @@ async def id_token_jwt_grant(request, token_uri, assertion, can_retry=True):
         raise new_exc from caught_exc
 
     payload = jwt.decode(id_token, verify=False)
-    expiry = datetime.datetime.utcfromtimestamp(payload["exp"])
+    expiry = datetime.datetime.fromtimestamp(payload["exp"], tz=datetime.timezone.utc)
 
     return id_token, expiry, response_data
 
