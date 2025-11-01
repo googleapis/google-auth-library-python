@@ -366,6 +366,8 @@ class TestCredentials(object):
                 "utf-8"
             ),
         )
+        assert creds.token is None
+        assert creds.refresh_token is None
 
     def test_revoke_without_revoke_url(self):
         request = self.make_mock_request()
