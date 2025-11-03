@@ -444,7 +444,7 @@ class AuthorizedSession(requests.Session):
             google.auth.exceptions.MutualTLSChannelError: If mutual TLS channel
                 creation failed for any reason.
         """
-        use_client_cert = _mtls_helper.check_use_client_cert()
+        use_client_cert = google.auth.transport._mtls_helper.check_use_client_cert()
         if use_client_cert != "true":
             self._is_mtls = False
             return

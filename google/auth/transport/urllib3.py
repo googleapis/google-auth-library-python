@@ -335,7 +335,7 @@ class AuthorizedHttp(RequestMethods):  # type: ignore
             google.auth.exceptions.MutualTLSChannelError: If mutual TLS channel
                 creation failed for any reason.
         """
-        use_client_cert = _mtls_helper.check_use_client_cert()
+        use_client_cert = transport._mtls_helper.check_use_client_cert()
         if use_client_cert != "true":
             return False
         try:

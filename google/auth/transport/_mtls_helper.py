@@ -16,7 +16,7 @@
 
 import json
 import logging
-from os import environ, path, getenv
+from os import environ, getenv, path
 import re
 import subprocess
 
@@ -408,7 +408,8 @@ def decrypt_private_key(key, passphrase):
 
 
 def check_use_client_cert():
-    """Returns whether the client certificate should to be used for mTLS.
+    """Returns the value of the GOOGLE_API_USE_CLIENT_CERTIFICATE variable,
+    or an inferred 'true' or 'false' value if unset.
 
     The function checks the value of GOOGLE_API_USE_CLIENT_CERTIFICATE
     environment variable, and GOOGLE_API_CERTIFICATE_CONFIG environment variable
@@ -419,8 +420,9 @@ def check_use_client_cert():
     "workload" section and "false" otherwise.
 
     Returns:
-        str: A string("true" or "false") indicating if client certificate should
-          be used.
+        str: A string("true" or "false" or value of the 
+         GOOGLE_API_USE_CLIENT_CERTIFICATE variable set) indicating if client
+         certificate should be used.
     """
     use_client_cert = getenv("GOOGLE_API_USE_CLIENT_CERTIFICATE")
     # Check if the value of GOOGLE_API_USE_CLIENT_CERTIFICATE is set.
@@ -433,25 +435,16 @@ def check_use_client_cert():
             try:
                 with open(cert_path, "r") as f:
                     content = json.load(f)
-            except json.JSONDecodeError:
-                _LOGGER.debug("JSON decode error.")
-                return "false"
-            except FileNotFoundError:
-                _LOGGER.debug("Certificate config file not found.")
-                return "false"
-            except OSError:
-                _LOGGER.debug("OS error.")
-                return "false"
-            try:
-                if content["cert_configs"]["workload"]:
+                    # verify json has workload key
+                    content["cert_configs"]["workload"]
                     return "true"
-            except KeyError:
-                _LOGGER.debug(
-                    "Certificate config file content does not contain 'workload'"
-                    " section in 'cert_configs'."
-                )
-                return "false"
-            except TypeError:
-                _LOGGER.debug("Certificate config file content is not a JSON object.")
+            except (
+                FileNotFoundError,
+                OSError,
+                KeyError,
+                TypeError,
+                json.JSONDecodeError,
+            ) as e:
+                _LOGGER.debug("error decoding certificate: %s", e)
                 return "false"
         return "false"
