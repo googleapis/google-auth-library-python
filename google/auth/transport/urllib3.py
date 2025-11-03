@@ -17,7 +17,6 @@
 from __future__ import absolute_import
 
 import logging
-import os
 import warnings
 
 # Certifi is Mozilla's certificate bundle. Urllib3 needs a certificate bundle
@@ -51,7 +50,6 @@ except ImportError as caught_exc:  # pragma: NO COVER
 
 
 from google.auth import _helpers
-from google.auth import environment_vars
 from google.auth import exceptions
 from google.auth import transport
 from google.oauth2 import service_account

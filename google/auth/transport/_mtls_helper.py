@@ -409,20 +409,22 @@ def decrypt_private_key(key, passphrase):
 
 def check_use_client_cert():
     """Returns the value of the GOOGLE_API_USE_CLIENT_CERTIFICATE variable,
-    or an inferred 'true' or 'false' value if unset.
+    or an inferred value('true' or 'false') if unset.
 
-    The function checks the value of GOOGLE_API_USE_CLIENT_CERTIFICATE
-    environment variable, and GOOGLE_API_CERTIFICATE_CONFIG environment variable
-    if the former is not set. If GOOGLE_API_USE_CLIENT_CERTIFICATE is set,
-    this helper function returns the value of the former. If it is unset, this
-    helper function checks if GOOGLE_API_CERTIFICATE_CONFIG is set. If it is set,
-    this helper function returns "true" if the certificate config file contains
-    "workload" section and "false" otherwise.
+    This value is meant to be interpreted as a "true" or "false" value
+    representing whether the client certificate should be used, but could be any
+    arbitrary string.
+
+    If GOOGLE_API_USE_CLIENT_CERTIFICATE is unset, the value value will be
+    inferred by reading a file pointed at by GOOGLE_API_CERTIFICATE_CONFIG, and
+    verifying it contains a "workload" section. If so, the function will return
+    "true", otherwise "false".
 
     Returns:
-        str: A string("true" or "false" or value of the 
-         GOOGLE_API_USE_CLIENT_CERTIFICATE variable set) indicating if client
-         certificate should be used.
+        str: The value of GOOGLE_API_USE_CLIENT_CERTIFICATE, or an inferred value
+        ("true" or "false") if unset. This string should contain a value, but may
+        be an any arbitrary string read from the user's set
+        GOOGLE_API_USE_CLIENT_CERTIFICATE.
     """
     use_client_cert = getenv("GOOGLE_API_USE_CLIENT_CERTIFICATE")
     # Check if the value of GOOGLE_API_USE_CLIENT_CERTIFICATE is set.
@@ -446,5 +448,4 @@ def check_use_client_cert():
                 json.JSONDecodeError,
             ) as e:
                 _LOGGER.debug("error decoding certificate: %s", e)
-                return "false"
         return "false"

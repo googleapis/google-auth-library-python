@@ -19,7 +19,6 @@ from __future__ import absolute_import
 import functools
 import logging
 import numbers
-import os
 import time
 
 try:
@@ -35,7 +34,6 @@ from requests.packages.urllib3.util.ssl_ import (  # type: ignore
 )  # pylint: disable=ungrouped-imports
 
 from google.auth import _helpers
-from google.auth import environment_vars
 from google.auth import exceptions
 from google.auth import transport
 import google.auth.transport._mtls_helper
