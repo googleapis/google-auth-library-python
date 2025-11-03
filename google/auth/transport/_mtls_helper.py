@@ -16,8 +16,7 @@
 
 import json
 import logging
-from os import environ, path
-import os
+from os import environ, path, getenv
 import re
 import subprocess
 
@@ -407,29 +406,52 @@ def decrypt_private_key(key, passphrase):
     # Then dump the decrypted key bytes
     return crypto.dump_privatekey(crypto.FILETYPE_PEM, pkey)
 
+
 def check_use_client_cert():
-  """Returns whether the client certificate should to be used for mTLS.
+    """Returns whether the client certificate should to be used for mTLS.
 
-  Returns:
-      str:
-          A boolean indicating if client certificate should be used.
-          The value is "true" or "false" or unset.
-          If unset, the function checks if the GOOGLE_API_CERTIFICATE_CONFIG
-          environment variable is set. If it is set, the function returns
-          "true" if the certificate config file contains "workload" section
-          and "false" otherwise.
-  """
-  use_client_cert = os.getenv("GOOGLE_API_USE_CLIENT_CERTIFICATE")
-  ### Check if the value of GOOGLE_API_USE_CLIENT_CERTIFICATE is unset.
-  if not use_client_cert:
-    cert_path = os.getenv("GOOGLE_API_CERTIFICATE_CONFIG")
-    if cert_path:
-      with open(cert_path, "r") as f:
-        content = json.load(f)
-        if "cert_configs" in content and "workload" in content['cert_configs']:
-          return "true"
-    return "false"
-  else:
-    ### Return the value of GOOGLE_API_USE_CLIENT_CERTIFICATE which is set.
-    return use_client_cert
+    The function checks the value of GOOGLE_API_USE_CLIENT_CERTIFICATE
+    environment variable, and GOOGLE_API_CERTIFICATE_CONFIG environment variable
+    if the former is not set. If GOOGLE_API_USE_CLIENT_CERTIFICATE is set,
+    this helper function returns the value of the former. If it is unset, this
+    helper function checks if GOOGLE_API_CERTIFICATE_CONFIG is set. If it is set,
+    this helper function returns "true" if the certificate config file contains
+    "workload" section and "false" otherwise.
 
+    Returns:
+        str: A string("true" or "false") indicating if client certificate should
+          be used.
+    """
+    use_client_cert = getenv("GOOGLE_API_USE_CLIENT_CERTIFICATE")
+    # Check if the value of GOOGLE_API_USE_CLIENT_CERTIFICATE is set.
+    if use_client_cert:
+        return use_client_cert.lower()
+    else:
+        # Check if the value of GOOGLE_API_CERTIFICATE_CONFIG is set.
+        cert_path = getenv("GOOGLE_API_CERTIFICATE_CONFIG")
+        if cert_path:
+            try:
+                with open(cert_path, "r") as f:
+                    content = json.load(f)
+            except json.JSONDecodeError:
+                _LOGGER.debug("JSON decode error.")
+                return "false"
+            except FileNotFoundError:
+                _LOGGER.debug("Certificate config file not found.")
+                return "false"
+            except OSError:
+                _LOGGER.debug("OS error.")
+                return "false"
+            try:
+                if content["cert_configs"]["workload"]:
+                    return "true"
+            except KeyError:
+                _LOGGER.debug(
+                    "Certificate config file content does not contain 'workload'"
+                    " section in 'cert_configs'."
+                )
+                return "false"
+            except TypeError:
+                _LOGGER.debug("Certificate config file content is not a JSON object.")
+                return "false"
+        return "false"
