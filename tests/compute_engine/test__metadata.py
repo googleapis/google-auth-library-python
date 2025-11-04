@@ -329,6 +329,7 @@ def test_get_success_custom_root_old_variable():
         timeout=_metadata._METADATA_DEFAULT_TIMEOUT,
     )
 
+
 def test_get_success_custom_root():
     request = make_request("{}", headers={"content-type": "application/json"})
 

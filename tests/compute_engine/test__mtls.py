@@ -113,3 +113,15 @@ def test_create_session(mock_adapter, mock_session, mock_mds_mtls_config):
     session_instance.mount.assert_called_once_with(
         "https://", mock_adapter.return_value
     )
+
+
+@mock.patch("ssl.create_default_context")
+@mock.patch("requests.adapters.HTTPAdapter.proxy_manager_for")
+def test_mds_mtls_adapter_proxy_manager_for(
+    mock_proxy_manager_for, mock_ssl_context, mock_mds_mtls_config
+):
+    adapter = _mtls.MdsMtlsAdapter(mock_mds_mtls_config)
+    adapter.proxy_manager_for("test_proxy")
+    mock_proxy_manager_for.assert_called_once_with(
+        "test_proxy", ssl_context=adapter.ssl_context
+    )
