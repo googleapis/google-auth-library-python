@@ -39,7 +39,12 @@ class MdsMtlsConfig:
 
 
 class MdsMtlsMode(enum.Enum):
-    """MDS mTLS mode."""
+    """MDS mTLS mode. Used to configure connection behavior when connecting to MDS.
+
+    STRICT: Always use HTTPS/mTLS.  If certificates are not found locally, an error will be returned.
+    NONE: Never use mTLS. Requests will use regular HTTP.
+    DEFAULT: Use mTLS if certificates are found locally, otherwise use regular HTTP.
+    """
 
     STRICT = "strict"
     NONE = "none"
