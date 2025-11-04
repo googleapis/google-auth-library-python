@@ -111,6 +111,7 @@ def default_client_encrypted_cert_source(cert_path, key_path):
 
     return callback
 
+
 def should_use_client_cert():
     """Returns boolean for whether the client certificate should be used for mTLS.
 
@@ -128,4 +129,3 @@ def should_use_client_cert():
        bool: indicating whether the client certificate should be used for mTLS.
     """
     return _mtls_helper.check_use_client_cert()
-

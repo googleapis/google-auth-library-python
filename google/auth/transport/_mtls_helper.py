@@ -448,4 +448,3 @@ def check_use_client_cert():
             ) as e:
                 _LOGGER.debug("error decoding certificate: %s", e)
         return False
-
