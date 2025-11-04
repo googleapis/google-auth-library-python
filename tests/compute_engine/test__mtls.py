@@ -16,7 +16,7 @@
 #
 
 import mock
-import pytest
+import pytest  # type: ignore
 
 from google.auth import environment_vars, exceptions
 from google.auth.compute_engine import _mtls

@@ -329,6 +329,20 @@ def test_get_success_custom_root_old_variable():
         timeout=_metadata._METADATA_DEFAULT_TIMEOUT,
     )
 
+def test_get_success_custom_root():
+    request = make_request("{}", headers={"content-type": "application/json"})
+
+    fake_root = "http://another.metadata.service"
+
+    _metadata.get(request, PATH, root=fake_root)
+
+    request.assert_called_once_with(
+        method="GET",
+        url="{}/{}".format(fake_root, PATH),
+        headers=_metadata._METADATA_HEADERS,
+        timeout=_metadata._METADATA_DEFAULT_TIMEOUT,
+    )
+
 
 @mock.patch("time.sleep", return_value=None)
 def test_get_failure(mock_sleep):
