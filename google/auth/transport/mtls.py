@@ -110,3 +110,22 @@ def default_client_encrypted_cert_source(cert_path, key_path):
         return cert_path, key_path, passphrase_bytes
 
     return callback
+
+def should_use_client_cert():
+    """Returns boolean for whether the client certificate should be used for mTLS.
+
+    This is a wrapper around _mtls_helper.check_use_client_cert().
+    The value is meant to be interpreted as a boolean representing whether
+    the client certificate should be used. If GOOGLE_API_USE_CLIENT_CERTIFICATE
+    is unset, the value will be inferred by reading a file pointed at by
+    GOOGLE_API_CERTIFICATE_CONFIG, and verifying it contains a "workload"
+    section. If so, the function will return True, otherwise False. Also, note
+    that if GOOGLE_API_USE_CLIENT_CERTIFICATE is set but is not 'true' or 'false'
+    (case-insensitive), this check is inconclusive, that case should be handled
+    by the caller.
+
+    Returns:
+       bool: indicating whether the client certificate should be used for mTLS.
+    """
+    return _mtls_helper.check_use_client_cert()
+
