@@ -670,6 +670,11 @@ class TestDecryptPrivateKey(object):
         use_client_cert = _mtls_helper.check_use_client_cert()
         assert use_client_cert is False
 
+    def test_check_use_client_cert_unsupported_value(self, monkeypatch):
+        monkeypatch.setenv("GOOGLE_API_USE_CLIENT_CERTIFICATE", "dummy")
+        use_client_cert = _mtls_helper.check_use_client_cert()
+        assert use_client_cert is False
+
     def test_check_use_client_cert_for_workload_with_config_file_not_found(
         self, monkeypatch
     ):
