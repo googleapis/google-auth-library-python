@@ -423,10 +423,7 @@ def check_use_client_cert():
     use_client_cert = getenv("GOOGLE_API_USE_CLIENT_CERTIFICATE")
     # Check if the value of GOOGLE_API_USE_CLIENT_CERTIFICATE is set.
     if use_client_cert:
-        if use_client_cert.lower() == "true":
-            return True
-        else:
-            return False
+        return use_client_cert.lower() == "true"
     else:
         # Check if the value of GOOGLE_API_CERTIFICATE_CONFIG is set.
         cert_path = getenv("GOOGLE_API_CERTIFICATE_CONFIG")
