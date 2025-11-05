@@ -410,11 +410,12 @@ def decrypt_private_key(key, passphrase):
 def check_use_client_cert():
     """Returns boolean for whether the client certificate should be used for mTLS.
 
-    This value is meant to be interpreted as a boolean representing whether
-    the client certificate should be used. If GOOGLE_API_USE_CLIENT_CERTIFICATE
-    is unset, the value will be inferred by reading a file pointed at by
-    GOOGLE_API_CERTIFICATE_CONFIG, and verifying it contains a "workload"
-    section. If so, the function will return True, otherwise False.
+    If GOOGLE_API_USE_CLIENT_CERTIFICATE is set to true or false, a corresponding
+    bool value will be returned.
+    If GOOGLE_API_USE_CLIENT_CERTIFICATE is unset, the value will be inferred
+    by reading a file pointed at by GOOGLE_API_CERTIFICATE_CONFIG, and verifying
+    it contains a "workload" section. If so, the function will return True,
+    otherwise False.
 
     Returns:
         bool: Whether the client certificate should be used for mTLS connection.
@@ -424,10 +425,7 @@ def check_use_client_cert():
     if use_client_cert:
         if use_client_cert.lower() == "true":
             return True
-        # Check if GOOGLE_API_USE_CLIENT_CERTIFICATE is set to false explicitly.
-        # Invalid values for GOOGLE_API_USE_CLIENT_CERTIFICATE are not handled here.
-        # That will be handled by the code calling this function.
-        elif use_client_cert.lower() == "false":
+        else:
             return False
     else:
         # Check if the value of GOOGLE_API_CERTIFICATE_CONFIG is set.

@@ -292,7 +292,7 @@ class SslCredentials:
 
     def __init__(self):
         use_client_cert = _mtls_helper.check_use_client_cert()
-        if use_client_cert:
+        if not use_client_cert:
             self._is_mtls = False
         else:
             # Load client SSL credentials.
