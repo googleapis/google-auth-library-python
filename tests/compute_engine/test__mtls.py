@@ -15,6 +15,8 @@
 # limitations under the License.
 #
 
+import os
+
 import mock
 import pytest  # type: ignore
 
@@ -26,6 +28,28 @@ from google.auth.compute_engine import _mtls
 def mock_mds_mtls_config():
     return _mtls.MdsMtlsConfig(
         ca_cert_path="/fake/ca.crt", client_combined_cert_path="/fake/client.key"
+    )
+
+
+@mock.patch("os.name", "nt")
+def test__MdsMtlsConfig_windows_defaults():
+    config = _mtls.MdsMtlsConfig()
+    assert config.ca_cert_path == os.path.join(
+        "C:\\", "ProgramData", "Google", "ComputeEngine", "mds-mtls-root.crt"
+    )
+    assert config.client_combined_cert_path == os.path.join(
+        "C:\\", "ProgramData", "Google", "ComputeEngine", "mds-mtls-client.key"
+    )
+
+
+@mock.patch("os.name", "posix")
+def test__MdsMtlsConfig_non_windows_defaults():
+    config = _mtls.MdsMtlsConfig()
+    assert config.ca_cert_path == os.path.join(
+        "/", "run", "google-mds-mtls", "root.crt"
+    )
+    assert config.client_combined_cert_path == os.path.join(
+        "/", "run", "google-mds-mtls", "client.key"
     )
 
 

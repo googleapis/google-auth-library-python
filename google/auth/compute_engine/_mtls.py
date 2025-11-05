@@ -16,10 +16,9 @@
 #
 """Mutual TLS for Google Compute Engine metadata server."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import enum
 import os
-from pathlib import Path
 import ssl
 
 import requests
@@ -27,14 +26,36 @@ from requests.adapters import HTTPAdapter
 
 from google.auth import environment_vars, exceptions
 
+# MDS mTLS certificate paths based on OS.
+# Documentation to well known locations can be found at:
+# https://cloud.google.com/compute/docs/metadata/overview#https-mds-certificates
+
+
+def _get_mds_root_crt_path():
+    if os.name == "nt":
+        return os.path.join(
+            "C:\\", "ProgramData", "Google", "ComputeEngine", "mds-mtls-root.crt"
+        )
+    else:
+        return os.path.join("/", "run", "google-mds-mtls", "root.crt")
+
+
+def _get_mds_client_combined_cert_path():
+    if os.name == "nt":
+        return os.path.join(
+            "C:\\", "ProgramData", "Google", "ComputeEngine", "mds-mtls-client.key"
+        )
+    else:
+        return os.path.join("/", "run", "google-mds-mtls", "client.key")
+
 
 @dataclass
 class MdsMtlsConfig:
-    ca_cert_path: str = os.path.join(
-        Path.home(), "mtls_mds_certificates", "root.crt"
+    ca_cert_path: str = field(
+        default_factory=_get_mds_root_crt_path
     )  # path to CA certificate
-    client_combined_cert_path: str = os.path.join(
-        Path.home(), "mtls_mds_certificates", "client_creds.key"
+    client_combined_cert_path: str = field(
+        default_factory=_get_mds_client_combined_cert_path
     )  # path to file containing client certificate and key
 
 
