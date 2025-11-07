@@ -180,13 +180,7 @@ class Client(utils.OAuthClientAuthHandler):
             {"grant_type": "refresh_token", "refresh_token": refresh_token},
         )
 
-    def revoke_token(
-        self,
-        request,
-        token,
-        token_type_hint,
-        revoke_url,
-    ):
+    def revoke_token(self, request, token, token_type_hint, revoke_url):
         """Revokes the provided token based on the RFC7009 spec.
 
         Args:
@@ -200,11 +194,8 @@ class Client(utils.OAuthClientAuthHandler):
             google.auth.exceptions.OAuthError: If the token revocation endpoint
                 returned an error.
         """
-        request_body = {
-            "token": token,
-        }
+        request_body = {"token": token}
         if token_type_hint:
             request_body["token_type_hint"] = token_type_hint
 
         return self._make_request(request, None, request_body, revoke_url)
-

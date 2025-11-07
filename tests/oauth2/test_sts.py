@@ -456,9 +456,7 @@ class TestStsClient(object):
     def test_revoke_token_success(self):
         """Test revoke token with successful response."""
         client = self.make_client(self.CLIENT_AUTH_BASIC)
-        request = self.make_mock_request(
-            data="", status=http_client.OK, use_json=False
-        )
+        request = self.make_mock_request(data="", status=http_client.OK, use_json=False)
 
         response = client.revoke_token(
             request, self.TOKEN_TO_REVOKE, self.TOKEN_TYPE_HINT, self.REVOKE_URL
@@ -472,6 +470,25 @@ class TestStsClient(object):
             "token": self.TOKEN_TO_REVOKE,
             "token_type_hint": self.TOKEN_TYPE_HINT,
         }
+        self.assert_request_kwargs(
+            request.call_args[1], headers, request_data, url=self.REVOKE_URL
+        )
+        assert response == {}
+
+    def test_revoke_token_success_no_hint(self):
+        """Test revoke token with successful response."""
+        client = self.make_client(self.CLIENT_AUTH_BASIC)
+        request = self.make_mock_request(data="", status=http_client.OK, use_json=False)
+
+        response = client.revoke_token(
+            request, self.TOKEN_TO_REVOKE, None, self.REVOKE_URL
+        )
+
+        headers = {
+            "Authorization": "Basic {}".format(BASIC_AUTH_ENCODING),
+            "Content-Type": "application/x-www-form-urlencoded",
+        }
+        request_data = {"token": self.TOKEN_TO_REVOKE}
         self.assert_request_kwargs(
             request.call_args[1], headers, request_data, url=self.REVOKE_URL
         )
@@ -533,4 +550,3 @@ class TestStsClient(object):
         response = client._make_request(request, {}, {})
 
         assert response == {}
-

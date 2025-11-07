@@ -340,10 +340,7 @@ class Credentials(
             )
 
         self._sts_client.revoke_token(
-            request,
-            self._refresh_token_val,
-            "refresh_token",
-            self._revoke_url,
+            request, self._refresh_token_val, "refresh_token", self._revoke_url
         )
         self.token = None
         self._refresh_token = None
