@@ -45,7 +45,8 @@ if not _GCE_METADATA_HOST:
         environment_vars.GCE_METADATA_ROOT, "metadata.google.internal"
     )
 
-GCE_MDS_HOSTS = ["metadata.google.internal", "169.254.169.254"]
+_GCE_DEFAULT_MDS_IP = "169.254.169.254"
+_GCE_MDS_HOSTS = ["metadata.google.internal", _GCE_DEFAULT_MDS_IP]
 
 
 def _get_metadata_root(use_mtls):
@@ -58,7 +59,7 @@ def _get_metadata_ip_root(use_mtls):
     """Returns the metadata server IP root URL."""
     scheme = "https" if use_mtls else "http"
     return "{}://{}".format(
-        scheme, os.getenv(environment_vars.GCE_METADATA_IP, "169.254.169.254")
+        scheme, os.getenv(environment_vars.GCE_METADATA_IP, _GCE_DEFAULT_MDS_IP)
     )
 
 
@@ -123,10 +124,12 @@ def _prepare_request_for_mds(request, use_mtls=False):
     Args:
         request (google.auth.transport.Request): A callable used to make
             HTTP requests.
+        use_mtls (bool): Whether to use mTLS for the request.
 
     Returns:
-        google.auth.transport.Request: Request
-            object to use.
+        google.auth.transport.Request: A request object to use.
+            If mTLS is enabled, this will be a new request object with mTLS session configured.
+            Otherwise, it will be the same as the input request.
     """
     if use_mtls:
         request = requests.Request(_mtls.create_session())
