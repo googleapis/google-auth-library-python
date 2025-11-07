@@ -21,7 +21,6 @@ import enum
 import os
 import ssl
 
-import requests
 from requests.adapters import HTTPAdapter
 
 from google.auth import environment_vars, exceptions
@@ -59,6 +58,13 @@ class MdsMtlsConfig:
     )  # path to file containing client certificate and key
 
 
+def _certs_exist(mds_mtls_config: MdsMtlsConfig):
+    """Checks if the mTLS certificates exist."""
+    return os.path.exists(mds_mtls_config.ca_cert_path) and os.path.exists(
+        mds_mtls_config.client_combined_cert_path
+    )
+
+
 class MdsMtlsMode(enum.Enum):
     """MDS mTLS mode. Used to configure connection behavior when connecting to MDS.
 
@@ -85,17 +91,27 @@ def _parse_mds_mode():
         )
 
 
-def _certs_exist(mds_mtls_config: MdsMtlsConfig):
-    """Checks if the mTLS certificates exist."""
-    return os.path.exists(mds_mtls_config.ca_cert_path) and os.path.exists(
-        mds_mtls_config.client_combined_cert_path
-    )
+def should_use_mds_mtls(mds_mtls_config: MdsMtlsConfig = MdsMtlsConfig()):
+    """Determines if mTLS should be used for the metadata server."""
+    mode = _parse_mds_mode()
+    if mode == MdsMtlsMode.STRICT:
+        if not _certs_exist(mds_mtls_config):
+            raise exceptions.MutualTLSChannelError(
+                "mTLS certificates not found in strict mode."
+            )
+        return True
+    elif mode == MdsMtlsMode.NONE:
+        return False
+    else:  # Default mode
+        return _certs_exist(mds_mtls_config)
 
 
 class MdsMtlsAdapter(HTTPAdapter):
     """An HTTP adapter that uses mTLS for the metadata server."""
 
-    def __init__(self, mds_mtls_config: MdsMtlsConfig, *args, **kwargs):
+    def __init__(
+        self, mds_mtls_config: MdsMtlsConfig = MdsMtlsConfig(), *args, **kwargs
+    ):
         self.ssl_context = ssl.create_default_context()
         self.ssl_context.load_verify_locations(cafile=mds_mtls_config.ca_cert_path)
         self.ssl_context.load_cert_chain(
@@ -110,26 +126,3 @@ class MdsMtlsAdapter(HTTPAdapter):
     def proxy_manager_for(self, *args, **kwargs):
         kwargs["ssl_context"] = self.ssl_context
         return super(MdsMtlsAdapter, self).proxy_manager_for(*args, **kwargs)
-
-
-def create_session(mds_mtls_config: MdsMtlsConfig = MdsMtlsConfig()):
-    """Creates a requests.Session configured for mTLS."""
-    session = requests.Session()
-    adapter = MdsMtlsAdapter(mds_mtls_config)
-    session.mount("https://", adapter)
-    return session
-
-
-def should_use_mds_mtls(mds_mtls_config: MdsMtlsConfig = MdsMtlsConfig()):
-    """Determines if mTLS should be used for the metadata server."""
-    mode = _parse_mds_mode()
-    if mode == MdsMtlsMode.STRICT:
-        if not _certs_exist(mds_mtls_config):
-            raise exceptions.MutualTLSChannelError(
-                "mTLS certificates not found in strict mode."
-            )
-        return True
-    elif mode == MdsMtlsMode.NONE:
-        return False
-    else:  # Default mode
-        return _certs_exist(mds_mtls_config)

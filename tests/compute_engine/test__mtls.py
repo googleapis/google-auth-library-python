@@ -19,6 +19,7 @@ import os
 
 import mock
 import pytest  # type: ignore
+import requests
 
 from google.auth import environment_vars, exceptions
 from google.auth.compute_engine import _mtls
@@ -127,15 +128,14 @@ def test_mds_mtls_adapter_init(mock_ssl_context, mock_mds_mtls_config):
     )
 
 
-@mock.patch("requests.Session")
-@mock.patch("google.auth.compute_engine._mtls.MdsMtlsAdapter")
-def test_create_session(mock_adapter, mock_session, mock_mds_mtls_config):
-    session_instance = mock_session.return_value
-    session = _mtls.create_session(mock_mds_mtls_config)
-    assert session is session_instance
-    mock_adapter.assert_called_once_with(mock_mds_mtls_config)
-    session_instance.mount.assert_called_once_with(
-        "https://", mock_adapter.return_value
+@mock.patch("ssl.create_default_context")
+@mock.patch("requests.adapters.HTTPAdapter.init_poolmanager")
+def test_mds_mtls_adapter_init_poolmanager(
+    mock_init_poolmanager, mock_ssl_context, mock_mds_mtls_config
+):
+    adapter = _mtls.MdsMtlsAdapter(mock_mds_mtls_config)
+    mock_init_poolmanager.assert_called_with(
+        10, 10, block=False, ssl_context=adapter.ssl_context
     )
 
 
@@ -149,3 +149,23 @@ def test_mds_mtls_adapter_proxy_manager_for(
     mock_proxy_manager_for.assert_called_once_with(
         "test_proxy", ssl_context=adapter.ssl_context
     )
+
+
+@mock.patch("ssl.create_default_context")
+def test_mds_mtls_adapter_session_request(mock_ssl_context, mock_mds_mtls_config):
+    adapter = _mtls.MdsMtlsAdapter(mock_mds_mtls_config)
+    session = requests.Session()
+    session.mount("https://", adapter)
+
+    # Mock the adapter's send method to avoid actual network requests
+    adapter.send = mock.Mock()
+    response = requests.Response()
+    response.status_code = 200
+    adapter.send.return_value = response
+
+    # Make a request
+    response = session.get("https://example.com")
+
+    # Assert that the request was successful
+    assert response.status_code == 200
+    adapter.send.assert_called_once()

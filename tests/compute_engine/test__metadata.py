@@ -712,12 +712,12 @@ def test__get_metadata_ip_root_no_mtls():
     assert _metadata._get_metadata_ip_root(use_mtls=False) == "http://169.254.169.254"
 
 
-@mock.patch("google.auth.compute_engine._mtls.create_session")
-def test__prepare_request_for_mds_mtls(mock_create_session):
-    request = mock.Mock()
-    new_request = _metadata._prepare_request_for_mds(request, use_mtls=True)
-    mock_create_session.assert_called_once()
-    assert isinstance(new_request, google_auth_requests.Request)
+@mock.patch("google.auth.compute_engine._mtls.MdsMtlsAdapter")
+def test__prepare_request_for_mds_mtls(mock_mds_mtls_adapter):
+    request = google_auth_requests.Request(mock.create_autospec(requests.Session))
+    _metadata._prepare_request_for_mds(request, use_mtls=True)
+    mock_mds_mtls_adapter.assert_called_once()
+    assert request.session.mount.call_count == len(_metadata._GCE_DEFAULT_MDS_HOSTS)
 
 
 def test__prepare_request_for_mds_no_mtls():
@@ -726,53 +726,100 @@ def test__prepare_request_for_mds_no_mtls():
     assert new_request is request
 
 
-@mock.patch("google.auth.compute_engine._mtls.should_use_mds_mtls", return_value=True)
-@mock.patch("google.auth.compute_engine._mtls.create_session")
 @mock.patch("google.auth.metrics.mds_ping", return_value=MDS_PING_METRICS_HEADER_VALUE)
+@mock.patch("google.auth.compute_engine._mtls.MdsMtlsAdapter")
+@mock.patch("google.auth.compute_engine._mtls.should_use_mds_mtls", return_value=True)
+@mock.patch("google.auth.transport.requests.Request")
 def test_ping_mtls(
-    mock_metrics_header_value, mock_create_session, mock_should_use_mtls
+    mock_request, mock_should_use_mtls, mock_mds_mtls_adapter, mock_metrics_header_value
 ):
-    response = mock.create_autospec(requests.Response, instance=True)
-    response.status_code = http_client.OK
+    response = mock.create_autospec(transport.Response, instance=True)
+    response.status = http_client.OK
     response.headers = _metadata._METADATA_HEADERS
-    mock_session = mock.Mock()
-    mock_session.request.return_value = response
-    mock_create_session.return_value = mock_session
+    mock_request.return_value = response
 
-    initial_request = mock.Mock()
-    assert _metadata.ping(initial_request)
+    assert _metadata.ping(mock_request)
 
     mock_should_use_mtls.assert_called_once()
-    mock_create_session.assert_called_once()
-    mock_session.request.assert_called_once_with(
-        "GET",
-        "https://169.254.169.254",
+    mock_mds_mtls_adapter.assert_called_once()
+    mock_request.assert_called_once_with(
+        url="https://169.254.169.254",
+        method="GET",
         headers=MDS_PING_REQUEST_HEADER,
         timeout=_metadata._METADATA_DEFAULT_TIMEOUT,
-        data=None,
     )
 
 
+@mock.patch("google.auth.compute_engine._mtls.MdsMtlsAdapter")
 @mock.patch("google.auth.compute_engine._mtls.should_use_mds_mtls", return_value=True)
-@mock.patch("google.auth.compute_engine._mtls.create_session")
-def test_get_mtls(mock_create_session, mock_should_use_mtls):
-    response = mock.create_autospec(requests.Response, instance=True)
-    response.status_code = http_client.OK
-    response.content = _helpers.to_bytes("{}")
+@mock.patch("google.auth.transport.requests.Request")
+def test_get_mtls(mock_request, mock_should_use_mtls, mock_mds_mtls_adapter):
+    response = mock.create_autospec(transport.Response, instance=True)
+    response.status = http_client.OK
+    response.data = _helpers.to_bytes("{}")
     response.headers = {"content-type": "application/json"}
-    mock_session = mock.Mock()
-    mock_session.request.return_value = response
-    mock_create_session.return_value = mock_session
+    mock_request.return_value = response
 
-    initial_request = mock.Mock()
-    _metadata.get(initial_request, "some/path")
+    _metadata.get(mock_request, "some/path")
 
     mock_should_use_mtls.assert_called_once()
-    mock_create_session.assert_called_once()
-    mock_session.request.assert_called_once_with(
-        "GET",
-        "https://metadata.google.internal/computeMetadata/v1/some/path",
-        data=None,
+    mock_mds_mtls_adapter.assert_called_once()
+    mock_request.assert_called_once_with(
+        url="https://metadata.google.internal/computeMetadata/v1/some/path",
+        method="GET",
         headers=_metadata._METADATA_HEADERS,
         timeout=_metadata._METADATA_DEFAULT_TIMEOUT,
     )
+
+
+@pytest.mark.parametrize(
+    "mds_mode, metadata_host, expect_exception",
+    [
+        (_metadata._mtls.MdsMtlsMode.STRICT, _metadata._GCE_DEFAULT_HOST, False),
+        (_metadata._mtls.MdsMtlsMode.STRICT, "custom.host", True),
+        (_metadata._mtls.MdsMtlsMode.NONE, "custom.host", False),
+        (_metadata._mtls.MdsMtlsMode.DEFAULT, _metadata._GCE_DEFAULT_HOST, False),
+    ],
+)
+@mock.patch("google.auth.compute_engine._mtls._parse_mds_mode")
+def test_validate_gce_mds_configured_environment(
+    mock_parse_mds_mode, mds_mode, metadata_host, expect_exception
+):
+    mock_parse_mds_mode.return_value = mds_mode
+    with mock.patch(
+        "google.auth.compute_engine._metadata._GCE_METADATA_HOST", new=metadata_host
+    ):
+        if expect_exception:
+            with pytest.raises(exceptions.MutualTLSChannelError):
+                _metadata._validate_gce_mds_configured_environment()
+        else:
+            _metadata._validate_gce_mds_configured_environment()
+    mock_parse_mds_mode.assert_called_once()
+
+
+@mock.patch("google.auth.compute_engine._mtls.MdsMtlsAdapter")
+def test__prepare_request_for_mds_mtls_session_exists(mock_mds_mtls_adapter):
+    mock_session = mock.create_autospec(requests.Session)
+    request = google_auth_requests.Request(mock_session)
+    new_request = _metadata._prepare_request_for_mds(request, use_mtls=True)
+
+    mock_mds_mtls_adapter.assert_called_once()
+    assert mock_session.mount.call_count == len(_metadata._GCE_DEFAULT_MDS_HOSTS)
+    assert new_request is request
+
+
+@mock.patch("google.auth.compute_engine._mtls.MdsMtlsAdapter")
+def test__prepare_request_for_mds_mtls_no_session(mock_mds_mtls_adapter):
+    request = google_auth_requests.Request(None)
+    # Explicitly set session to None to avoid a session being created in the Request constructor.
+    request.session = None
+
+    with mock.patch("requests.Session") as mock_session_class:
+        new_request = _metadata._prepare_request_for_mds(request, use_mtls=True)
+
+        mock_session_class.assert_called_once()
+        mock_mds_mtls_adapter.assert_called_once()
+        assert new_request.session.mount.call_count == len(
+            _metadata._GCE_DEFAULT_MDS_HOSTS
+        )
+        assert new_request is request

@@ -24,6 +24,8 @@ import logging
 import os
 from urllib.parse import urljoin
 
+import requests
+
 from google.auth import _helpers
 from google.auth import environment_vars
 from google.auth import exceptions
@@ -31,9 +33,13 @@ from google.auth import metrics
 from google.auth import transport
 from google.auth._exponential_backoff import ExponentialBackoff
 from google.auth.compute_engine import _mtls
-from google.auth.transport import requests
+
 
 _LOGGER = logging.getLogger(__name__)
+
+_GCE_DEFAULT_MDS_IP = "169.254.169.254"
+_GCE_DEFAULT_HOST = "metadata.google.internal"
+_GCE_DEFAULT_MDS_HOSTS = [_GCE_DEFAULT_HOST, _GCE_DEFAULT_MDS_IP]
 
 # Environment variable GCE_METADATA_HOST is originally named
 # GCE_METADATA_ROOT. For compatibility reasons, here it checks
@@ -42,20 +48,37 @@ _LOGGER = logging.getLogger(__name__)
 _GCE_METADATA_HOST = os.getenv(environment_vars.GCE_METADATA_HOST, None)
 if not _GCE_METADATA_HOST:
     _GCE_METADATA_HOST = os.getenv(
-        environment_vars.GCE_METADATA_ROOT, "metadata.google.internal"
+        environment_vars.GCE_METADATA_ROOT, _GCE_DEFAULT_HOST
     )
 
-_GCE_DEFAULT_MDS_IP = "169.254.169.254"
-_GCE_MDS_HOSTS = ["metadata.google.internal", _GCE_DEFAULT_MDS_IP]
+
+def _validate_gce_mds_configured_environment():
+    """Validates the GCE metadata server environment configuration for mTLS.
+
+    Raises:
+        google.auth.exceptions.MutualTLSChannelError: if the environment
+            configuration is invalid for mTLS.
+    """
+    mode = _mtls._parse_mds_mode()
+    if mode == _mtls.MdsMtlsMode.STRICT:
+        if _GCE_METADATA_HOST != _GCE_DEFAULT_HOST:
+            # mTLS is only supported when connecting to the default metadata host.
+            # Raise an exception if we are in strict mode (which requires mTLS)
+            # but the metadata host has been overridden. (which means mTLS will fail)
+            raise exceptions.MutualTLSChannelError(
+                "Mutual TLS is required, but the metadata host has been overridden. "
+                "mTLS is only supported when connecting to the default metadata host."
+            )
 
 
-def _get_metadata_root(use_mtls):
+def _get_metadata_root(use_mtls: bool):
     """Returns the metadata server root URL."""
+
     scheme = "https" if use_mtls else "http"
     return "{}://{}/computeMetadata/v1/".format(scheme, _GCE_METADATA_HOST)
 
 
-def _get_metadata_ip_root(use_mtls):
+def _get_metadata_ip_root(use_mtls: bool):
     """Returns the metadata server IP root URL."""
     scheme = "https" if use_mtls else "http"
     return "{}://{}".format(
@@ -131,8 +154,14 @@ def _prepare_request_for_mds(request, use_mtls=False):
             If mTLS is enabled, this will be a new request object with mTLS session configured.
             Otherwise, it will be the same as the input request.
     """
-    if use_mtls:
-        request = requests.Request(_mtls.create_session())
+    if not use_mtls:
+        return request
+
+    adapter = _mtls.MdsMtlsAdapter()
+    if not request.session:
+        request.session = requests.Session()
+    for host in _GCE_DEFAULT_MDS_HOSTS:
+        request.session.mount(f"https://{host}/", adapter)
     return request
 
 
@@ -236,6 +265,7 @@ def get(
 
     if root is None:
         root = _get_metadata_root(use_mtls)
+    _validate_gce_mds_configured_environment()
 
     base_url = urljoin(root, path)
     query_params = {} if params is None else params
