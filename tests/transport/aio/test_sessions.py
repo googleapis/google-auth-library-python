@@ -32,8 +32,10 @@ from google.auth.exceptions import InvalidType, TimeoutError, TransportError
 
 
 @pytest.fixture
-async def simple_async_task():
-    return True
+def simple_async_task():
+    async def inner_fixture():
+        return 1
+    return inner_fixture()
 
 
 class MockRequest(Request):
