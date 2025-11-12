@@ -59,8 +59,16 @@ class ClientCertError(GoogleAuthError):
 
 
 class OAuthError(GoogleAuthError):
-    """Used to indicate an error occurred during an OAuth related HTTP
-    request."""
+    """Used to indicate an error occurred during an OAuth-related HTTP request."""
+
+    def __init__(
+        self,
+        message: Optional[str] = None,
+        response_body: Optional[str] = None,
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(message or "", **kwargs)
+        self.response_body = response_body
 
 
 class ReauthFailError(RefreshError):
