@@ -456,7 +456,7 @@ class Credentials(
                 additional_options["userProject"] = self._workforce_pool_user_project
 
             if cert_fingerprint:
-                additional_options["bindCertificateFingerprint"] = cert_fingerprint
+                additional_options["bindCertFingerprint"] = cert_fingerprint
 
             additional_headers = {
                 metrics.API_CLIENT_HEADER: metrics.byoid_metrics_header(

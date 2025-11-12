@@ -753,10 +753,7 @@ class TestCredentials(object):
         )
 
         _, kwargs = credentials._sts_client.exchange_token.call_args
-        assert (
-            kwargs["additional_options"]["bindCertificateFingerprint"]
-            == "my-fingerprint"
-        )
+        assert kwargs["additional_options"]["bindCertFingerprint"] == "my-fingerprint"
 
     def test_refresh_skips_sending_allowed_locations_header_with_trust_boundary(self):
         # This test verifies that the x-allowed-locations header is not sent with
