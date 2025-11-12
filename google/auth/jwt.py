@@ -97,7 +97,7 @@ def encode(signer, payload, header=None, key_id=None):
 
     if "alg" not in header:
         if es is not None and isinstance(signer, es.EsSigner):
-            header.update({"alg": signer.alg})
+            header.update({"alg": signer.algorithm})
         else:
             header.update({"alg": "RS256"})
 

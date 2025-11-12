@@ -15,6 +15,9 @@
 """ECDSA verifier and signer that use the ``cryptography`` library.
 """
 
+from dataclasses import dataclass
+from typing import Any, Dict, Optional, Union
+
 from cryptography import utils  # type: ignore
 import cryptography.exceptions
 from cryptography.hazmat import backends
@@ -35,55 +38,74 @@ _BACKEND = backends.default_backend()
 _PADDING = padding.PKCS1v15()
 
 
+@dataclass
+class ESAttributes:
+    """A class that models ECDSA attributes.
+
+    Attributes:
+        rs_size (int): Size for ASN.1 r and s size.
+        sha_algo (hashes.HashAlgorithm): Hash algorithm.
+        algorithm (str): Algorithm name.
+    """
+    rs_size: int
+    sha_algo: hashes.HashAlgorithm
+    algorithm: str
+
+    @classmethod
+    def from_public_key(cls, key: ec.EllipticCurvePublicKey):
+        return cls.from_curve(key.curve)
+
+
+    @classmethod
+    def from_private_key(cls, key: ec.EllipticCurvePrivateKey):
+        return cls.from_curve(key.curve)
+
+
+    @classmethod
+    def from_curve(cls, curve: ec.EllipticCurve):
+        # ECDSA raw signature has (r||s) format where r,s are two
+        # integers of size 32 bytes for P-256 curve and 48 bytes
+        # for P-384 curve. For P-256 curve, we use SHA256 hash algo,
+        # and for P-384 curve we use SHA384 algo.
+        if isinstance(curve, ec.SECP384R1):
+            return cls(48, hashes.SHA384(), "ES384")
+        else:
+            # default to ES256
+            return cls(32, hashes.SHA256(), "ES256")
+
+
 class EsVerifier(base.Verifier):
     """Verifies ECDSA cryptographic signatures using public keys.
 
     Args:
         public_key (
-                cryptography.hazmat.primitives.asymmetric.ec.ECDSAPublicKey):
+                cryptography.hazmat.primitives.asymmetric.ec.EllipticCurvePublicKey):
             The public key used to verify signatures.
     """
 
-    def __init__(self, public_key):
+    def __init__(self, public_key: ec.EllipticCurvePublicKey) -> None:
         self._pubkey = public_key
-        # ECDSA raw signature has (r||s) format where r,s are two
-        # integers of size 32 bytes for P-256 curve and 48 bytes
-        # for P-384 curve. For P-256 curve, we use SHA256 hash algo,
-        # and for P-384 curve we use SHA384 algo.
-        if isinstance(public_key.curve, ec.SECP384R1):
-            self._r_s_size = 48
-            self._sha_algo = hashes.SHA384()
-        else:
-            self._r_s_size = 32
-            self._sha_algo = hashes.SHA256()
+        self._attributes = ESAttributes.from_public_key(public_key)
 
     @_helpers.copy_docstring(base.Verifier)
-    def verify(self, message, signature):
+    def verify(self, message: bytes, signature: bytes) -> bool:
         # First convert (r||s) raw signature to ASN1 encoded signature.
         sig_bytes = _helpers.to_bytes(signature)
-        if len(sig_bytes) != self._r_s_size * 2:
+        if len(sig_bytes) != self._attributes.rs_size * 2:
             return False
-        r = (
-            int.from_bytes(sig_bytes[: self._r_s_size], byteorder="big")
-            if _helpers.is_python_3()
-            else utils.int_from_bytes(sig_bytes[: self._r_s_size], byteorder="big")
-        )
-        s = (
-            int.from_bytes(sig_bytes[self._r_s_size :], byteorder="big")
-            if _helpers.is_python_3()
-            else utils.int_from_bytes(sig_bytes[self._r_s_size :], byteorder="big")
-        )
+        r = int.from_bytes(sig_bytes[: self._attributes.rs_size], byteorder="big")
+        s = int.from_bytes(sig_bytes[self._attributes.rs_size :], byteorder="big")
         asn1_sig = encode_dss_signature(r, s)
 
         message = _helpers.to_bytes(message)
         try:
-            self._pubkey.verify(asn1_sig, message, ec.ECDSA(self._sha_algo))
+            self._pubkey.verify(asn1_sig, message, ec.ECDSA(self._attributes.sha_algo))
             return True
         except (ValueError, cryptography.exceptions.InvalidSignature):
             return False
 
     @classmethod
-    def from_string(cls, public_key):
+    def from_string(cls, public_key: Union[str, bytes]) -> "EsVerifier":
         """Construct an Verifier instance from a public key or public
         certificate string.
 
@@ -103,10 +125,13 @@ class EsVerifier(base.Verifier):
             cert = cryptography.x509.load_pem_x509_certificate(
                 public_key_data, _BACKEND
             )
-            pubkey = cert.public_key()
+            pubkey = cert.public_key() # type: Any
 
         else:
             pubkey = serialization.load_pem_public_key(public_key_data, _BACKEND)
+
+        if not isinstance(pubkey, ec.EllipticCurvePublicKey):
+            raise TypeError("Expected public key of type EllipticCurvePublicKey")
 
         return cls(pubkey)
 
@@ -116,60 +141,49 @@ class EsSigner(base.Signer, base.FromServiceAccountMixin):
 
     Args:
         private_key (
-                cryptography.hazmat.primitives.asymmetric.ec.ECDSAPrivateKey):
+                cryptography.hazmat.primitives.asymmetric.ec.EllipticCurvePrivateKey):
             The private key to sign with.
         key_id (str): Optional key ID used to identify this private key. This
             can be useful to associate the private key with its associated
             public key or certificate.
     """
 
-    def __init__(self, private_key, key_id=None):
+    def __init__(
+        self, private_key: ec.EllipticCurvePrivateKey, key_id: Optional[str] = None
+    ) -> None:
         self._key = private_key
         self._key_id = key_id
-        # ECDSA raw signature has (r||s) format where r,s are two
-        # integers of size 32 bytes for P-256 curve and 48 bytes
-        # for P-384 curve. For P-256 curve, we use SHA256 hash algo,
-        # and for P-384 curve we use SHA384 algo.
-        if isinstance(private_key.curve, ec.SECP384R1):
-            self._r_s_size = 48
-            self._sha_algo = hashes.SHA384()
-            self._alg = "ES384"
-        else:
-            self._r_s_size = 32
-            self._sha_algo = hashes.SHA256()
-            self._alg = "ES256"
+        self._attributes = ESAttributes.from_private_key(private_key)
 
     @property  # type: ignore
-    def alg(self):
-        """Optional[str]: The algorithm used to sign the messages."""
-        return self._alg
+    def algorithm(self) -> str:
+        """Name of the algorithm used to sign messages.
+        Returns:
+            str: The algorithm name.
+        """
+        return self._attributes.algorithm
 
     @property  # type: ignore
     @_helpers.copy_docstring(base.Signer)
-    def key_id(self):
+    def key_id(self) -> Optional[str]:
         return self._key_id
 
     @_helpers.copy_docstring(base.Signer)
-    def sign(self, message):
+    def sign(self, message: bytes) -> bytes:
         message = _helpers.to_bytes(message)
-        asn1_signature = self._key.sign(message, ec.ECDSA(self._sha_algo))
+        asn1_signature = self._key.sign(message, ec.ECDSA(self._attributes.sha_algo))
 
         # Convert ASN1 encoded signature to (r||s) raw signature.
         (r, s) = decode_dss_signature(asn1_signature)
         return (
-            (
-                    r.to_bytes(self._r_s_size, byteorder="big")
-                    + s.to_bytes(self._r_s_size, byteorder="big")
-            )
-            if _helpers.is_python_3()
-            else (
-                    utils.int_to_bytes(r, self._r_s_size)
-                    + utils.int_to_bytes(s, self._r_s_size)
-            )
+            r.to_bytes(self._attributes.rs_size, byteorder="big")
+            + s.to_bytes(self._attributes.rs_size, byteorder="big")
         )
 
     @classmethod
-    def from_string(cls, key, key_id=None):
+    def from_string(
+        cls, key: Union[bytes, str], key_id: Optional[str] = None
+    ) -> "EsSigner":
         """Construct a RSASigner from a private key in PEM format.
 
         Args:
@@ -186,13 +200,17 @@ class EsSigner(base.Signer, base.FromServiceAccountMixin):
                 into a UTF-8 ``str``.
             ValueError: If ``cryptography`` "Could not deserialize key data."
         """
-        key = _helpers.to_bytes(key)
+        key_bytes = _helpers.to_bytes(key)
         private_key = serialization.load_pem_private_key(
-            key, password=None, backend=_BACKEND
+            key_bytes, password=None, backend=_BACKEND
         )
+
+        if not isinstance(private_key, ec.EllipticCurvePrivateKey):
+            raise TypeError("Expected private key of type EllipticCurvePrivateKey")
+
         return cls(private_key, key_id=key_id)
 
-    def __getstate__(self):
+    def __getstate__(self) -> Dict[str, Any]:
         """Pickle helper that serializes the _key attribute."""
         state = self.__dict__.copy()
         state["_key"] = self._key.private_bytes(
@@ -202,7 +220,7 @@ class EsSigner(base.Signer, base.FromServiceAccountMixin):
         )
         return state
 
-    def __setstate__(self, state):
+    def __setstate__(self, state: Dict[str, Any]) -> None:
         """Pickle helper that deserializes the _key attribute."""
         state["_key"] = serialization.load_pem_private_key(state["_key"], None)
         self.__dict__.update(state)

@@ -40,6 +40,8 @@ version is at least 1.4.0.
 from google.auth.crypt import base
 from google.auth.crypt import rsa
 
+# google.auth.crypt.es depends on the crytpography module which may not be
+# successfully imported depending on the system.
 try:
     from google.auth.crypt import es
 except ImportError:  # pragma: NO COVER
@@ -56,6 +58,11 @@ if es is not None:  # pragma: NO COVER
         "Signer",
         "Verifier",
     ]
+
+    ES256Signer = es.EsSigner
+    ES256Verifier = es.EsVerifier
+    EsSigner = es.EsSigner
+    EsVerifier = es.EsVerifier
 else:  # pragma: NO COVER
     __all__ = ["RSASigner", "RSAVerifier", "Signer", "Verifier"]
 
@@ -66,12 +73,6 @@ Signer = base.Signer
 Verifier = base.Verifier
 RSASigner = rsa.RSASigner
 RSAVerifier = rsa.RSAVerifier
-
-if es is not None:  # pragma: NO COVER
-    ES256Signer = es.EsSigner
-    ES256Verifier = es.EsVerifier
-    EsSigner = es.EsSigner
-    EsVerifier = es.EsVerifier
 
 
 def verify_signature(message, signature, certs, verifier_cls=rsa.RSAVerifier):

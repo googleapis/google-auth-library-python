@@ -56,7 +56,7 @@ def test_from_dict_es384_signer():
     )
     assert isinstance(signer, crypt.EsSigner)
     assert signer.key_id == GDCH_SERVICE_ACCOUNT_ES384_INFO["private_key_id"]
-    assert signer.alg == "ES384"
+    assert signer.algorithm == "ES384"
 
 def test_from_dict_bad_private_key():
     info = SERVICE_ACCOUNT_INFO.copy()
@@ -101,4 +101,4 @@ def test_from_filename_es384_signer():
 
     assert isinstance(signer, crypt.EsSigner)
     assert signer.key_id == GDCH_SERVICE_ACCOUNT_ES384_INFO["private_key_id"]
-    assert signer.alg == "ES384"
+    assert signer.algorithm == "ES384"
