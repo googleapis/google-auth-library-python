@@ -142,7 +142,7 @@ def detect_gce_residency_linux():
 def _prepare_request_for_mds(request, use_mtls=False):
     """Prepares a request for the metadata server.
 
-    This will check if mTLS should be used and return a new request object if so.
+    This will check if mTLS should be used and mount the mTLS adapter if needed.
 
     Args:
         request (google.auth.transport.Request): A callable used to make
@@ -151,8 +151,8 @@ def _prepare_request_for_mds(request, use_mtls=False):
 
     Returns:
         google.auth.transport.Request: A request object to use.
-            If mTLS is enabled, this will be a new request object with mTLS session configured.
-            Otherwise, it will be the same as the input request.
+            If mTLS is enabled, the request will have the mTLS adapter mounted.
+            Otherwise, the original request will be returned unchanged.
     """
     if not use_mtls:
         return request

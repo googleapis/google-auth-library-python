@@ -15,8 +15,6 @@
 # limitations under the License.
 #
 
-import os
-
 import mock
 import pytest  # type: ignore
 import requests
@@ -35,23 +33,21 @@ def mock_mds_mtls_config():
 @mock.patch("os.name", "nt")
 def test__MdsMtlsConfig_windows_defaults():
     config = _mtls.MdsMtlsConfig()
-    assert config.ca_cert_path == os.path.join(
-        "C:\\", "ProgramData", "Google", "ComputeEngine", "mds-mtls-root.crt"
+    assert (
+        str(config.ca_cert_path)
+        == "C:/ProgramData/Google/ComputeEngine/mds-mtls-root.crt"
     )
-    assert config.client_combined_cert_path == os.path.join(
-        "C:\\", "ProgramData", "Google", "ComputeEngine", "mds-mtls-client.key"
+    assert (
+        str(config.client_combined_cert_path)
+        == "C:/ProgramData/Google/ComputeEngine/mds-mtls-client.key"
     )
 
 
 @mock.patch("os.name", "posix")
 def test__MdsMtlsConfig_non_windows_defaults():
     config = _mtls.MdsMtlsConfig()
-    assert config.ca_cert_path == os.path.join(
-        "/", "run", "google-mds-mtls", "root.crt"
-    )
-    assert config.client_combined_cert_path == os.path.join(
-        "/", "run", "google-mds-mtls", "client.key"
-    )
+    assert str(config.ca_cert_path) == "/run/google-mds-mtls/root.crt"
+    assert str(config.client_combined_cert_path) == "/run/google-mds-mtls/client.key"
 
 
 def test__parse_mds_mode_default(monkeypatch):
@@ -157,7 +153,7 @@ def test_mds_mtls_adapter_session_request(mock_ssl_context, mock_mds_mtls_config
     session = requests.Session()
     session.mount("https://", adapter)
 
-    # Mock the adapter's send method to avoid actual network requests
+    # Mock the adapter\'s send method to avoid actual network requests
     adapter.send = mock.Mock()
     response = requests.Response()
     response.status_code = 200
@@ -169,3 +165,67 @@ def test_mds_mtls_adapter_session_request(mock_ssl_context, mock_mds_mtls_config
     # Assert that the request was successful
     assert response.status_code == 200
     adapter.send.assert_called_once()
+
+
+@mock.patch("google.auth.compute_engine._mtls.HTTPAdapter")
+@mock.patch("google.auth.compute_engine._mtls._parse_mds_mode")
+@mock.patch("ssl.create_default_context")
+def test_mds_mtls_adapter_send_fallback_default_mode(
+    mock_ssl_context, mock_parse_mds_mode, mock_http_adapter_class, mock_mds_mtls_config
+):
+    mock_parse_mds_mode.return_value = _mtls.MdsMtlsMode.DEFAULT
+    adapter = _mtls.MdsMtlsAdapter(mock_mds_mtls_config)
+
+    mock_fallback_send = mock.Mock()
+    mock_http_adapter_class.return_value.send = mock_fallback_send
+
+    # Simulate SSLError on the super().send() call
+    with mock.patch(
+        "requests.adapters.HTTPAdapter.send", side_effect=requests.exceptions.SSLError
+    ):
+        request = requests.Request(method="GET", url="https://example.com").prepare()
+        adapter.send(request)
+
+    # Check that fallback to HTTPAdapter.send occurred
+    mock_http_adapter_class.assert_called_once()
+    mock_fallback_send.assert_called_once()
+    fallback_request = mock_fallback_send.call_args[0][0]
+    assert fallback_request.url == "http://example.com/"
+
+
+@mock.patch("google.auth.compute_engine._mtls._parse_mds_mode")
+@mock.patch("ssl.create_default_context")
+def test_mds_mtls_adapter_send_no_fallback_strict_mode(
+    mock_ssl_context, mock_parse_mds_mode, mock_mds_mtls_config
+):
+    mock_parse_mds_mode.return_value = _mtls.MdsMtlsMode.STRICT
+    adapter = _mtls.MdsMtlsAdapter(mock_mds_mtls_config)
+
+    # Simulate SSLError on the super().send() call
+    with mock.patch(
+        "requests.adapters.HTTPAdapter.send", side_effect=requests.exceptions.SSLError
+    ):
+        request = requests.Request(method="GET", url="https://example.com").prepare()
+        with pytest.raises(requests.exceptions.SSLError):
+            adapter.send(request)
+
+
+@mock.patch("requests.adapters.HTTPAdapter.send")
+@mock.patch("google.auth.compute_engine._mtls._parse_mds_mode")
+@mock.patch("ssl.create_default_context")
+def test_mds_mtls_adapter_send_no_fallback_other_exception(
+    mock_ssl_context, mock_parse_mds_mode, mock_http_adapter_send, mock_mds_mtls_config
+):
+    mock_parse_mds_mode.return_value = _mtls.MdsMtlsMode.DEFAULT
+    adapter = _mtls.MdsMtlsAdapter(mock_mds_mtls_config)
+
+    # Simulate a different exception
+    with mock.patch(
+        "requests.adapters.HTTPAdapter.send",
+        side_effect=requests.exceptions.ConnectionError,
+    ):
+        request = requests.Request(method="GET", url="https://example.com").prepare()
+        with pytest.raises(requests.exceptions.ConnectionError):
+            adapter.send(request)
+
+    mock_http_adapter_send.assert_not_called()

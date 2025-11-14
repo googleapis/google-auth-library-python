@@ -18,34 +18,41 @@
 
 from dataclasses import dataclass, field
 import enum
+import logging
 import os
+from pathlib import Path
 import ssl
+from urllib.parse import urlparse, urlunparse
 
+import requests
 from requests.adapters import HTTPAdapter
 
 from google.auth import environment_vars, exceptions
 
+
+_LOGGER = logging.getLogger(__name__)
+
+_WINDOWS_OS_NAME = "nt"
+
 # MDS mTLS certificate paths based on OS.
 # Documentation to well known locations can be found at:
 # https://cloud.google.com/compute/docs/metadata/overview#https-mds-certificates
+_WINDOWS_MTLS_COMPONENTS_BASE_PATH = Path("C:/ProgramData/Google/ComputeEngine")
+_MTLS_COMPONENTS_BASE_PATH = Path("/run/google-mds-mtls")
 
 
 def _get_mds_root_crt_path():
-    if os.name == "nt":
-        return os.path.join(
-            "C:\\", "ProgramData", "Google", "ComputeEngine", "mds-mtls-root.crt"
-        )
+    if os.name == _WINDOWS_OS_NAME:
+        return _WINDOWS_MTLS_COMPONENTS_BASE_PATH / "mds-mtls-root.crt"
     else:
-        return os.path.join("/", "run", "google-mds-mtls", "root.crt")
+        return _MTLS_COMPONENTS_BASE_PATH / "root.crt"
 
 
 def _get_mds_client_combined_cert_path():
-    if os.name == "nt":
-        return os.path.join(
-            "C:\\", "ProgramData", "Google", "ComputeEngine", "mds-mtls-client.key"
-        )
+    if os.name == _WINDOWS_OS_NAME:
+        return _WINDOWS_MTLS_COMPONENTS_BASE_PATH / "mds-mtls-client.key"
     else:
-        return os.path.join("/", "run", "google-mds-mtls", "client.key")
+        return _MTLS_COMPONENTS_BASE_PATH / "client.key"
 
 
 @dataclass
@@ -126,3 +133,26 @@ class MdsMtlsAdapter(HTTPAdapter):
     def proxy_manager_for(self, *args, **kwargs):
         kwargs["ssl_context"] = self.ssl_context
         return super(MdsMtlsAdapter, self).proxy_manager_for(*args, **kwargs)
+
+    def send(self, request, **kwargs):
+        # If we are in strict mode, always use mTLS (no HTTP fallback)
+        if _parse_mds_mode() == MdsMtlsMode.STRICT:
+            return super(MdsMtlsAdapter, self).send(request, **kwargs)
+
+        # In default mode, attempt mTLS first, then fallback to HTTP on failure
+        try:
+            return super(MdsMtlsAdapter, self).send(request, **kwargs)
+        except (ssl.SSLError, requests.exceptions.SSLError) as e:
+            _LOGGER.warning(
+                "mTLS connection to Compute Engine Metadata server failed. "
+                "Falling back to standard HTTP. Reason: %s",
+                e,
+            )
+            # Fallback to standard HTTP
+            parsed_original_url = urlparse(request.url)
+            http_fallback_url = urlunparse(parsed_original_url._replace(scheme="http"))
+            request.url = http_fallback_url
+
+            # Use a standard HTTPAdapter for the fallback
+            http_adapter = HTTPAdapter()
+            return http_adapter.send(request, **kwargs)
