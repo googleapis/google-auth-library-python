@@ -39,6 +39,8 @@ _AGENT_IDENTITY_SPIFFE_TRUST_DOMAIN_PATTERNS = [
     r"^agents\.global\.proj-\d+\.system\.id\.goog$",
 ]
 
+_WELL_KNOWN_CERT_PATH = "/var/run/secrets/workload-spiffe-credentials/certificates.pem"
+
 # Constants for polling the certificate file.
 _FAST_POLL_CYCLES = 50
 _FAST_POLL_INTERVAL = 0.1  # 100ms
@@ -53,6 +55,11 @@ _SLOW_POLL_CYCLES = int(
 _POLLING_INTERVALS = ([_FAST_POLL_INTERVAL] * _FAST_POLL_CYCLES) + (
     [_SLOW_POLL_INTERVAL] * _SLOW_POLL_CYCLES
 )
+
+
+def _is_certificate_file_ready(path):
+    """Checks if a file exists and is not empty."""
+    return path and os.path.exists(path) and os.path.getsize(path) > 0
 
 
 def get_agent_identity_certificate_path():
@@ -87,7 +94,7 @@ def get_agent_identity_certificate_path():
                     .get("workload", {})
                     .get("cert_path")
                 )
-                if cert_path and os.path.exists(cert_path):
+                if _is_certificate_file_ready(cert_path):
                     return cert_path
         except (IOError, ValueError, KeyError):
             if not has_logged_warning:
@@ -100,6 +107,10 @@ def get_agent_identity_certificate_path():
                 )
                 has_logged_warning = True
             pass
+
+        # As a fallback, check the well-known certificate path.
+        if _is_certificate_file_ready(_WELL_KNOWN_CERT_PATH):
+            return _WELL_KNOWN_CERT_PATH
 
         # A sleep is required in two cases:
         # 1. The config file is not found (the except block).
