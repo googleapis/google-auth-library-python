@@ -193,6 +193,34 @@ def test_mds_mtls_adapter_send_fallback_default_mode(
     assert fallback_request.url == "http://example.com/"
 
 
+@mock.patch("google.auth.compute_engine._mtls.HTTPAdapter")
+@mock.patch("google.auth.compute_engine._mtls._parse_mds_mode")
+@mock.patch("ssl.create_default_context")
+def test_mds_mtls_adapter_send_fallback_http_error(
+    mock_ssl_context, mock_parse_mds_mode, mock_http_adapter_class, mock_mds_mtls_config
+):
+    mock_parse_mds_mode.return_value = _mtls.MdsMtlsMode.DEFAULT
+    adapter = _mtls.MdsMtlsAdapter(mock_mds_mtls_config)
+
+    mock_fallback_send = mock.Mock()
+    mock_http_adapter_class.return_value.send = mock_fallback_send
+
+    # Simulate HTTPError on the super().send() call
+    mock_mtls_response = requests.Response()
+    mock_mtls_response.status_code = 404
+    with mock.patch(
+        "requests.adapters.HTTPAdapter.send", return_value=mock_mtls_response
+    ):
+        request = requests.Request(method="GET", url="https://example.com").prepare()
+        adapter.send(request)
+
+    # Check that fallback to HTTPAdapter.send occurred
+    mock_http_adapter_class.assert_called_once()
+    mock_fallback_send.assert_called_once()
+    fallback_request = mock_fallback_send.call_args[0][0]
+    assert fallback_request.url == "http://example.com/"
+
+
 @mock.patch("google.auth.compute_engine._mtls._parse_mds_mode")
 @mock.patch("ssl.create_default_context")
 def test_mds_mtls_adapter_send_no_fallback_strict_mode(

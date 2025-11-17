@@ -141,8 +141,14 @@ class MdsMtlsAdapter(HTTPAdapter):
 
         # In default mode, attempt mTLS first, then fallback to HTTP on failure
         try:
-            return super(MdsMtlsAdapter, self).send(request, **kwargs)
-        except (ssl.SSLError, requests.exceptions.SSLError) as e:
+            response = super(MdsMtlsAdapter, self).send(request, **kwargs)
+            response.raise_for_status()
+            return response
+        except (
+            ssl.SSLError,
+            requests.exceptions.SSLError,
+            requests.exceptions.HTTPError,
+        ) as e:
             _LOGGER.warning(
                 "mTLS connection to Compute Engine Metadata server failed. "
                 "Falling back to standard HTTP. Reason: %s",
