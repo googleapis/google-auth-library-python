@@ -15,6 +15,8 @@
 # limitations under the License.
 #
 
+from pathlib import Path
+
 import mock
 import pytest  # type: ignore
 import requests
@@ -26,7 +28,8 @@ from google.auth.compute_engine import _mtls
 @pytest.fixture
 def mock_mds_mtls_config():
     return _mtls.MdsMtlsConfig(
-        ca_cert_path="/fake/ca.crt", client_combined_cert_path="/fake/client.key"
+        ca_cert_path=Path("/fake/ca.crt"),
+        client_combined_cert_path=Path("/fake/client.key"),
     )
 
 

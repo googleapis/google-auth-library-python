@@ -57,10 +57,10 @@ def _get_mds_client_combined_cert_path():
 
 @dataclass
 class MdsMtlsConfig:
-    ca_cert_path: str = field(
+    ca_cert_path: Path = field(
         default_factory=_get_mds_root_crt_path
     )  # path to CA certificate
-    client_combined_cert_path: str = field(
+    client_combined_cert_path: Path = field(
         default_factory=_get_mds_client_combined_cert_path
     )  # path to file containing client certificate and key
 
