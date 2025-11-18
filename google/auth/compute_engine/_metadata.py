@@ -55,6 +55,10 @@ if not _GCE_METADATA_HOST:
 def _validate_gce_mds_configured_environment():
     """Validates the GCE metadata server environment configuration for mTLS.
 
+    mTLS is only supported when connecting to the default metadata host.
+    If we are in strict mode (which requires mTLS), ensure that the metadata host
+    has not been overridden (which means mTLS will fail).
+
     Raises:
         google.auth.exceptions.MutualTLSChannelError: if the environment
             configuration is invalid for mTLS.
@@ -236,7 +240,8 @@ def get(
             HTTP requests.
         path (str): The resource to retrieve. For example,
             ``'instance/service-accounts/default'``.
-        root (str): The full path to the metadata server root.
+        root (Optional[str]): The full path to the metadata server root. If not
+            provided, the default root will be used.
         params (Optional[Mapping[str, str]]): A mapping of query parameter
             keys to values.
         recursive (bool): Whether to do a recursive query of metadata. See
@@ -257,6 +262,10 @@ def get(
     Raises:
         google.auth.exceptions.TransportError: if an error occurred while
             retrieving metadata.
+        google.auth.exceptions.MutualTLSChannelError: if the environment
+            configuration is invalid for mTLS (for example, the metadata host
+            has been overridden in strict mTLS mode).
+
     """
     use_mtls = _mtls.should_use_mds_mtls()
     # Prepare the request object for mTLS if needed.
@@ -265,6 +274,10 @@ def get(
 
     if root is None:
         root = _get_metadata_root(use_mtls)
+
+    # mTLS is only supported when connecting to the default metadata host.
+    # If we are in strict mode (which requires mTLS), ensure that the metadata host
+    # has not been overridden (which means mTLS will fail).
     _validate_gce_mds_configured_environment()
 
     base_url = urljoin(root, path)
