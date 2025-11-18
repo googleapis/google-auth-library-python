@@ -44,14 +44,16 @@ from google.auth.crypt import rsa
 # successfully imported depending on the system.
 try:
     from google.auth.crypt import es
+    from google.auth.crypt import es256
 except ImportError:  # pragma: NO COVER
     es = None  # type: ignore
+    es256 = None  # type: ignore
 
-if es is not None:  # pragma: NO COVER
+if es is not None and es256 is not None:  # pragma: NO COVER
     __all__ = [
         "EsSigner",
-        "ES256Signer",
         "EsVerifier",
+        "ES256Signer",
         "ES256Verifier",
         "RSASigner",
         "RSAVerifier",
@@ -59,10 +61,10 @@ if es is not None:  # pragma: NO COVER
         "Verifier",
     ]
 
-    ES256Signer = es.EsSigner
-    ES256Verifier = es.EsVerifier
     EsSigner = es.EsSigner
     EsVerifier = es.EsVerifier
+    ES256Signer = es256.ES256Signer
+    ES256Verifier = es256.ES256Verifier
 else:  # pragma: NO COVER
     __all__ = ["RSASigner", "RSAVerifier", "Signer", "Verifier"]
 
