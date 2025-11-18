@@ -39,7 +39,7 @@ _PADDING = padding.PKCS1v15()
 
 
 @dataclass
-class ESAttributes:
+class _ESAttributes:
     """A class that models ECDSA attributes.
 
     Attributes:
@@ -52,12 +52,7 @@ class ESAttributes:
     algorithm: str
 
     @classmethod
-    def from_public_key(cls, key: ec.EllipticCurvePublicKey):
-        return cls.from_curve(key.curve)
-
-
-    @classmethod
-    def from_private_key(cls, key: ec.EllipticCurvePrivateKey):
+    def from_key(cls, key: Union[ec.EllipticCurvePublicKey, ec.EllipticCurvePrivateKey]):
         return cls.from_curve(key.curve)
 
 
@@ -85,7 +80,7 @@ class EsVerifier(base.Verifier):
 
     def __init__(self, public_key: ec.EllipticCurvePublicKey) -> None:
         self._pubkey = public_key
-        self._attributes = ESAttributes.from_public_key(public_key)
+        self._attributes = _ESAttributes.from_key(public_key)
 
     @_helpers.copy_docstring(base.Verifier)
     def verify(self, message: bytes, signature: bytes) -> bool:
@@ -153,9 +148,9 @@ class EsSigner(base.Signer, base.FromServiceAccountMixin):
     ) -> None:
         self._key = private_key
         self._key_id = key_id
-        self._attributes = ESAttributes.from_private_key(private_key)
+        self._attributes = _ESAttributes.from_key(private_key)
 
-    @property  # type: ignore
+    @property
     def algorithm(self) -> str:
         """Name of the algorithm used to sign messages.
         Returns:
