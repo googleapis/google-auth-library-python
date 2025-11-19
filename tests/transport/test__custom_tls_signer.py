@@ -18,7 +18,10 @@ import os
 import mock
 import pytest  # type: ignore
 from requests.packages.urllib3.util.ssl_ import create_urllib3_context  # type: ignore
-import urllib3.contrib.pyopenssl  # type: ignore
+urllib3_pyopenssl = pytest.importorskip(
+    "urllib3.contrib.pyopenssl",
+    reason="urllib3.contrib.pyopenssl not available in this environment",
+)
 
 from google.auth import exceptions
 from google.auth.transport import _custom_tls_signer
