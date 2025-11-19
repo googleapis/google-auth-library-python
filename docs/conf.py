@@ -358,47 +358,6 @@ texinfo_documents = [
 # texinfo_no_detailmenu = False
 
 
-# -- Options for autodoc --------------------------------------------------
-
-
-def autodoc_skip_member_handler(app, what, name, obj, skip, options):
-    """
-    Skips members from internal modules (like _cryptography_rsa or base)
-    if they are publicly exposed via a higher-level package (like google.auth.crypt),
-    to avoid duplicate documentation entries and ambiguous cross-references.
-    """
-    # Handle RSASigner and RSAVerifier from _cryptography_rsa
-    if name in ("RSASigner", "RSAVerifier") and hasattr(obj, "__module__"):
-        if obj.__module__ == "google.auth.crypt._cryptography_rsa":
-            # Check if it's also available via the public google.auth.crypt path
-            try:
-                import google.auth.crypt
-
-                public_obj = getattr(google.auth.crypt, name, None)
-                if public_obj is obj:
-                    return True  # Skip this internal one
-            except ImportError:
-                pass  # Should not happen if the library is installed
-
-    # Handle Signer and Verifier from base
-    elif name in ("Signer", "Verifier") and hasattr(obj, "__module__"):
-        if obj.__module__ == "google.auth.crypt.base":
-            # Check if it's also available via the public google.auth.crypt path
-            try:
-                import google.auth.crypt
-
-                public_obj = getattr(google.auth.crypt, name, None)
-                if public_obj is obj:
-                    return True  # Skip this internal one
-            except ImportError:
-                pass  # Should not happen if the library is installed
-    return None  # Default behavior (don't skip)
-
-
-def setup(app):
-    app.connect("autodoc-skip-member", autodoc_skip_member_handler)
-
-
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3.5", None),
