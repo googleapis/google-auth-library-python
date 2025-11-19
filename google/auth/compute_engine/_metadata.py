@@ -55,9 +55,9 @@ if not _GCE_METADATA_HOST:
 def _validate_gce_mds_configured_environment():
     """Validates the GCE metadata server environment configuration for mTLS.
 
-    mTLS is only supported when connecting to the default metadata host.
+    mTLS is only supported when connecting to the default metadata server hosts.
     If we are in strict mode (which requires mTLS), ensure that the metadata host
-    has not been overridden (which means mTLS will fail).
+    has not been overridden to a custom value (which means mTLS will fail).
 
     Raises:
         google.auth.exceptions.MutualTLSChannelError: if the environment
@@ -65,10 +65,10 @@ def _validate_gce_mds_configured_environment():
     """
     mode = _mtls._parse_mds_mode()
     if mode == _mtls.MdsMtlsMode.STRICT:
-        if _GCE_METADATA_HOST != _GCE_DEFAULT_HOST:
-            # mTLS is only supported when connecting to the default metadata host.
-            # Raise an exception if we are in strict mode (which requires mTLS)
-            # but the metadata host has been overridden. (which means mTLS will fail)
+        # mTLS is only supported when connecting to the default metadata host.
+        # Raise an exception if we are in strict mode (which requires mTLS)
+        # but the metadata host has been overridden to a custom MDS. (which means mTLS will fail)
+        if _GCE_METADATA_HOST not in _GCE_DEFAULT_MDS_HOSTS:
             raise exceptions.MutualTLSChannelError(
                 "Mutual TLS is required, but the metadata host has been overridden. "
                 "mTLS is only supported when connecting to the default metadata host."
@@ -143,7 +143,7 @@ def detect_gce_residency_linux():
     return content.startswith(_GOOGLE)
 
 
-def _prepare_request_for_mds(request, use_mtls=False):
+def _prepare_request_for_mds(request, use_mtls=False) -> None:
     """Prepares a request for the metadata server.
 
     This will check if mTLS should be used and mount the mTLS adapter if needed.
@@ -158,15 +158,16 @@ def _prepare_request_for_mds(request, use_mtls=False):
             If mTLS is enabled, the request will have the mTLS adapter mounted.
             Otherwise, the original request will be returned unchanged.
     """
-    if not use_mtls:
-        return request
+    # Only modify the request if mTLS is enabled.
+    if use_mtls:
+        # Ensure the request has a session to mount the adapter to.
+        if not request.session:
+            request.session = requests.Session()
 
-    adapter = _mtls.MdsMtlsAdapter()
-    if not request.session:
-        request.session = requests.Session()
-    for host in _GCE_DEFAULT_MDS_HOSTS:
-        request.session.mount(f"https://{host}/", adapter)
-    return request
+        adapter = _mtls.MdsMtlsAdapter()
+        # Mount the adapter for all default GCE metadata hosts.
+        for host in _GCE_DEFAULT_MDS_HOSTS:
+            request.session.mount(f"https://{host}/", adapter)
 
 
 def ping(request, timeout=_METADATA_DEFAULT_TIMEOUT, retry_count=3):
@@ -183,7 +184,7 @@ def ping(request, timeout=_METADATA_DEFAULT_TIMEOUT, retry_count=3):
         bool: True if the metadata server is reachable, False otherwise.
     """
     use_mtls = _mtls.should_use_mds_mtls()
-    request = _prepare_request_for_mds(request, use_mtls=use_mtls)
+    _prepare_request_for_mds(request, use_mtls=use_mtls)
     # NOTE: The explicit ``timeout`` is a workaround. The underlying
     #       issue is that resolving an unknown host on some networks will take
     #       20-30 seconds; making this timeout short fixes the issue, but
@@ -270,14 +271,14 @@ def get(
     use_mtls = _mtls.should_use_mds_mtls()
     # Prepare the request object for mTLS if needed.
     # This will create a new request object with the mTLS session.
-    request = _prepare_request_for_mds(request, use_mtls=use_mtls)
+    _prepare_request_for_mds(request, use_mtls=use_mtls)
 
     if root is None:
         root = _get_metadata_root(use_mtls)
 
     # mTLS is only supported when connecting to the default metadata host.
     # If we are in strict mode (which requires mTLS), ensure that the metadata host
-    # has not been overridden (which means mTLS will fail).
+    # has not been overridden to a non-default host value (which means mTLS will fail).
     _validate_gce_mds_configured_environment()
 
     base_url = urljoin(root, path)

@@ -722,8 +722,8 @@ def test__prepare_request_for_mds_mtls(mock_mds_mtls_adapter):
 
 def test__prepare_request_for_mds_no_mtls():
     request = mock.Mock()
-    new_request = _metadata._prepare_request_for_mds(request, use_mtls=False)
-    assert new_request is request
+    _metadata._prepare_request_for_mds(request, use_mtls=False)
+    request.session.mount.assert_not_called()
 
 
 @mock.patch("google.auth.metrics.mds_ping", return_value=MDS_PING_METRICS_HEADER_VALUE)
@@ -776,9 +776,11 @@ def test_get_mtls(mock_request, mock_should_use_mtls, mock_mds_mtls_adapter):
     "mds_mode, metadata_host, expect_exception",
     [
         (_metadata._mtls.MdsMtlsMode.STRICT, _metadata._GCE_DEFAULT_HOST, False),
+        (_metadata._mtls.MdsMtlsMode.STRICT, _metadata._GCE_DEFAULT_MDS_IP, False),
         (_metadata._mtls.MdsMtlsMode.STRICT, "custom.host", True),
         (_metadata._mtls.MdsMtlsMode.NONE, "custom.host", False),
         (_metadata._mtls.MdsMtlsMode.DEFAULT, _metadata._GCE_DEFAULT_HOST, False),
+        (_metadata._mtls.MdsMtlsMode.DEFAULT, _metadata._GCE_DEFAULT_MDS_IP, False),
     ],
 )
 @mock.patch("google.auth.compute_engine._mtls._parse_mds_mode")
@@ -801,11 +803,10 @@ def test_validate_gce_mds_configured_environment(
 def test__prepare_request_for_mds_mtls_session_exists(mock_mds_mtls_adapter):
     mock_session = mock.create_autospec(requests.Session)
     request = google_auth_requests.Request(mock_session)
-    new_request = _metadata._prepare_request_for_mds(request, use_mtls=True)
+    _metadata._prepare_request_for_mds(request, use_mtls=True)
 
     mock_mds_mtls_adapter.assert_called_once()
     assert mock_session.mount.call_count == len(_metadata._GCE_DEFAULT_MDS_HOSTS)
-    assert new_request is request
 
 
 @mock.patch("google.auth.compute_engine._mtls.MdsMtlsAdapter")
@@ -815,11 +816,8 @@ def test__prepare_request_for_mds_mtls_no_session(mock_mds_mtls_adapter):
     request.session = None
 
     with mock.patch("requests.Session") as mock_session_class:
-        new_request = _metadata._prepare_request_for_mds(request, use_mtls=True)
+        _metadata._prepare_request_for_mds(request, use_mtls=True)
 
         mock_session_class.assert_called_once()
         mock_mds_mtls_adapter.assert_called_once()
-        assert new_request.session.mount.call_count == len(
-            _metadata._GCE_DEFAULT_MDS_HOSTS
-        )
-        assert new_request is request
+        assert request.session.mount.call_count == len(_metadata._GCE_DEFAULT_MDS_HOSTS)
