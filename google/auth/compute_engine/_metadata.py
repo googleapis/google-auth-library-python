@@ -263,7 +263,7 @@ def get(
     Raises:
         google.auth.exceptions.TransportError: if an error occurred while
             retrieving metadata.
-        google.auth.exceptions.MutualTLSChannelError: if the environment
+        google.auth.exceptions.MutualTLSChannelError: if using mtls and the environment
             configuration is invalid for mTLS (for example, the metadata host
             has been overridden in strict mTLS mode).
 
