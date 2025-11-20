@@ -46,7 +46,7 @@ def test_from_dict_es256_signer():
     signer = _service_account_info.from_dict(
         GDCH_SERVICE_ACCOUNT_ES256_INFO, use_rsa_signer=False
     )
-    assert isinstance(signer, crypt.ES256Signer)
+    assert isinstance(signer, crypt.EsSigner)
     assert signer.key_id == GDCH_SERVICE_ACCOUNT_ES256_INFO["private_key_id"]
 
 
@@ -90,7 +90,7 @@ def test_from_filename_es256_signer():
         GDCH_SERVICE_ACCOUNT_ES256_JSON_FILE, use_rsa_signer=False
     )
 
-    assert isinstance(signer, crypt.ES256Signer)
+    assert isinstance(signer, crypt.EsSigner)
     assert signer.key_id == GDCH_SERVICE_ACCOUNT_ES256_INFO["private_key_id"]
 
 
