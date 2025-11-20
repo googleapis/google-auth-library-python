@@ -60,7 +60,7 @@ import google.auth.credentials
 
 try:
     from google.auth.crypt import es
-except ImportError:
+except ImportError: # pragma: NO COVER
     es = None  # type: ignore
 
 _DEFAULT_TOKEN_LIFETIME_SECS = 3600  # 1 hour in seconds
@@ -68,7 +68,7 @@ _DEFAULT_MAX_CACHE_SIZE = 10
 _ALGORITHM_TO_VERIFIER_CLASS = {"RS256": crypt.RSAVerifier}
 _CRYPTOGRAPHY_BASED_ALGORITHMS = frozenset(["ES256", "ES384"])
 
-if es is not None:
+if es is not None: # pragma: NO COVER
     _ALGORITHM_TO_VERIFIER_CLASS["ES256"] = es.EsVerifier  # type: ignore
     _ALGORITHM_TO_VERIFIER_CLASS["ES384"] = es.EsVerifier  # type: ignore
 

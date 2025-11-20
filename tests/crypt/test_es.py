@@ -44,6 +44,14 @@ with open(os.path.join(DATA_DIR, "es384_publickey.pem"), "rb") as fh:
 with open(os.path.join(DATA_DIR, "es384_public_cert.pem"), "rb") as fh:
     PUBLIC_CERT_BYTES = fh.read()
 
+# RSA keys used to test for type errors in EsVerifier and EsSigner.
+with open(os.path.join(DATA_DIR, "privatekey.pem"), "rb") as fh:
+    RSA_PRIVATE_KEY_BYTES = fh.read()
+    RSA_PKCS1_KEY_BYTES = RSA_PRIVATE_KEY_BYTES
+
+with open(os.path.join(DATA_DIR, "privatekey.pub"), "rb") as fh:
+    RSA_PUBLIC_KEY_BYTES = fh.read()
+
 SERVICE_ACCOUNT_JSON_FILE = os.path.join(DATA_DIR, "es384_service_account.json")
 
 with open(SERVICE_ACCOUNT_JSON_FILE, "rb") as fh:
@@ -107,6 +115,10 @@ class TestEsVerifier(object):
         assert isinstance(verifier, es.EsVerifier)
         assert isinstance(verifier._pubkey, ec.EllipticCurvePublicKey)
 
+    def test_from_string_type_error(self):
+        with pytest.raises(TypeError):
+            es.EsVerifier.from_string(RSA_PUBLIC_KEY_BYTES)
+
 
 class TestEsSigner(object):
     def test_from_string_pkcs1(self):
@@ -123,6 +135,11 @@ class TestEsSigner(object):
     def test_from_string_bogus_key(self):
         key_bytes = "bogus-key"
         with pytest.raises(ValueError):
+            es.EsSigner.from_string(key_bytes)
+
+    def test_from_string_type_error(self):
+        key_bytes = _helpers.from_bytes(RSA_PKCS1_KEY_BYTES)
+        with pytest.raises(TypeError):
             es.EsSigner.from_string(key_bytes)
 
     def test_from_service_account_info(self):
