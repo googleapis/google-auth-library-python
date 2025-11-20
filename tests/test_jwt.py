@@ -113,7 +113,9 @@ def test_encode_basic_es384(es384_signer):
 
 @pytest.fixture
 def token_factory(signer, es256_signer, es384_signer):
-    def factory(claims=None, key_id=None, use_es256_signer=False, use_es384_signer=False):
+    def factory(
+        claims=None, key_id=None, use_es256_signer=False, use_es384_signer=False
+    ):
         now = _helpers.datetime_to_secs(_helpers.utcnow())
         payload = {
             "aud": "audience@example.com",
@@ -177,6 +179,7 @@ def test_decode_valid_es256(token_factory):
     assert payload["aud"] == "audience@example.com"
     assert payload["user"] == "billy bob"
     assert payload["metadata"]["meta"] == "data"
+
 
 def test_decode_valid_es384(token_factory):
     payload = jwt.decode(

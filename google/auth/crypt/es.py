@@ -47,14 +47,16 @@ class _ESAttributes:
         sha_algo (hashes.HashAlgorithm): Hash algorithm.
         algorithm (str): Algorithm name.
     """
+
     rs_size: int
     sha_algo: hashes.HashAlgorithm
     algorithm: str
 
     @classmethod
-    def from_key(cls, key: Union[ec.EllipticCurvePublicKey, ec.EllipticCurvePrivateKey]):
+    def from_key(
+        cls, key: Union[ec.EllipticCurvePublicKey, ec.EllipticCurvePrivateKey]
+    ):
         return cls.from_curve(key.curve)
-
 
     @classmethod
     def from_curve(cls, curve: ec.EllipticCurve):
@@ -120,7 +122,7 @@ class EsVerifier(base.Verifier):
             cert = cryptography.x509.load_pem_x509_certificate(
                 public_key_data, _BACKEND
             )
-            pubkey = cert.public_key() # type: Any
+            pubkey = cert.public_key()  # type: Any
 
         else:
             pubkey = serialization.load_pem_public_key(public_key_data, _BACKEND)
@@ -170,9 +172,8 @@ class EsSigner(base.Signer, base.FromServiceAccountMixin):
 
         # Convert ASN1 encoded signature to (r||s) raw signature.
         (r, s) = decode_dss_signature(asn1_signature)
-        return (
-            r.to_bytes(self._attributes.rs_size, byteorder="big")
-            + s.to_bytes(self._attributes.rs_size, byteorder="big")
+        return r.to_bytes(self._attributes.rs_size, byteorder="big") + s.to_bytes(
+            self._attributes.rs_size, byteorder="big"
         )
 
     @classmethod

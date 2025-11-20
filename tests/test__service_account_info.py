@@ -23,8 +23,12 @@ from google.auth import crypt
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
 SERVICE_ACCOUNT_JSON_FILE = os.path.join(DATA_DIR, "service_account.json")
-GDCH_SERVICE_ACCOUNT_ES256_JSON_FILE = os.path.join(DATA_DIR, "gdch_service_account.json")
-GDCH_SERVICE_ACCOUNT_ES384_JSON_FILE = os.path.join(DATA_DIR, "es384_service_account.json")
+GDCH_SERVICE_ACCOUNT_ES256_JSON_FILE = os.path.join(
+    DATA_DIR, "gdch_service_account.json"
+)
+GDCH_SERVICE_ACCOUNT_ES384_JSON_FILE = os.path.join(
+    DATA_DIR, "es384_service_account.json"
+)
 
 with open(SERVICE_ACCOUNT_JSON_FILE, "r") as fh:
     SERVICE_ACCOUNT_INFO = json.load(fh)
@@ -57,6 +61,7 @@ def test_from_dict_es384_signer():
     assert isinstance(signer, crypt.EsSigner)
     assert signer.key_id == GDCH_SERVICE_ACCOUNT_ES384_INFO["private_key_id"]
     assert signer.algorithm == "ES384"
+
 
 def test_from_dict_bad_private_key():
     info = SERVICE_ACCOUNT_INFO.copy()
