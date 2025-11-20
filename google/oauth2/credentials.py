@@ -139,7 +139,7 @@ class Credentials(credentials.ReadOnlyScoped, credentials.CredentialsWithQuotaPr
         super(Credentials, self).__init__()
         self.token = token
         self.expiry = expiry
-        self._refresh_token = refresh_token
+        self._refresh_token_val = refresh_token
         self._id_token = id_token
         self._scopes = scopes
         self._default_scopes = default_scopes
@@ -178,7 +178,7 @@ class Credentials(credentials.ReadOnlyScoped, credentials.CredentialsWithQuotaPr
         all the attributes."""
         self.token = d.get("token")
         self.expiry = d.get("expiry")
-        self._refresh_token = d.get("_refresh_token")
+        self._refresh_token_val = d.get("_refresh_token_val")
         self._id_token = d.get("_id_token")
         self._scopes = d.get("_scopes")
         self._default_scopes = d.get("_default_scopes")
@@ -203,7 +203,7 @@ class Credentials(credentials.ReadOnlyScoped, credentials.CredentialsWithQuotaPr
     @property
     def refresh_token(self):
         """Optional[str]: The OAuth 2.0 refresh token."""
-        return self._refresh_token
+        return self._refresh_token_val
 
     @property
     def scopes(self):
@@ -350,6 +350,9 @@ class Credentials(credentials.ReadOnlyScoped, credentials.CredentialsWithQuotaPr
     def _metric_header_for_usage(self):
         return metrics.CRED_TYPE_USER
 
+    def _refresh_token(self, request):
+        return self.refresh(request)
+
     @_helpers.copy_docstring(credentials.Credentials)
     def refresh(self, request):
         if self._universe_domain != credentials.DEFAULT_UNIVERSE_DOMAIN:
@@ -368,7 +371,7 @@ class Credentials(credentials.ReadOnlyScoped, credentials.CredentialsWithQuotaPr
         # available. This is useful in general when tokens are obtained by calling
         # some external process on demand. It is particularly useful for retrieving
         # downscoped tokens from a token broker.
-        if self._refresh_token is None and self.refresh_handler:
+        if self._refresh_token_val is None and self.refresh_handler:
             token, expiry = self.refresh_handler(request, scopes=scopes)
             # Validate returned data.
             if not isinstance(token, str):
@@ -389,7 +392,7 @@ class Credentials(credentials.ReadOnlyScoped, credentials.CredentialsWithQuotaPr
             return
 
         if (
-            self._refresh_token is None
+            self._refresh_token_val is None
             or self._token_uri is None
             or self._client_id is None
             or self._client_secret is None
@@ -409,7 +412,7 @@ class Credentials(credentials.ReadOnlyScoped, credentials.CredentialsWithQuotaPr
         ) = reauth.refresh_grant(
             request,
             self._token_uri,
-            self._refresh_token,
+            self._refresh_token_val,
             self._client_id,
             self._client_secret,
             scopes=scopes,
@@ -419,7 +422,7 @@ class Credentials(credentials.ReadOnlyScoped, credentials.CredentialsWithQuotaPr
 
         self.token = access_token
         self.expiry = expiry
-        self._refresh_token = refresh_token
+        self._refresh_token_val = refresh_token
         self._id_token = grant_response.get("id_token")
         self._rapt_token = rapt_token
 
