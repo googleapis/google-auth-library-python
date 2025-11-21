@@ -563,10 +563,10 @@ class AuthorizedSession(requests.Session):
                         call_cert_callback_result[0]
                     )
                     current_cert_fingerprint = (
-                            _agent_identity_utils.calculate_certificate_fingerprint(
-                                cert_obj
-                            )
+                        _agent_identity_utils.calculate_certificate_fingerprint(
+                            cert_obj
                         )
+                    )
                     cached_fingerprint = (
                         _agent_identity_utils.get_cached_cert_fingerprint(
                             self._cached_cert

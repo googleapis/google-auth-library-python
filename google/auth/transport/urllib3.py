@@ -440,7 +440,7 @@ class AuthorizedHttp(RequestMethods):  # type: ignore
                                 "channel."
                             )
                             self.configure_mtls_channel(
-                                lambda: call_cert_callback_result
+                                client_cert_callback=lambda: call_cert_callback_result
                             )
                         except Exception as e:
                             _LOGGER.error(
@@ -489,7 +489,11 @@ class AuthorizedHttp(RequestMethods):  # type: ignore
 
     @property
     def is_mtls(self):
-        """Indicates if the created SSL channel is mutual TLS."""
+        """Indicates if the created SSL channel is mutual TLS.
+
+         Returns:
+            True if the channel is mutual TLS and False otherwise.
+	"""
         return self._is_mtls
 
     @property
