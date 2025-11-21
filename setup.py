@@ -24,28 +24,22 @@ DEPENDENCIES = (
     "pyasn1-modules>=0.2.1",
     # rsa==4.5 is the last version to support 2.7
     # https://github.com/sybrenstuvel/python-rsa/issues/152#issuecomment-643470233
-    "rsa>=3.1.4,<5",
-)
-
-# TODO(https://github.com/googleapis/google-auth-library-python/issues/1737): Unit test fails with
-#  `No module named 'cryptography.hazmat.backends.openssl.x509' for Python 3.7``.
-cryptography_base_require = [
     "cryptography >= 38.0.3",
     "cryptography < 39.0.0; python_version < '3.8'",
-]
+)
 
 requests_extra_require = ["requests >= 2.20.0, < 3.0.0"]
 
 aiohttp_extra_require = ["aiohttp >= 3.6.2, < 4.0.0", *requests_extra_require]
 
-pyjwt_extra_require = ["pyjwt>=2.0", *cryptography_base_require]
+pyjwt_extra_require = ["pyjwt>=2.0"]
 
 reauth_extra_require = ["pyu2f>=0.1.5"]
 
 # TODO(https://github.com/googleapis/google-auth-library-python/issues/1738): Add bounds for cryptography and pyopenssl dependencies.
-enterprise_cert_extra_require = ["cryptography", "pyopenssl"]
+enterprise_cert_extra_require = ["pyopenssl"]
 
-pyopenssl_extra_require = ["pyopenssl>=20.0.0", cryptography_base_require]
+pyopenssl_extra_require = ["pyopenssl>=20.0.0"]
 
 # TODO(https://github.com/googleapis/google-auth-library-python/issues/1739): Add bounds for urllib3 and packaging dependencies.
 urllib3_extra_require = ["urllib3", "packaging"]
