@@ -18,7 +18,6 @@
 from dataclasses import dataclass
 from typing import Any, Dict, Optional, Union
 
-from cryptography import utils  # type: ignore
 import cryptography.exceptions
 from cryptography.hazmat import backends
 from cryptography.hazmat.primitives import hashes
