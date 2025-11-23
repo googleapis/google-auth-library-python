@@ -343,7 +343,7 @@ class Credentials(
             request, self._refresh_token_val, "refresh_token", self._revoke_url
         )
         self.token = None
-        self._refresh_token = None
+        self._refresh_token_val = None
 
     @_helpers.copy_docstring(credentials.Credentials)
     def get_cred_info(self):
