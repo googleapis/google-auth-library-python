@@ -52,7 +52,7 @@ def test__convert_oauth2_credentials():
     new_credentials = _oauth2client._convert_oauth2_credentials(old_credentials)
 
     assert new_credentials.token == old_credentials.access_token
-    assert new_credentials._refresh_token == old_credentials.refresh_token
+    assert new_credentials._refresh_token_val == old_credentials.refresh_token
     assert new_credentials._client_id == old_credentials.client_id
     assert new_credentials._client_secret == old_credentials.client_secret
     assert new_credentials._token_uri == old_credentials.token_uri

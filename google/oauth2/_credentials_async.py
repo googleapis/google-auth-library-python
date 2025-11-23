@@ -50,7 +50,7 @@ class Credentials(oauth2_credentials.Credentials):
     @_helpers.copy_docstring(credentials.Credentials)
     async def refresh(self, request):
         if (
-            self._refresh_token is None
+            self._refresh_token_val is None
             or self._token_uri is None
             or self._client_id is None
             or self._client_secret is None
@@ -70,7 +70,7 @@ class Credentials(oauth2_credentials.Credentials):
         ) = await reauth.refresh_grant(
             request,
             self._token_uri,
-            self._refresh_token,
+            self._refresh_token_val,
             self._client_id,
             self._client_secret,
             scopes=self._scopes,
@@ -80,7 +80,7 @@ class Credentials(oauth2_credentials.Credentials):
 
         self.token = access_token
         self.expiry = expiry
-        self._refresh_token = refresh_token
+        self._refresh_token_val = refresh_token
         self._id_token = grant_response.get("id_token")
         self._rapt_token = rapt_token
 
