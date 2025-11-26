@@ -367,7 +367,7 @@ class TestCredentials(object):
             ),
         )
         assert creds.token is None
-        assert creds._refresh_token is None
+        assert creds._refresh_token_val is None
 
     def test_revoke_without_revoke_url(self):
         request = self.make_mock_request()
