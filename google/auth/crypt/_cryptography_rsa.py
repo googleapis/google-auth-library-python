@@ -66,7 +66,7 @@ class RSAVerifier(base.Verifier):
                 x509 public key certificate.
 
         Returns:
-            Verifier: The constructed verifier.
+            google.auth.crypt.base.Verifier: The constructed verifier.
 
         Raises:
             ValueError: If the public key can't be parsed.
