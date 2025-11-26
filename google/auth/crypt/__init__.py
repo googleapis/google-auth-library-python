@@ -38,9 +38,9 @@ version is at least 1.4.0.
 """
 
 from google.auth.crypt import base
+from google.auth.crypt import es
 from google.auth.crypt import es256
 from google.auth.crypt import rsa
-
 
 # Aliases to maintain the v1.0.0 interface, as the crypt module was split
 # into submodules.
@@ -48,10 +48,14 @@ Signer = base.Signer
 Verifier = base.Verifier
 RSASigner = rsa.RSASigner
 RSAVerifier = rsa.RSAVerifier
+EsSigner = es.EsSigner
+EsVerifier = es.EsVerifier
 ES256Signer = es256.ES256Signer
 ES256Verifier = es256.ES256Verifier
 
 __all__ = [
+    "EsSigner",
+    "EsVerifier",
     "ES256Signer",
     "ES256Verifier",
     "RSASigner",
