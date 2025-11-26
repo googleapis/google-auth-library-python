@@ -22,8 +22,6 @@ from setuptools import setup
 DEPENDENCIES = (
     "cachetools>=2.0.0,<7.0",
     "pyasn1-modules>=0.2.1",
-    # rsa==4.5 is the last version to support 2.7
-    # https://github.com/sybrenstuvel/python-rsa/issues/152#issuecomment-643470233
     "cryptography >= 38.0.3",
     "cryptography < 39.0.0; python_version < '3.8'",
 )
