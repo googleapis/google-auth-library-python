@@ -69,6 +69,7 @@ class Credentials(_BaseCredentials):
 
         self._use_non_blocking_refresh = False
         self._refresh_worker = RefreshThreadManager()
+        self._custom_headers = {}
 
     @property
     def expired(self):
@@ -185,6 +186,7 @@ class Credentials(_BaseCredentials):
         self._apply(headers, token)
         if self.quota_project_id:
             headers["x-goog-user-project"] = self.quota_project_id
+        headers.update(self._custom_headers)
 
     def _blocking_refresh(self, request):
         if not self.valid:
@@ -232,6 +234,38 @@ class Credentials(_BaseCredentials):
 
     def with_non_blocking_refresh(self):
         self._use_non_blocking_refresh = True
+
+    def with_headers(self, headers):
+        """Returns a copy of these credentials with additional custom headers.
+
+        Args:
+            headers (Mapping[str, str]): The custom headers to add.
+
+        Returns:
+            google.auth.credentials.Credentials: A new credentials instance.
+
+        Raises:
+            ValueError: If a protected header is included in the input headers.
+        """
+        import copy
+
+        PROTECTED_HEADERS = {
+            "authorization",
+            "x-goog-user-project",
+            "x-goog-api-client",
+            "x-allowed-locations",
+        }
+
+        for key in headers:
+            if key.lower() in PROTECTED_HEADERS:
+                raise ValueError(
+                    f"Header '{key}' is protected and cannot be set with with_headers. "
+                    "These headers are managed by the library."
+                )
+
+        new_creds = copy.deepcopy(self)
+        new_creds._custom_headers.update(headers)
+        return new_creds
 
 
 class CredentialsWithQuotaProject(Credentials):
