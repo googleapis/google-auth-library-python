@@ -26,9 +26,9 @@ A general purpose ID Token verifier is available as :func:`verify_token`.
 Example::
 
     from google.oauth2 import _id_token_async
-    from google.auth.transport import aiohttp_requests
+    from google.auth.transport import _aiohttp_requests
 
-    request = aiohttp_requests.Request()
+    request = _aiohttp_requests.Request()
 
     id_info = await _id_token_async.verify_oauth2_token(
         token, request, 'my-client-id.example.com')
