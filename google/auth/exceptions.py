@@ -14,17 +14,18 @@
 
 """Exceptions used in the google.auth package."""
 
+from typing import Any, Optional
+
 
 class GoogleAuthError(Exception):
     """Base class for all google.auth errors."""
 
-    def __init__(self, *args, **kwargs):
-        super(GoogleAuthError, self).__init__(*args)
-        retryable = kwargs.get("retryable", False)
-        self._retryable = retryable
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args)
+        self._retryable: bool = kwargs.get("retryable", False)
 
     @property
-    def retryable(self):
+    def retryable(self) -> bool:
         return self._retryable
 
 
@@ -33,8 +34,7 @@ class TransportError(GoogleAuthError):
 
 
 class RefreshError(GoogleAuthError):
-    """Used to indicate that an refreshing the credentials' access token
-    failed."""
+    """Used to indicate that refreshing the credentials' access token failed."""
 
 
 class UserAccessTokenError(GoogleAuthError):
@@ -46,30 +46,32 @@ class DefaultCredentialsError(GoogleAuthError):
 
 
 class MutualTLSChannelError(GoogleAuthError):
-    """Used to indicate that mutual TLS channel creation is failed, or mutual
-    TLS channel credentials is missing or invalid."""
+    """Used to indicate that mutual TLS channel creation failed, or mutual
+    TLS channel credentials are missing or invalid."""
+
+    @property
+    def retryable(self) -> bool:
+        return False
 
 
 class ClientCertError(GoogleAuthError):
     """Used to indicate that client certificate is missing or invalid."""
 
     @property
-    def retryable(self):
+    def retryable(self) -> bool:
         return False
 
 
 class OAuthError(GoogleAuthError):
-    """Used to indicate an error occurred during an OAuth related HTTP
-    request."""
+    """Used to indicate an error occurred during an OAuth-related HTTP request."""
 
 
 class ReauthFailError(RefreshError):
     """An exception for when reauth failed."""
 
-    def __init__(self, message=None, **kwargs):
-        super(ReauthFailError, self).__init__(
-            "Reauthentication failed. {0}".format(message), **kwargs
-        )
+    def __init__(self, message: Optional[str] = None, **kwargs: Any) -> None:
+        full_message = f"Reauthentication failed. {message}" if message else "Reauthentication failed."
+        super().__init__(full_message, **kwargs)
 
 
 class ReauthSamlChallengeFailError(ReauthFailError):
@@ -78,6 +80,9 @@ class ReauthSamlChallengeFailError(ReauthFailError):
 
 class MalformedError(DefaultCredentialsError, ValueError):
     """An exception for malformed data."""
+
+    def __init__(self, message: Optional[str] = None, **kwargs: Any) -> None:
+        super().__init__(message or "Malformed input.", **kwargs)
 
 
 class InvalidResource(DefaultCredentialsError, ValueError):
@@ -97,7 +102,7 @@ class InvalidType(DefaultCredentialsError, TypeError):
 
 
 class OSError(DefaultCredentialsError, EnvironmentError):
-    """Used to wrap EnvironmentError(OSError after python3.3)."""
+    """Used to wrap EnvironmentError (OSError after Python 3.3)."""
 
 
 class TimeoutError(GoogleAuthError):
