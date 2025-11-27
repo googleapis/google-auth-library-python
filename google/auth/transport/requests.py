@@ -472,6 +472,18 @@ class AuthorizedSession(requests.Session):
             new_exc = exceptions.MutualTLSChannelError(caught_exc)
             raise new_exc from caught_exc
 
+    def _is_stale_regional_access_boundary_error(self, response):
+        """Checks if the response indicates a stale regional access boundary."""
+        if response.status_code != 400:
+            return False
+
+        try:
+            # The response data is bytes, decode it to a string.
+            response_text = response.content.decode("utf-8")
+            return "stale regional access boundary" in response_text.lower()
+        except (UnicodeDecodeError, AttributeError):
+            return False
+
     def request(
         self,
         method,
@@ -511,6 +523,7 @@ class AuthorizedSession(requests.Session):
         # Use a kwarg for this instead of an attribute to maintain
         # thread-safety.
         _credential_refresh_attempt = kwargs.pop("_credential_refresh_attempt", 0)
+        _stale_boundary_retried = kwargs.pop("_stale_boundary_retried", False)
 
         # Make a copy of the headers. They will be modified by the credentials
         # and we want to pass the original headers if we recurse.
@@ -581,6 +594,26 @@ class AuthorizedSession(requests.Session):
                 max_allowed_time=remaining_time,
                 timeout=timeout,
                 _credential_refresh_attempt=_credential_refresh_attempt + 1,
+                **kwargs
+            )
+
+        # If the response indicated a stale regional access boundary, clear the
+        # cached boundary and re-attempt the request. This is only done once.
+        if (
+            self._is_stale_regional_access_boundary_error(response)
+            and not _stale_boundary_retried
+        ):
+            _LOGGER.info("Stale regional access boundary detected, clearing and retrying.")
+            self.credentials.handle_stale_regional_access_boundary(auth_request)
+            # Recurse, passing in the original headers and marking that we have retried.
+            return self.request(
+                method,
+                url,
+                data=data,
+                headers=headers,
+                max_allowed_time=remaining_time,
+                timeout=timeout,
+                _stale_boundary_retried=True,
                 **kwargs
             )
 

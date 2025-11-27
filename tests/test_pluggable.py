@@ -32,8 +32,10 @@ SERVICE_ACCOUNT_EMAIL = "service-1234@service-name.iam.gserviceaccount.com"
 SERVICE_ACCOUNT_IMPERSONATION_URL_BASE = (
     "https://us-east1-iamcredentials.googleapis.com"
 )
-SERVICE_ACCOUNT_IMPERSONATION_URL_ROUTE = "/v1/projects/-/serviceAccounts/{}:generateAccessToken".format(
-    SERVICE_ACCOUNT_EMAIL
+SERVICE_ACCOUNT_IMPERSONATION_URL_ROUTE = (
+    "/v1/projects/-/serviceAccounts/{}:generateAccessToken".format(
+        SERVICE_ACCOUNT_EMAIL
+    )
 )
 SERVICE_ACCOUNT_IMPERSONATION_URL = (
     SERVICE_ACCOUNT_IMPERSONATION_URL_BASE + SERVICE_ACCOUNT_IMPERSONATION_URL_ROUTE
@@ -272,7 +274,6 @@ class TestCredentials(object):
             quota_project_id=QUOTA_PROJECT_ID,
             workforce_pool_user_project=None,
             universe_domain=DEFAULT_UNIVERSE_DOMAIN,
-            trust_boundary=None,
         )
 
     @mock.patch.object(pluggable.Credentials, "__init__", return_value=None)
@@ -301,7 +302,6 @@ class TestCredentials(object):
             quota_project_id=None,
             workforce_pool_user_project=None,
             universe_domain=DEFAULT_UNIVERSE_DOMAIN,
-            trust_boundary=None,
         )
 
     @mock.patch.object(pluggable.Credentials, "__init__", return_value=None)
@@ -337,7 +337,6 @@ class TestCredentials(object):
             quota_project_id=QUOTA_PROJECT_ID,
             workforce_pool_user_project=None,
             universe_domain=DEFAULT_UNIVERSE_DOMAIN,
-            trust_boundary=None,
         )
 
     @mock.patch.object(pluggable.Credentials, "__init__", return_value=None)
@@ -367,7 +366,6 @@ class TestCredentials(object):
             quota_project_id=None,
             workforce_pool_user_project=None,
             universe_domain=DEFAULT_UNIVERSE_DOMAIN,
-            trust_boundary=None,
         )
 
     def test_constructor_invalid_options(self):
@@ -1108,7 +1106,7 @@ class TestCredentials(object):
 
     @mock.patch.dict(os.environ, {"GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES": "1"})
     def test_retrieve_subject_token_fail_on_validation_missing_interactive_timeout(
-        self
+        self,
     ):
         CREDENTIAL_SOURCE_EXECUTABLE = {
             "command": self.CREDENTIAL_SOURCE_EXECUTABLE_COMMAND,

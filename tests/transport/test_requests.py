@@ -141,6 +141,20 @@ class TimeTickCredentialsStub(CredentialsStub):
         super(TimeTickCredentialsStub, self).refresh(requests)
 
 
+class CredentialsWithRegionalAccessBoundaryStub(
+    google.auth.credentials.CredentialsWithRegionalAccessBoundary, CredentialsStub
+):
+    def __init__(self, token="token"):
+        super(CredentialsWithRegionalAccessBoundaryStub, self).__init__(token=token)
+        self._regional_access_boundary = {"encodedLocations": "initial_value"}
+
+    def _refresh_token(self, request):
+        return super(CredentialsWithRegionalAccessBoundaryStub, self).refresh(request)
+
+    def _build_regional_access_boundary_lookup_url(self):
+        return "http://metadata.google.internal"
+
+
 class AdapterStub(requests.adapters.BaseAdapter):
     def __init__(self, responses, headers=None):
         super(AdapterStub, self).__init__()
@@ -285,6 +299,42 @@ class TestAuthorizedSession(object):
 
         assert adapter.requests[1].url == self.TEST_URL
         assert adapter.requests[1].headers["authorization"] == "token1"
+
+    def test_request_stale_regional_access_boundary(self):
+        credentials = mock.Mock(wraps=CredentialsWithRegionalAccessBoundaryStub())
+        final_response = make_response(status=http_client.OK)
+        # First request will fail with a stale boundary error, the second will succeed.
+        adapter = AdapterStub(
+            [
+                make_response(
+                    status=http_client.BAD_REQUEST,
+                    data=b"stale regional access boundary",
+                ),
+                final_response,
+            ]
+        )
+
+        authed_session = google.auth.transport.requests.AuthorizedSession(
+            credentials,
+        )
+        authed_session.mount(self.TEST_URL, adapter)
+
+        result = authed_session.request("GET", self.TEST_URL)
+
+        # Check that the final result is the successful one.
+        assert result == final_response
+        # Check that we made two requests.
+        assert len(adapter.requests) == 2
+        # Check that the stale boundary handler was called.
+        credentials.handle_stale_regional_access_boundary.assert_called_once()
+
+        # Check the headers for the first request.
+        assert adapter.requests[0].url == self.TEST_URL
+        assert "initial_value" in adapter.requests[0].headers.get("x-allowed-locations")
+
+        # Check the headers for the retried request.
+        assert adapter.requests[1].url == self.TEST_URL
+        assert "x-allowed-locations" not in adapter.requests[1].headers
 
     def test_request_max_allowed_time_timeout_error(self, frozen_time):
         tick_one_second = functools.partial(

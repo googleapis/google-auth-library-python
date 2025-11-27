@@ -17,6 +17,7 @@ import datetime
 import http.client as http_client
 import json
 import os
+import warnings
 
 import mock
 import pytest  # type: ignore
@@ -129,21 +130,19 @@ class TestImpersonatedCredentials(object):
     # Because Python 2.7:
     DELEGATES = []  # type: ignore
     LIFETIME = 3600
-    NO_OP_TRUST_BOUNDARY = {
-        "locations": auth_credentials.NO_OP_TRUST_BOUNDARY_LOCATIONS,
-        "encodedLocations": auth_credentials.NO_OP_TRUST_BOUNDARY_ENCODED_LOCATIONS,
-    }
-    VALID_TRUST_BOUNDARY = {
+    VALID_REGIONAL_ACCESS_BOUNDARY = {
         "locations": ["us-central1", "us-east1"],
         "encodedLocations": "0xVALIDHEX",
     }
-    EXPECTED_TRUST_BOUNDARY_LOOKUP_URL_DEFAULT_UNIVERSE = (
+    EXPECTED_REGIONAL_ACCESS_BOUNDARY_LOOKUP_URL_DEFAULT_UNIVERSE = (
         "https://iamcredentials.googleapis.com/v1/projects/-"
         "/serviceAccounts/impersonated@project.iam.gserviceaccount.com/allowedLocations"
     )
     FAKE_UNIVERSE_DOMAIN = "universe.foo"
     SOURCE_CREDENTIALS = service_account.Credentials(
-        SIGNER, SERVICE_ACCOUNT_EMAIL, TOKEN_URI, trust_boundary=NO_OP_TRUST_BOUNDARY
+        SIGNER, SERVICE_ACCOUNT_EMAIL, TOKEN_URI
+    ).with_regional_access_boundary(
+        {"locations": ["us-central1", "us-east1"], "encodedLocations": "0xVALIDHEX"}
     )
     USER_SOURCE_CREDENTIALS = credentials.Credentials(token="ABCDE")
     IAM_ENDPOINT_OVERRIDE = (
@@ -158,10 +157,10 @@ class TestImpersonatedCredentials(object):
         target_principal=TARGET_PRINCIPAL,
         subject=None,
         iam_endpoint_override=None,
-        trust_boundary=None,  # Align with Credentials class default
+        regional_access_boundary=None,  # Align with Credentials class default
     ):
 
-        return Credentials(
+        creds = Credentials(
             source_credentials=source_credentials,
             target_principal=target_principal,
             target_scopes=self.TARGET_SCOPES,
@@ -169,23 +168,59 @@ class TestImpersonatedCredentials(object):
             lifetime=lifetime,
             subject=subject,
             iam_endpoint_override=iam_endpoint_override,
-            trust_boundary=trust_boundary,
         )
+        if regional_access_boundary:
+            creds = creds.with_regional_access_boundary(regional_access_boundary)
+        return creds
+
+    def test_build_regional_access_boundary_lookup_url(self):
+        credentials = self.make_credentials()
+        expected_url = (
+            "https://iamcredentials.googleapis.com/v1/projects/-"
+            "/serviceAccounts/{}/allowedLocations".format(self.TARGET_PRINCIPAL)
+        )
+        url = credentials._build_regional_access_boundary_lookup_url()
+        assert url == expected_url
+
+    def test_build_regional_access_boundary_lookup_url_non_default_universe(self):
+        # Create a copy of the service account info and set the universe_domain.
+        info = SERVICE_ACCOUNT_INFO.copy()
+        info["universe_domain"] = "my-universe.com"
+        source_creds = service_account.Credentials.from_service_account_info(info)
+        credentials = self.make_credentials(source_credentials=source_creds)
+        expected_url = (
+            "https://iamcredentials.my-universe.com/v1/projects/-"
+            "/serviceAccounts/{}/allowedLocations".format(self.TARGET_PRINCIPAL)
+        )
+        url = credentials._build_regional_access_boundary_lookup_url()
+        assert url == expected_url
+
+    def test_build_regional_access_boundary_lookup_url_no_email(self):
+        credentials = self.make_credentials(target_principal=None)
+        with pytest.raises(ValueError) as excinfo:
+            credentials._build_regional_access_boundary_lookup_url()
+        assert "Service account email is required" in str(excinfo.value)
 
     def test_from_impersonated_service_account_info(self):
-        credentials = impersonated_credentials.Credentials.from_impersonated_service_account_info(
-            IMPERSONATED_SERVICE_ACCOUNT_AUTHORIZED_USER_SOURCE_INFO
+        credentials = (
+            impersonated_credentials.Credentials.from_impersonated_service_account_info(
+                IMPERSONATED_SERVICE_ACCOUNT_AUTHORIZED_USER_SOURCE_INFO
+            )
         )
         assert isinstance(credentials, impersonated_credentials.Credentials)
 
-    def test_from_impersonated_service_account_info_with_trust_boundary(self):
+    def test_from_impersonated_service_account_info_with_regional_access_boundary(self):
         info = copy.deepcopy(IMPERSONATED_SERVICE_ACCOUNT_AUTHORIZED_USER_SOURCE_INFO)
-        info["trust_boundary"] = self.VALID_TRUST_BOUNDARY
-        credentials = impersonated_credentials.Credentials.from_impersonated_service_account_info(
-            info
+        info["regional_access_boundary"] = self.VALID_REGIONAL_ACCESS_BOUNDARY
+        credentials = (
+            impersonated_credentials.Credentials.from_impersonated_service_account_info(
+                info
+            )
         )
         assert isinstance(credentials, impersonated_credentials.Credentials)
-        assert credentials._trust_boundary == self.VALID_TRUST_BOUNDARY
+        assert (
+            credentials._regional_access_boundary == self.VALID_REGIONAL_ACCESS_BOUNDARY
+        )
 
     def test_from_impersonated_service_account_info_with_invalid_source_credentials_type(
         self,
@@ -216,8 +251,10 @@ class TestImpersonatedCredentials(object):
     def test_from_impersonated_service_account_info_with_scopes(self):
         info = copy.deepcopy(IMPERSONATED_SERVICE_ACCOUNT_AUTHORIZED_USER_SOURCE_INFO)
         info["scopes"] = ["scope1", "scope2"]
-        credentials = impersonated_credentials.Credentials.from_impersonated_service_account_info(
-            info
+        credentials = (
+            impersonated_credentials.Credentials.from_impersonated_service_account_info(
+                info
+            )
         )
         assert credentials._target_scopes == ["scope1", "scope2"]
 
@@ -225,8 +262,10 @@ class TestImpersonatedCredentials(object):
         info = copy.deepcopy(IMPERSONATED_SERVICE_ACCOUNT_AUTHORIZED_USER_SOURCE_INFO)
         info["scopes"] = ["scope_from_info_1", "scope_from_info_2"]
         scopes_param = ["scope_from_param_1", "scope_from_param_2"]
-        credentials = impersonated_credentials.Credentials.from_impersonated_service_account_info(
-            info, scopes=scopes_param
+        credentials = (
+            impersonated_credentials.Credentials.from_impersonated_service_account_info(
+                info, scopes=scopes_param
+            )
         )
         assert credentials._target_scopes == scopes_param
 
@@ -304,72 +343,8 @@ class TestImpersonatedCredentials(object):
         assert headers["authorization"] == "Bearer token"
         assert headers["x-goog-api-client"] == "cred-type/imp"
 
-    @pytest.mark.parametrize("use_data_bytes", [True, False])
-    @mock.patch("google.oauth2._client._lookup_trust_boundary")
-    def test_refresh_success(
-        self, mock_lookup_trust_boundary, use_data_bytes, mock_donor_credentials
-    ):
-        # Start with no boundary.
-        credentials = self.make_credentials(lifetime=None, trust_boundary=None)
-        token = "token"
-
-        expire_time = (
-            _helpers.utcnow().replace(microsecond=0) + datetime.timedelta(seconds=500)
-        ).isoformat("T") + "Z"
-        response_body = {"accessToken": token, "expireTime": expire_time}
-
-        request = self.make_request(
-            data=json.dumps(response_body),
-            status=http_client.OK,
-            use_data_bytes=use_data_bytes,
-        )
-
-        # Mock the trust boundary lookup to return a valid value.
-        mock_lookup_trust_boundary.return_value = self.VALID_TRUST_BOUNDARY
-
-        with mock.patch.dict(
-            os.environ, {environment_vars.GOOGLE_AUTH_TRUST_BOUNDARY_ENABLED: "true"}
-        ), mock.patch(
-            "google.auth.metrics.token_request_access_token_impersonate",
-            return_value=ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
-        ):
-            credentials.refresh(request)
-
-        assert credentials.valid
-        assert not credentials.expired
-        assert (
-            request.call_args.kwargs["headers"]["x-goog-api-client"]
-            == ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE
-        )
-
-        # Verify that the x-allowed-locations header from the source credential
-        # was applied. The source credential has a NO_OP boundary, so the
-        # header should be an empty string.
-        request_kwargs = request.call_args[1]
-        assert "headers" in request_kwargs
-        assert "x-allowed-locations" in request_kwargs["headers"]
-        assert request_kwargs["headers"]["x-allowed-locations"] == ""
-
-        # Verify trust boundary was set.
-        assert credentials._trust_boundary == self.VALID_TRUST_BOUNDARY
-
-        # Verify the mock was called with the correct URL.
-        mock_lookup_trust_boundary.assert_called_once_with(
-            request,
-            self.EXPECTED_TRUST_BOUNDARY_LOOKUP_URL_DEFAULT_UNIVERSE,
-            headers={"authorization": "Bearer token"},
-        )
-
-        # Verify x-allowed-locations header is set correctly by apply().
-        headers_applied = {}
-        credentials.apply(headers_applied)
-        assert (
-            headers_applied["x-allowed-locations"]
-            == self.VALID_TRUST_BOUNDARY["encodedLocations"]
-        )
-
-    def test_refresh_source_creds_no_trust_boundary(self):
-        # Use a source credential that does not support trust boundaries.
+    def test_refresh_source_creds_no_regional_access_boundary(self):
+        # Use a source credential that does not support Regional Access Boundaries.
         source_credentials = credentials.Credentials(token="source_token")
         creds = self.make_credentials(source_credentials=source_credentials)
         token = "impersonated_token"
@@ -386,81 +361,13 @@ class TestImpersonatedCredentials(object):
         creds.refresh(request)
 
         # Verify that the x-allowed-locations header was NOT applied because
-        # the source credential does not support trust boundaries.
+        # the source credential does not support Regional Access Boundaries.
         request_kwargs = request.call_args[1]
         assert "x-allowed-locations" not in request_kwargs["headers"]
 
-    @mock.patch("google.oauth2._client._lookup_trust_boundary")
-    def test_refresh_trust_boundary_lookup_fails_no_cache(
-        self, mock_lookup_trust_boundary, mock_donor_credentials
-    ):
-        # Start with no trust boundary
-        credentials = self.make_credentials(lifetime=None, trust_boundary=None)
-        token = "token"
-
-        expire_time = (
-            _helpers.utcnow().replace(microsecond=0) + datetime.timedelta(seconds=500)
-        ).isoformat("T") + "Z"
-        response_body = {"accessToken": token, "expireTime": expire_time}
-
-        request = self.make_request(
-            data=json.dumps(response_body), status=http_client.OK
-        )
-
-        # Mock the trust boundary lookup to raise an error
-        mock_lookup_trust_boundary.side_effect = exceptions.RefreshError(
-            "Lookup failed"
-        )
-
-        with mock.patch.dict(
-            os.environ, {environment_vars.GOOGLE_AUTH_TRUST_BOUNDARY_ENABLED: "true"}
-        ), pytest.raises(exceptions.RefreshError) as excinfo:
-            credentials.refresh(request)
-
-        assert "Lookup failed" in str(excinfo.value)
-        assert credentials._trust_boundary is None  # Still no trust boundary
-        mock_lookup_trust_boundary.assert_called_once()
-
-    @mock.patch("google.oauth2._client._lookup_trust_boundary")
-    def test_refresh_fetches_no_op_trust_boundary(
-        self, mock_lookup_trust_boundary, mock_donor_credentials
-    ):
-        # Start with no trust boundary
-        credentials = self.make_credentials(lifetime=None, trust_boundary=None)
-        token = "token"
-        expire_time = (
-            _helpers.utcnow().replace(microsecond=0) + datetime.timedelta(seconds=500)
-        ).isoformat("T") + "Z"
-        response_body = {"accessToken": token, "expireTime": expire_time}
-        request = self.make_request(
-            data=json.dumps(response_body), status=http_client.OK
-        )
-
-        mock_lookup_trust_boundary.return_value = (
-            self.NO_OP_TRUST_BOUNDARY
-        )  # Mock returns NO_OP
-
-        with mock.patch.dict(
-            os.environ, {environment_vars.GOOGLE_AUTH_TRUST_BOUNDARY_ENABLED: "true"}
-        ), mock.patch(
-            "google.auth.metrics.token_request_access_token_impersonate",
-            return_value=ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
-        ):
-            credentials.refresh(request)
-
-        assert credentials._trust_boundary == self.NO_OP_TRUST_BOUNDARY
-        mock_lookup_trust_boundary.assert_called_once_with(
-            request,
-            self.EXPECTED_TRUST_BOUNDARY_LOOKUP_URL_DEFAULT_UNIVERSE,
-            headers={"authorization": "Bearer token"},
-        )
-        headers_applied = {}
-        credentials.apply(headers_applied)
-        assert headers_applied["x-allowed-locations"] == ""
-
-    @mock.patch("google.oauth2._client._lookup_trust_boundary")
-    def test_refresh_skips_trust_boundary_lookup_non_default_universe(
-        self, mock_lookup_trust_boundary
+    @mock.patch("google.oauth2._client._lookup_regional_access_boundary")
+    def test_refresh_skips_regional_access_boundary_lookup_non_default_universe(
+        self, mock_lookup_rab
     ):
         # Create source credentials with a non-default universe domain
         source_credentials = service_account.Credentials(
@@ -483,97 +390,19 @@ class TestImpersonatedCredentials(object):
         )
 
         with mock.patch.dict(
-            os.environ, {environment_vars.GOOGLE_AUTH_TRUST_BOUNDARY_ENABLED: "true"}
+            os.environ,
+            {
+                environment_vars.GOOGLE_AUTH_REGIONAL_ACCESS_BOUNDARY_ENABLE_EXPERIMENT: "true"
+            },
         ):
             credentials.refresh(request)
 
-        # Ensure trust boundary lookup was not called
-        mock_lookup_trust_boundary.assert_not_called()
+        # Ensure Regional Access Boundary lookup was not called
+        mock_lookup_rab.assert_not_called()
         # Verify that x-allowed-locations header is not set by apply()
         headers_applied = {}
         credentials.apply(headers_applied)
         assert "x-allowed-locations" not in headers_applied
-
-    @mock.patch("google.oauth2._client._lookup_trust_boundary")
-    def test_refresh_starts_with_no_op_trust_boundary_skips_lookup(
-        self, mock_lookup_trust_boundary, mock_donor_credentials
-    ):
-        credentials = self.make_credentials(
-            lifetime=None, trust_boundary=self.NO_OP_TRUST_BOUNDARY
-        )  # Start with NO_OP
-        token = "token"
-        expire_time = (
-            _helpers.utcnow().replace(microsecond=0) + datetime.timedelta(seconds=500)
-        ).isoformat("T") + "Z"
-        response_body = {"accessToken": token, "expireTime": expire_time}
-        request = self.make_request(
-            data=json.dumps(response_body), status=http_client.OK
-        )
-        with mock.patch.dict(
-            os.environ, {environment_vars.GOOGLE_AUTH_TRUST_BOUNDARY_ENABLED: "true"}
-        ), mock.patch(
-            "google.auth.metrics.token_request_access_token_impersonate",
-            return_value=ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
-        ):
-            credentials.refresh(request)
-
-        # Verify trust boundary remained NO_OP
-        assert credentials._trust_boundary == self.NO_OP_TRUST_BOUNDARY
-
-        # Lookup should be skipped
-        mock_lookup_trust_boundary.assert_not_called()
-
-        # Verify that an empty header was added.
-        headers_applied = {}
-        credentials.apply(headers_applied)
-        assert headers_applied["x-allowed-locations"] == ""
-
-    @mock.patch("google.oauth2._client._lookup_trust_boundary")
-    def test_refresh_trust_boundary_lookup_fails_with_cached_data2(
-        self, mock_lookup_trust_boundary, mock_donor_credentials
-    ):
-        # Start with no trust boundary
-        credentials = self.make_credentials(lifetime=None, trust_boundary=None)
-        token = "token"
-
-        expire_time = (
-            _helpers.utcnow().replace(microsecond=0) + datetime.timedelta(seconds=500)
-        ).isoformat("T") + "Z"
-        response_body = {"accessToken": token, "expireTime": expire_time}
-
-        request = self.make_request(
-            data=json.dumps(response_body), status=http_client.OK
-        )
-
-        # First refresh: Successfully fetch a valid trust boundary.
-        mock_lookup_trust_boundary.return_value = self.VALID_TRUST_BOUNDARY
-        with mock.patch.dict(
-            os.environ, {environment_vars.GOOGLE_AUTH_TRUST_BOUNDARY_ENABLED: "true"}
-        ), mock.patch(
-            "google.auth.metrics.token_request_access_token_impersonate",
-            return_value=ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
-        ):
-            credentials.refresh(request)
-
-        assert credentials.valid
-        # Verify trust boundary was set.
-        assert credentials._trust_boundary == self.VALID_TRUST_BOUNDARY
-        mock_lookup_trust_boundary.assert_called_once()
-
-        # Second refresh: Mock lookup to fail, but expect cached data to be preserved.
-        mock_lookup_trust_boundary.reset_mock()
-        mock_lookup_trust_boundary.side_effect = exceptions.RefreshError(
-            "Lookup failed"
-        )
-
-        with mock.patch.dict(
-            os.environ, {environment_vars.GOOGLE_AUTH_TRUST_BOUNDARY_ENABLED: "true"}
-        ):
-            credentials.refresh(request)
-
-        assert credentials.valid
-        assert credentials._trust_boundary == self.VALID_TRUST_BOUNDARY
-        mock_lookup_trust_boundary.assert_called_once()
 
     @pytest.mark.parametrize("use_data_bytes", [True, False])
     def test_refresh_with_subject_success(self, use_data_bytes, mock_dwd_credentials):
@@ -952,13 +781,13 @@ class TestImpersonatedCredentials(object):
         assert credentials.requires_scopes is False
         assert credentials._target_scopes == ["fake_scope1", "fake_scope2"]
 
-    def test_with_trust_boundary(self):
+    def test_with_regional_access_boundary(self):
         credentials = self.make_credentials()
         new_boundary = {"encodedLocations": "new_boundary"}
-        new_credentials = credentials.with_trust_boundary(new_boundary)
+        new_credentials = credentials.with_regional_access_boundary(new_boundary)
 
         assert new_credentials is not credentials
-        assert new_credentials._trust_boundary == new_boundary
+        assert new_credentials._regional_access_boundary == new_boundary
         # The source credentials should be a copy, not the same object.
         # But they should be functionally equivalent.
         assert (
@@ -975,11 +804,11 @@ class TestImpersonatedCredentials(object):
         )
         assert new_credentials._target_principal == credentials._target_principal
 
-    def test_build_trust_boundary_lookup_url_no_email(self):
+    def test_build_regional_access_boundary_lookup_url_no_email(self):
         credentials = self.make_credentials(target_principal=None)
 
         with pytest.raises(ValueError) as excinfo:
-            credentials._build_trust_boundary_lookup_url()
+            credentials._build_regional_access_boundary_lookup_url()
 
         assert "Service account email is required" in str(excinfo.value)
 

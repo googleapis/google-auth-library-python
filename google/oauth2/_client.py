@@ -510,15 +510,15 @@ def refresh_grant(
     return _handle_refresh_grant_response(response_data, refresh_token)
 
 
-def _lookup_trust_boundary(request, url, headers=None):
-    """Implements the global lookup of a credential trust boundary.
+def _lookup_regional_access_boundary(request, url, headers=None):
+    """Implements the global lookup of a credential Regional Access Boundary.
     For the lookup, we send a request to the global lookup endpoint and then
     parse the response. Service account credentials, workload identity
-    pools and workforce pools implementation may have trust boundaries configured.
+    pools and workforce pools implementation may have Regional Access Boundaries configured.
     Args:
         request (google.auth.transport.Request): A callable used to make
             HTTP requests.
-        url (str): The trust boundary lookup url.
+        url (str): The Regional Access Boundary lookup url.
         headers (Optional[Mapping[str, str]]): The headers for the request.
     Returns:
         Mapping[str,list|str]: A dictionary containing
@@ -531,33 +531,30 @@ def _lookup_trust_boundary(request, url, headers=None):
                 ],
                 "encodedLocations": "0xA30"
             }
-            If the credential is not set up with explicit trust boundaries, a trust boundary
-            of "all" will be returned as a default response.
-            {
-                "locations": [],
-                "encodedLocations": "0x0"
-            }
     Raises:
         exceptions.RefreshError: If the response status code is not 200.
         exceptions.MalformedError: If the response is not in a valid format.
     """
 
-    response_data = _lookup_trust_boundary_request(request, url, headers=headers)
-    # In case of no-op response, the "locations" list may or may not be present as an empty list.
+    response_data = _lookup_regional_access_boundary_request(
+        request, url, headers=headers
+    )
     if "encodedLocations" not in response_data:
         raise exceptions.MalformedError(
-            "Invalid trust boundary info: {}".format(response_data)
+            "Invalid Regional Access Boundary info: {}".format(response_data)
         )
     return response_data
 
 
-def _lookup_trust_boundary_request(request, url, can_retry=True, headers=None):
-    """Makes a request to the trust boundary lookup endpoint.
+def _lookup_regional_access_boundary_request(
+    request, url, can_retry=True, headers=None
+):
+    """Makes a request to the Regional Access Boundary lookup endpoint.
 
     Args:
         request (google.auth.transport.Request): A callable used to make
             HTTP requests.
-        url (str): The trust boundary lookup url.
+        url (str): The Regional Access Boundary lookup url.
         can_retry (bool): Enable or disable request retry behavior. Defaults to true.
         headers (Optional[Mapping[str, str]]): The headers for the request.
 
@@ -568,7 +565,7 @@ def _lookup_trust_boundary_request(request, url, can_retry=True, headers=None):
         google.auth.exceptions.RefreshError: If the token endpoint returned
             an error.
     """
-    response_status_ok, response_data, retryable_error = _lookup_trust_boundary_request_no_throw(
+    response_status_ok, response_data, retryable_error = _lookup_regional_access_boundary_request_no_throw(
         request, url, can_retry, headers
     )
     if not response_status_ok:
@@ -576,14 +573,16 @@ def _lookup_trust_boundary_request(request, url, can_retry=True, headers=None):
     return response_data
 
 
-def _lookup_trust_boundary_request_no_throw(request, url, can_retry=True, headers=None):
-    """Makes a request to the trust boundary lookup endpoint. This
+def _lookup_regional_access_boundary_request_no_throw(
+    request, url, can_retry=True, headers=None
+):
+    """Makes a request to the Regional Access Boundary lookup endpoint. This
         function doesn't throw on response errors.
 
     Args:
         request (google.auth.transport.Request): A callable used to make
             HTTP requests.
-        url (str): The trust boundary lookup url.
+        url (str): The Regional Access Boundary lookup url.
         can_retry (bool): Enable or disable request retry behavior. Defaults to true.
         headers (Optional[Mapping[str, str]]): The headers for the request.
 
