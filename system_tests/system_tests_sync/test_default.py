@@ -29,8 +29,8 @@ def test_application_default_credentials(verify_refresh):
 
     try:
         verify_refresh(credentials)
-    except RefreshError:
+    except RefreshError as e:
         # allow expired credentials for explicit_authorized_user tests
         # TODO: https://github.com/googleapis/google-auth-library-python/issues/1882
-        if not CREDENTIALS.endswith("authorized_user.json"):
+        if not CREDENTIALS.endswith("authorized_user.json") or "Token has been expired or revoked" not in str(e):
             raise
