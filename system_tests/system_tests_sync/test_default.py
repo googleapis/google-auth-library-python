@@ -17,8 +17,8 @@ import os
 import google.auth
 from google.auth.exceptions import RefreshError
 
-EXPECT_PROJECT_ID = os.environ.get("EXPECT_PROJECT_ID")
-CREDENTIALS = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
+EXPECT_PROJECT_ID = os.getenv("EXPECT_PROJECT_ID")
+CREDENTIALS = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "")
 
 
 def test_application_default_credentials(verify_refresh):
