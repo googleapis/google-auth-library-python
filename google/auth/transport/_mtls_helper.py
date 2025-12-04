@@ -198,6 +198,7 @@ def _get_workload_cert_and_key_paths(config_path):
     key_path = workload["key_path"]
 
     # == BEGIN Temporary Cloud Run PATCH ==
+    # See https://github.com/googleapis/google-auth-library-python/issues/1881
     if (cert_path == _INCORRECT_CLOUD_RUN_CERT_PATH) and (
         key_path == _INCORRECT_CLOUD_RUN_KEY_PATH
     ):
