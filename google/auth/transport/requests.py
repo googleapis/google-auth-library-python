@@ -505,6 +505,10 @@ class AuthorizedSession(requests.Session):
                 itself does not timeout, e.g. if a large file is being
                 transmitted. The timout error will be raised after such
                 request completes.
+        Raises:
+            google.auth.exceptions.MutualTLSChannelError: If mutual TLS
+                channel creation fails for any reason.
+            ValueError: If the client certificate is invalid.
         """
         # pylint: disable=arguments-differ
         # Requests has a ton of arguments to request, but only two
@@ -554,13 +558,14 @@ class AuthorizedSession(requests.Session):
             response.status_code in self._refresh_status_codes
             and _credential_refresh_attempt < self._max_refresh_attempts
         ):
+            # Handle unauthorized permission error(401 status code)
             if response.status_code == 401:
                 if self.is_mtls:
-                    call_cert_callback_result = (
+                    call_cert_bytes, call_key_bytes  = (
                         _agent_identity_utils.call_client_cert_callback()
                     )
                     cert_obj = _agent_identity_utils.parse_certificate(
-                        call_cert_callback_result[0]
+                        call_cert_bytes
                     )
                     current_cert_fingerprint = (
                         _agent_identity_utils.calculate_certificate_fingerprint(
@@ -579,7 +584,7 @@ class AuthorizedSession(requests.Session):
                                 "channel."
                             )
                             self.configure_mtls_channel(
-                                lambda: call_cert_callback_result
+                                lambda: (call_cert_bytes, call_key_bytes)
                             )
                         except Exception as e:
                             _LOGGER.error("Failed to reconfigure mTLS channel: %s", e)
@@ -629,7 +634,7 @@ class AuthorizedSession(requests.Session):
         return self._is_mtls
 
     @property
-    def cached_cert(self):
+    def cached_cert(self) -> bytes:
         """Returns the cached client certificate."""
         return self._cached_cert
 
