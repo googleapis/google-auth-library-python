@@ -16,6 +16,8 @@ import base64
 import hashlib
 import json
 
+import urllib.parse
+
 from cryptography import x509
 import mock
 import pytest
@@ -101,11 +103,10 @@ class TestAgentIdentityUtils:
         mock_cert = mock.MagicMock()
         mock_cert.public_bytes.return_value = b"der-bytes"
 
-        expected_fingerprint = (
-            base64.urlsafe_b64encode(hashlib.sha256(b"der-bytes").digest())
-            .rstrip(b"=")
-            .decode("utf-8")
-        )
+        # Expected: base64 (standard), unpadded, then URL-encoded
+        base64_fingerprint = base64.b64encode(hashlib.sha256(b"der-bytes").digest()).decode("utf-8")
+        unpadded_base64_fingerprint = base64_fingerprint.rstrip("=")
+        expected_fingerprint = urllib.parse.quote(unpadded_base64_fingerprint)
 
         fingerprint = _agent_identity_utils.calculate_certificate_fingerprint(mock_cert)
 
