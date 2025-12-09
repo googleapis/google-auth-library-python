@@ -390,8 +390,8 @@ class AuthorizedHttp(RequestMethods):  # type: ignore
 
         use_mtls = False
         if self._is_mtls == True:
-            if "mtls.googleapis.com" in url or "mtls.sandbox.googleapis.com" in url:
-                use_mtls = True
+            MTLS_URL_PREFIXES = ["mtls.googleapis.com", "mtls.sandbox.googleapis.com"]
+            use_mtls = any([prefix in url for prefix in MTLS_URL_PREFIXES])
 
         # Make a copy of the headers. They will be modified by the credentials
         # and we want to pass the original headers if we recurse.
