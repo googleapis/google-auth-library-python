@@ -53,7 +53,6 @@ from google.auth import _helpers
 from google.auth import exceptions
 from google.auth import transport
 from google.auth.transport import _mtls_helper
-from google.auth import _agent_identity_utils
 from google.oauth2 import service_account
 
 if version.parse(urllib3.__version__) >= version.parse("2.0.0"):  # pragma: NO COVER
@@ -416,42 +415,34 @@ class AuthorizedHttp(RequestMethods):  # type: ignore
         ):
           if response.status == 401:
             if use_mtls:
-                call_cert_callback_result = (
-                    _agent_identity_utils.call_client_cert_callback()
+                call_cert_bytes, call_key_bytes, cached_fingerprint, current_cert_fingerprint = (
+                    _mtls_helper.check_parameters_for_unauthorized_response(self._cached_cert)
                 )
-                cert_obj = _agent_identity_utils.parse_certificate(
-                    call_cert_callback_result[0]
-                )
-                current_cert_fingerprint = (
-                    _agent_identity_utils.calculate_certificate_fingerprint(
-                        cert_obj
-                    )
-                )
-                if self._cached_cert:
-                    cached_fingerprint = (
-                        _agent_identity_utils.get_cached_cert_fingerprint(
-                            self._cached_cert
-                        )
-                    )
-                    if cached_fingerprint != current_cert_fingerprint:
-                        try:
-                            _LOGGER.info(
-                                "Client certificate has changed, reconfiguring mTLS "
-                                "channel."
-                            )
-                            self.configure_mtls_channel(
-                                client_cert_callback=lambda: call_cert_callback_result
-                            )
-                        except Exception as e:
-                            _LOGGER.error(
-                                "Failed to reconfigure mTLS channel: %s", e
-                            )
-                            raise e
-                    else:
+                if cached_fingerprint != current_cert_fingerprint:
+                    try:
                         _LOGGER.info(
-                            "Skipping reconfiguration of mTLS channel because the "
-                            "client certificate has not changed."
+                            "Client certificate has changed, reconfiguring mTLS "
+                            "channel."
                         )
+                        self.configure_mtls_channel(
+                            client_cert_callback=lambda: (call_cert_bytes, call_key_bytes)
+                        )
+                    except Exception as e:
+                        _LOGGER.error(
+                            "Failed to reconfigure mTLS channel: %s", e
+                        )
+                        raise google.auth.exceptions.MutualTLSChannelError("Failed to reconfigure mTLS channel") from e
+
+                    except Exception as e:
+                        _LOGGER.error(
+                            "Failed to reconfigure mTLS channel: %s", e
+                        )
+                        raise e
+                else:
+                    _LOGGER.info(
+                        "Skipping reconfiguration of mTLS channel because the "
+                        "client certificate has not changed."
+                    )
 
           _LOGGER.info(
                 "Refreshing credentials due to a %s response. Attempt %s/%s.",

@@ -37,7 +37,6 @@ from google.auth import _helpers
 from google.auth import exceptions
 from google.auth import transport
 from google.auth.transport import _mtls_helper
-from google.auth import _agent_identity_utils
 import google.auth.transport._mtls_helper
 from google.oauth2 import service_account
 
@@ -561,21 +560,8 @@ class AuthorizedSession(requests.Session):
             # Handle unauthorized permission error(401 status code)
             if response.status_code == 401:
                 if self.is_mtls:
-                    call_cert_bytes, call_key_bytes  = (
-                        _agent_identity_utils.call_client_cert_callback()
-                    )
-                    cert_obj = _agent_identity_utils.parse_certificate(
-                        call_cert_bytes
-                    )
-                    current_cert_fingerprint = (
-                        _agent_identity_utils.calculate_certificate_fingerprint(
-                            cert_obj
-                        )
-                    )
-                    cached_fingerprint = (
-                        _agent_identity_utils.get_cached_cert_fingerprint(
-                            self._cached_cert
-                        )
+                    call_cert_bytes, call_key_bytes, cached_fingerprint, current_cert_fingerprint = (
+                        _mtls_helper.check_parameters_for_unauthorized_response(self._cached_cert)
                     )
                     if cached_fingerprint != current_cert_fingerprint:
                         try:
