@@ -560,8 +560,8 @@ class AuthorizedSession(requests.Session):
             # Handle unauthorized permission error(401 status code)
             if response.status_code == 401:
                 if self.is_mtls:
-                    call_cert_bytes, call_key_bytes, cached_fingerprint, current_cert_fingerprint = (
-                        _mtls_helper.check_parameters_for_unauthorized_response(self._cached_cert)
+                    call_cert_bytes, call_key_bytes, cached_fingerprint, current_cert_fingerprint = _mtls_helper.check_parameters_for_unauthorized_response(
+                        self._cached_cert
                     )
                     if cached_fingerprint != current_cert_fingerprint:
                         try:
@@ -574,7 +574,9 @@ class AuthorizedSession(requests.Session):
                             )
                         except Exception as e:
                             _LOGGER.error("Failed to reconfigure mTLS channel: %s", e)
-                            raise MutualTLSChannelError("Failed to reconfigure mTLS channel") from e
+                            raise exceptions.MutualTLSChannelError(
+                                "Failed to reconfigure mTLS channel"
+                            ) from e
                     else:
                         _LOGGER.info(
                             "Skipping reconfiguration of mTLS channel because the client"
@@ -628,4 +630,3 @@ class AuthorizedSession(requests.Session):
         if self._auth_request_session is not None:
             self._auth_request_session.close()
         super(AuthorizedSession, self).close()
-

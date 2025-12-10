@@ -388,7 +388,7 @@ class AuthorizedHttp(RequestMethods):  # type: ignore
             headers = self.headers
 
         use_mtls = False
-        if self._is_mtls == True:
+        if self._is_mtls:
             MTLS_URL_PREFIXES = ["mtls.googleapis.com", "mtls.sandbox.googleapis.com"]
             use_mtls = any([prefix in url for prefix in MTLS_URL_PREFIXES])
 
@@ -413,57 +413,56 @@ class AuthorizedHttp(RequestMethods):  # type: ignore
             response.status in self._refresh_status_codes
             and _credential_refresh_attempt < self._max_refresh_attempts
         ):
-          if response.status == 401:
-            if use_mtls:
-                call_cert_bytes, call_key_bytes, cached_fingerprint, current_cert_fingerprint = (
-                    _mtls_helper.check_parameters_for_unauthorized_response(self._cached_cert)
-                )
-                if cached_fingerprint != current_cert_fingerprint:
-                    try:
-                        _LOGGER.info(
-                            "Client certificate has changed, reconfiguring mTLS "
-                            "channel."
-                        )
-                        self.configure_mtls_channel(
-                            client_cert_callback=lambda: (call_cert_bytes, call_key_bytes)
-                        )
-                    except Exception as e:
-                        _LOGGER.error(
-                            "Failed to reconfigure mTLS channel: %s", e
-                        )
-                        raise google.auth.exceptions.MutualTLSChannelError("Failed to reconfigure mTLS channel") from e
-
-                    except Exception as e:
-                        _LOGGER.error(
-                            "Failed to reconfigure mTLS channel: %s", e
-                        )
-                        raise e
-                else:
-                    _LOGGER.info(
-                        "Skipping reconfiguration of mTLS channel because the "
-                        "client certificate has not changed."
+            if response.status == 401:
+                if use_mtls:
+                    call_cert_bytes, call_key_bytes, cached_fingerprint, current_cert_fingerprint = _mtls_helper.check_parameters_for_unauthorized_response(
+                        self._cached_cert
                     )
+                    if cached_fingerprint != current_cert_fingerprint:
+                        try:
+                            _LOGGER.info(
+                                "Client certificate has changed, reconfiguring mTLS "
+                                "channel."
+                            )
+                            self.configure_mtls_channel(
+                                client_cert_callback=lambda: (
+                                    call_cert_bytes,
+                                    call_key_bytes,
+                                )
+                            )
+                        except Exception as e:
+                            _LOGGER.error("Failed to reconfigure mTLS channel: %s", e)
+                            raise exceptions.MutualTLSChannelError(
+                                "Failed to reconfigure mTLS channel"
+                            ) from e
 
-          _LOGGER.info(
+                    else:
+                        _LOGGER.info(
+                            "Skipping reconfiguration of mTLS channel because the "
+                            "client certificate has not changed."
+                        )
+
+            _LOGGER.info(
                 "Refreshing credentials due to a %s response. Attempt %s/%s.",
                 response.status,
                 _credential_refresh_attempt + 1,
                 self._max_refresh_attempts,
             )
 
-          self.credentials.refresh(self._request)
+            self.credentials.refresh(self._request)
 
-          # Recurse. Pass in the original headers, not our modified set.
-          return self.urlopen(
-            method,
-            url,
-            body=body,
-            headers=headers,
-            _credential_refresh_attempt=_credential_refresh_attempt + 1,
-            **kwargs,
-          )
+            # Recurse. Pass in the original headers, not our modified set.
+            return self.urlopen(
+                method,
+                url,
+                body=body,
+                headers=headers,
+                _credential_refresh_attempt=_credential_refresh_attempt + 1,
+                **kwargs,
+            )
 
         return response
+
     # Proxy methods for compliance with the urllib3.PoolManager interface
 
     def __enter__(self):
@@ -484,7 +483,7 @@ class AuthorizedHttp(RequestMethods):  # type: ignore
 
          Returns:
             True if the channel is mutual TLS and False otherwise.
-	"""
+        """
         return self._is_mtls
 
     @property
@@ -496,5 +495,3 @@ class AuthorizedHttp(RequestMethods):  # type: ignore
     def headers(self, value):
         """Proxy to ``self.http``."""
         self.http.headers = value
-
-
