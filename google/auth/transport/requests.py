@@ -574,7 +574,7 @@ class AuthorizedSession(requests.Session):
                             )
                         except Exception as e:
                             _LOGGER.error("Failed to reconfigure mTLS channel: %s", e)
-                            raise e
+                            raise MutualTLSChannelError("Failed to reconfigure mTLS channel") from e
                     else:
                         _LOGGER.info(
                             "Skipping reconfiguration of mTLS channel because the client"
@@ -620,7 +620,7 @@ class AuthorizedSession(requests.Session):
         return self._is_mtls
 
     @property
-    def cached_cert(self) -> bytes:
+    def _cached_cert(self) -> bytes:
         """Returns the cached client certificate."""
         return self._cached_cert
 
