@@ -668,6 +668,62 @@ class TestAuthorizedSession(object):
         assert not credentials.refresh.called
         assert credentials.refresh.call_count == 0
 
+    def test_cert_rotation_failure_raises_error(self):
+        credentials = mock.Mock(wraps=CredentialsStub())
+        # First request will 401, second request will fail to reconfigure mTLS.
+        adapter = AdapterStub([make_response(status=http_client.UNAUTHORIZED)])
+
+        authed_session = google.auth.transport.requests.AuthorizedSession(
+            credentials, refresh_timeout=60
+        )
+        authed_session.mount(self.TEST_URL, adapter)
+
+        old_cert = b"-----BEGIN CERTIFICATE-----\nMIIBdTCCARqgAwIBAgIJAOYVvu/axMxvMAoGCCqGSM49BAMCMCcxJTAjBgNVBAMM\nHEdvb2dsZSBFbmRwb2ludCBWZXJpZmljYXRpb24wHhcNMjUwNzMwMjMwNjA4WhcN\nMjYwNzMxMjMwNjA4WjAnMSUwIwYDVQQDDBxHb29nbGUgRW5kcG9pbnQgVmVyaWZp\nY2F0aW9uMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEbtr18gkEtwPow2oqyZsU\n4KLwFaLFlRlYv55UATS3QTDykDnIufC42TJCnqFRYhwicwpE2jnUV+l9g3Voias8\nraMvMC0wCQYDVR0TBAIwADALBgNVHQ8EBAMCB4AwEwYDVR0lBAwwCgYIKwYBBQUH\nAwIwCgYIKoZIzj0EAwIDSQAwRgIhAKcjW6dmF1YCksXPgDPlPu/nSnOjb3qCcivz\n/Jxq2zoeAiEA7/aNxcEoCGS3hwMIXoaaD/vPcZOOopKSyqXCvxRooKQ=\n-----END CERTIFICATE-----\n"
+
+        # New certificate and key to simulate rotation.
+        new_cert = CERT_MOCK_VAL
+        new_key = KEY_MOCK_VAL
+
+        authed_session._cached_cert = old_cert
+        authed_session._is_mtls = True
+
+        with mock.patch.object(
+            google.auth.transport._mtls_helper._agent_identity_utils,
+            "call_client_cert_callback",
+            return_value=(new_cert, new_key),
+        ):
+            with mock.patch.object(
+                authed_session,
+                "configure_mtls_channel",
+                side_effect=Exception("Failed to reconfigure"),
+            ):
+                with pytest.raises(exceptions.MutualTLSChannelError):
+                    authed_session.request("GET", self.TEST_URL)
+
+                # Assert to verify behavior
+                credentials.refresh.assert_not_called()
+
+    def test_cert_rotation_check_params_fails(self):
+        credentials = mock.Mock(wraps=CredentialsStub())
+        adapter = AdapterStub([make_response(status=http_client.UNAUTHORIZED)])
+
+        authed_session = google.auth.transport.requests.AuthorizedSession(
+            credentials, refresh_timeout=60
+        )
+        authed_session.mount(self.TEST_URL, adapter)
+        authed_session._is_mtls = True
+        authed_session._cached_cert = b"cached_cert"
+
+        with mock.patch(
+            "google.auth.transport.requests._mtls_helper.check_parameters_for_unauthorized_response",
+            side_effect=Exception("check_params failed"),
+        ) as mock_check_params:
+            with pytest.raises(Exception, match="check_params failed"):
+                authed_session.request("GET", self.TEST_URL)
+
+            mock_check_params.assert_called_once()
+            credentials.refresh.assert_not_called()
+
 
 class TestMutualTlsOffloadAdapter(object):
     @mock.patch.object(requests.adapters.HTTPAdapter, "init_poolmanager")

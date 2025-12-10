@@ -437,3 +437,57 @@ class TestAuthorizedHttp(object):
         assert result.status == final_response.status
         assert not credentials.refresh.called
         assert credentials.refresh.call_count == 0
+
+    def test_cert_rotation_failure_raises_error(self):
+        credentials = mock.Mock(wraps=CredentialsStub())
+        http = HttpStub([ResponseStub(status=http_client.UNAUTHORIZED)])
+
+        authed_http = google.auth.transport.urllib3.AuthorizedHttp(
+            credentials, http=http
+        )
+
+        old_cert = b"-----BEGIN CERTIFICATE-----\nMIIBdTCCARqgAwIBAgIJAOYVvu/axMxvMAoGCCqGSM49BAMCMCcxJTAjBgNVBAMM\nHEdvb2dsZSBFbmRwb2ludCBWZXJpZmljYXRpb24wHhcNMjUwNzMwMjMwNjA4WhcN\nMjYwNzMxMjMwNjA4WjAnMSUwIwYDVQQDDBxHb29nbGUgRW5kcG9pbnQgVmVyaWZp\nY2F0aW9uMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEbtr18gkEtwPow2oqyZsU\n4KLwFaLFlRlYv55UATS3QTDykDnIufC42TJCnqFRYhwicwpE2jnUV+l9g3Voias8\nraMvMC0wCQYDVR0TBAIwADALBgNVHQ8EBAMCB4AwEwYDVR0lBAwwCgYIKwYBBQUH\nAwIwCgYIKoZIzj0EAwIDSQAwRgIhAKcjW6dmF1YCksXPgDPlPu/nSnOjb3qCcivz\n/Jxq2zoeAiEA7/aNxcEoCGS3hwMIXoaaD/vPcZOOopKSyqXCvxRooKQ=\n-----END CERTIFICATE-----\n"
+
+        # New certificate and key to simulate rotation.
+        new_cert = CERT_MOCK_VAL
+        new_key = KEY_MOCK_VAL
+        authed_http._cached_cert = old_cert
+        authed_http._is_mtls = True
+
+        # Mock call_client_cert_callback to return the new certificate.
+        with mock.patch.object(
+            google.auth.transport._mtls_helper,
+            "check_parameters_for_unauthorized_response",
+            return_value=(new_cert, new_key, "old_fingerprint", "new_fingerprint"),
+        ) as mock_check_params:
+            with mock.patch.object(
+                authed_http,
+                "configure_mtls_channel",
+                side_effect=Exception("Failed to reconfigure"),
+            ) as mock_reconfigure:
+                with pytest.raises(exceptions.MutualTLSChannelError):
+                    authed_http.urlopen("GET", "https://example.mtls.googleapis.com")
+
+                mock_check_params.assert_called_once()
+                mock_reconfigure.assert_called_once()
+                credentials.refresh.assert_not_called()
+
+    def test_cert_rotation_check_params_fails(self):
+        credentials = mock.Mock(wraps=CredentialsStub())
+        http = HttpStub([ResponseStub(status=http_client.UNAUTHORIZED)])
+
+        authed_http = google.auth.transport.urllib3.AuthorizedHttp(
+            credentials, http=http
+        )
+        authed_http._is_mtls = True
+        authed_http._cached_cert = b"cached_cert"
+
+        with mock.patch(
+            "google.auth.transport.urllib3._mtls_helper.check_parameters_for_unauthorized_response",
+            side_effect=Exception("check_params failed"),
+        ) as mock_check_params:
+            with pytest.raises(Exception, match="check_params failed"):
+                authed_http.urlopen("GET", "http://example.mtls.googleapis.com")
+
+            mock_check_params.assert_called_once()
+            credentials.refresh.assert_not_called()
