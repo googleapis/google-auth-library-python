@@ -621,11 +621,6 @@ class AuthorizedSession(requests.Session):
         """Indicates if the created SSL channel is mutual TLS."""
         return self._is_mtls
 
-    @property
-    def _cached_cert(self) -> bytes:
-        """Returns the cached client certificate."""
-        return self._cached_cert
-
     def close(self):
         if self._auth_request_session is not None:
             self._auth_request_session.close()
