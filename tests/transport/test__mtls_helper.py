@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
 import os
 import re
 
@@ -333,9 +334,102 @@ class TestGetClientSslCredentials(object):
         assert key == pytest.private_key_bytes
         assert passphrase is None
 
+    @mock.patch(
+        "google.auth.transport._mtls_helper._read_cert_and_key_files", autospec=True
+    )
+    @mock.patch(
+        "google.auth.transport._mtls_helper._get_cert_config_path", autospec=True
+    )
+    @mock.patch("google.auth.transport._mtls_helper._load_json_file", autospec=True)
     @mock.patch("google.auth.transport._mtls_helper._check_config_path", autospec=True)
-    def test_success_without_metadata(self, mock_check_config_path):
+    def test_success_with_certificate_config_cloud_run_patch(
+        self,
+        mock_check_config_path,
+        mock_load_json_file,
+        mock_get_cert_config_path,
+        mock_read_cert_and_key_files,
+    ):
+        cert_config_path = "/path/to/config"
+        mock_check_config_path.return_value = cert_config_path
+        mock_load_json_file.return_value = {
+            "cert_configs": {
+                "workload": {
+                    "cert_path": _mtls_helper._INCORRECT_CLOUD_RUN_CERT_PATH,
+                    "key_path": _mtls_helper._INCORRECT_CLOUD_RUN_KEY_PATH,
+                }
+            }
+        }
+        mock_get_cert_config_path.return_value = cert_config_path
+        mock_read_cert_and_key_files.return_value = (
+            pytest.public_cert_bytes,
+            pytest.private_key_bytes,
+        )
+
+        has_cert, cert, key, passphrase = _mtls_helper.get_client_ssl_credentials()
+        assert has_cert
+        assert cert == pytest.public_cert_bytes
+        assert key == pytest.private_key_bytes
+        assert passphrase is None
+
+        mock_read_cert_and_key_files.assert_called_once_with(
+            _mtls_helper._WELL_KNOWN_CLOUD_RUN_CERT_PATH,
+            _mtls_helper._WELL_KNOWN_CLOUD_RUN_KEY_PATH,
+        )
+
+    @mock.patch("os.path.exists", autospec=True)
+    @mock.patch(
+        "google.auth.transport._mtls_helper._read_cert_and_key_files", autospec=True
+    )
+    @mock.patch(
+        "google.auth.transport._mtls_helper._get_cert_config_path", autospec=True
+    )
+    @mock.patch("google.auth.transport._mtls_helper._load_json_file", autospec=True)
+    @mock.patch("google.auth.transport._mtls_helper._check_config_path", autospec=True)
+    def test_success_with_certificate_config_cloud_run_patch_skipped_if_cert_exists(
+        self,
+        mock_check_config_path,
+        mock_load_json_file,
+        mock_get_cert_config_path,
+        mock_read_cert_and_key_files,
+        mock_os_path_exists,
+    ):
+        cert_config_path = "/path/to/config"
+        mock_check_config_path.return_value = cert_config_path
+        mock_os_path_exists.return_value = True
+        mock_load_json_file.return_value = {
+            "cert_configs": {
+                "workload": {
+                    "cert_path": _mtls_helper._INCORRECT_CLOUD_RUN_CERT_PATH,
+                    "key_path": _mtls_helper._INCORRECT_CLOUD_RUN_KEY_PATH,
+                }
+            }
+        }
+        mock_get_cert_config_path.return_value = cert_config_path
+        mock_read_cert_and_key_files.return_value = (
+            pytest.public_cert_bytes,
+            pytest.private_key_bytes,
+        )
+
+        has_cert, cert, key, passphrase = _mtls_helper.get_client_ssl_credentials()
+        assert has_cert
+        assert cert == pytest.public_cert_bytes
+        assert key == pytest.private_key_bytes
+        assert passphrase is None
+
+        mock_read_cert_and_key_files.assert_called_once_with(
+            _mtls_helper._INCORRECT_CLOUD_RUN_CERT_PATH,
+            _mtls_helper._INCORRECT_CLOUD_RUN_KEY_PATH,
+        )
+
+    @mock.patch(
+        "google.auth.transport._mtls_helper._get_workload_cert_and_key", autospec=True
+    )
+    @mock.patch("google.auth.transport._mtls_helper._check_config_path", autospec=True)
+    def test_success_without_metadata(
+        self, mock_check_config_path, mock_get_workload_cert_and_key
+    ):
         mock_check_config_path.return_value = False
+        mock_get_workload_cert_and_key.return_value = (None, None)
         has_cert, cert, key, passphrase = _mtls_helper.get_client_ssl_credentials()
         assert not has_cert
         assert cert is None
@@ -394,12 +488,17 @@ class TestGetClientSslCredentials(object):
     )
     @mock.patch("google.auth.transport._mtls_helper._load_json_file", autospec=True)
     @mock.patch("google.auth.transport._mtls_helper._check_config_path", autospec=True)
+    @mock.patch(
+        "google.auth.transport._mtls_helper._get_workload_cert_and_key", autospec=True
+    )
     def test_customize_context_aware_metadata_path(
         self,
+        mock_get_workload_cert_and_key,
         mock_check_config_path,
         mock_load_json_file,
         mock_run_cert_provider_command,
     ):
+        mock_get_workload_cert_and_key.return_value = (None, None)
         context_aware_metadata_path = "/path/to/metata/data"
         mock_check_config_path.return_value = context_aware_metadata_path
         mock_load_json_file.return_value = {"cert_provider_command": ["command"]}
@@ -638,3 +737,79 @@ class TestDecryptPrivateKey(object):
             _mtls_helper.decrypt_private_key(
                 ENCRYPTED_EC_PRIVATE_KEY, b"wrong_password"
             )
+
+    def test_check_use_client_cert(self, monkeypatch):
+        monkeypatch.setenv("GOOGLE_API_USE_CLIENT_CERTIFICATE", "true")
+        use_client_cert = _mtls_helper.check_use_client_cert()
+        assert use_client_cert is True
+
+    def test_check_use_client_cert_for_workload_with_config_file(self, monkeypatch):
+        config_data = {
+            "version": 1,
+            "cert_configs": {
+                "workload": {
+                    "cert_path": "path/to/cert/file",
+                    "key_path": "path/to/key/file",
+                }
+            },
+        }
+        config_filename = "mock_certificate_config.json"
+        config_file_content = json.dumps(config_data)
+        monkeypatch.setenv("GOOGLE_API_CERTIFICATE_CONFIG", config_filename)
+        monkeypatch.setenv("GOOGLE_API_USE_CLIENT_CERTIFICATE", "")
+        # Use mock_open to simulate the file in memory
+        mock_file_handle = mock.mock_open(read_data=config_file_content)
+        with mock.patch("builtins.open", mock_file_handle):
+            use_client_cert = _mtls_helper.check_use_client_cert()
+            assert use_client_cert is True
+
+    def test_check_use_client_cert_false(self, monkeypatch):
+        monkeypatch.setenv("GOOGLE_API_USE_CLIENT_CERTIFICATE", "false")
+        use_client_cert = _mtls_helper.check_use_client_cert()
+        assert use_client_cert is False
+
+    def test_check_use_client_cert_unsupported_value(self, monkeypatch):
+        monkeypatch.setenv("GOOGLE_API_USE_CLIENT_CERTIFICATE", "dummy")
+        use_client_cert = _mtls_helper.check_use_client_cert()
+        assert use_client_cert is False
+
+    def test_check_use_client_cert_for_workload_with_config_file_not_found(
+        self, monkeypatch
+    ):
+        monkeypatch.setenv("GOOGLE_API_USE_CLIENT_CERTIFICATE", "")
+        use_client_cert = _mtls_helper.check_use_client_cert()
+        assert use_client_cert is False
+
+    def test_check_use_client_cert_for_workload_with_config_file_not_json(
+        self, monkeypatch
+    ):
+        config_filename = "mock_certificate_config.json"
+        config_file_content = "not_valid_json"
+        monkeypatch.setenv("GOOGLE_API_CERTIFICATE_CONFIG", config_filename)
+        monkeypatch.setenv("GOOGLE_API_USE_CLIENT_CERTIFICATE", "")
+        # Use mock_open to simulate the file in memory
+        mock_file_handle = mock.mock_open(read_data=config_file_content)
+        with mock.patch("builtins.open", mock_file_handle):
+            use_client_cert = _mtls_helper.check_use_client_cert()
+            assert use_client_cert is False
+
+    def test_check_use_client_cert_for_workload_with_config_file_no_workload(
+        self, monkeypatch
+    ):
+        config_data = {"version": 1, "cert_configs": {"dummy_key": {}}}
+        config_filename = "mock_certificate_config.json"
+        config_file_content = json.dumps(config_data)
+        monkeypatch.setenv("GOOGLE_API_CERTIFICATE_CONFIG", config_filename)
+        monkeypatch.setenv("GOOGLE_API_USE_CLIENT_CERTIFICATE", "")
+        # Use mock_open to simulate the file in memory
+        mock_file_handle = mock.mock_open(read_data=config_file_content)
+        with mock.patch("builtins.open", mock_file_handle):
+            use_client_cert = _mtls_helper.check_use_client_cert()
+            assert use_client_cert is False
+
+    def test_check_use_client_cert_when_file_does_not_exist(self, monkeypatch):
+        config_filename = "mock_certificate_config.json"
+        monkeypatch.setenv("GOOGLE_API_CERTIFICATE_CONFIG", config_filename)
+        monkeypatch.setenv("GOOGLE_API_USE_CLIENT_CERTIFICATE", "")
+        use_client_cert = _mtls_helper.check_use_client_cert()
+        assert use_client_cert is False
