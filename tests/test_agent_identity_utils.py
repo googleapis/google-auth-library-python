@@ -15,7 +15,6 @@
 import base64
 import hashlib
 import json
-
 import urllib.parse
 
 from cryptography import x509
@@ -104,7 +103,9 @@ class TestAgentIdentityUtils:
         mock_cert.public_bytes.return_value = b"der-bytes"
 
         # Expected: base64 (standard), unpadded, then URL-encoded
-        base64_fingerprint = base64.b64encode(hashlib.sha256(b"der-bytes").digest()).decode("utf-8")
+        base64_fingerprint = base64.b64encode(
+            hashlib.sha256(b"der-bytes").digest()
+        ).decode("utf-8")
         unpadded_base64_fingerprint = base64_fingerprint.rstrip("=")
         expected_fingerprint = urllib.parse.quote(unpadded_base64_fingerprint)
 
@@ -259,6 +260,54 @@ class TestAgentIdentityUtils:
         mock_open.assert_called_once_with("/fake/cert.pem", "rb")
         mock_parse_certificate.assert_called_once_with(b"cert_bytes")
         assert result == mock_parse_certificate.return_value
+
+    @mock.patch("time.sleep", return_value=None)
+    @mock.patch("google.auth._agent_identity_utils._is_certificate_file_ready")
+    def test_get_agent_identity_certificate_path_fallback_to_well_known_path(
+        self, mock_is_ready, mock_sleep, monkeypatch
+    ):
+        # Set a dummy config path that won't be found.
+        monkeypatch.setenv(
+            environment_vars.GOOGLE_API_CERTIFICATE_CONFIG, "/dummy/config.json"
+        )
+
+        # First, the primary path from the (mocked) config is not ready.
+        # Then, the fallback well-known path is ready.
+        mock_is_ready.side_effect = [False, True]
+
+        result = _agent_identity_utils.get_agent_identity_certificate_path()
+
+        assert result == _agent_identity_utils._WELL_KNOWN_CERT_PATH
+        # The sleep should have been called once before the fallback is checked.
+        mock_sleep.assert_called_once()
+        assert mock_is_ready.call_count == 2
+
+    @mock.patch("google.auth.transport._mtls_helper.get_client_ssl_credentials")
+    def test_call_client_cert_callback(self, mock_get_client_ssl_credentials):
+        mock_get_client_ssl_credentials.return_value = (
+            True,
+            b"cert_bytes",
+            b"key_bytes",
+            b"passphrase",
+        )
+
+        cert, key = _agent_identity_utils.call_client_cert_callback()
+
+        assert cert == b"cert_bytes"
+        assert key == b"key_bytes"
+        mock_get_client_ssl_credentials.assert_called_once_with(
+            generate_encrypted_key=True
+        )
+
+    def test_get_cached_cert_fingerprint_no_cert(self):
+        with pytest.raises(ValueError, match="mTLS connection is not configured."):
+            _agent_identity_utils.get_cached_cert_fingerprint(None)
+
+    def test_get_cached_cert_fingerprint_with_cert(self):
+        fingerprint = _agent_identity_utils.get_cached_cert_fingerprint(
+            NON_AGENT_IDENTITY_CERT_BYTES
+        )
+        assert isinstance(fingerprint, str)
 
 
 class TestAgentIdentityUtilsNoCryptography:
