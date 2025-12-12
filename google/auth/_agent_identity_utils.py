@@ -20,10 +20,11 @@ import logging
 import os
 import re
 import time
-from urllib.parse import urlparse, quote
+from urllib.parse import quote, urlparse
 
 from google.auth import environment_vars
 from google.auth import exceptions
+from google.auth.transport import _mtls_helper
 
 
 _LOGGER = logging.getLogger(__name__)
@@ -260,3 +261,21 @@ def should_request_bound_token(cert):
         == "true"
     )
     return is_agent_cert and is_opted_in
+
+
+def call_client_cert_callback():
+    """Calls the client cert callback and returns the certificate and key."""
+    _, cert_bytes, key_bytes, passphrase = _mtls_helper.get_client_ssl_credentials(
+        generate_encrypted_key=True
+    )
+    return cert_bytes, key_bytes
+
+
+def get_cached_cert_fingerprint(cached_cert):
+    """Returns the fingerprint of the cached certificate."""
+    if cached_cert:
+        cert_obj = parse_certificate(cached_cert)
+        cached_cert_fingerprint = calculate_certificate_fingerprint(cert_obj)
+    else:
+        raise ValueError("mTLS connection is not configured.")
+    return cached_cert_fingerprint
