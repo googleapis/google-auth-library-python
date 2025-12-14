@@ -16,6 +16,7 @@ import datetime
 import http.client as http_client
 import json
 import os
+import warnings
 
 import mock
 import pytest  # type: ignore
@@ -557,14 +558,16 @@ class TestCredentials(object):
         assert new_creds._quota_project_id == QUOTA_PROJECT_ID
         assert new_creds.universe_domain == FAKE_UNIVERSE_DOMAIN
 
-    def test_with_trust_boundary(self):
+    def test_with_regional_access_boundary(self):
         creds = self.make_credentials(
             token=ACCESS_TOKEN,
             expiry=NOW,
             revoke_url=REVOKE_URL,
             quota_project_id=QUOTA_PROJECT_ID,
         )
-        new_creds = creds.with_trust_boundary({"encodedLocations": "new_boundary"})
+        new_creds = creds.with_regional_access_boundary(
+            {"encodedLocations": "new_boundary"}
+        )
         assert new_creds._audience == creds._audience
         assert new_creds._refresh_token_val == creds.refresh_token
         assert new_creds._token_url == creds._token_url
@@ -575,7 +578,9 @@ class TestCredentials(object):
         assert new_creds.expiry == creds.expiry
         assert new_creds._revoke_url == creds._revoke_url
         assert new_creds._quota_project_id == QUOTA_PROJECT_ID
-        assert new_creds._trust_boundary == {"encodedLocations": "new_boundary"}
+        assert new_creds._regional_access_boundary == {
+            "encodedLocations": "new_boundary"
+        }
 
     def test_from_file_required_options_only(self, tmpdir):
         from_creds = self.make_credentials()
@@ -621,7 +626,7 @@ class TestCredentials(object):
         assert creds._revoke_url == REVOKE_URL
         assert creds._quota_project_id == QUOTA_PROJECT_ID
 
-    def test_refresh_fetches_trust_boundary(self):
+    def test_refresh_skips_regional_access_boundary_lookup_when_disabled(self):
         request = self.make_mock_request(
             status=http_client.OK,
             data={"access_token": ACCESS_TOKEN, "expires_in": 3600},
@@ -629,28 +634,7 @@ class TestCredentials(object):
         credentials = self.make_credentials()
 
         with mock.patch.object(
-            credentials,
-            "_lookup_trust_boundary",
-            return_value={"encodedLocations": "0x123"},
-        ) as mock_lookup, mock.patch.dict(
-            os.environ, {environment_vars.GOOGLE_AUTH_TRUST_BOUNDARY_ENABLED: "true"}
-        ):
-            credentials.refresh(request)
-
-        mock_lookup.assert_called_once()
-        headers = {}
-        credentials.apply(headers)
-        assert headers["x-allowed-locations"] == "0x123"
-
-    def test_refresh_skips_trust_boundary_lookup_when_disabled(self):
-        request = self.make_mock_request(
-            status=http_client.OK,
-            data={"access_token": ACCESS_TOKEN, "expires_in": 3600},
-        )
-        credentials = self.make_credentials()
-
-        with mock.patch.object(
-            credentials, "_lookup_trust_boundary"
+            credentials, "_lookup_regional_access_boundary"
         ) as mock_lookup, mock.patch.dict(os.environ, {}, clear=True):
             credentials.refresh(request)
 
@@ -659,10 +643,10 @@ class TestCredentials(object):
         credentials.apply(headers)
         assert "x-allowed-locations" not in headers
 
-    def test_build_trust_boundary_lookup_url(self):
+    def test_build_regional_access_boundary_lookup_url(self):
         credentials = self.make_credentials()
         expected_url = "https://iamcredentials.googleapis.com/v1/locations/global/workforcePools/POOL_ID/allowedLocations"
-        assert credentials._build_trust_boundary_lookup_url() == expected_url
+        assert credentials._build_regional_access_boundary_lookup_url() == expected_url
 
     @pytest.mark.parametrize(
         "audience",
@@ -673,12 +657,21 @@ class TestCredentials(object):
             "//iam.googleapis.com/workforcePools/POOL_ID/providers/PROVIDER_ID",
         ],
     )
-    def test_build_trust_boundary_lookup_url_invalid_audience(self, audience):
+    def test_build_regional_access_boundary_lookup_url_invalid_audience(self, audience):
         credentials = self.make_credentials(audience=audience)
         with pytest.raises(exceptions.InvalidValue):
-            credentials._build_trust_boundary_lookup_url()
+            credentials._build_regional_access_boundary_lookup_url()
 
-    def test_build_trust_boundary_lookup_url_different_universe(self):
+    def test_build_regional_access_boundary_lookup_url_different_universe(self):
         credentials = self.make_credentials(universe_domain=FAKE_UNIVERSE_DOMAIN)
         expected_url = "https://iamcredentials.fake-universe-domain/v1/locations/global/workforcePools/POOL_ID/allowedLocations"
-        assert credentials._build_trust_boundary_lookup_url() == expected_url
+        assert credentials._build_regional_access_boundary_lookup_url() == expected_url
+
+    def test_with_trust_boundary_deprecation_warning(self):
+        creds = self.make_credentials()
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            creds.with_trust_boundary({"encodedLocations": "new_boundary"})
+            assert len(w) == 1
+            assert issubclass(w[-1].category, DeprecationWarning)
+            assert "with_trust_boundary" in str(w[-1].message)

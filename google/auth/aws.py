@@ -273,9 +273,9 @@ def _generate_authentication_header_map(
         full_headers[key.lower()] = additional_headers[key]
     # Add AWS session token if available.
     if aws_security_credentials.session_token is not None:
-        full_headers[
-            _AWS_SECURITY_TOKEN_HEADER
-        ] = aws_security_credentials.session_token
+        full_headers[_AWS_SECURITY_TOKEN_HEADER] = (
+            aws_security_credentials.session_token
+        )
 
     # Required headers
     full_headers["host"] = host
@@ -348,10 +348,10 @@ def _generate_authentication_header_map(
 class AwsSecurityCredentials:
     """A class that models AWS security credentials with an optional session token.
 
-        Attributes:
-            access_key_id (str): The AWS security credentials access key id.
-            secret_access_key (str): The AWS security credentials secret access key.
-            session_token (Optional[str]): The optional AWS security credentials session token. This should be set when using temporary credentials.
+    Attributes:
+        access_key_id (str): The AWS security credentials access key id.
+        secret_access_key (str): The AWS security credentials secret access key.
+        session_token (Optional[str]): The optional AWS security credentials session token. This should be set when using temporary credentials.
     """
 
     access_key_id: str
@@ -641,7 +641,7 @@ class Credentials(external_account.Credentials):
                         "regional_cred_verification_url": "https://sts.{region}.amazonaws.com?Action=GetCallerIdentity&Version=2011-06-15",
                         "region_url": "http://169.254.169.254/latest/meta-data/placement/availability-zone",
                         "url": "http://169.254.169.254/latest/meta-data/iam/security-credentials",
-                        imdsv2_session_token_url": "http://169.254.169.254/latest/api/token"
+                        "imdsv2_session_token_url": "http://169.254.169.254/latest/api/token"
                     }
 
             aws_security_credentials_supplier (Optional [AwsSecurityCredentialsSupplier]): Optional AWS security credentials supplier.
@@ -660,6 +660,9 @@ class Credentials(external_account.Credentials):
             :meth:`from_file` or
             :meth:`from_info` are used instead of calling the constructor directly.
         """
+        # Pop regional_access_boundary from kwargs to avoid passing it to the parent constructor.
+        kwargs.pop("regional_access_boundary", None)
+
         super(Credentials, self).__init__(
             audience=audience,
             subject_token_type=subject_token_type,
@@ -688,8 +691,8 @@ class Credentials(external_account.Credentials):
             )
         else:
             environment_id = credential_source.get("environment_id") or ""
-            self._aws_security_credentials_supplier = _DefaultAwsSecurityCredentialsSupplier(
-                credential_source
+            self._aws_security_credentials_supplier = (
+                _DefaultAwsSecurityCredentialsSupplier(credential_source)
             )
             self._cred_verification_url = credential_source.get(
                 "regional_cred_verification_url"
@@ -759,8 +762,10 @@ class Credentials(external_account.Credentials):
 
         # Retrieve the AWS security credentials needed to generate the signed
         # request.
-        aws_security_credentials = self._aws_security_credentials_supplier.get_aws_security_credentials(
-            self._supplier_context, request
+        aws_security_credentials = (
+            self._aws_security_credentials_supplier.get_aws_security_credentials(
+                self._supplier_context, request
+            )
         )
         # Generate the signed request to AWS STS GetCallerIdentity API.
         # Use the required regional endpoint. Otherwise, the request will fail.
@@ -845,7 +850,16 @@ class Credentials(external_account.Credentials):
         kwargs.update(
             {"aws_security_credentials_supplier": aws_security_credentials_supplier}
         )
-        return super(Credentials, cls).from_info(info, **kwargs)
+        regional_access_boundary = info.pop("regional_access_boundary", None)
+
+        credentials = super(Credentials, cls).from_info(info, **kwargs)
+
+        if regional_access_boundary:
+            credentials = credentials.with_regional_access_boundary(
+                regional_access_boundary
+            )
+
+        return credentials
 
     @classmethod
     def from_file(cls, filename, **kwargs):

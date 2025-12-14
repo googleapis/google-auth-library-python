@@ -37,6 +37,7 @@ import datetime
 import io
 import json
 import re
+import warnings
 
 from google.auth import _constants
 from google.auth import _helpers
@@ -52,7 +53,7 @@ class Credentials(
     credentials.CredentialsWithQuotaProject,
     credentials.ReadOnlyScoped,
     credentials.CredentialsWithTokenUri,
-    credentials.CredentialsWithTrustBoundary,
+    credentials.CredentialsWithRegionalAccessBoundary,
 ):
     """Credentials for External Account Authorized Users.
 
@@ -86,7 +87,6 @@ class Credentials(
         scopes=None,
         quota_project_id=None,
         universe_domain=credentials.DEFAULT_UNIVERSE_DOMAIN,
-        trust_boundary=None,
     ):
         """Instantiates a external account authorized user credentials object.
 
@@ -112,7 +112,7 @@ class Credentials(
             create the credentials.
         universe_domain (Optional[str]): The universe domain. The default value
             is googleapis.com.
-        trust_boundary (Mapping[str,str]): A credential trust boundary.
+        regional_access_boundary (Mapping[str,str]): A credential Regional Access Boundary.
 
         Returns:
             google.auth.external_account_authorized_user.Credentials: The
@@ -133,7 +133,6 @@ class Credentials(
         self._scopes = scopes
         self._universe_domain = universe_domain or credentials.DEFAULT_UNIVERSE_DOMAIN
         self._cred_file_path = None
-        self._trust_boundary = trust_boundary
 
         if not self.valid and not self.can_refresh:
             raise exceptions.InvalidOperation(
@@ -181,7 +180,6 @@ class Credentials(
             "scopes": self._scopes,
             "quota_project_id": self._quota_project_id,
             "universe_domain": self._universe_domain,
-            "trust_boundary": self._trust_boundary,
         }
 
     @property
@@ -307,8 +305,8 @@ class Credentials(
         if "refresh_token" in response_data:
             self._refresh_token_val = response_data["refresh_token"]
 
-    def _build_trust_boundary_lookup_url(self):
-        """Builds and returns the URL for the trust boundary lookup API."""
+    def _build_regional_access_boundary_lookup_url(self):
+        """Builds and returns the URL for the Regional Access Boundary lookup API."""
         # Audience format: //iam.googleapis.com/locations/global/workforcePools/POOL_ID/providers/PROVIDER_ID
         match = re.search(r"locations/[^/]+/workforcePools/([^/]+)", self._audience)
 
@@ -317,7 +315,7 @@ class Credentials(
 
         pool_id = match.groups()[0]
 
-        return _constants._WORKFORCE_POOL_TRUST_BOUNDARY_LOOKUP_ENDPOINT.format(
+        return _constants._WORKFORCE_POOL_REGIONAL_ACCESS_BOUNDARY_LOOKUP_ENDPOINT.format(
             universe_domain=self._universe_domain, pool_id=pool_id
         )
 
@@ -358,6 +356,7 @@ class Credentials(
         kwargs = self.constructor_args()
         cred = self.__class__(**kwargs)
         cred._cred_file_path = self._cred_file_path
+        self._copy_regional_access_boundary_state(cred)
         return cred
 
     @_helpers.copy_docstring(credentials.CredentialsWithQuotaProject)
@@ -376,12 +375,6 @@ class Credentials(
     def with_universe_domain(self, universe_domain):
         cred = self._make_copy()
         cred._universe_domain = universe_domain
-        return cred
-
-    @_helpers.copy_docstring(credentials.CredentialsWithTrustBoundary)
-    def with_trust_boundary(self, trust_boundary):
-        cred = self._make_copy()
-        cred._trust_boundary = trust_boundary
         return cred
 
     @classmethod
@@ -413,7 +406,18 @@ class Credentials(
             expiry = datetime.datetime.strptime(
                 expiry.rstrip("Z").split(".")[0], "%Y-%m-%dT%H:%M:%S"
             )
-        return cls(
+
+        regional_access_boundary = info.get("regional_access_boundary")
+        if regional_access_boundary is None:
+            regional_access_boundary = info.get("trust_boundary")
+            if regional_access_boundary is not None:
+                warnings.warn(
+                    "'trust_boundary' is deprecated and will be removed in a future version. Please use 'regional_access_boundary'.",
+                    DeprecationWarning,
+                    stacklevel=2,
+                )
+
+        initial_creds = cls(
             audience=info.get("audience"),
             refresh_token=info.get("refresh_token"),
             token_url=info.get("token_url"),
@@ -428,9 +432,15 @@ class Credentials(
             universe_domain=info.get(
                 "universe_domain", credentials.DEFAULT_UNIVERSE_DOMAIN
             ),
-            trust_boundary=info.get("trust_boundary"),
             **kwargs
         )
+
+        if regional_access_boundary:
+            initial_creds = initial_creds.with_regional_access_boundary(
+                regional_access_boundary
+            )
+
+        return initial_creds
 
     @classmethod
     def from_file(cls, filename, **kwargs):

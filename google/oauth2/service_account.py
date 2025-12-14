@@ -72,6 +72,7 @@ specific subject using :meth:`~Credentials.with_subject`.
 
 import copy
 import datetime
+import warnings
 
 from google.auth import _constants
 from google.auth import _helpers
@@ -92,7 +93,7 @@ class Credentials(
     credentials.Scoped,
     credentials.CredentialsWithQuotaProject,
     credentials.CredentialsWithTokenUri,
-    credentials.CredentialsWithTrustBoundary,
+    credentials.CredentialsWithRegionalAccessBoundary,
 ):
     """Service account credentials
 
@@ -142,7 +143,6 @@ class Credentials(
         additional_claims=None,
         always_use_jwt_access=False,
         universe_domain=credentials.DEFAULT_UNIVERSE_DOMAIN,
-        trust_boundary=None,
     ):
         """
         Args:
@@ -166,7 +166,6 @@ class Credentials(
             universe_domain (str): The universe domain. The default
                 universe domain is googleapis.com. For default value self
                 signed jwt is used for token refresh.
-            trust_boundary (Mapping[str,str]): A credential trust boundary.
 
         .. note:: Typically one of the helper constructors
             :meth:`from_service_account_file` or
@@ -196,7 +195,6 @@ class Credentials(
             self._additional_claims = additional_claims
         else:
             self._additional_claims = {}
-        self._trust_boundary = trust_boundary
 
     @classmethod
     def _from_signer_and_info(cls, signer, info, **kwargs):
@@ -214,7 +212,16 @@ class Credentials(
         Raises:
             ValueError: If the info is not in the expected format.
         """
-        return cls(
+        regional_access_boundary = info.get("regional_access_boundary")
+        if regional_access_boundary is None:
+            regional_access_boundary = info.get("trust_boundary")
+            if regional_access_boundary is not None:
+                warnings.warn(
+                    "'trust_boundary' is deprecated and will be removed in a future version. Please use 'regional_access_boundary'.",
+                    DeprecationWarning,
+                    stacklevel=2,
+                )
+        initial_creds = cls(
             signer,
             service_account_email=info["client_email"],
             token_uri=info["token_uri"],
@@ -222,9 +229,13 @@ class Credentials(
             universe_domain=info.get(
                 "universe_domain", credentials.DEFAULT_UNIVERSE_DOMAIN
             ),
-            trust_boundary=info.get("trust_boundary"),
             **kwargs,
         )
+        if regional_access_boundary:
+            initial_creds = initial_creds.with_regional_access_boundary(
+                regional_access_boundary
+            )
+        return initial_creds
 
     @classmethod
     def from_service_account_info(cls, info, **kwargs):
@@ -296,9 +307,9 @@ class Credentials(
             additional_claims=self._additional_claims.copy(),
             always_use_jwt_access=self._always_use_jwt_access,
             universe_domain=self._universe_domain,
-            trust_boundary=self._trust_boundary,
         )
         cred._cred_file_path = self._cred_file_path
+        self._copy_regional_access_boundary_state(cred)
         return cred
 
     @_helpers.copy_docstring(credentials.Scoped)
@@ -384,12 +395,6 @@ class Credentials(
         cred._token_uri = token_uri
         return cred
 
-    @_helpers.copy_docstring(credentials.CredentialsWithTrustBoundary)
-    def with_trust_boundary(self, trust_boundary):
-        cred = self._make_copy()
-        cred._trust_boundary = trust_boundary
-        return cred
-
     def _make_authorization_grant_assertion(self):
         """Create the OAuth 2.0 assertion.
 
@@ -433,7 +438,7 @@ class Credentials(
             return metrics.CRED_TYPE_SA_JWT
         return metrics.CRED_TYPE_SA_ASSERTION
 
-    @_helpers.copy_docstring(credentials.CredentialsWithTrustBoundary)
+    @_helpers.copy_docstring(credentials.CredentialsWithRegionalAccessBoundary)
     def _refresh_token(self, request):
         if self._always_use_jwt_access and not self._jwt_credentials:
             # If self signed jwt should be used but jwt credential is not
@@ -500,8 +505,8 @@ class Credentials(
                 self, audience
             )
 
-    def _build_trust_boundary_lookup_url(self):
-        """Builds and returns the URL for the trust boundary lookup API.
+    def _build_regional_access_boundary_lookup_url(self):
+        """Builds and returns the URL for the Regional Access Boundary lookup API.
 
         This method constructs the specific URL for the IAM Credentials API's
         `allowedLocations` endpoint, using the credential's universe domain
@@ -512,13 +517,13 @@ class Credentials(
                 string, as it's required to form the URL.
 
         Returns:
-            str: The URL for the trust boundary lookup endpoint.
+            str: The URL for the Regional Access Boundary lookup endpoint.
         """
         if not self.service_account_email:
             raise ValueError(
-                "Service account email is required to build the trust boundary lookup URL."
+                "Service account email is required to build the Regional Access Boundary lookup URL."
             )
-        return _constants._SERVICE_ACCOUNT_TRUST_BOUNDARY_LOOKUP_ENDPOINT.format(
+        return _constants._SERVICE_ACCOUNT_REGIONAL_ACCESS_BOUNDARY_LOOKUP_ENDPOINT.format(
             universe_domain=self._universe_domain,
             service_account_email=self._service_account_email,
         )

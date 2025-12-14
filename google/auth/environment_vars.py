@@ -89,6 +89,8 @@ AWS_SESSION_TOKEN = "AWS_SESSION_TOKEN"
 AWS_REGION = "AWS_REGION"
 AWS_DEFAULT_REGION = "AWS_DEFAULT_REGION"
 
-GOOGLE_AUTH_TRUST_BOUNDARY_ENABLED = "GOOGLE_AUTH_TRUST_BOUNDARY_ENABLED"
-"""Environment variable controlling whether to enable trust boundary feature.
+GOOGLE_AUTH_REGIONAL_ACCESS_BOUNDARY_ENABLE_EXPERIMENT = (
+    "GOOGLE_AUTH_REGIONAL_ACCESS_BOUNDARY_ENABLE_EXPERIMENT"
+)
+"""Environment variable controlling whether to enable Regional Access Boundary feature.
 The default value is false. Users have to explicitly set this value to true."""

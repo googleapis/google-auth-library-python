@@ -75,6 +75,10 @@ REQUEST_PARAMS = '{"KeySchema":[{"KeyType":"HASH","AttributeName":"Id"}],"TableN
 # Each tuple contains the following entries:
 # region, time, credentials, original_request, signed_request
 
+VALID_REGIONAL_ACCESS_BOUNDARY = {
+    "locations": ["us-central1", "us-east1"],
+    "encodedLocations": "0xVALIDHEXSA",
+}
 VALID_TOKEN_URLS = [
     "https://sts.googleapis.com",
     "https://us-east-1.sts.googleapis.com",
@@ -880,8 +884,9 @@ class TestCredentials(object):
         scopes=None,
         default_scopes=None,
         service_account_impersonation_url=None,
+        regional_access_boundary=None,
     ):
-        return aws.Credentials(
+        creds = aws.Credentials(
             audience=AUDIENCE,
             subject_token_type=SUBJECT_TOKEN_TYPE,
             token_url=token_url,
@@ -895,6 +900,9 @@ class TestCredentials(object):
             scopes=scopes,
             default_scopes=default_scopes,
         )
+        if regional_access_boundary:
+            creds = creds.with_regional_access_boundary(regional_access_boundary)
+        return creds
 
     @classmethod
     def assert_aws_metadata_request_kwargs(
@@ -971,7 +979,6 @@ class TestCredentials(object):
             quota_project_id=QUOTA_PROJECT_ID,
             workforce_pool_user_project=None,
             universe_domain=DEFAULT_UNIVERSE_DOMAIN,
-            trust_boundary=None,
         )
 
     @mock.patch.object(aws.Credentials, "__init__", return_value=None)
@@ -1001,7 +1008,6 @@ class TestCredentials(object):
             quota_project_id=None,
             workforce_pool_user_project=None,
             universe_domain=DEFAULT_UNIVERSE_DOMAIN,
-            trust_boundary=None,
         )
 
     @mock.patch.object(aws.Credentials, "__init__", return_value=None)
@@ -1033,8 +1039,27 @@ class TestCredentials(object):
             quota_project_id=None,
             workforce_pool_user_project=None,
             universe_domain=DEFAULT_UNIVERSE_DOMAIN,
-            trust_boundary=None,
         )
+
+    def test_from_info_with_regional_access_boundary(self):
+        regional_access_boundary = VALID_REGIONAL_ACCESS_BOUNDARY
+        credentials = aws.Credentials.from_info(
+            {
+                "audience": AUDIENCE,
+                "subject_token_type": SUBJECT_TOKEN_TYPE,
+                "token_url": TOKEN_URL,
+                "credential_source": self.CREDENTIAL_SOURCE,
+                "regional_access_boundary": regional_access_boundary,
+            }
+        )
+
+        # Confirm aws.Credentials instance initialized with the expected parameters.
+        assert isinstance(credentials, aws.Credentials)
+        assert credentials._regional_access_boundary == regional_access_boundary
+        assert credentials._regional_access_boundary_expiry is not None
+        assert (
+            credentials._regional_access_boundary_expiry - _helpers.utcnow()
+        ).total_seconds() > 0
 
     @mock.patch.object(aws.Credentials, "__init__", return_value=None)
     def test_from_file_full_options(self, mock_init, tmpdir):
@@ -1071,7 +1096,6 @@ class TestCredentials(object):
             quota_project_id=QUOTA_PROJECT_ID,
             workforce_pool_user_project=None,
             universe_domain=DEFAULT_UNIVERSE_DOMAIN,
-            trust_boundary=None,
         )
 
     @mock.patch.object(aws.Credentials, "__init__", return_value=None)
@@ -1102,8 +1126,28 @@ class TestCredentials(object):
             quota_project_id=None,
             workforce_pool_user_project=None,
             universe_domain=DEFAULT_UNIVERSE_DOMAIN,
-            trust_boundary=None,
         )
+
+    def test_from_file_with_regional_access_boundary(self, tmpdir):
+        regional_access_boundary = VALID_REGIONAL_ACCESS_BOUNDARY
+        info = {
+            "audience": AUDIENCE,
+            "subject_token_type": SUBJECT_TOKEN_TYPE,
+            "token_url": TOKEN_URL,
+            "credential_source": self.CREDENTIAL_SOURCE,
+            "regional_access_boundary": regional_access_boundary,
+        }
+        config_file = tmpdir.join("config.json")
+        config_file.write(json.dumps(info))
+        credentials = aws.Credentials.from_file(str(config_file))
+
+        # Confirm aws.Credentials instance initialized with the expected parameters.
+        assert isinstance(credentials, aws.Credentials)
+        assert credentials._regional_access_boundary == regional_access_boundary
+        assert credentials._regional_access_boundary_expiry is not None
+        assert (
+            credentials._regional_access_boundary_expiry - _helpers.utcnow()
+        ).total_seconds() > 0
 
     def test_constructor_invalid_credential_source(self):
         # Provide invalid credential source.
@@ -1900,321 +1944,6 @@ class TestCredentials(object):
 
         assert excinfo.match(r"Unable to retrieve AWS security credentials")
 
-    @mock.patch(
-        "google.auth.metrics.python_and_auth_lib_version",
-        return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
-    )
-    @mock.patch("google.auth._helpers.utcnow")
-    def test_refresh_success_without_impersonation_ignore_default_scopes(
-        self, utcnow, mock_auth_lib_value
-    ):
-        utcnow.return_value = datetime.datetime.strptime(
-            self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
-        )
-        expected_subject_token = self.make_serialized_aws_signed_request(
-            aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
-        )
-        token_headers = {
-            "Content-Type": "application/x-www-form-urlencoded",
-            "Authorization": "Basic " + BASIC_AUTH_ENCODING,
-            "x-goog-api-client": "gl-python/3.7 auth/1.1 google-byoid-sdk sa-impersonation/false config-lifetime/false source/aws",
-        }
-        token_request_data = {
-            "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
-            "audience": AUDIENCE,
-            "requested_token_type": "urn:ietf:params:oauth:token-type:access_token",
-            "scope": " ".join(SCOPES),
-            "subject_token": expected_subject_token,
-            "subject_token_type": SUBJECT_TOKEN_TYPE,
-        }
-        request = self.make_mock_request(
-            region_status=http_client.OK,
-            region_name=self.AWS_REGION,
-            role_status=http_client.OK,
-            role_name=self.AWS_ROLE,
-            security_credentials_status=http_client.OK,
-            security_credentials_data=self.AWS_SECURITY_CREDENTIALS_RESPONSE,
-            token_status=http_client.OK,
-            token_data=self.SUCCESS_RESPONSE,
-        )
-        credentials = self.make_credentials(
-            client_id=CLIENT_ID,
-            client_secret=CLIENT_SECRET,
-            credential_source=self.CREDENTIAL_SOURCE,
-            quota_project_id=QUOTA_PROJECT_ID,
-            scopes=SCOPES,
-            # Default scopes should be ignored.
-            default_scopes=["ignored"],
-        )
-
-        credentials.refresh(request)
-
-        assert len(request.call_args_list) == 4
-        # Fourth request should be sent to GCP STS endpoint.
-        self.assert_token_request_kwargs(
-            request.call_args_list[3][1], token_headers, token_request_data
-        )
-        assert credentials.token == self.SUCCESS_RESPONSE["access_token"]
-        assert credentials.quota_project_id == QUOTA_PROJECT_ID
-        assert credentials.scopes == SCOPES
-        assert credentials.default_scopes == ["ignored"]
-
-    @mock.patch(
-        "google.auth.metrics.python_and_auth_lib_version",
-        return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
-    )
-    @mock.patch("google.auth._helpers.utcnow")
-    def test_refresh_success_without_impersonation_use_default_scopes(
-        self, utcnow, mock_auth_lib_value
-    ):
-        utcnow.return_value = datetime.datetime.strptime(
-            self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
-        )
-        expected_subject_token = self.make_serialized_aws_signed_request(
-            aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
-        )
-        token_headers = {
-            "Content-Type": "application/x-www-form-urlencoded",
-            "Authorization": "Basic " + BASIC_AUTH_ENCODING,
-            "x-goog-api-client": "gl-python/3.7 auth/1.1 google-byoid-sdk sa-impersonation/false config-lifetime/false source/aws",
-        }
-        token_request_data = {
-            "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
-            "audience": AUDIENCE,
-            "requested_token_type": "urn:ietf:params:oauth:token-type:access_token",
-            "scope": " ".join(SCOPES),
-            "subject_token": expected_subject_token,
-            "subject_token_type": SUBJECT_TOKEN_TYPE,
-        }
-        request = self.make_mock_request(
-            region_status=http_client.OK,
-            region_name=self.AWS_REGION,
-            role_status=http_client.OK,
-            role_name=self.AWS_ROLE,
-            security_credentials_status=http_client.OK,
-            security_credentials_data=self.AWS_SECURITY_CREDENTIALS_RESPONSE,
-            token_status=http_client.OK,
-            token_data=self.SUCCESS_RESPONSE,
-        )
-        credentials = self.make_credentials(
-            client_id=CLIENT_ID,
-            client_secret=CLIENT_SECRET,
-            credential_source=self.CREDENTIAL_SOURCE,
-            quota_project_id=QUOTA_PROJECT_ID,
-            scopes=None,
-            # Default scopes should be used since user specified scopes are none.
-            default_scopes=SCOPES,
-        )
-
-        credentials.refresh(request)
-
-        assert len(request.call_args_list) == 4
-        # Fourth request should be sent to GCP STS endpoint.
-        self.assert_token_request_kwargs(
-            request.call_args_list[3][1], token_headers, token_request_data
-        )
-        assert credentials.token == self.SUCCESS_RESPONSE["access_token"]
-        assert credentials.quota_project_id == QUOTA_PROJECT_ID
-        assert credentials.scopes is None
-        assert credentials.default_scopes == SCOPES
-
-    @mock.patch(
-        "google.auth.metrics.token_request_access_token_impersonate",
-        return_value=IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
-    )
-    @mock.patch(
-        "google.auth.metrics.python_and_auth_lib_version",
-        return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
-    )
-    @mock.patch("google.auth._helpers.utcnow")
-    def test_refresh_success_with_impersonation_ignore_default_scopes(
-        self, utcnow, mock_metrics_header_value, mock_auth_lib_value
-    ):
-        utcnow.return_value = datetime.datetime.strptime(
-            self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
-        )
-        expire_time = (
-            _helpers.utcnow().replace(microsecond=0) + datetime.timedelta(seconds=3600)
-        ).isoformat("T") + "Z"
-        expected_subject_token = self.make_serialized_aws_signed_request(
-            aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
-        )
-        token_headers = {
-            "Content-Type": "application/x-www-form-urlencoded",
-            "Authorization": "Basic " + BASIC_AUTH_ENCODING,
-            "x-goog-api-client": "gl-python/3.7 auth/1.1 google-byoid-sdk sa-impersonation/true config-lifetime/false source/aws",
-        }
-        token_request_data = {
-            "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
-            "audience": AUDIENCE,
-            "requested_token_type": "urn:ietf:params:oauth:token-type:access_token",
-            "scope": "https://www.googleapis.com/auth/iam",
-            "subject_token": expected_subject_token,
-            "subject_token_type": SUBJECT_TOKEN_TYPE,
-        }
-        # Service account impersonation request/response.
-        impersonation_response = {
-            "accessToken": "SA_ACCESS_TOKEN",
-            "expireTime": expire_time,
-        }
-        impersonation_headers = {
-            "Content-Type": "application/json",
-            "authorization": "Bearer {}".format(self.SUCCESS_RESPONSE["access_token"]),
-            "x-goog-user-project": QUOTA_PROJECT_ID,
-            "x-goog-api-client": IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
-            # TODO(negarb): Uncomment and update when trust boundary is supported
-            # for external account credentials.
-            # "x-allowed-locations": "0x0",
-        }
-        impersonation_request_data = {
-            "delegates": None,
-            "scope": SCOPES,
-            "lifetime": "3600s",
-        }
-        request = self.make_mock_request(
-            region_status=http_client.OK,
-            region_name=self.AWS_REGION,
-            role_status=http_client.OK,
-            role_name=self.AWS_ROLE,
-            security_credentials_status=http_client.OK,
-            security_credentials_data=self.AWS_SECURITY_CREDENTIALS_RESPONSE,
-            token_status=http_client.OK,
-            token_data=self.SUCCESS_RESPONSE,
-            impersonation_status=http_client.OK,
-            impersonation_data=impersonation_response,
-        )
-        credentials = self.make_credentials(
-            client_id=CLIENT_ID,
-            client_secret=CLIENT_SECRET,
-            credential_source=self.CREDENTIAL_SOURCE,
-            service_account_impersonation_url=SERVICE_ACCOUNT_IMPERSONATION_URL,
-            quota_project_id=QUOTA_PROJECT_ID,
-            scopes=SCOPES,
-            # Default scopes should be ignored.
-            default_scopes=["ignored"],
-        )
-
-        credentials.refresh(request)
-
-        assert len(request.call_args_list) == 5
-        # Fourth request should be sent to GCP STS endpoint.
-        self.assert_token_request_kwargs(
-            request.call_args_list[3][1], token_headers, token_request_data
-        )
-        # Fifth request should be sent to iamcredentials endpoint for service
-        # account impersonation.
-        self.assert_impersonation_request_kwargs(
-            request.call_args_list[4][1],
-            impersonation_headers,
-            impersonation_request_data,
-        )
-        assert credentials.token == impersonation_response["accessToken"]
-        assert credentials.quota_project_id == QUOTA_PROJECT_ID
-        assert credentials.scopes == SCOPES
-        assert credentials.default_scopes == ["ignored"]
-
-    @mock.patch(
-        "google.auth.metrics.token_request_access_token_impersonate",
-        return_value=IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
-    )
-    @mock.patch(
-        "google.auth.metrics.python_and_auth_lib_version",
-        return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
-    )
-    @mock.patch("google.auth._helpers.utcnow")
-    def test_refresh_success_with_impersonation_use_default_scopes(
-        self, utcnow, mock_metrics_header_value, mock_auth_lib_value
-    ):
-        utcnow.return_value = datetime.datetime.strptime(
-            self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
-        )
-        expire_time = (
-            _helpers.utcnow().replace(microsecond=0) + datetime.timedelta(seconds=3600)
-        ).isoformat("T") + "Z"
-        expected_subject_token = self.make_serialized_aws_signed_request(
-            aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
-        )
-        token_headers = {
-            "Content-Type": "application/x-www-form-urlencoded",
-            "Authorization": "Basic " + BASIC_AUTH_ENCODING,
-            "x-goog-api-client": "gl-python/3.7 auth/1.1 google-byoid-sdk sa-impersonation/true config-lifetime/false source/aws",
-        }
-        token_request_data = {
-            "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
-            "audience": AUDIENCE,
-            "requested_token_type": "urn:ietf:params:oauth:token-type:access_token",
-            "scope": "https://www.googleapis.com/auth/iam",
-            "subject_token": expected_subject_token,
-            "subject_token_type": SUBJECT_TOKEN_TYPE,
-        }
-        # Service account impersonation request/response.
-        impersonation_response = {
-            "accessToken": "SA_ACCESS_TOKEN",
-            "expireTime": expire_time,
-        }
-        impersonation_headers = {
-            "Content-Type": "application/json",
-            "authorization": "Bearer {}".format(self.SUCCESS_RESPONSE["access_token"]),
-            "x-goog-user-project": QUOTA_PROJECT_ID,
-            "x-goog-api-client": IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
-            # "x-allowed-locations": "0x0",
-        }
-        impersonation_request_data = {
-            "delegates": None,
-            "scope": SCOPES,
-            "lifetime": "3600s",
-        }
-        request = self.make_mock_request(
-            region_status=http_client.OK,
-            region_name=self.AWS_REGION,
-            role_status=http_client.OK,
-            role_name=self.AWS_ROLE,
-            security_credentials_status=http_client.OK,
-            security_credentials_data=self.AWS_SECURITY_CREDENTIALS_RESPONSE,
-            token_status=http_client.OK,
-            token_data=self.SUCCESS_RESPONSE,
-            impersonation_status=http_client.OK,
-            impersonation_data=impersonation_response,
-        )
-        credentials = self.make_credentials(
-            client_id=CLIENT_ID,
-            client_secret=CLIENT_SECRET,
-            credential_source=self.CREDENTIAL_SOURCE,
-            service_account_impersonation_url=SERVICE_ACCOUNT_IMPERSONATION_URL,
-            quota_project_id=QUOTA_PROJECT_ID,
-            scopes=None,
-            # Default scopes should be used since user specified scopes are none.
-            default_scopes=SCOPES,
-        )
-
-        credentials.refresh(request)
-
-        assert len(request.call_args_list) == 5
-        # Fourth request should be sent to GCP STS endpoint.
-        self.assert_token_request_kwargs(
-            request.call_args_list[3][1], token_headers, token_request_data
-        )
-        # Fifth request should be sent to iamcredentials endpoint for service
-        # account impersonation.
-        self.assert_impersonation_request_kwargs(
-            request.call_args_list[4][1],
-            impersonation_headers,
-            impersonation_request_data,
-        )
-        assert credentials.token == impersonation_response["accessToken"]
-        assert credentials.quota_project_id == QUOTA_PROJECT_ID
-        assert credentials.scopes is None
-        assert credentials.default_scopes == SCOPES
-
-    def test_refresh_with_retrieve_subject_token_error(self):
-        request = self.make_mock_request(region_status=http_client.BAD_REQUEST)
-        credentials = self.make_credentials(credential_source=self.CREDENTIAL_SOURCE)
-
-        with pytest.raises(exceptions.RefreshError) as excinfo:
-            credentials.refresh(request)
-
-        assert excinfo.match(r"Unable to retrieve AWS region")
-
     @mock.patch("google.auth._helpers.utcnow")
     def test_retrieve_subject_token_success_with_supplier(self, utcnow):
         utcnow.return_value = datetime.datetime.strptime(
@@ -2256,207 +1985,3 @@ class TestCredentials(object):
         assert subject_token == self.make_serialized_aws_signed_request(
             aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
         )
-
-    @mock.patch("google.auth._helpers.utcnow")
-    def test_retrieve_subject_token_success_with_supplier_correct_context(self, utcnow):
-        utcnow.return_value = datetime.datetime.strptime(
-            self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
-        )
-        request = self.make_mock_request()
-        expected_context = external_account.SupplierContext(
-            SUBJECT_TOKEN_TYPE, AUDIENCE
-        )
-
-        security_credentials = aws.AwsSecurityCredentials(
-            ACCESS_KEY_ID, SECRET_ACCESS_KEY
-        )
-        supplier = TestAwsSecurityCredentialsSupplier(
-            security_credentials=security_credentials,
-            region=self.AWS_REGION,
-            expected_context=expected_context,
-        )
-
-        credentials = self.make_credentials(aws_security_credentials_supplier=supplier)
-
-        credentials.retrieve_subject_token(request)
-
-    def test_retrieve_subject_token_error_with_supplier(self):
-        request = self.make_mock_request()
-        expected_exception = exceptions.RefreshError("Test error")
-        supplier = TestAwsSecurityCredentialsSupplier(
-            region=self.AWS_REGION, credentials_exception=expected_exception
-        )
-
-        credentials = self.make_credentials(aws_security_credentials_supplier=supplier)
-
-        with pytest.raises(exceptions.RefreshError) as excinfo:
-            credentials.refresh(request)
-
-        assert excinfo.match(r"Test error")
-
-    def test_retrieve_subject_token_error_with_supplier_region(self):
-        request = self.make_mock_request()
-        expected_exception = exceptions.RefreshError("Test error")
-        security_credentials = aws.AwsSecurityCredentials(
-            ACCESS_KEY_ID, SECRET_ACCESS_KEY
-        )
-        supplier = TestAwsSecurityCredentialsSupplier(
-            security_credentials=security_credentials,
-            region_exception=expected_exception,
-        )
-
-        credentials = self.make_credentials(aws_security_credentials_supplier=supplier)
-
-        with pytest.raises(exceptions.RefreshError) as excinfo:
-            credentials.refresh(request)
-
-        assert excinfo.match(r"Test error")
-
-    @mock.patch(
-        "google.auth.metrics.python_and_auth_lib_version",
-        return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
-    )
-    @mock.patch("google.auth._helpers.utcnow")
-    def test_refresh_success_with_supplier_with_impersonation(
-        self, utcnow, mock_auth_lib_value
-    ):
-        utcnow.return_value = datetime.datetime.strptime(
-            self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
-        )
-        expire_time = (
-            _helpers.utcnow().replace(microsecond=0) + datetime.timedelta(seconds=3600)
-        ).isoformat("T") + "Z"
-        expected_subject_token = self.make_serialized_aws_signed_request(
-            aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
-        )
-        token_headers = {
-            "Content-Type": "application/x-www-form-urlencoded",
-            "Authorization": "Basic " + BASIC_AUTH_ENCODING,
-            "x-goog-api-client": "gl-python/3.7 auth/1.1 google-byoid-sdk sa-impersonation/true config-lifetime/false source/programmatic",
-        }
-        token_request_data = {
-            "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
-            "audience": AUDIENCE,
-            "requested_token_type": "urn:ietf:params:oauth:token-type:access_token",
-            "scope": "https://www.googleapis.com/auth/iam",
-            "subject_token": expected_subject_token,
-            "subject_token_type": SUBJECT_TOKEN_TYPE,
-        }
-        # Service account impersonation request/response.
-        impersonation_response = {
-            "accessToken": "SA_ACCESS_TOKEN",
-            "expireTime": expire_time,
-        }
-        impersonation_headers = {
-            "Content-Type": "application/json",
-            "authorization": "Bearer {}".format(self.SUCCESS_RESPONSE["access_token"]),
-            "x-goog-user-project": QUOTA_PROJECT_ID,
-            "x-goog-api-client": IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
-            # "x-allowed-locations": "0x0",
-        }
-        impersonation_request_data = {
-            "delegates": None,
-            "scope": SCOPES,
-            "lifetime": "3600s",
-        }
-        request = self.make_mock_request(
-            token_status=http_client.OK,
-            token_data=self.SUCCESS_RESPONSE,
-            impersonation_status=http_client.OK,
-            impersonation_data=impersonation_response,
-        )
-
-        supplier = TestAwsSecurityCredentialsSupplier(
-            security_credentials=aws.AwsSecurityCredentials(
-                ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN
-            ),
-            region=self.AWS_REGION,
-        )
-
-        credentials = self.make_credentials(
-            client_id=CLIENT_ID,
-            client_secret=CLIENT_SECRET,
-            aws_security_credentials_supplier=supplier,
-            service_account_impersonation_url=SERVICE_ACCOUNT_IMPERSONATION_URL,
-            quota_project_id=QUOTA_PROJECT_ID,
-            scopes=SCOPES,
-            # Default scopes should be ignored.
-            default_scopes=["ignored"],
-        )
-
-        credentials.refresh(request)
-
-        assert len(request.call_args_list) == 2
-        # First request should be sent to GCP STS endpoint.
-        self.assert_token_request_kwargs(
-            request.call_args_list[0][1], token_headers, token_request_data
-        )
-        # Second request should be sent to iamcredentials endpoint for service
-        # account impersonation.
-        self.assert_impersonation_request_kwargs(
-            request.call_args_list[1][1],
-            impersonation_headers,
-            impersonation_request_data,
-        )
-        assert credentials.token == impersonation_response["accessToken"]
-        assert credentials.quota_project_id == QUOTA_PROJECT_ID
-        assert credentials.scopes == SCOPES
-        assert credentials.default_scopes == ["ignored"]
-
-    @mock.patch(
-        "google.auth.metrics.python_and_auth_lib_version",
-        return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
-    )
-    @mock.patch("google.auth._helpers.utcnow")
-    def test_refresh_success_with_supplier(self, utcnow, mock_auth_lib_value):
-        utcnow.return_value = datetime.datetime.strptime(
-            self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
-        )
-        expected_subject_token = self.make_serialized_aws_signed_request(
-            aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
-        )
-        token_headers = {
-            "Content-Type": "application/x-www-form-urlencoded",
-            "Authorization": "Basic " + BASIC_AUTH_ENCODING,
-            "x-goog-api-client": "gl-python/3.7 auth/1.1 google-byoid-sdk sa-impersonation/false config-lifetime/false source/programmatic",
-        }
-        token_request_data = {
-            "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
-            "audience": AUDIENCE,
-            "requested_token_type": "urn:ietf:params:oauth:token-type:access_token",
-            "scope": " ".join(SCOPES),
-            "subject_token": expected_subject_token,
-            "subject_token_type": SUBJECT_TOKEN_TYPE,
-        }
-        request = self.make_mock_request(
-            token_status=http_client.OK, token_data=self.SUCCESS_RESPONSE
-        )
-
-        supplier = TestAwsSecurityCredentialsSupplier(
-            security_credentials=aws.AwsSecurityCredentials(
-                ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN
-            ),
-            region=self.AWS_REGION,
-        )
-
-        credentials = self.make_credentials(
-            client_id=CLIENT_ID,
-            client_secret=CLIENT_SECRET,
-            aws_security_credentials_supplier=supplier,
-            quota_project_id=QUOTA_PROJECT_ID,
-            scopes=SCOPES,
-            # Default scopes should be ignored.
-            default_scopes=["ignored"],
-        )
-
-        credentials.refresh(request)
-
-        assert len(request.call_args_list) == 1
-        # First request should be sent to GCP STS endpoint.
-        self.assert_token_request_kwargs(
-            request.call_args_list[0][1], token_headers, token_request_data
-        )
-        assert credentials.token == self.SUCCESS_RESPONSE["access_token"]
-        assert credentials.quota_project_id == QUOTA_PROJECT_ID
-        assert credentials.scopes == SCOPES
-        assert credentials.default_scopes == ["ignored"]
