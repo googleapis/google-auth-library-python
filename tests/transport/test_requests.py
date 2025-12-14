@@ -724,6 +724,43 @@ class TestAuthorizedSession(object):
             mock_check_params.assert_called_once()
             credentials.refresh.assert_not_called()
 
+    def test_cert_rotation_logic_skipped_on_other_refresh_status_codes(self):
+        """
+        Tests that the code can handle a refresh triggered by a status code
+        other than 401 (UNAUTHORIZED). This covers the 'else' branch of the
+        'if response.status_code == http_client.UNAUTHORIZED' check
+        """
+        credentials = mock.Mock(wraps=CredentialsStub())
+        # Configure the session to treat 503 (Service Unavailable) as a refreshable error
+        custom_refresh_codes = [http_client.SERVICE_UNAVAILABLE]
+
+        # Return 503 first, then 200
+        adapter = AdapterStub(
+            [
+                make_response(status=http_client.SERVICE_UNAVAILABLE),
+                make_response(status=http_client.OK),
+            ]
+        )
+
+        authed_session = google.auth.transport.requests.AuthorizedSession(
+            credentials, refresh_status_codes=custom_refresh_codes
+        )
+        authed_session.mount(self.TEST_URL, adapter)
+
+        # Enable mTLS to prove it is skipped despite being enabled
+        authed_session._is_mtls = True
+
+        with mock.patch(
+            "google.auth.transport.requests._mtls_helper", autospec=True
+        ) as mock_helper:
+            authed_session.request("GET", self.TEST_URL)
+
+            # Assert refresh happened (Outer Check was True)
+            assert credentials.refresh.called
+
+            # Assert mTLS check logic was SKIPPED (Inner Check was False)
+            assert not mock_helper.check_parameters_for_unauthorized_response.called
+
 
 class TestMutualTlsOffloadAdapter(object):
     @mock.patch.object(requests.adapters.HTTPAdapter, "init_poolmanager")

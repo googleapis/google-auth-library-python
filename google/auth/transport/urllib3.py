@@ -16,6 +16,7 @@
 
 from __future__ import absolute_import
 
+import http.client as http_client
 import logging
 import warnings
 
@@ -413,7 +414,7 @@ class AuthorizedHttp(RequestMethods):  # type: ignore
             response.status in self._refresh_status_codes
             and _credential_refresh_attempt < self._max_refresh_attempts
         ):
-            if response.status == 401:
+            if response.status == http_client.UNAUTHORIZED:
                 if use_mtls:
                     call_cert_bytes, call_key_bytes, cached_fingerprint, current_cert_fingerprint = _mtls_helper.check_parameters_for_unauthorized_response(
                         self._cached_cert
@@ -476,15 +477,6 @@ class AuthorizedHttp(RequestMethods):  # type: ignore
     def __del__(self):
         if hasattr(self, "http") and self.http is not None:
             self.http.clear()
-
-    @property
-    def is_mtls(self):
-        """Indicates if the created SSL channel is mutual TLS.
-
-         Returns:
-            True if the channel is mutual TLS and False otherwise.
-        """
-        return self._is_mtls
 
     @property
     def headers(self):

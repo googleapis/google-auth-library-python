@@ -17,6 +17,7 @@
 from __future__ import absolute_import
 
 import functools
+import http.client as http_client
 import logging
 import numbers
 import time
@@ -558,7 +559,7 @@ class AuthorizedSession(requests.Session):
             and _credential_refresh_attempt < self._max_refresh_attempts
         ):
             # Handle unauthorized permission error(401 status code)
-            if response.status_code == 401:
+            if response.status_code == http_client.UNAUTHORIZED:
                 if self.is_mtls:
                     call_cert_bytes, call_key_bytes, cached_fingerprint, current_cert_fingerprint = _mtls_helper.check_parameters_for_unauthorized_response(
                         self._cached_cert
