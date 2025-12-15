@@ -811,6 +811,7 @@ class TestCheckUseClientCert(object):
     def test_no_env_vars_set(self):
         assert _mtls_helper.check_use_client_cert() is False
 
+
 class TestMtlsHelper:
     @mock.patch("google.auth.transport._mtls_helper._agent_identity_utils")
     def test_check_parameters_for_unauthorized_response_with_cached_cert(
