@@ -20,10 +20,8 @@ import nox
 
 CURRENT_DIRECTORY = pathlib.Path(__file__).parent.absolute()
 
-# https://github.com/psf/black/issues/2964, pin click version to 8.0.4 to
-# avoid incompatiblity with black.
-CLICK_VERSION = "click==8.0.4"
-BLACK_VERSION = "black==19.3b0"
+CLICK_VERSION = "click"
+BLACK_VERSION = "black==23.7.0"
 BLACK_PATHS = [
     "google",
     "tests",
