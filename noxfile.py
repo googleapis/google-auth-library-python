@@ -118,6 +118,7 @@ def unit(session):
     session.run(
         "pytest",
         f"--junitxml=unit_{session.python}_sponge_log.xml",
+        "--cov-append",
         "--cov=google.auth",
         "--cov=google.oauth2",
         "--cov=tests",
