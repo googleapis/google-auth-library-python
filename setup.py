@@ -73,7 +73,7 @@ testing_extra_require = [
 ]
 
 extras = {
-    "cryptography": cryptography_base_require,
+    "cryptography": [],  # cryptography is required, but keep as extra for backwards compatibility
     "aiohttp": aiohttp_extra_require,
     "enterprise_cert": enterprise_cert_extra_require,
     "pyopenssl": pyopenssl_extra_require,
