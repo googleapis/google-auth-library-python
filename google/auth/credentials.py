@@ -303,7 +303,7 @@ class CredentialsWithTrustBoundary(Credentials):
             google.auth.exceptions.RefreshError: If the credentials could
                 not be refreshed.
         """
-        raise NotImplementedError("_perfrom_refresh_token must be implemented")
+        raise NotImplementedError("_perform_refresh_token must be implemented")
 
     def with_trust_boundary(self, trust_boundary):
         """Returns a copy of these credentials with a modified trust boundary.
