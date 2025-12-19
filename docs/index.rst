@@ -22,6 +22,7 @@ also provides integration with several HTTP libraries.
 - Support for :mod:`Google App Engine standard credentials <google.auth.app_engine>`.
 - Support for :mod:`Identity Pool credentials <google.auth.identity_pool>`.
 - Support for :mod:`AWS credentials <google.auth.aws>`.
+- Support for :mod:`Downscoping with Credential Access Boundaries credentials <google.auth.downscoped>`.
 - Support for various transports, including
   :mod:`Requests <google.auth.transport.requests>`,
   :mod:`urllib3 <google.auth.transport.urllib3>`, and
@@ -61,7 +62,7 @@ google-auth is made available under the Apache License, Version 2.0. For more
 details, see `LICENSE`_
 
 .. _LICENSE:
-    https://github.com/GoogleCloudPlatform/google-auth-library-python/blob/master/LICENSE
+    https://github.com/GoogleCloudPlatform/google-auth-library-python/blob/main/LICENSE
 
 Contributing
 ------------
@@ -70,4 +71,4 @@ We happily welcome contributions, please see our `contributing`_ documentation
 for details.
 
 .. _contributing:
-    https://github.com/GoogleCloudPlatform/google-auth-library-python/blob/master/CONTRIBUTING.rst
+    https://github.com/GoogleCloudPlatform/google-auth-library-python/blob/main/CONTRIBUTING.rst

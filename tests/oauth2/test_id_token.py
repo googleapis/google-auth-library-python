@@ -16,18 +16,25 @@ import json
 import os
 
 import mock
-import pytest
+import pytest  # type: ignore
 
 from google.auth import environment_vars
 from google.auth import exceptions
+from google.auth import impersonated_credentials
 from google.auth import transport
-import google.auth.compute_engine._metadata
 from google.oauth2 import id_token
 from google.oauth2 import service_account
 
 SERVICE_ACCOUNT_FILE = os.path.join(
     os.path.dirname(__file__), "../data/service_account.json"
 )
+
+IMPERSONATED_SERVICE_ACCOUNT_FILE = os.path.join(
+    os.path.dirname(__file__),
+    "../data/impersonated_service_account_authorized_user_source.json",
+)
+
+ID_TOKEN_AUDIENCE = "https://pubsub.googleapis.com"
 
 
 def make_request(status, data=None):
@@ -71,7 +78,33 @@ def test_verify_token(_fetch_certs, decode):
         mock.sentinel.request, id_token._GOOGLE_OAUTH2_CERTS_URL
     )
     decode.assert_called_once_with(
-        mock.sentinel.token, certs=_fetch_certs.return_value, audience=None
+        mock.sentinel.token,
+        certs=_fetch_certs.return_value,
+        audience=None,
+        clock_skew_in_seconds=0,
+    )
+
+
+@mock.patch("google.oauth2.id_token._fetch_certs", autospec=True)
+@mock.patch("jwt.PyJWKClient", autospec=True)
+@mock.patch("jwt.decode", autospec=True)
+def test_verify_token_jwk(decode, py_jwk, _fetch_certs):
+    certs_url = "abc123"
+    data = {"keys": [{"alg": "RS256"}]}
+    _fetch_certs.return_value = data
+    result = id_token.verify_token(
+        mock.sentinel.token, mock.sentinel.request, certs_url=certs_url
+    )
+    assert result == decode.return_value
+    py_jwk.assert_called_once_with(certs_url)
+    signing_key = py_jwk.return_value.get_signing_key_from_jwt
+    _fetch_certs.assert_called_once_with(mock.sentinel.request, certs_url)
+    signing_key.assert_called_once_with(mock.sentinel.token)
+    decode.assert_called_once_with(
+        mock.sentinel.token,
+        signing_key.return_value.key,
+        algorithms=[signing_key.return_value.algorithm_name],
+        audience=None,
     )
 
 
@@ -91,6 +124,28 @@ def test_verify_token_args(_fetch_certs, decode):
         mock.sentinel.token,
         certs=_fetch_certs.return_value,
         audience=mock.sentinel.audience,
+        clock_skew_in_seconds=0,
+    )
+
+
+@mock.patch("google.auth.jwt.decode", autospec=True)
+@mock.patch("google.oauth2.id_token._fetch_certs", autospec=True)
+def test_verify_token_clock_skew(_fetch_certs, decode):
+    result = id_token.verify_token(
+        mock.sentinel.token,
+        mock.sentinel.request,
+        audience=mock.sentinel.audience,
+        certs_url=mock.sentinel.certs_url,
+        clock_skew_in_seconds=10,
+    )
+
+    assert result == decode.return_value
+    _fetch_certs.assert_called_once_with(mock.sentinel.request, mock.sentinel.certs_url)
+    decode.assert_called_once_with(
+        mock.sentinel.token,
+        certs=_fetch_certs.return_value,
+        audience=mock.sentinel.audience,
+        clock_skew_in_seconds=10,
     )
 
 
@@ -107,6 +162,27 @@ def test_verify_oauth2_token(verify_token):
         mock.sentinel.request,
         audience=mock.sentinel.audience,
         certs_url=id_token._GOOGLE_OAUTH2_CERTS_URL,
+        clock_skew_in_seconds=0,
+    )
+
+
+@mock.patch("google.oauth2.id_token.verify_token", autospec=True)
+def test_verify_oauth2_token_clock_skew(verify_token):
+    verify_token.return_value = {"iss": "accounts.google.com"}
+    result = id_token.verify_oauth2_token(
+        mock.sentinel.token,
+        mock.sentinel.request,
+        audience=mock.sentinel.audience,
+        clock_skew_in_seconds=10,
+    )
+
+    assert result == verify_token.return_value
+    verify_token.assert_called_once_with(
+        mock.sentinel.token,
+        mock.sentinel.request,
+        audience=mock.sentinel.audience,
+        certs_url=id_token._GOOGLE_OAUTH2_CERTS_URL,
+        clock_skew_in_seconds=10,
     )
 
 
@@ -132,40 +208,76 @@ def test_verify_firebase_token(verify_token):
         mock.sentinel.request,
         audience=mock.sentinel.audience,
         certs_url=id_token._GOOGLE_APIS_CERTS_URL,
+        clock_skew_in_seconds=0,
     )
 
 
-def test_fetch_id_token_from_metadata_server(monkeypatch):
+@mock.patch("google.oauth2.id_token.verify_token", autospec=True)
+def test_verify_firebase_token_clock_skew(verify_token):
+    result = id_token.verify_firebase_token(
+        mock.sentinel.token,
+        mock.sentinel.request,
+        audience=mock.sentinel.audience,
+        clock_skew_in_seconds=10,
+    )
+
+    assert result == verify_token.return_value
+    verify_token.assert_called_once_with(
+        mock.sentinel.token,
+        mock.sentinel.request,
+        audience=mock.sentinel.audience,
+        certs_url=id_token._GOOGLE_APIS_CERTS_URL,
+        clock_skew_in_seconds=10,
+    )
+
+
+def test_fetch_id_token_credentials_optional_request(monkeypatch):
     monkeypatch.delenv(environment_vars.CREDENTIALS, raising=False)
 
-    def mock_init(self, request, audience, use_metadata_identity_endpoint):
-        assert use_metadata_identity_endpoint
-        self.token = "id_token"
+    # Test a request object is created if not provided
+    with mock.patch("google.auth.compute_engine._metadata.ping", return_value=True):
+        with mock.patch(
+            "google.auth.compute_engine.IDTokenCredentials.__init__", return_value=None
+        ):
+            with mock.patch(
+                "google.auth.transport.requests.Request.__init__", return_value=None
+            ) as mock_request:
+                id_token.fetch_id_token_credentials(ID_TOKEN_AUDIENCE)
+            mock_request.assert_called()
+
+
+def test_fetch_id_token_credentials_from_metadata_server(monkeypatch):
+    monkeypatch.delenv(environment_vars.CREDENTIALS, raising=False)
+
+    mock_req = mock.Mock()
 
     with mock.patch("google.auth.compute_engine._metadata.ping", return_value=True):
-        with mock.patch.multiple(
-            google.auth.compute_engine.IDTokenCredentials,
-            __init__=mock_init,
-            refresh=mock.Mock(),
-        ):
-            request = mock.Mock()
-            token = id_token.fetch_id_token(request, "https://pubsub.googleapis.com")
-            assert token == "id_token"
+        with mock.patch(
+            "google.auth.compute_engine.IDTokenCredentials.__init__", return_value=None
+        ) as mock_init:
+            id_token.fetch_id_token_credentials(ID_TOKEN_AUDIENCE, request=mock_req)
+        mock_init.assert_called_once_with(
+            mock_req, ID_TOKEN_AUDIENCE, use_metadata_identity_endpoint=True
+        )
 
 
-def test_fetch_id_token_from_explicit_cred_json_file(monkeypatch):
+def test_fetch_id_token_credentials_from_explicit_cred_json_file(monkeypatch):
     monkeypatch.setenv(environment_vars.CREDENTIALS, SERVICE_ACCOUNT_FILE)
 
-    def mock_refresh(self, request):
-        self.token = "id_token"
-
-    with mock.patch.object(service_account.IDTokenCredentials, "refresh", mock_refresh):
-        request = mock.Mock()
-        token = id_token.fetch_id_token(request, "https://pubsub.googleapis.com")
-        assert token == "id_token"
+    cred = id_token.fetch_id_token_credentials(ID_TOKEN_AUDIENCE)
+    assert isinstance(cred, service_account.IDTokenCredentials)
+    assert cred._target_audience == ID_TOKEN_AUDIENCE
 
 
-def test_fetch_id_token_no_cred_exists(monkeypatch):
+def test_fetch_id_token_credentials_from_impersonated_cred_json_file(monkeypatch):
+    monkeypatch.setenv(environment_vars.CREDENTIALS, IMPERSONATED_SERVICE_ACCOUNT_FILE)
+
+    cred = id_token.fetch_id_token_credentials(ID_TOKEN_AUDIENCE)
+    assert isinstance(cred, impersonated_credentials.IDTokenCredentials)
+    assert cred._target_audience == ID_TOKEN_AUDIENCE
+
+
+def test_fetch_id_token_credentials_no_cred_exists(monkeypatch):
     monkeypatch.delenv(environment_vars.CREDENTIALS, raising=False)
 
     with mock.patch(
@@ -173,22 +285,20 @@ def test_fetch_id_token_no_cred_exists(monkeypatch):
         side_effect=exceptions.TransportError(),
     ):
         with pytest.raises(exceptions.DefaultCredentialsError) as excinfo:
-            request = mock.Mock()
-            id_token.fetch_id_token(request, "https://pubsub.googleapis.com")
+            id_token.fetch_id_token_credentials(ID_TOKEN_AUDIENCE)
         assert excinfo.match(
             r"Neither metadata server or valid service account credentials are found."
         )
 
     with mock.patch("google.auth.compute_engine._metadata.ping", return_value=False):
         with pytest.raises(exceptions.DefaultCredentialsError) as excinfo:
-            request = mock.Mock()
-            id_token.fetch_id_token(request, "https://pubsub.googleapis.com")
+            id_token.fetch_id_token_credentials(ID_TOKEN_AUDIENCE)
         assert excinfo.match(
             r"Neither metadata server or valid service account credentials are found."
         )
 
 
-def test_fetch_id_token_invalid_cred_file_type(monkeypatch):
+def test_fetch_id_token_credentials_invalid_cred_file_type(monkeypatch):
     user_credentials_file = os.path.join(
         os.path.dirname(__file__), "../data/authorized_user.json"
     )
@@ -196,32 +306,44 @@ def test_fetch_id_token_invalid_cred_file_type(monkeypatch):
 
     with mock.patch("google.auth.compute_engine._metadata.ping", return_value=False):
         with pytest.raises(exceptions.DefaultCredentialsError) as excinfo:
-            request = mock.Mock()
-            id_token.fetch_id_token(request, "https://pubsub.googleapis.com")
+            id_token.fetch_id_token_credentials(ID_TOKEN_AUDIENCE)
         assert excinfo.match(
             r"Neither metadata server or valid service account credentials are found."
         )
 
 
-def test_fetch_id_token_invalid_json(monkeypatch):
+def test_fetch_id_token_credentials_invalid_json(monkeypatch):
     not_json_file = os.path.join(os.path.dirname(__file__), "../data/public_cert.pem")
     monkeypatch.setenv(environment_vars.CREDENTIALS, not_json_file)
 
     with pytest.raises(exceptions.DefaultCredentialsError) as excinfo:
-        request = mock.Mock()
-        id_token.fetch_id_token(request, "https://pubsub.googleapis.com")
+        id_token.fetch_id_token_credentials(ID_TOKEN_AUDIENCE)
     assert excinfo.match(
         r"GOOGLE_APPLICATION_CREDENTIALS is not valid service account credentials."
     )
 
 
-def test_fetch_id_token_invalid_cred_path(monkeypatch):
+def test_fetch_id_token_credentials_invalid_cred_path(monkeypatch):
     not_json_file = os.path.join(os.path.dirname(__file__), "../data/not_exists.json")
     monkeypatch.setenv(environment_vars.CREDENTIALS, not_json_file)
 
     with pytest.raises(exceptions.DefaultCredentialsError) as excinfo:
-        request = mock.Mock()
-        id_token.fetch_id_token(request, "https://pubsub.googleapis.com")
+        id_token.fetch_id_token_credentials(ID_TOKEN_AUDIENCE)
     assert excinfo.match(
         r"GOOGLE_APPLICATION_CREDENTIALS path is either not found or invalid."
     )
+
+
+def test_fetch_id_token(monkeypatch):
+    mock_cred = mock.MagicMock()
+    mock_cred.token = "token"
+
+    mock_req = mock.Mock()
+
+    with mock.patch(
+        "google.oauth2.id_token.fetch_id_token_credentials", return_value=mock_cred
+    ) as mock_fetch:
+        token = id_token.fetch_id_token(mock_req, ID_TOKEN_AUDIENCE)
+    mock_fetch.assert_called_once_with(ID_TOKEN_AUDIENCE, request=mock_req)
+    mock_cred.refresh.assert_called_once_with(mock_req)
+    assert token == "token"

@@ -44,14 +44,13 @@ try:
     from collections.abc import Mapping
 # Python 2.7 compatibility
 except ImportError:  # pragma: NO COVER
-    from collections import Mapping
+    from collections import Mapping  # type: ignore
 import copy
 import datetime
 import json
+import urllib
 
 import cachetools
-import six
-from six.moves import urllib
 
 from google.auth import _helpers
 from google.auth import _service_account_info
@@ -60,17 +59,18 @@ from google.auth import exceptions
 import google.auth.credentials
 
 try:
-    from google.auth.crypt import es256
+    from google.auth.crypt import es
 except ImportError:  # pragma: NO COVER
-    es256 = None
+    es = None  # type: ignore
 
 _DEFAULT_TOKEN_LIFETIME_SECS = 3600  # 1 hour in seconds
 _DEFAULT_MAX_CACHE_SIZE = 10
 _ALGORITHM_TO_VERIFIER_CLASS = {"RS256": crypt.RSAVerifier}
-_CRYPTOGRAPHY_BASED_ALGORITHMS = frozenset(["ES256"])
+_CRYPTOGRAPHY_BASED_ALGORITHMS = frozenset(["ES256", "ES384"])
 
-if es256 is not None:  # pragma: NO COVER
-    _ALGORITHM_TO_VERIFIER_CLASS["ES256"] = es256.ES256Verifier
+if es is not None:  # pragma: NO COVER
+    _ALGORITHM_TO_VERIFIER_CLASS["ES256"] = es.EsVerifier  # type: ignore
+    _ALGORITHM_TO_VERIFIER_CLASS["ES384"] = es.EsVerifier  # type: ignore
 
 
 def encode(signer, payload, header=None, key_id=None):
@@ -96,8 +96,8 @@ def encode(signer, payload, header=None, key_id=None):
     header.update({"typ": "JWT"})
 
     if "alg" not in header:
-        if es256 is not None and isinstance(signer, es256.ES256Signer):
-            header.update({"alg": "ES256"})
+        if es is not None and isinstance(signer, es.EsSigner):
+            header.update({"alg": signer.algorithm})
         else:
             header.update({"alg": "RS256"})
 
@@ -122,8 +122,10 @@ def _decode_jwt_segment(encoded_section):
     try:
         return json.loads(section_bytes.decode("utf-8"))
     except ValueError as caught_exc:
-        new_exc = ValueError("Can't parse segment: {0}".format(section_bytes))
-        six.raise_from(new_exc, caught_exc)
+        new_exc = exceptions.MalformedError(
+            "Can't parse segment: {0}".format(section_bytes)
+        )
+        raise new_exc from caught_exc
 
 
 def _unverified_decode(token):
@@ -133,16 +135,18 @@ def _unverified_decode(token):
         token (Union[str, bytes]): The encoded JWT.
 
     Returns:
-        Tuple[str, str, str, str]: header, payload, signed_section, and
+        Tuple[Mapping, Mapping, str, str]: header, payload, signed_section, and
             signature.
 
     Raises:
-        ValueError: if there are an incorrect amount of segments in the token.
+        google.auth.exceptions.MalformedError: if there are an incorrect amount of segments in the token or segments of the wrong type.
     """
     token = _helpers.to_bytes(token)
 
     if token.count(b".") != 2:
-        raise ValueError("Wrong number of segments in token: {0}".format(token))
+        raise exceptions.MalformedError(
+            "Wrong number of segments in token: {0}".format(token)
+        )
 
     encoded_header, encoded_payload, signature = token.split(b".")
     signed_section = encoded_header + b"." + encoded_payload
@@ -151,6 +155,16 @@ def _unverified_decode(token):
     # Parse segments
     header = _decode_jwt_segment(encoded_header)
     payload = _decode_jwt_segment(encoded_payload)
+
+    if not isinstance(header, Mapping):
+        raise exceptions.MalformedError(
+            "Header segment should be a JSON object: {0}".format(encoded_header)
+        )
+
+    if not isinstance(payload, Mapping):
+        raise exceptions.MalformedError(
+            "Payload segment should be a JSON object: {0}".format(encoded_payload)
+        )
 
     return header, payload, signed_section, signature
 
@@ -172,41 +186,50 @@ def decode_header(token):
     return header
 
 
-def _verify_iat_and_exp(payload):
+def _verify_iat_and_exp(payload, clock_skew_in_seconds=0):
     """Verifies the ``iat`` (Issued At) and ``exp`` (Expires) claims in a token
     payload.
 
     Args:
         payload (Mapping[str, str]): The JWT payload.
+        clock_skew_in_seconds (int): The clock skew used for `iat` and `exp`
+            validation.
 
     Raises:
-        ValueError: if any checks failed.
+        google.auth.exceptions.InvalidValue: if value validation failed.
+        google.auth.exceptions.MalformedError: if schema validation failed.
     """
     now = _helpers.datetime_to_secs(_helpers.utcnow())
 
     # Make sure the iat and exp claims are present.
     for key in ("iat", "exp"):
         if key not in payload:
-            raise ValueError("Token does not contain required claim {}".format(key))
+            raise exceptions.MalformedError(
+                "Token does not contain required claim {}".format(key)
+            )
 
     # Make sure the token wasn't issued in the future.
     iat = payload["iat"]
     # Err on the side of accepting a token that is slightly early to account
     # for clock skew.
-    earliest = iat - _helpers.CLOCK_SKEW_SECS
+    earliest = iat - clock_skew_in_seconds
     if now < earliest:
-        raise ValueError("Token used too early, {} < {}".format(now, iat))
+        raise exceptions.InvalidValue(
+            "Token used too early, {} < {}. Check that your computer's clock is set correctly.".format(
+                now, iat
+            )
+        )
 
     # Make sure the token wasn't issued in the past.
     exp = payload["exp"]
     # Err on the side of accepting a token that is slightly out of date
     # to account for clow skew.
-    latest = exp + _helpers.CLOCK_SKEW_SECS
+    latest = exp + clock_skew_in_seconds
     if latest < now:
-        raise ValueError("Token expired, {} < {}".format(latest, now))
+        raise exceptions.InvalidValue("Token expired, {} < {}".format(latest, now))
 
 
-def decode(token, certs=None, verify=True, audience=None):
+def decode(token, certs=None, verify=True, audience=None, clock_skew_in_seconds=0):
     """Decode and verify a JWT.
 
     Args:
@@ -222,12 +245,15 @@ def decode(token, certs=None, verify=True, audience=None):
         audience (str or list): The audience claim, 'aud', that this JWT should
             contain. Or a list of audience claims. If None then the JWT's 'aud'
             parameter is not verified.
+        clock_skew_in_seconds (int): The clock skew used for `iat` and `exp`
+            validation.
 
     Returns:
         Mapping[str, str]: The deserialized JSON payload in the JWT.
 
     Raises:
-        ValueError: if any verification checks failed.
+        google.auth.exceptions.InvalidValue: if value validation failed.
+        google.auth.exceptions.MalformedError: if schema validation failed.
     """
     header, payload, signed_section, signature = _unverified_decode(token)
 
@@ -243,24 +269,23 @@ def decode(token, certs=None, verify=True, audience=None):
         verifier_cls = _ALGORITHM_TO_VERIFIER_CLASS[key_alg]
     except KeyError as exc:
         if key_alg in _CRYPTOGRAPHY_BASED_ALGORITHMS:
-            six.raise_from(
-                ValueError(
-                    "The key algorithm {} requires the cryptography package "
-                    "to be installed.".format(key_alg)
-                ),
-                exc,
-            )
+            raise exceptions.InvalidValue(
+                "The key algorithm {} requires the cryptography package to be installed.".format(
+                    key_alg
+                )
+            ) from exc
         else:
-            six.raise_from(
-                ValueError("Unsupported signature algorithm {}".format(key_alg)), exc
-            )
-
+            raise exceptions.InvalidValue(
+                "Unsupported signature algorithm {}".format(key_alg)
+            ) from exc
     # If certs is specified as a dictionary of key IDs to certificates, then
     # use the certificate identified by the key ID in the token header.
     if isinstance(certs, Mapping):
         if key_id:
             if key_id not in certs:
-                raise ValueError("Certificate for key id {} not found.".format(key_id))
+                raise exceptions.MalformedError(
+                    "Certificate for key id {} not found.".format(key_id)
+                )
             certs_to_check = [certs[key_id]]
         # If there's no key id in the header, check against all of the certs.
         else:
@@ -272,10 +297,10 @@ def decode(token, certs=None, verify=True, audience=None):
     if not crypt.verify_signature(
         signed_section, signature, certs_to_check, verifier_cls
     ):
-        raise ValueError("Could not verify token signature.")
+        raise exceptions.MalformedError("Could not verify token signature.")
 
     # Verify the issued at and created times in the payload.
-    _verify_iat_and_exp(payload)
+    _verify_iat_and_exp(payload, clock_skew_in_seconds)
 
     # Check audience.
     if audience is not None:
@@ -283,7 +308,7 @@ def decode(token, certs=None, verify=True, audience=None):
         if isinstance(audience, str):
             audience = [audience]
         if claim_audience not in audience:
-            raise ValueError(
+            raise exceptions.InvalidValue(
                 "Token has wrong audience {}, expected one of {}".format(
                     claim_audience, audience
                 )
@@ -395,7 +420,7 @@ class Credentials(
             google.auth.jwt.Credentials: The constructed credentials.
 
         Raises:
-            ValueError: If the info is not in the expected format.
+            google.auth.exceptions.MalformedError: If the info is not in the expected format.
         """
         kwargs.setdefault("subject", info["client_email"])
         kwargs.setdefault("issuer", info["client_email"])
@@ -414,7 +439,7 @@ class Credentials(
             google.auth.jwt.Credentials: The constructed credentials.
 
         Raises:
-            ValueError: If the info is not in the expected format.
+            google.auth.exceptions.MalformedError: If the info is not in the expected format.
         """
         signer = _service_account_info.from_dict(info, require=["client_email"])
         return cls._from_signer_and_info(signer, info, **kwargs)
@@ -549,15 +574,20 @@ class Credentials(
     def sign_bytes(self, message):
         return self._signer.sign(message)
 
-    @property
+    @property  # type: ignore
     @_helpers.copy_docstring(google.auth.credentials.Signing)
     def signer_email(self):
         return self._issuer
 
-    @property
+    @property  # type: ignore
     @_helpers.copy_docstring(google.auth.credentials.Signing)
     def signer(self):
         return self._signer
+
+    @property  # type: ignore
+    def additional_claims(self):
+        """Additional claims the JWT object was created with."""
+        return self._additional_claims
 
 
 class OnDemandCredentials(
@@ -632,7 +662,7 @@ class OnDemandCredentials(
             google.auth.jwt.OnDemandCredentials: The constructed credentials.
 
         Raises:
-            ValueError: If the info is not in the expected format.
+            google.auth.exceptions.MalformedError: If the info is not in the expected format.
         """
         kwargs.setdefault("subject", info["client_email"])
         kwargs.setdefault("issuer", info["client_email"])
@@ -651,7 +681,7 @@ class OnDemandCredentials(
             google.auth.jwt.OnDemandCredentials: The constructed credentials.
 
         Raises:
-            ValueError: If the info is not in the expected format.
+            google.auth.exceptions.MalformedError: If the info is not in the expected format.
         """
         signer = _service_account_info.from_dict(info, require=["client_email"])
         return cls._from_signer_and_info(signer, info, **kwargs)
@@ -730,7 +760,6 @@ class OnDemandCredentials(
 
     @_helpers.copy_docstring(google.auth.credentials.CredentialsWithQuotaProject)
     def with_quota_project(self, quota_project_id):
-
         return self.__class__(
             self._signer,
             issuer=self._issuer,
@@ -838,12 +867,12 @@ class OnDemandCredentials(
     def sign_bytes(self, message):
         return self._signer.sign(message)
 
-    @property
+    @property  # type: ignore
     @_helpers.copy_docstring(google.auth.credentials.Signing)
     def signer_email(self):
         return self._issuer
 
-    @property
+    @property  # type: ignore
     @_helpers.copy_docstring(google.auth.credentials.Signing)
     def signer(self):
         return self._signer

@@ -24,22 +24,6 @@ cd "${PROJECT_ROOT}"
 # Disable buffering, so that the logs stream through.
 export PYTHONUNBUFFERED=1
 
-# Debug: show build environment
-env | grep KOKORO
-
-# Setup service account credentials.
-export GOOGLE_APPLICATION_CREDENTIALS=${KOKORO_GFILE_DIR}/service-account.json
-
-# Setup project id.
-export PROJECT_ID=$(cat "${KOKORO_GFILE_DIR}/project-id.txt")
-
-# Activate gcloud with service account credentials	
-gcloud auth activate-service-account --key-file=$GOOGLE_APPLICATION_CREDENTIALS	
-gcloud config set project ${PROJECT_ID}	
-
-# Decrypt system test secrets	
-./scripts/decrypt-secrets.sh
-
 # Remove old nox
 python3 -m pip uninstall --yes --quiet nox-automation
 
@@ -54,10 +38,3 @@ if [[ -n "${NOX_SESSION:-}" ]]; then
 else
     python3 -m nox
 fi
-
-
-# Decrypt system test secrets
-./scripts/decrypt-secrets.sh
-
-# Run system tests which use a different noxfile
-python3 -m nox -f system_tests/noxfile.py

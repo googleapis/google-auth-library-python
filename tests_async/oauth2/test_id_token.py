@@ -12,10 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
 import os
 
 import mock
-import pytest
+import pytest  # type: ignore
 
 from google.auth import environment_vars
 from google.auth import exceptions
@@ -32,7 +33,9 @@ def make_request(status, data=None):
 
     if data is not None:
         response.data = mock.AsyncMock(spec=["__call__", "read"])
-        response.data.read = mock.AsyncMock(spec=["__call__"], return_value=data)
+        response.content = mock.AsyncMock(
+            spec=["__call__"], return_value=json.dumps(data).encode("utf-8")
+        )
 
     request = mock.AsyncMock(spec=["transport.Request"])
     request.return_value = response
@@ -71,7 +74,30 @@ async def test_verify_token(_fetch_certs, decode):
         mock.sentinel.request, sync_id_token._GOOGLE_OAUTH2_CERTS_URL
     )
     decode.assert_called_once_with(
-        mock.sentinel.token, certs=_fetch_certs.return_value, audience=None
+        mock.sentinel.token,
+        certs=_fetch_certs.return_value,
+        audience=None,
+        clock_skew_in_seconds=0,
+    )
+
+
+@mock.patch("google.auth.jwt.decode", autospec=True)
+@mock.patch("google.oauth2._id_token_async._fetch_certs", autospec=True)
+@pytest.mark.asyncio
+async def test_verify_token_clock_skew(_fetch_certs, decode):
+    result = await id_token.verify_token(
+        mock.sentinel.token, mock.sentinel.request, clock_skew_in_seconds=10
+    )
+
+    assert result == decode.return_value
+    _fetch_certs.assert_called_once_with(
+        mock.sentinel.request, sync_id_token._GOOGLE_OAUTH2_CERTS_URL
+    )
+    decode.assert_called_once_with(
+        mock.sentinel.token,
+        certs=_fetch_certs.return_value,
+        audience=None,
+        clock_skew_in_seconds=10,
     )
 
 
@@ -92,6 +118,7 @@ async def test_verify_token_args(_fetch_certs, decode):
         mock.sentinel.token,
         certs=_fetch_certs.return_value,
         audience=mock.sentinel.audience,
+        clock_skew_in_seconds=0,
     )
 
 
@@ -109,6 +136,28 @@ async def test_verify_oauth2_token(verify_token):
         mock.sentinel.request,
         audience=mock.sentinel.audience,
         certs_url=sync_id_token._GOOGLE_OAUTH2_CERTS_URL,
+        clock_skew_in_seconds=0,
+    )
+
+
+@mock.patch("google.oauth2._id_token_async.verify_token", autospec=True)
+@pytest.mark.asyncio
+async def test_verify_oauth2_token_clock_skew(verify_token):
+    verify_token.return_value = {"iss": "accounts.google.com"}
+    result = await id_token.verify_oauth2_token(
+        mock.sentinel.token,
+        mock.sentinel.request,
+        audience=mock.sentinel.audience,
+        clock_skew_in_seconds=10,
+    )
+
+    assert result == verify_token.return_value
+    verify_token.assert_called_once_with(
+        mock.sentinel.token,
+        mock.sentinel.request,
+        audience=mock.sentinel.audience,
+        certs_url=sync_id_token._GOOGLE_OAUTH2_CERTS_URL,
+        clock_skew_in_seconds=10,
     )
 
 
@@ -136,6 +185,27 @@ async def test_verify_firebase_token(verify_token):
         mock.sentinel.request,
         audience=mock.sentinel.audience,
         certs_url=sync_id_token._GOOGLE_APIS_CERTS_URL,
+        clock_skew_in_seconds=0,
+    )
+
+
+@mock.patch("google.oauth2._id_token_async.verify_token", autospec=True)
+@pytest.mark.asyncio
+async def test_verify_firebase_token_clock_skew(verify_token):
+    result = await id_token.verify_firebase_token(
+        mock.sentinel.token,
+        mock.sentinel.request,
+        audience=mock.sentinel.audience,
+        clock_skew_in_seconds=10,
+    )
+
+    assert result == verify_token.return_value
+    verify_token.assert_called_once_with(
+        mock.sentinel.token,
+        mock.sentinel.request,
+        audience=mock.sentinel.audience,
+        certs_url=sync_id_token._GOOGLE_APIS_CERTS_URL,
+        clock_skew_in_seconds=10,
     )
 
 

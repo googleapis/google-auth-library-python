@@ -21,8 +21,6 @@
 
 from __future__ import absolute_import
 
-import six
-
 from google.auth import _helpers
 import google.auth.app_engine
 import google.auth.compute_engine
@@ -30,14 +28,14 @@ import google.oauth2.credentials
 import google.oauth2.service_account
 
 try:
-    import oauth2client.client
-    import oauth2client.contrib.gce
-    import oauth2client.service_account
+    import oauth2client.client  # type: ignore
+    import oauth2client.contrib.gce  # type: ignore
+    import oauth2client.service_account  # type: ignore
 except ImportError as caught_exc:
-    six.raise_from(ImportError("oauth2client is not installed."), caught_exc)
+    raise ImportError("oauth2client is not installed.") from caught_exc
 
 try:
-    import oauth2client.contrib.appengine  # pytype: disable=import-error
+    import oauth2client.contrib.appengine  # type: ignore
 
     _HAS_APPENGINE = True
 except ImportError:
@@ -129,7 +127,7 @@ _CLASS_CONVERSION_MAP = {
     oauth2client.contrib.gce.AppAssertionCredentials: _convert_gce_app_assertion_credentials,
 }
 
-if _HAS_APPENGINE:
+if _HAS_APPENGINE:  # pragma: no cover
     _CLASS_CONVERSION_MAP[
         oauth2client.contrib.appengine.AppAssertionCredentials
     ] = _convert_appengine_app_assertion_credentials
@@ -166,4 +164,4 @@ def convert(credentials):
         return _CLASS_CONVERSION_MAP[credentials_class](credentials)
     except KeyError as caught_exc:
         new_exc = ValueError(_CONVERT_ERROR_TMPL.format(credentials_class))
-        six.raise_from(new_exc, caught_exc)
+        raise new_exc from caught_exc

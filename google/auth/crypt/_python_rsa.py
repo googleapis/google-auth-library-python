@@ -21,14 +21,16 @@ certificates. There is no support for p12 files.
 
 from __future__ import absolute_import
 
-from pyasn1.codec.der import decoder
-from pyasn1_modules import pem
-from pyasn1_modules.rfc2459 import Certificate
-from pyasn1_modules.rfc5208 import PrivateKeyInfo
-import rsa
-import six
+import io
+
+from pyasn1.codec.der import decoder  # type: ignore
+from pyasn1_modules import pem  # type: ignore
+from pyasn1_modules.rfc2459 import Certificate  # type: ignore
+from pyasn1_modules.rfc5208 import PrivateKeyInfo  # type: ignore
+import rsa  # type: ignore
 
 from google.auth import _helpers
+from google.auth import exceptions
 from google.auth.crypt import base
 
 _POW2 = (128, 64, 32, 16, 8, 4, 2, 1)
@@ -52,9 +54,9 @@ def _bit_list_to_bytes(bit_list):
     """
     num_bits = len(bit_list)
     byte_vals = bytearray()
-    for start in six.moves.xrange(0, num_bits, 8):
+    for start in range(0, num_bits, 8):
         curr_bits = bit_list[start : start + 8]
-        char_val = sum(val * digit for val, digit in six.moves.zip(_POW2, curr_bits))
+        char_val = sum(val * digit for val, digit in zip(_POW2, curr_bits))
         byte_vals.append(char_val)
     return bytes(byte_vals)
 
@@ -101,7 +103,7 @@ class RSAVerifier(base.Verifier):
             der = rsa.pem.load_pem(public_key, "CERTIFICATE")
             asn1_cert, remaining = decoder.decode(der, asn1Spec=Certificate())
             if remaining != b"":
-                raise ValueError("Unused bytes", remaining)
+                raise exceptions.InvalidValue("Unused bytes", remaining)
 
             cert_info = asn1_cert["tbsCertificate"]["subjectPublicKeyInfo"]
             key_bytes = _bit_list_to_bytes(cert_info["subjectPublicKey"])
@@ -125,7 +127,7 @@ class RSASigner(base.Signer, base.FromServiceAccountMixin):
         self._key = private_key
         self._key_id = key_id
 
-    @property
+    @property  # type: ignore
     @_helpers.copy_docstring(base.Signer)
     def key_id(self):
         return self._key_id
@@ -152,7 +154,7 @@ class RSASigner(base.Signer, base.FromServiceAccountMixin):
         """
         key = _helpers.from_bytes(key)  # PEM expects str in Python 3
         marker_id, key_bytes = pem.readPemBlocksFromFile(
-            six.StringIO(key), _PKCS1_MARKER, _PKCS8_MARKER
+            io.StringIO(key), _PKCS1_MARKER, _PKCS8_MARKER
         )
 
         # Key is in pkcs1 format.
@@ -162,12 +164,12 @@ class RSASigner(base.Signer, base.FromServiceAccountMixin):
         elif marker_id == 1:
             key_info, remaining = decoder.decode(key_bytes, asn1Spec=_PKCS8_SPEC)
             if remaining != b"":
-                raise ValueError("Unused bytes", remaining)
+                raise exceptions.InvalidValue("Unused bytes", remaining)
             private_key_info = key_info.getComponentByName("privateKey")
             private_key = rsa.key.PrivateKey.load_pkcs1(
                 private_key_info.asOctets(), format="DER"
             )
         else:
-            raise ValueError("No key could be detected.")
+            raise exceptions.MalformedError("No key could be detected.")
 
         return cls(private_key, key_id=key_id)

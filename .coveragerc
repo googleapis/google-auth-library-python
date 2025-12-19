@@ -5,6 +5,9 @@ branch = True
 omit =
     */samples/*
     */conftest.py
+    */google-cloud-sdk/lib/*
+    # NOTE: Temporarily disabling coverage for `_requests_base.py`.
+    */_requests_base.py
 exclude_lines =
     # Re-enable the standard pragma
     pragma: NO COVER

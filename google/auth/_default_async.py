@@ -20,8 +20,7 @@ Implements application default credentials and project ID detection.
 import io
 import json
 import os
-
-import six
+import warnings
 
 from google.auth import _default
 from google.auth import environment_vars
@@ -63,7 +62,7 @@ def load_credentials_from_file(filename, scopes=None, quota_project_id=None):
             new_exc = exceptions.DefaultCredentialsError(
                 "File {} is not a valid json file.".format(filename), caught_exc
             )
-            six.raise_from(new_exc, caught_exc)
+            raise new_exc from caught_exc
 
     # The type key should indicate that the file is either a service account
     # credentials file or an authorized user credentials file.
@@ -75,11 +74,13 @@ def load_credentials_from_file(filename, scopes=None, quota_project_id=None):
         try:
             credentials = credentials.Credentials.from_authorized_user_info(
                 info, scopes=scopes
-            ).with_quota_project(quota_project_id)
+            )
         except ValueError as caught_exc:
             msg = "Failed to load authorized user credentials from {}".format(filename)
             new_exc = exceptions.DefaultCredentialsError(msg, caught_exc)
-            six.raise_from(new_exc, caught_exc)
+            raise new_exc from caught_exc
+        if quota_project_id:
+            credentials = credentials.with_quota_project(quota_project_id)
         if not credentials.quota_project_id:
             _default._warn_about_problematic_credentials(credentials)
         return credentials, None
@@ -94,7 +95,7 @@ def load_credentials_from_file(filename, scopes=None, quota_project_id=None):
         except ValueError as caught_exc:
             msg = "Failed to load service account credentials from {}".format(filename)
             new_exc = exceptions.DefaultCredentialsError(msg, caught_exc)
-            six.raise_from(new_exc, caught_exc)
+            raise new_exc from caught_exc
         return credentials, info.get("project_id")
 
     else:
@@ -106,7 +107,7 @@ def load_credentials_from_file(filename, scopes=None, quota_project_id=None):
         )
 
 
-def _get_gcloud_sdk_credentials():
+def _get_gcloud_sdk_credentials(quota_project_id=None):
     """Gets the credentials and project ID from the Cloud SDK."""
     from google.auth import _cloud_sdk
 
@@ -116,15 +117,19 @@ def _get_gcloud_sdk_credentials():
     if not os.path.isfile(credentials_filename):
         return None, None
 
-    credentials, project_id = load_credentials_from_file(credentials_filename)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", DeprecationWarning)
+        credentials, project_id = load_credentials_from_file(
+            credentials_filename, quota_project_id=quota_project_id
+        )
 
-    if not project_id:
-        project_id = _cloud_sdk.get_project_id()
+        if not project_id:
+            project_id = _cloud_sdk.get_project_id()
 
-    return credentials, project_id
+        return credentials, project_id
 
 
-def _get_explicit_environ_credentials():
+def _get_explicit_environ_credentials(quota_project_id=None):
     """Gets credentials from the GOOGLE_APPLICATION_CREDENTIALS environment
     variable."""
     from google.auth import _cloud_sdk
@@ -136,14 +141,17 @@ def _get_explicit_environ_credentials():
         # Cloud sdk flow calls gcloud to fetch project id, so if the explicit
         # file path is cloud sdk credentials path, then we should fall back
         # to cloud sdk flow, otherwise project id cannot be obtained.
-        return _get_gcloud_sdk_credentials()
+        return _get_gcloud_sdk_credentials(quota_project_id=quota_project_id)
 
     if explicit_file is not None:
-        credentials, project_id = load_credentials_from_file(
-            os.environ[environment_vars.CREDENTIALS]
-        )
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", DeprecationWarning)
+            credentials, project_id = load_credentials_from_file(
+                os.environ[environment_vars.CREDENTIALS],
+                quota_project_id=quota_project_id,
+            )
 
-        return credentials, project_id
+            return credentials, project_id
 
     else:
         return None, None
@@ -246,14 +254,15 @@ def default_async(scopes=None, request=None, quota_project_id=None):
             invalid.
     """
     from google.auth._credentials_async import with_scopes_if_required
+    from google.auth.credentials import CredentialsWithQuotaProject
 
     explicit_project_id = os.environ.get(
         environment_vars.PROJECT, os.environ.get(environment_vars.LEGACY_PROJECT)
     )
 
     checkers = (
-        _get_explicit_environ_credentials,
-        _get_gcloud_sdk_credentials,
+        lambda: _get_explicit_environ_credentials(quota_project_id=quota_project_id),
+        lambda: _get_gcloud_sdk_credentials(quota_project_id=quota_project_id),
         _get_gae_credentials,
         lambda: _get_gce_credentials(request),
     )
@@ -261,9 +270,11 @@ def default_async(scopes=None, request=None, quota_project_id=None):
     for checker in checkers:
         credentials, project_id = checker()
         if credentials is not None:
-            credentials = with_scopes_if_required(
-                credentials, scopes
-            ).with_quota_project(quota_project_id)
+            credentials = with_scopes_if_required(credentials, scopes)
+            if quota_project_id and isinstance(
+                credentials, CredentialsWithQuotaProject
+            ):
+                credentials = credentials.with_quota_project(quota_project_id)
             effective_project_id = explicit_project_id or project_id
             if not effective_project_id:
                 _default._LOGGER.warning(
@@ -274,4 +285,4 @@ def default_async(scopes=None, request=None, quota_project_id=None):
                 )
             return credentials, effective_project_id
 
-    raise exceptions.DefaultCredentialsError(_default._HELP_MESSAGE)
+    raise exceptions.DefaultCredentialsError(_default._CLOUD_SDK_MISSING_CREDENTIALS)

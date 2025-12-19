@@ -23,11 +23,11 @@ See the `nox docs`_ for details on how this file works:
 """
 
 import os
-import subprocess
+import pathlib
+import shutil
+import tempfile
 
-from nox.command import which
 import nox
-import py.path
 
 HERE = os.path.abspath(os.path.dirname(__file__))
 LIBRARY_DIR = os.path.abspath(os.path.dirname(HERE))
@@ -37,10 +37,8 @@ AUTHORIZED_USER_FILE = os.path.join(DATA_DIR, "authorized_user.json")
 EXPLICIT_CREDENTIALS_ENV = "GOOGLE_APPLICATION_CREDENTIALS"
 EXPLICIT_PROJECT_ENV = "GOOGLE_CLOUD_PROJECT"
 EXPECT_PROJECT_ENV = "EXPECT_PROJECT_ID"
+ALLOW_PLUGGABLE_ENV = "GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES"
 
-SKIP_GAE_TEST_ENV = "SKIP_APP_ENGINE_SYSTEM_TEST"
-GAE_APP_URL_TMPL = "https://{}-dot-{}.appspot.com"
-GAE_TEST_APP_SERVICE = "google-auth-system-tests"
 
 # The download location for the Cloud SDK
 CLOUD_SDK_DIST_FILENAME = "google-cloud-sdk.tar.gz"
@@ -58,21 +56,18 @@ CLOUD_SDK_CONFIG_ENV = "CLOUDSDK_CONFIG"
 CLOUD_SDK_ROOT = os.environ.get("CLOUD_SDK_ROOT")
 
 if CLOUD_SDK_ROOT is not None:
-    CLOUD_SDK_ROOT = py.path.local(CLOUD_SDK_ROOT)
-    CLOUD_SDK_ROOT.ensure(dir=True)  # Makes sure the directory exists.
+    CLOUD_SDK_ROOT = pathlib.Path(CLOUD_SDK_ROOT)
+    if not CLOUD_SDK_ROOT.exists() or not CLOUD_SDK_ROOT.is_dir():
+        print("{} did not exist! Please set the CLOUD_SDK_ROOT environment variable to a directory that exists".format(CLOUD_SDK_ROOT))
+        exit(1)
 else:
-    CLOUD_SDK_ROOT = py.path.local.mkdtemp()
+    CLOUD_SDK_ROOT = pathlib.Path(tempfile.mkdtemp())
 
 # The full path the cloud sdk install directory
-CLOUD_SDK_INSTALL_DIR = CLOUD_SDK_ROOT.join("google-cloud-sdk")
+CLOUD_SDK_INSTALL_DIR = CLOUD_SDK_ROOT.joinpath("google-cloud-sdk")
 
 # The full path to the gcloud cli executable.
-GCLOUD = str(CLOUD_SDK_INSTALL_DIR.join("bin", "gcloud"))
-
-# gcloud requires Python 2 and doesn't work on 3, so we need to tell it
-# where to find 2 when we're running in a 3 environment.
-CLOUD_SDK_PYTHON_ENV = "CLOUDSDK_PYTHON"
-CLOUD_SDK_PYTHON = which("python2", None)
+GCLOUD = str(CLOUD_SDK_INSTALL_DIR.joinpath("bin", "gcloud"))
 
 # Cloud SDK helpers
 
@@ -84,31 +79,29 @@ def install_cloud_sdk(session):
     # our tests from clobbering a developer's configuration when running
     # these tests locally.
     session.env[CLOUD_SDK_CONFIG_ENV] = str(CLOUD_SDK_ROOT)
-    # This tells gcloud which Python interpreter to use (always use 2.7)
-    session.env[CLOUD_SDK_PYTHON_ENV] = CLOUD_SDK_PYTHON
     # This set the $PATH for the subprocesses so they can find the gcloud
     # executable.
     session.env["PATH"] = (
-        str(CLOUD_SDK_INSTALL_DIR.join("bin")) + os.pathsep + os.environ["PATH"]
+        str(CLOUD_SDK_INSTALL_DIR.joinpath("bin")) + os.pathsep + os.environ["PATH"]
     )
 
     # If gcloud cli executable already exists, just update it.
-    if py.path.local(GCLOUD).exists():
+    if pathlib.Path(GCLOUD).exists():
         session.run(GCLOUD, "components", "update", "-q")
         return
 
-    tar_path = CLOUD_SDK_ROOT.join(CLOUD_SDK_DIST_FILENAME)
+    tar_path = CLOUD_SDK_ROOT.joinpath(CLOUD_SDK_DIST_FILENAME)
 
     # Download the release.
     session.run("wget", CLOUD_SDK_DOWNLOAD_URL, "-O", str(tar_path), silent=True)
 
     # Extract the release.
     session.run("tar", "xzf", str(tar_path), "-C", str(CLOUD_SDK_ROOT))
-    session.run(tar_path.remove)
+    tar_path.unlink()
 
     # Run the install script.
     session.run(
-        str(CLOUD_SDK_INSTALL_DIR.join("install.sh")),
+        str(CLOUD_SDK_INSTALL_DIR.joinpath("install.sh")),
         "--usage-reporting",
         "false",
         "--path-update",
@@ -122,10 +115,10 @@ def install_cloud_sdk(session):
 def copy_credentials(credentials_path):
     """Copies credentials into the SDK root as the application default
     credentials."""
-    dest = CLOUD_SDK_ROOT.join("application_default_credentials.json")
+    dest = CLOUD_SDK_ROOT.joinpath("application_default_credentials.json")
     if dest.exists():
-        dest.remove()
-    py.path.local(credentials_path).copy(dest)
+        dest.unlink()
+    shutil.copyfile(pathlib.Path(credentials_path), dest)
 
 
 def configure_cloud_sdk(session, application_default_credentials, project=False):
@@ -168,10 +161,10 @@ def configure_cloud_sdk(session, application_default_credentials, project=False)
 
 # Test sesssions
 
-TEST_DEPENDENCIES_ASYNC = ["aiohttp", "pytest-asyncio", "nest-asyncio"]
-TEST_DEPENDENCIES_SYNC = ["pytest", "requests", "mock"]
-PYTHON_VERSIONS_ASYNC = ["3.7"]
-PYTHON_VERSIONS_SYNC = ["2.7", "3.7"]
+TEST_DEPENDENCIES_ASYNC = ["aiohttp", "pytest-asyncio", "nest-asyncio", "mock"]
+TEST_DEPENDENCIES_SYNC = ["pytest", "requests", "mock", "pyjwt"]
+PYTHON_VERSIONS_ASYNC = ["3.10"]
+PYTHON_VERSIONS_SYNC = ["3.10"]
 
 
 def default(session, *test_paths):
@@ -287,54 +280,11 @@ def compute_engine(session):
     )
 
 
-@nox.session(python=["2.7"])
-def app_engine(session):
-    if SKIP_GAE_TEST_ENV in os.environ:
-        session.log("Skipping App Engine tests.")
-        return
-
-    session.install(LIBRARY_DIR)
-    # Unlike the default tests above, the App Engine system test require a
-    # 'real' gcloud sdk installation that is configured to deploy to an
-    # app engine project.
-    # Grab the project ID from the cloud sdk.
-    project_id = (
-        subprocess.check_output(
-            ["gcloud", "config", "list", "project", "--format", "value(core.project)"]
-        )
-        .decode("utf-8")
-        .strip()
-    )
-
-    if not project_id:
-        session.error(
-            "The Cloud SDK must be installed and configured to deploy to App " "Engine."
-        )
-
-    application_url = GAE_APP_URL_TMPL.format(GAE_TEST_APP_SERVICE, project_id)
-
-    # Vendor in the test application's dependencies
-    session.chdir(os.path.join(HERE, "system_tests_sync/app_engine_test_app"))
-    session.install(*TEST_DEPENDENCIES_SYNC)
-    session.run(
-        "pip", "install", "--target", "lib", "-r", "requirements.txt", silent=True
-    )
-
-    # Deploy the application.
-    session.run("gcloud", "app", "deploy", "-q", "app.yaml")
-
-    # Run the tests
-    session.env["TEST_APP_URL"] = application_url
-    session.chdir(HERE)
-    default(
-        session, "system_tests_sync/test_app_engine.py",
-    )
-
-
 @nox.session(python=PYTHON_VERSIONS_SYNC)
 def grpc(session):
     session.install(LIBRARY_DIR)
-    session.install(*TEST_DEPENDENCIES_SYNC, "google-cloud-pubsub==1.7.0")
+    session.install("six")
+    session.install(*TEST_DEPENDENCIES_SYNC, "google-cloud-pubsub==1.7.2")
     session.env[EXPLICIT_CREDENTIALS_ENV] = SERVICE_ACCOUNT_FILE
     default(
         session,
@@ -379,17 +329,31 @@ def mtls_http(session):
     )
 
 
-@nox.session(python=PYTHON_VERSIONS_SYNC)
+@nox.session(python=PYTHON_VERSIONS_ASYNC)
 def external_accounts(session):
+    session.env[ALLOW_PLUGGABLE_ENV] = "1"
     session.install(
-        *TEST_DEPENDENCIES_SYNC,
-        "google-auth",
+        *TEST_DEPENDENCIES_ASYNC,
+        LIBRARY_DIR,
         "google-api-python-client",
-        "enum34",
     )
     default(
         session,
         "system_tests_sync/test_external_accounts.py",
+        *session.posargs,
+    )
+
+
+@nox.session(python=PYTHON_VERSIONS_SYNC)
+def downscoping(session):
+    session.install(
+        *TEST_DEPENDENCIES_SYNC,
+        LIBRARY_DIR,
+        "google-cloud-storage",
+    )
+    default(
+        session,
+        "system_tests_sync/test_downscoping.py",
         *session.posargs,
     )
 

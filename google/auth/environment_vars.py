@@ -29,6 +29,10 @@ This environment variable is used instead of the current one in some
 situations (such as Google App Engine).
 """
 
+GOOGLE_CLOUD_QUOTA_PROJECT = "GOOGLE_CLOUD_QUOTA_PROJECT"
+"""Environment variable defining the project to be used for
+quota and billing."""
+
 CREDENTIALS = "GOOGLE_APPLICATION_CREDENTIALS"
 """Environment variable defining the location of Google application default
 credentials."""
@@ -41,18 +45,26 @@ files."""
 # These two variables allow for customization of the addresses used when
 # contacting the GCE metadata service.
 GCE_METADATA_HOST = "GCE_METADATA_HOST"
-GCE_METADATA_ROOT = "GCE_METADATA_ROOT"
 """Environment variable providing an alternate hostname or host:port to be
 used for GCE metadata requests.
 
-This environment variable is originally named GCE_METADATA_ROOT. System will
-check the new variable first; should there be no value present,
-the system falls back to the old variable.
+This environment variable was originally named GCE_METADATA_ROOT. The system will
+check this environemnt variable first; should there be no value present,
+the system will fall back to the old variable.
 """
+
+GCE_METADATA_ROOT = "GCE_METADATA_ROOT"
+"""Old environment variable for GCE_METADATA_HOST."""
 
 GCE_METADATA_IP = "GCE_METADATA_IP"
 """Environment variable providing an alternate ip:port to be used for ip-only
 GCE metadata requests."""
+
+GCE_METADATA_MTLS_MODE = "GCE_METADATA_MTLS_MODE"
+"""Environment variable controlling the mTLS behavior for GCE metadata requests.
+
+Can be one of "strict", "none", or "default".
+"""
 
 GOOGLE_API_USE_CLIENT_CERTIFICATE = "GOOGLE_API_USE_CLIENT_CERTIFICATE"
 """Environment variable controlling whether to use client certificate or not.
@@ -76,3 +88,16 @@ AWS_SECRET_ACCESS_KEY = "AWS_SECRET_ACCESS_KEY"
 AWS_SESSION_TOKEN = "AWS_SESSION_TOKEN"
 AWS_REGION = "AWS_REGION"
 AWS_DEFAULT_REGION = "AWS_DEFAULT_REGION"
+
+GOOGLE_AUTH_TRUST_BOUNDARY_ENABLED = "GOOGLE_AUTH_TRUST_BOUNDARY_ENABLED"
+"""Environment variable controlling whether to enable trust boundary feature.
+The default value is false. Users have to explicitly set this value to true."""
+
+GOOGLE_API_CERTIFICATE_CONFIG = "GOOGLE_API_CERTIFICATE_CONFIG"
+"""Environment variable defining the location of Google API certificate config
+file."""
+
+GOOGLE_API_PREVENT_AGENT_TOKEN_SHARING_FOR_GCP_SERVICES = (
+    "GOOGLE_API_PREVENT_AGENT_TOKEN_SHARING_FOR_GCP_SERVICES"
+)
+"""Environment variable to prevent agent token sharing for GCP services."""

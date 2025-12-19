@@ -31,10 +31,9 @@ spec JSON response.
 .. _rfc8693 section 2.2.1: https://tools.ietf.org/html/rfc8693#section-2.2.1
 """
 
+import http.client as http_client
 import json
-
-from six.moves import http_client
-from six.moves import urllib
+import urllib
 
 from google.oauth2 import utils
 
@@ -57,6 +56,46 @@ class Client(utils.OAuthClientAuthHandler):
         """
         super(Client, self).__init__(client_authentication)
         self._token_exchange_endpoint = token_exchange_endpoint
+
+    def _make_request(self, request, headers, request_body, url=None):
+        # Initialize request headers.
+        request_headers = _URLENCODED_HEADERS.copy()
+
+        # Inject additional headers.
+        if headers:
+            for k, v in dict(headers).items():
+                request_headers[k] = v
+
+        # Apply OAuth client authentication.
+        self.apply_client_authentication_options(request_headers, request_body)
+
+        # Use default token exchange endpoint if no url is provided.
+        url = url or self._token_exchange_endpoint
+
+        # Execute request.
+        response = request(
+            url=url,
+            method="POST",
+            headers=request_headers,
+            body=urllib.parse.urlencode(request_body).encode("utf-8"),
+        )
+
+        response_body = (
+            response.data.decode("utf-8")
+            if hasattr(response.data, "decode")
+            else response.data
+        )
+
+        # If non-200 response received, translate to OAuthError exception.
+        if response.status != http_client.OK:
+            utils.handle_error_response(response_body)
+
+        # A successful token revocation returns an empty response body.
+        if not response_body:
+            return {}
+
+        # Other successful responses should be valid JSON.
+        return json.loads(response_body)
 
     def exchange_token(
         self,
@@ -102,12 +141,6 @@ class Client(utils.OAuthClientAuthHandler):
             google.auth.exceptions.OAuthError: If the token endpoint returned
                 an error.
         """
-        # Initialize request headers.
-        headers = _URLENCODED_HEADERS.copy()
-        # Inject additional headers.
-        if additional_headers:
-            for k, v in dict(additional_headers).items():
-                headers[k] = v
         # Initialize request body.
         request_body = {
             "grant_type": grant_type,
@@ -128,28 +161,41 @@ class Client(utils.OAuthClientAuthHandler):
         for k, v in dict(request_body).items():
             if v is None or v == "":
                 del request_body[k]
-        # Apply OAuth client authentication.
-        self.apply_client_authentication_options(headers, request_body)
 
-        # Execute request.
-        response = request(
-            url=self._token_exchange_endpoint,
-            method="POST",
-            headers=headers,
-            body=urllib.parse.urlencode(request_body).encode("utf-8"),
+        return self._make_request(request, additional_headers, request_body)
+
+    def refresh_token(self, request, refresh_token):
+        """Exchanges a refresh token for an access token based on the
+        RFC6749 spec.
+
+        Args:
+            request (google.auth.transport.Request): A callable used to make
+                HTTP requests.
+            subject_token (str): The OAuth 2.0 refresh token.
+        """
+
+        return self._make_request(
+            request,
+            None,
+            {"grant_type": "refresh_token", "refresh_token": refresh_token},
         )
 
-        response_body = (
-            response.data.decode("utf-8")
-            if hasattr(response.data, "decode")
-            else response.data
-        )
+    def revoke_token(self, request, token, token_type_hint, revoke_url):
+        """Revokes the provided token based on the RFC7009 spec.
 
-        # If non-200 response received, translate to OAuthError exception.
-        if response.status != http_client.OK:
-            utils.handle_error_response(response_body)
+        Args:
+            request (google.auth.transport.Request): A callable used to make
+                HTTP requests.
+            token (str): The OAuth 2.0 token to revoke.
+            token_type_hint (str): Hint for the type of token being revoked.
+            revoke_url (str): The STS endpoint URL for revoking tokens.
 
-        response_data = json.loads(response_body)
+        Raises:
+            google.auth.exceptions.OAuthError: If the token revocation endpoint
+                returned an error.
+        """
+        request_body = {"token": token}
+        if token_type_hint:
+            request_body["token_type_hint"] = token_type_hint
 
-        # Return successful response.
-        return response_data
+        return self._make_request(request, None, request_body, revoke_url)

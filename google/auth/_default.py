@@ -23,8 +23,6 @@ import logging
 import os
 import warnings
 
-import six
-
 from google.auth import environment_vars
 from google.auth import exceptions
 import google.auth.transport._http_client
@@ -35,26 +33,66 @@ _LOGGER = logging.getLogger(__name__)
 _AUTHORIZED_USER_TYPE = "authorized_user"
 _SERVICE_ACCOUNT_TYPE = "service_account"
 _EXTERNAL_ACCOUNT_TYPE = "external_account"
-_VALID_TYPES = (_AUTHORIZED_USER_TYPE, _SERVICE_ACCOUNT_TYPE, _EXTERNAL_ACCOUNT_TYPE)
+_EXTERNAL_ACCOUNT_AUTHORIZED_USER_TYPE = "external_account_authorized_user"
+_IMPERSONATED_SERVICE_ACCOUNT_TYPE = "impersonated_service_account"
+_GDCH_SERVICE_ACCOUNT_TYPE = "gdch_service_account"
+_VALID_TYPES = (
+    _AUTHORIZED_USER_TYPE,
+    _SERVICE_ACCOUNT_TYPE,
+    _EXTERNAL_ACCOUNT_TYPE,
+    _EXTERNAL_ACCOUNT_AUTHORIZED_USER_TYPE,
+    _IMPERSONATED_SERVICE_ACCOUNT_TYPE,
+    _GDCH_SERVICE_ACCOUNT_TYPE,
+)
 
 # Help message when no credentials can be found.
-_HELP_MESSAGE = """\
-Could not automatically determine credentials. Please set {env} or \
-explicitly create credentials and re-run the application. For more \
-information, please see \
-https://cloud.google.com/docs/authentication/getting-started
-""".format(
-    env=environment_vars.CREDENTIALS
-).strip()
+_CLOUD_SDK_MISSING_CREDENTIALS = """\
+Your default credentials were not found. To set up Application Default Credentials, \
+see https://cloud.google.com/docs/authentication/external/set-up-adc for more information.\
+"""
 
 # Warning when using Cloud SDK user credentials
 _CLOUD_SDK_CREDENTIALS_WARNING = """\
 Your application has authenticated using end user credentials from Google \
 Cloud SDK without a quota project. You might receive a "quota exceeded" \
-or "API not enabled" error. We recommend you rerun \
-`gcloud auth application-default login` and make sure a quota project is \
-added. Or you can use service accounts instead. For more information \
-about service accounts, see https://cloud.google.com/docs/authentication/"""
+or "API not enabled" error. See the following page for troubleshooting: \
+https://cloud.google.com/docs/authentication/adc-troubleshooting/user-creds. \
+"""
+
+_GENERIC_LOAD_METHOD_WARNING = """\
+The {} method is deprecated because of a potential security risk.
+
+This method does not validate the credential configuration. The security
+risk occurs when a credential configuration is accepted from a source that
+is not under your control and used without validation on your side.
+
+If you know that you will be loading credential configurations of a
+specific type, it is recommended to use a credential-type-specific
+load method.
+This will ensure that an unexpected credential type with potential for
+malicious intent is not loaded unintentionally. You might still have to do
+validation for certain credential types. Please follow the recommendations
+for that method. For example, if you want to load only service accounts,
+you can create the service account credentials explicitly:
+
+```
+from google.oauth2 import service_account
+creds = service_account.Credentials.from_service_account_file(filename)
+```
+
+If you are loading your credential configuration from an untrusted source and have
+not mitigated the risks (e.g. by validating the configuration yourself), make
+these changes as soon as possible to prevent security risks to your environment.
+
+Regardless of the method used, it is always your responsibility to validate
+configurations received from external sources.
+
+Refer to https://cloud.google.com/docs/authentication/external/externally-sourced-credentials
+for more details.
+"""
+
+# The subject token type used for AWS external_account credentials.
+_AWS_SUBJECT_TOKEN_TYPE = "urn:ietf:params:aws:token-type:aws4_request"
 
 
 def _warn_about_problematic_credentials(credentials):
@@ -70,13 +108,39 @@ def _warn_about_problematic_credentials(credentials):
         warnings.warn(_CLOUD_SDK_CREDENTIALS_WARNING)
 
 
+def _warn_about_generic_load_method(method_name):  # pragma: NO COVER
+    """Warns that a generic load method is being used.
+
+    This is to discourage use of the generic load methods in favor of
+    more specific methods. The generic methods are more likely to lead to
+    security issues if the input is not validated.
+
+    Args:
+        method_name (str): The name of the method being used.
+    """
+
+    warnings.warn(_GENERIC_LOAD_METHOD_WARNING.format(method_name), DeprecationWarning)
+
+
 def load_credentials_from_file(
     filename, scopes=None, default_scopes=None, quota_project_id=None, request=None
 ):
     """Loads Google credentials from a file.
 
     The credentials file must be a service account key, stored authorized
-    user credentials or external account credentials.
+    user credentials, external account credentials, or impersonated service
+    account credentials.
+
+    .. warning::
+        Important: If you accept a credential configuration (credential JSON/File/Stream)
+        from an external source for authentication to Google Cloud Platform, you must
+        validate it before providing it to any Google API or client library. Providing an
+        unvalidated credential configuration to Google APIs or libraries can compromise
+        the security of your systems and data. For more information, refer to
+        `Validate credential configurations from external sources`_.
+
+        .. _Validate credential configurations from external sources:
+            https://cloud.google.com/docs/authentication/external/externally-sourced-credentials
 
     Args:
         filename (str): The full path to the credentials file.
@@ -103,6 +167,8 @@ def load_credentials_from_file(
         google.auth.exceptions.DefaultCredentialsError: if the file is in the
             wrong format or is missing.
     """
+    _warn_about_generic_load_method("load_credentials_from_file")
+
     if not os.path.exists(filename):
         raise exceptions.DefaultCredentialsError(
             "File {} was not found.".format(filename)
@@ -115,43 +181,84 @@ def load_credentials_from_file(
             new_exc = exceptions.DefaultCredentialsError(
                 "File {} is not a valid json file.".format(filename), caught_exc
             )
-            six.raise_from(new_exc, caught_exc)
+            raise new_exc from caught_exc
+    return _load_credentials_from_info(
+        filename, info, scopes, default_scopes, quota_project_id, request
+    )
 
-    # The type key should indicate that the file is either a service account
-    # credentials file or an authorized user credentials file.
+
+def load_credentials_from_dict(
+    info, scopes=None, default_scopes=None, quota_project_id=None, request=None
+):
+    """Loads Google credentials from a dict.
+
+    The credentials file must be a service account key, stored authorized
+    user credentials, external account credentials, or impersonated service
+    account credentials.
+
+    .. warning::
+        Important: If you accept a credential configuration (credential JSON/File/Stream)
+        from an external source for authentication to Google Cloud Platform, you must
+        validate it before providing it to any Google API or client library. Providing an
+        unvalidated credential configuration to Google APIs or libraries can compromise
+        the security of your systems and data. For more information, refer to
+        `Validate credential configurations from external sources`_.
+
+    .. _Validate credential configurations from external sources:
+        https://cloud.google.com/docs/authentication/external/externally-sourced-credentials
+
+    Args:
+        info (Dict[str, Any]): A dict object containing the credentials
+        scopes (Optional[Sequence[str]]): The list of scopes for the credentials. If
+            specified, the credentials will automatically be scoped if
+            necessary
+        default_scopes (Optional[Sequence[str]]): Default scopes passed by a
+            Google client library. Use 'scopes' for user-defined scopes.
+        quota_project_id (Optional[str]):  The project ID used for
+            quota and billing.
+        request (Optional[google.auth.transport.Request]): An object used to make
+            HTTP requests. This is used to determine the associated project ID
+            for a workload identity pool resource (external account credentials).
+            If not specified, then it will use a
+            google.auth.transport.requests.Request client to make requests.
+
+    Returns:
+        Tuple[google.auth.credentials.Credentials, Optional[str]]: Loaded
+            credentials and the project ID. Authorized user credentials do not
+            have the project ID information. External account credentials project
+            IDs may not always be determined.
+
+    Raises:
+        google.auth.exceptions.DefaultCredentialsError: if the file is in the
+            wrong format or is missing.
+    """
+    _warn_about_generic_load_method("load_credentials_from_dict")
+    if not isinstance(info, dict):
+        raise exceptions.DefaultCredentialsError(
+            "info object was of type {} but dict type was expected.".format(type(info))
+        )
+
+    return _load_credentials_from_info(
+        "dict object", info, scopes, default_scopes, quota_project_id, request
+    )
+
+
+def _load_credentials_from_info(
+    filename, info, scopes, default_scopes, quota_project_id, request
+):
+    from google.auth.credentials import CredentialsWithQuotaProject
+
     credential_type = info.get("type")
 
     if credential_type == _AUTHORIZED_USER_TYPE:
-        from google.oauth2 import credentials
-
-        try:
-            credentials = credentials.Credentials.from_authorized_user_info(
-                info, scopes=scopes
-            )
-        except ValueError as caught_exc:
-            msg = "Failed to load authorized user credentials from {}".format(filename)
-            new_exc = exceptions.DefaultCredentialsError(msg, caught_exc)
-            six.raise_from(new_exc, caught_exc)
-        if quota_project_id:
-            credentials = credentials.with_quota_project(quota_project_id)
-        if not credentials.quota_project_id:
-            _warn_about_problematic_credentials(credentials)
-        return credentials, None
+        credentials, project_id = _get_authorized_user_credentials(
+            filename, info, scopes
+        )
 
     elif credential_type == _SERVICE_ACCOUNT_TYPE:
-        from google.oauth2 import service_account
-
-        try:
-            credentials = service_account.Credentials.from_service_account_info(
-                info, scopes=scopes, default_scopes=default_scopes
-            )
-        except ValueError as caught_exc:
-            msg = "Failed to load service account credentials from {}".format(filename)
-            new_exc = exceptions.DefaultCredentialsError(msg, caught_exc)
-            six.raise_from(new_exc, caught_exc)
-        if quota_project_id:
-            credentials = credentials.with_quota_project(quota_project_id)
-        return credentials, info.get("project_id")
+        credentials, project_id = _get_service_account_credentials(
+            filename, info, scopes, default_scopes
+        )
 
     elif credential_type == _EXTERNAL_ACCOUNT_TYPE:
         credentials, project_id = _get_external_account_credentials(
@@ -161,10 +268,18 @@ def load_credentials_from_file(
             default_scopes=default_scopes,
             request=request,
         )
-        if quota_project_id:
-            credentials = credentials.with_quota_project(quota_project_id)
-        return credentials, project_id
 
+    elif credential_type == _EXTERNAL_ACCOUNT_AUTHORIZED_USER_TYPE:
+        credentials, project_id = _get_external_account_authorized_user_credentials(
+            filename, info, request
+        )
+
+    elif credential_type == _IMPERSONATED_SERVICE_ACCOUNT_TYPE:
+        credentials, project_id = _get_impersonated_service_account_credentials(
+            filename, info, scopes
+        )
+    elif credential_type == _GDCH_SERVICE_ACCOUNT_TYPE:
+        credentials, project_id = _get_gdch_service_account_credentials(filename, info)
     else:
         raise exceptions.DefaultCredentialsError(
             "The file {file} does not have a valid type. "
@@ -172,9 +287,12 @@ def load_credentials_from_file(
                 file=filename, type=credential_type, valid_types=_VALID_TYPES
             )
         )
+    if isinstance(credentials, CredentialsWithQuotaProject):
+        credentials = _apply_quota_project_id(credentials, quota_project_id)
+    return credentials, project_id
 
 
-def _get_gcloud_sdk_credentials():
+def _get_gcloud_sdk_credentials(quota_project_id=None):
     """Gets the credentials and project ID from the Cloud SDK."""
     from google.auth import _cloud_sdk
 
@@ -187,15 +305,20 @@ def _get_gcloud_sdk_credentials():
         _LOGGER.debug("Cloud SDK credentials not found on disk; not using them")
         return None, None
 
-    credentials, project_id = load_credentials_from_file(credentials_filename)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", DeprecationWarning)
+        credentials, project_id = load_credentials_from_file(
+            credentials_filename, quota_project_id=quota_project_id
+        )
+        credentials._cred_file_path = credentials_filename
 
-    if not project_id:
-        project_id = _cloud_sdk.get_project_id()
+        if not project_id:
+            project_id = _cloud_sdk.get_project_id()
 
-    return credentials, project_id
+        return credentials, project_id
 
 
-def _get_explicit_environ_credentials():
+def _get_explicit_environ_credentials(quota_project_id=None):
     """Gets credentials from the GOOGLE_APPLICATION_CREDENTIALS environment
     variable."""
     from google.auth import _cloud_sdk
@@ -215,14 +338,18 @@ def _get_explicit_environ_credentials():
             "Explicit credentials path %s is the same as Cloud SDK credentials path, fall back to Cloud SDK credentials flow...",
             explicit_file,
         )
-        return _get_gcloud_sdk_credentials()
+        return _get_gcloud_sdk_credentials(quota_project_id=quota_project_id)
 
     if explicit_file is not None:
-        credentials, project_id = load_credentials_from_file(
-            os.environ[environment_vars.CREDENTIALS]
-        )
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", DeprecationWarning)
+            credentials, project_id = load_credentials_from_file(
+                os.environ[environment_vars.CREDENTIALS],
+                quota_project_id=quota_project_id,
+            )
+            credentials._cred_file_path = f"{explicit_file} file via the GOOGLE_APPLICATION_CREDENTIALS environment variable"
 
-        return credentials, project_id
+            return credentials, project_id
 
     else:
         return None, None
@@ -255,7 +382,7 @@ def _get_gae_credentials():
         return None, None
 
 
-def _get_gce_credentials(request=None):
+def _get_gce_credentials(request=None, quota_project_id=None):
     """Gets credentials and project ID from the GCE Metadata Service."""
     # Ping requires a transport, but we want application default credentials
     # to require no arguments. So, we'll use the _http_client transport which
@@ -274,14 +401,17 @@ def _get_gce_credentials(request=None):
     if request is None:
         request = google.auth.transport._http_client.Request()
 
-    if _metadata.ping(request=request):
+    if _metadata.is_on_gce(request=request):
         # Get the project ID.
         try:
             project_id = _metadata.get_project_id(request=request)
         except exceptions.TransportError:
             project_id = None
 
-        return compute_engine.Credentials(), project_id
+        cred = compute_engine.Credentials()
+        cred = _apply_quota_project_id(cred, quota_project_id)
+
+        return cred, project_id
     else:
         _LOGGER.warning(
             "Authentication failed using Compute Engine authentication due to unavailable metadata server."
@@ -320,15 +450,24 @@ def _get_external_account_credentials(
         google.auth.exceptions.DefaultCredentialsError: if the info dictionary
             is in the wrong format or is missing required information.
     """
-    # There are currently 2 types of external_account credentials.
-    try:
+    # There are currently 3 types of external_account credentials.
+    if info.get("subject_token_type") == _AWS_SUBJECT_TOKEN_TYPE:
         # Check if configuration corresponds to an AWS credentials.
         from google.auth import aws
 
         credentials = aws.Credentials.from_info(
             info, scopes=scopes, default_scopes=default_scopes
         )
-    except ValueError:
+    elif (
+        info.get("credential_source") is not None
+        and info.get("credential_source").get("executable") is not None
+    ):
+        from google.auth import pluggable
+
+        credentials = pluggable.Credentials.from_info(
+            info, scopes=scopes, default_scopes=default_scopes
+        )
+    else:
         try:
             # Check if configuration corresponds to an Identity Pool credentials.
             from google.auth import identity_pool
@@ -343,9 +482,110 @@ def _get_external_account_credentials(
                 "Failed to load external account credentials from {}".format(filename)
             )
     if request is None:
+        import google.auth.transport.requests
+
         request = google.auth.transport.requests.Request()
 
     return credentials, credentials.get_project_id(request=request)
+
+
+def _get_external_account_authorized_user_credentials(
+    filename, info, scopes=None, default_scopes=None, request=None
+):
+    try:
+        from google.auth import external_account_authorized_user
+
+        credentials = external_account_authorized_user.Credentials.from_info(info)
+    except ValueError:
+        raise exceptions.DefaultCredentialsError(
+            "Failed to load external account authorized user credentials from {}".format(
+                filename
+            )
+        )
+
+    return credentials, None
+
+
+def _get_authorized_user_credentials(filename, info, scopes=None):
+    from google.oauth2 import credentials
+
+    try:
+        credentials = credentials.Credentials.from_authorized_user_info(
+            info, scopes=scopes
+        )
+    except ValueError as caught_exc:
+        msg = "Failed to load authorized user credentials from {}".format(filename)
+        new_exc = exceptions.DefaultCredentialsError(msg, caught_exc)
+        raise new_exc from caught_exc
+    return credentials, None
+
+
+def _get_service_account_credentials(filename, info, scopes=None, default_scopes=None):
+    from google.oauth2 import service_account
+
+    try:
+        credentials = service_account.Credentials.from_service_account_info(
+            info, scopes=scopes, default_scopes=default_scopes
+        )
+    except ValueError as caught_exc:
+        msg = "Failed to load service account credentials from {}".format(filename)
+        new_exc = exceptions.DefaultCredentialsError(msg, caught_exc)
+        raise new_exc from caught_exc
+    return credentials, info.get("project_id")
+
+
+def _get_impersonated_service_account_credentials(filename, info, scopes):
+    from google.auth import impersonated_credentials
+
+    try:
+        credentials = (
+            impersonated_credentials.Credentials.from_impersonated_service_account_info(
+                info, scopes=scopes
+            )
+        )
+    except ValueError as caught_exc:
+        msg = "Failed to load impersonated service account credentials from {}".format(
+            filename
+        )
+        new_exc = exceptions.DefaultCredentialsError(msg, caught_exc)
+        raise new_exc from caught_exc
+    return credentials, None
+
+
+def _get_gdch_service_account_credentials(filename, info):
+    from google.oauth2 import gdch_credentials
+
+    try:
+        credentials = (
+            gdch_credentials.ServiceAccountCredentials.from_service_account_info(info)
+        )
+    except ValueError as caught_exc:
+        msg = "Failed to load GDCH service account credentials from {}".format(filename)
+        new_exc = exceptions.DefaultCredentialsError(msg, caught_exc)
+        raise new_exc from caught_exc
+    return credentials, info.get("project")
+
+
+def get_api_key_credentials(key):
+    """Return credentials with the given API key."""
+    from google.auth import api_key
+
+    return api_key.Credentials(key)
+
+
+def _apply_quota_project_id(credentials, quota_project_id):
+    if quota_project_id:
+        credentials = credentials.with_quota_project(quota_project_id)
+    else:
+        credentials = credentials.with_quota_project_from_environment()
+
+    from google.oauth2 import credentials as authorized_user_credentials
+
+    if isinstance(credentials, authorized_user_credentials.Credentials) and (
+        not credentials.quota_project_id
+    ):
+        _warn_about_problematic_credentials(credentials)
+    return credentials
 
 
 def default(scopes=None, request=None, quota_project_id=None, default_scopes=None):
@@ -370,6 +610,11 @@ def default(scopes=None, request=None, quota_project_id=None, default_scopes=Non
        endpoint.
        The project ID returned in this case is the one corresponding to the
        underlying workload identity pool resource if determinable.
+
+       If the environment variable is set to the path of a valid GDCH service
+       account JSON file (`Google Distributed Cloud Hosted`_), then a GDCH
+       credential will be returned. The project ID returned is the project
+       specified in the JSON file.
     2. If the `Google Cloud SDK`_ is installed and has application default
        credentials set they are loaded and returned.
 
@@ -404,6 +649,8 @@ def default(scopes=None, request=None, quota_project_id=None, default_scopes=Non
     .. _Metadata Service: https://cloud.google.com/compute/docs\
             /storing-retrieving-metadata
     .. _Cloud Run: https://cloud.google.com/run
+    .. _Google Distributed Cloud Hosted: https://cloud.google.com/blog/topics\
+            /hybrid-cloud/announcing-google-distributed-cloud-edge-and-hosted
 
     Example::
 
@@ -439,6 +686,7 @@ def default(scopes=None, request=None, quota_project_id=None, default_scopes=Non
             invalid.
     """
     from google.auth.credentials import with_scopes_if_required
+    from google.auth.credentials import CredentialsWithQuotaProject
 
     explicit_project_id = os.environ.get(
         environment_vars.PROJECT, os.environ.get(environment_vars.LEGACY_PROJECT)
@@ -449,10 +697,10 @@ def default(scopes=None, request=None, quota_project_id=None, default_scopes=Non
         # with_scopes_if_required() below will ensure scopes/default scopes are
         # safely set on the returned credentials since requires_scopes will
         # guard against setting scopes on user credentials.
-        _get_explicit_environ_credentials,
-        _get_gcloud_sdk_credentials,
+        lambda: _get_explicit_environ_credentials(quota_project_id=quota_project_id),
+        lambda: _get_gcloud_sdk_credentials(quota_project_id=quota_project_id),
         _get_gae_credentials,
-        lambda: _get_gce_credentials(request),
+        lambda: _get_gce_credentials(request, quota_project_id=quota_project_id),
     )
 
     for checker in checkers:
@@ -462,20 +710,25 @@ def default(scopes=None, request=None, quota_project_id=None, default_scopes=Non
                 credentials, scopes, default_scopes=default_scopes
             )
 
+            effective_project_id = explicit_project_id or project_id
+
             # For external account credentials, scopes are required to determine
             # the project ID. Try to get the project ID again if not yet
             # determined.
-            if not project_id and callable(
+            if not effective_project_id and callable(
                 getattr(credentials, "get_project_id", None)
             ):
                 if request is None:
-                    request = google.auth.transport.requests.Request()
-                project_id = credentials.get_project_id(request=request)
+                    import google.auth.transport.requests
 
-            if quota_project_id:
+                    request = google.auth.transport.requests.Request()
+                effective_project_id = credentials.get_project_id(request=request)
+
+            if quota_project_id and isinstance(
+                credentials, CredentialsWithQuotaProject
+            ):
                 credentials = credentials.with_quota_project(quota_project_id)
 
-            effective_project_id = explicit_project_id or project_id
             if not effective_project_id:
                 _LOGGER.warning(
                     "No project ID could be determined. Consider running "
@@ -485,4 +738,4 @@ def default(scopes=None, request=None, quota_project_id=None, default_scopes=Non
                 )
             return credentials, effective_project_id
 
-    raise exceptions.DefaultCredentialsError(_HELP_MESSAGE)
+    raise exceptions.DefaultCredentialsError(_CLOUD_SDK_MISSING_CREDENTIALS)

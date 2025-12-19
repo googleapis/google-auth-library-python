@@ -17,11 +17,17 @@ import json
 import os
 
 import mock
+import pytest  # type: ignore
 
 from google.auth import _helpers
+from google.auth import credentials
 from google.auth import crypt
+from google.auth import environment_vars
+from google.auth import exceptions
+from google.auth import iam
 from google.auth import jwt
 from google.auth import transport
+from google.auth.credentials import DEFAULT_UNIVERSE_DOMAIN
 from google.oauth2 import service_account
 
 
@@ -37,9 +43,16 @@ with open(os.path.join(DATA_DIR, "other_cert.pem"), "rb") as fh:
     OTHER_CERT_BYTES = fh.read()
 
 SERVICE_ACCOUNT_JSON_FILE = os.path.join(DATA_DIR, "service_account.json")
+SERVICE_ACCOUNT_NON_GDU_JSON_FILE = os.path.join(
+    DATA_DIR, "service_account_non_gdu.json"
+)
+FAKE_UNIVERSE_DOMAIN = "universe.foo"
 
-with open(SERVICE_ACCOUNT_JSON_FILE, "r") as fh:
+with open(SERVICE_ACCOUNT_JSON_FILE, "rb") as fh:
     SERVICE_ACCOUNT_INFO = json.load(fh)
+
+with open(SERVICE_ACCOUNT_NON_GDU_JSON_FILE, "rb") as fh:
+    SERVICE_ACCOUNT_INFO_NON_GDU = json.load(fh)
 
 SIGNER = crypt.RSASigner.from_string(PRIVATE_KEY_BYTES, "1")
 
@@ -47,12 +60,55 @@ SIGNER = crypt.RSASigner.from_string(PRIVATE_KEY_BYTES, "1")
 class TestCredentials(object):
     SERVICE_ACCOUNT_EMAIL = "service-account@example.com"
     TOKEN_URI = "https://example.com/oauth2/token"
+    NO_OP_TRUST_BOUNDARY = {
+        "locations": credentials.NO_OP_TRUST_BOUNDARY_LOCATIONS,
+        "encodedLocations": credentials.NO_OP_TRUST_BOUNDARY_ENCODED_LOCATIONS,
+    }
+    VALID_TRUST_BOUNDARY = {
+        "locations": ["us-central1", "us-east1"],
+        "encodedLocations": "0xVALIDHEXSA",
+    }
+    EXPECTED_TRUST_BOUNDARY_LOOKUP_URL_DEFAULT_UNIVERSE = (
+        "https://iamcredentials.googleapis.com/v1/projects/-"
+        "/serviceAccounts/service-account@example.com/allowedLocations"
+    )
 
     @classmethod
-    def make_credentials(cls):
+    def make_credentials(
+        cls,
+        universe_domain=DEFAULT_UNIVERSE_DOMAIN,
+        trust_boundary=None,  # Align with Credentials class default
+    ):
         return service_account.Credentials(
-            SIGNER, cls.SERVICE_ACCOUNT_EMAIL, cls.TOKEN_URI
+            SIGNER,
+            cls.SERVICE_ACCOUNT_EMAIL,
+            cls.TOKEN_URI,
+            universe_domain=universe_domain,
+            trust_boundary=trust_boundary,
         )
+
+    def test_get_cred_info(self):
+        credentials = self.make_credentials()
+        assert not credentials.get_cred_info()
+
+        credentials._cred_file_path = "/path/to/file"
+        assert credentials.get_cred_info() == {
+            "credential_source": "/path/to/file",
+            "credential_type": "service account credentials",
+            "principal": "service-account@example.com",
+        }
+
+    def test__make_copy_get_cred_info(self):
+        credentials = self.make_credentials()
+        credentials._cred_file_path = "/path/to/file"
+        cred_copy = credentials._make_copy()
+        assert cred_copy._cred_file_path == "/path/to/file"
+
+    def test_constructor_no_universe_domain(self):
+        credentials = service_account.Credentials(
+            SIGNER, self.SERVICE_ACCOUNT_EMAIL, self.TOKEN_URI, universe_domain=None
+        )
+        assert credentials.universe_domain == DEFAULT_UNIVERSE_DOMAIN
 
     def test_from_service_account_info(self):
         credentials = service_account.Credentials.from_service_account_info(
@@ -62,6 +118,16 @@ class TestCredentials(object):
         assert credentials._signer.key_id == SERVICE_ACCOUNT_INFO["private_key_id"]
         assert credentials.service_account_email == SERVICE_ACCOUNT_INFO["client_email"]
         assert credentials._token_uri == SERVICE_ACCOUNT_INFO["token_uri"]
+        assert credentials._universe_domain == DEFAULT_UNIVERSE_DOMAIN
+        assert not credentials._always_use_jwt_access
+
+    def test_from_service_account_info_non_gdu(self):
+        credentials = service_account.Credentials.from_service_account_info(
+            SERVICE_ACCOUNT_INFO_NON_GDU
+        )
+
+        assert credentials.universe_domain == FAKE_UNIVERSE_DOMAIN
+        assert credentials._always_use_jwt_access
 
     def test_from_service_account_info_args(self):
         info = SERVICE_ACCOUNT_INFO.copy()
@@ -80,6 +146,7 @@ class TestCredentials(object):
         assert credentials._scopes == scopes
         assert credentials._subject == subject
         assert credentials._additional_claims == additional_claims
+        assert not credentials._always_use_jwt_access
 
     def test_from_service_account_file(self):
         info = SERVICE_ACCOUNT_INFO.copy()
@@ -92,6 +159,20 @@ class TestCredentials(object):
         assert credentials.project_id == info["project_id"]
         assert credentials._signer.key_id == info["private_key_id"]
         assert credentials._token_uri == info["token_uri"]
+
+    def test_from_service_account_file_non_gdu(self):
+        info = SERVICE_ACCOUNT_INFO_NON_GDU.copy()
+
+        credentials = service_account.Credentials.from_service_account_file(
+            SERVICE_ACCOUNT_NON_GDU_JSON_FILE
+        )
+
+        assert credentials.service_account_email == info["client_email"]
+        assert credentials.project_id == info["project_id"]
+        assert credentials._signer.key_id == info["private_key_id"]
+        assert credentials._token_uri == info["token_uri"]
+        assert credentials._universe_domain == FAKE_UNIVERSE_DOMAIN
+        assert credentials._always_use_jwt_access
 
     def test_from_service_account_file_args(self):
         info = SERVICE_ACCOUNT_INFO.copy()
@@ -155,6 +236,24 @@ class TestCredentials(object):
         new_credentials.apply(hdrs, token="tok")
         assert "x-goog-user-project" in hdrs
 
+    def test_with_token_uri(self):
+        credentials = self.make_credentials()
+        new_token_uri = "https://example2.com/oauth2/token"
+        assert credentials._token_uri == self.TOKEN_URI
+        creds_with_new_token_uri = credentials.with_token_uri(new_token_uri)
+        assert creds_with_new_token_uri._token_uri == new_token_uri
+
+    def test_with_universe_domain(self):
+        credentials = self.make_credentials()
+
+        new_credentials = credentials.with_universe_domain("dummy_universe.com")
+        assert new_credentials.universe_domain == "dummy_universe.com"
+        assert new_credentials._always_use_jwt_access
+
+        new_credentials = credentials.with_universe_domain("googleapis.com")
+        assert new_credentials.universe_domain == "googleapis.com"
+        assert not new_credentials._always_use_jwt_access
+
     def test__with_always_use_jwt_access(self):
         credentials = self.make_credentials()
         assert not credentials._always_use_jwt_access
@@ -162,12 +261,33 @@ class TestCredentials(object):
         new_credentials = credentials.with_always_use_jwt_access(True)
         assert new_credentials._always_use_jwt_access
 
+    def test__with_always_use_jwt_access_non_default_universe_domain(self):
+        credentials = self.make_credentials(universe_domain=FAKE_UNIVERSE_DOMAIN)
+        with pytest.raises(exceptions.InvalidValue) as excinfo:
+            credentials.with_always_use_jwt_access(False)
+
+        assert excinfo.match(
+            "always_use_jwt_access should be True for non-default universe domain"
+        )
+
+    def test_with_trust_boundary(self):
+        credentials = self.make_credentials()
+        new_boundary = {"encodedLocations": "new_boundary"}
+        new_credentials = credentials.with_trust_boundary(new_boundary)
+
+        assert new_credentials is not credentials
+        assert new_credentials._trust_boundary == new_boundary
+        assert new_credentials._signer == credentials._signer
+        assert (
+            new_credentials.service_account_email == credentials.service_account_email
+        )
+
     def test__make_authorization_grant_assertion(self):
         credentials = self.make_credentials()
         token = credentials._make_authorization_grant_assertion()
         payload = jwt.decode(token, PUBLIC_CERT_BYTES)
         assert payload["iss"] == self.SERVICE_ACCOUNT_EMAIL
-        assert payload["aud"] == self.TOKEN_URI
+        assert payload["aud"] == service_account._GOOGLE_OAUTH2_TOKEN_ENDPOINT
 
     def test__make_authorization_grant_assertion_scoped(self):
         credentials = self.make_credentials()
@@ -247,6 +367,24 @@ class TestCredentials(object):
         jwt.from_signing_credentials.assert_called_once_with(credentials, audience)
 
     @mock.patch("google.auth.jwt.Credentials", instance=True, autospec=True)
+    def test__create_self_signed_jwt_always_use_jwt_access_with_audience_similar_jwt_is_reused(
+        self, jwt
+    ):
+        credentials = service_account.Credentials(
+            SIGNER,
+            self.SERVICE_ACCOUNT_EMAIL,
+            self.TOKEN_URI,
+            default_scopes=["bar", "foo"],
+            always_use_jwt_access=True,
+        )
+
+        audience = "https://pubsub.googleapis.com"
+        credentials._create_self_signed_jwt(audience)
+        credentials._jwt_credentials._audience = audience
+        credentials._create_self_signed_jwt(audience)
+        jwt.from_signing_credentials.assert_called_once_with(credentials, audience)
+
+    @mock.patch("google.auth.jwt.Credentials", instance=True, autospec=True)
     def test__create_self_signed_jwt_always_use_jwt_access_with_scopes(self, jwt):
         credentials = service_account.Credentials(
             SIGNER,
@@ -257,6 +395,26 @@ class TestCredentials(object):
         )
 
         audience = "https://pubsub.googleapis.com"
+        credentials._create_self_signed_jwt(audience)
+        jwt.from_signing_credentials.assert_called_once_with(
+            credentials, None, additional_claims={"scope": "bar foo"}
+        )
+
+    @mock.patch("google.auth.jwt.Credentials", instance=True, autospec=True)
+    def test__create_self_signed_jwt_always_use_jwt_access_with_scopes_similar_jwt_is_reused(
+        self, jwt
+    ):
+        credentials = service_account.Credentials(
+            SIGNER,
+            self.SERVICE_ACCOUNT_EMAIL,
+            self.TOKEN_URI,
+            scopes=["bar", "foo"],
+            always_use_jwt_access=True,
+        )
+
+        audience = "https://pubsub.googleapis.com"
+        credentials._create_self_signed_jwt(audience)
+        credentials._jwt_credentials.additional_claims = {"scope": "bar foo"}
         credentials._create_self_signed_jwt(audience)
         jwt.from_signing_credentials.assert_called_once_with(
             credentials, None, additional_claims={"scope": "bar foo"}
@@ -280,6 +438,25 @@ class TestCredentials(object):
         )
 
     @mock.patch("google.auth.jwt.Credentials", instance=True, autospec=True)
+    def test__create_self_signed_jwt_always_use_jwt_access_with_default_scopes_similar_jwt_is_reused(
+        self, jwt
+    ):
+        credentials = service_account.Credentials(
+            SIGNER,
+            self.SERVICE_ACCOUNT_EMAIL,
+            self.TOKEN_URI,
+            default_scopes=["bar", "foo"],
+            always_use_jwt_access=True,
+        )
+
+        credentials._create_self_signed_jwt(None)
+        credentials._jwt_credentials.additional_claims = {"scope": "bar foo"}
+        credentials._create_self_signed_jwt(None)
+        jwt.from_signing_credentials.assert_called_once_with(
+            credentials, None, additional_claims={"scope": "bar foo"}
+        )
+
+    @mock.patch("google.auth.jwt.Credentials", instance=True, autospec=True)
     def test__create_self_signed_jwt_always_use_jwt_access(self, jwt):
         credentials = service_account.Credentials(
             SIGNER,
@@ -290,6 +467,37 @@ class TestCredentials(object):
 
         credentials._create_self_signed_jwt(None)
         jwt.from_signing_credentials.assert_not_called()
+
+    def test_token_usage_metrics_assertion(self):
+        credentials = service_account.Credentials(
+            SIGNER,
+            self.SERVICE_ACCOUNT_EMAIL,
+            self.TOKEN_URI,
+            always_use_jwt_access=False,
+        )
+        credentials.token = "token"
+        credentials.expiry = None
+
+        headers = {}
+        credentials.before_request(mock.Mock(), None, None, headers)
+        assert headers["authorization"] == "Bearer token"
+        assert headers["x-goog-api-client"] == "cred-type/sa"
+
+    def test_token_usage_metrics_self_signed_jwt(self):
+        credentials = service_account.Credentials(
+            SIGNER,
+            self.SERVICE_ACCOUNT_EMAIL,
+            self.TOKEN_URI,
+            always_use_jwt_access=True,
+        )
+        credentials._create_self_signed_jwt("foo.googleapis.com")
+        credentials.token = "token"
+        credentials.expiry = None
+
+        headers = {}
+        credentials.before_request(mock.Mock(), None, None, headers)
+        assert headers["authorization"] == "Bearer token"
+        assert headers["x-goog-api-client"] == "cred-type/jwt"
 
     @mock.patch("google.oauth2._client.jwt_grant", autospec=True)
     def test_refresh_success(self, jwt_grant):
@@ -318,9 +526,41 @@ class TestCredentials(object):
         # Check that the credentials have the token.
         assert credentials.token == token
 
-        # Check that the credentials are valid (have a token and are not
-        # expired)
+        # Check that the credentials are valid (have a token and are not expired).
         assert credentials.valid
+
+        # Trust boundary should be None since env var is not set and no initial
+        # boundary was provided.
+        assert credentials._trust_boundary is None
+
+    @mock.patch("google.oauth2._client._lookup_trust_boundary")
+    @mock.patch("google.oauth2._client.jwt_grant", autospec=True)
+    def test_refresh_skips_trust_boundary_lookup_non_default_universe(
+        self, mock_jwt_grant, mock_lookup_trust_boundary
+    ):
+        # Create credentials with a non-default universe domain
+        credentials = self.make_credentials(universe_domain=FAKE_UNIVERSE_DOMAIN)
+        token = "token"
+        mock_jwt_grant.return_value = (
+            token,
+            _helpers.utcnow() + datetime.timedelta(seconds=500),
+            {},
+        )
+        request = mock.create_autospec(transport.Request, instance=True)
+
+        with mock.patch.dict(
+            os.environ, {environment_vars.GOOGLE_AUTH_TRUST_BOUNDARY_ENABLED: "true"}
+        ):
+            credentials.refresh(request)
+
+        # Ensure jwt_grant was called (token refresh happened)
+        mock_jwt_grant.assert_called_once()
+        # Ensure trust boundary lookup was not called
+        mock_lookup_trust_boundary.assert_not_called()
+        # Verify that x-allowed-locations header is not set by apply()
+        headers_applied = {}
+        credentials.apply(headers_applied)
+        assert "x-allowed-locations" not in headers_applied
 
     @mock.patch("google.oauth2._client.jwt_grant", autospec=True)
     def test_before_request_refreshes(self, jwt_grant):
@@ -354,7 +594,7 @@ class TestCredentials(object):
 
         token = "token"
         expiry = _helpers.utcnow() + datetime.timedelta(seconds=500)
-        make_jwt.return_value = (token, expiry)
+        make_jwt.return_value = (b"token", expiry)
 
         # Credentials should start as invalid
         assert not credentials.valid
@@ -366,10 +606,271 @@ class TestCredentials(object):
         assert credentials.valid
 
         # Assert make_jwt was called
-        assert make_jwt.called_once()
+        assert make_jwt.call_count == 1
 
         assert credentials.token == token
         assert credentials.expiry == expiry
+
+    def test_refresh_with_jwt_credentials_token_type_check(self):
+        credentials = self.make_credentials()
+        credentials._create_self_signed_jwt("https://pubsub.googleapis.com")
+        credentials.refresh(mock.Mock())
+
+        # Credentials token should be a JWT string.
+        assert isinstance(credentials.token, str)
+        payload = jwt.decode(credentials.token, verify=False)
+        assert payload["aud"] == "https://pubsub.googleapis.com"
+
+    @mock.patch("google.oauth2._client.jwt_grant", autospec=True)
+    @mock.patch("google.auth.jwt.Credentials.refresh", autospec=True)
+    def test_refresh_jwt_not_used_for_domain_wide_delegation(
+        self, self_signed_jwt_refresh, jwt_grant
+    ):
+        # Create a domain wide delegation credentials by setting the subject.
+        credentials = service_account.Credentials(
+            SIGNER,
+            self.SERVICE_ACCOUNT_EMAIL,
+            self.TOKEN_URI,
+            always_use_jwt_access=True,
+            subject="subject",
+        )
+        credentials._create_self_signed_jwt("https://pubsub.googleapis.com")
+        jwt_grant.return_value = (
+            "token",
+            _helpers.utcnow() + datetime.timedelta(seconds=500),
+            {},
+        )
+        request = mock.create_autospec(transport.Request, instance=True)
+
+        # Refresh credentials
+        credentials.refresh(request)
+
+        # Make sure we are using jwt_grant and not self signed JWT refresh
+        # method to obtain the token.
+        assert jwt_grant.called
+        assert not self_signed_jwt_refresh.called
+
+    def test_refresh_missing_jwt_credentials(self):
+        credentials = self.make_credentials()
+        credentials = credentials.with_scopes(["foo", "bar"])
+        credentials = credentials.with_always_use_jwt_access(True)
+        assert not credentials._jwt_credentials
+
+        credentials.refresh(mock.Mock())
+
+        # jwt credentials should have been automatically created with scopes
+        assert credentials._jwt_credentials is not None
+
+    def test_refresh_non_gdu_domain_wide_delegation_not_supported(self):
+        credentials = self.make_credentials(universe_domain="foo")
+        credentials._subject = "bar@example.com"
+        credentials._create_self_signed_jwt("https://pubsub.googleapis.com")
+
+        with pytest.raises(exceptions.RefreshError) as excinfo:
+            credentials.refresh(None)
+        assert excinfo.match("domain wide delegation is not supported")
+
+    @mock.patch("google.oauth2._client._lookup_trust_boundary")
+    @mock.patch("google.oauth2._client.jwt_grant", autospec=True)
+    def test_refresh_success_with_valid_trust_boundary(
+        self, mock_jwt_grant, mock_lookup_trust_boundary
+    ):
+        # Start with no boundary.
+        credentials = self.make_credentials(trust_boundary=None)
+        token = "token"
+        mock_jwt_grant.return_value = (
+            token,
+            _helpers.utcnow() + datetime.timedelta(seconds=500),
+            {},
+        )
+        request = mock.create_autospec(transport.Request, instance=True)
+
+        # Mock the trust boundary lookup to return a valid boundary.
+        mock_lookup_trust_boundary.return_value = self.VALID_TRUST_BOUNDARY
+
+        with mock.patch.dict(
+            os.environ, {environment_vars.GOOGLE_AUTH_TRUST_BOUNDARY_ENABLED: "true"}
+        ):
+            credentials.refresh(request)
+
+        assert credentials.valid
+        assert credentials.token == token
+
+        # Verify trust boundary was set.
+        assert credentials._trust_boundary == self.VALID_TRUST_BOUNDARY
+
+        # Verify the mock was called with the correct URL.
+        mock_lookup_trust_boundary.assert_called_once_with(
+            request,
+            self.EXPECTED_TRUST_BOUNDARY_LOOKUP_URL_DEFAULT_UNIVERSE,
+            headers={"authorization": "Bearer token"},
+        )
+
+        # Verify x-allowed-locations header is set correctly by apply().
+        headers_applied = {}
+        credentials.apply(headers_applied)
+        assert (
+            headers_applied["x-allowed-locations"]
+            == self.VALID_TRUST_BOUNDARY["encodedLocations"]
+        )
+
+    @mock.patch("google.oauth2._client._lookup_trust_boundary")
+    @mock.patch("google.oauth2._client.jwt_grant", autospec=True)
+    def test_refresh_fetches_no_op_trust_boundary(
+        self, mock_jwt_grant, mock_lookup_trust_boundary
+    ):
+        # Start with no trust boundary
+        credentials = self.make_credentials(trust_boundary=None)
+        token = "token"
+        mock_jwt_grant.return_value = (
+            token,
+            _helpers.utcnow() + datetime.timedelta(seconds=500),
+            {},
+        )
+        request = mock.create_autospec(transport.Request, instance=True)
+
+        mock_lookup_trust_boundary.return_value = self.NO_OP_TRUST_BOUNDARY
+
+        with mock.patch.dict(
+            os.environ, {environment_vars.GOOGLE_AUTH_TRUST_BOUNDARY_ENABLED: "true"}
+        ):
+            credentials.refresh(request)
+
+        assert credentials.valid
+        assert credentials.token == token
+        assert credentials._trust_boundary == self.NO_OP_TRUST_BOUNDARY
+        mock_lookup_trust_boundary.assert_called_once_with(
+            request,
+            self.EXPECTED_TRUST_BOUNDARY_LOOKUP_URL_DEFAULT_UNIVERSE,
+            headers={"authorization": "Bearer token"},
+        )
+        headers_applied = {}
+        credentials.apply(headers_applied)
+        assert headers_applied["x-allowed-locations"] == ""
+
+    @mock.patch("google.oauth2._client._lookup_trust_boundary")
+    @mock.patch("google.oauth2._client.jwt_grant", autospec=True)
+    def test_refresh_starts_with_no_op_trust_boundary_skips_lookup(
+        self, mock_jwt_grant, mock_lookup_trust_boundary
+    ):
+        credentials = self.make_credentials(
+            trust_boundary=self.NO_OP_TRUST_BOUNDARY
+        )  # Start with NO_OP
+        token = "token"
+        mock_jwt_grant.return_value = (
+            token,
+            _helpers.utcnow() + datetime.timedelta(seconds=500),
+            {},
+        )
+        request = mock.create_autospec(transport.Request, instance=True)
+
+        with mock.patch.dict(
+            os.environ, {environment_vars.GOOGLE_AUTH_TRUST_BOUNDARY_ENABLED: "true"}
+        ):
+            credentials.refresh(request)
+
+        assert credentials.valid
+        assert credentials.token == token
+        # Verify trust boundary remained NO_OP
+        assert credentials._trust_boundary == self.NO_OP_TRUST_BOUNDARY
+
+        # Lookup should be skipped
+        mock_lookup_trust_boundary.assert_not_called()
+
+        # Verify that an empty header was added.
+        headers_applied = {}
+        credentials.apply(headers_applied)
+        assert headers_applied["x-allowed-locations"] == ""
+
+    @mock.patch("google.oauth2._client._lookup_trust_boundary")
+    @mock.patch("google.oauth2._client.jwt_grant", autospec=True)
+    def test_refresh_trust_boundary_lookup_fails_no_cache(
+        self, mock_jwt_grant, mock_lookup_trust_boundary
+    ):
+        # Start with no trust boundary
+        credentials = self.make_credentials(trust_boundary=None)
+        mock_lookup_trust_boundary.side_effect = exceptions.RefreshError(
+            "Lookup failed"
+        )
+        mock_jwt_grant.return_value = (
+            "mock_access_token",
+            _helpers.utcnow() + datetime.timedelta(seconds=3600),
+            {},
+        )
+        request = mock.create_autospec(transport.Request, instance=True)
+
+        # Mock the trust boundary lookup to raise an error
+        with mock.patch.dict(
+            os.environ, {environment_vars.GOOGLE_AUTH_TRUST_BOUNDARY_ENABLED: "true"}
+        ), pytest.raises(exceptions.RefreshError, match="Lookup failed"):
+            credentials.refresh(request)
+
+        assert credentials._trust_boundary is None
+        mock_lookup_trust_boundary.assert_called_once()
+
+    @mock.patch("google.oauth2._client._lookup_trust_boundary")
+    @mock.patch("google.oauth2._client.jwt_grant", autospec=True)
+    def test_refresh_trust_boundary_lookup_fails_with_cached_data(
+        self, mock_jwt_grant, mock_lookup_trust_boundary
+    ):
+        # Initial setup: Credentials with no trust boundary.
+        credentials = self.make_credentials(trust_boundary=None)
+        token = "token"
+        mock_jwt_grant.return_value = (
+            token,
+            _helpers.utcnow() + datetime.timedelta(seconds=500),
+            {},
+        )
+        request = mock.create_autospec(transport.Request, instance=True)
+
+        # First refresh: Successfully fetch a valid trust boundary.
+        mock_lookup_trust_boundary.return_value = self.VALID_TRUST_BOUNDARY
+        with mock.patch.dict(
+            os.environ, {environment_vars.GOOGLE_AUTH_TRUST_BOUNDARY_ENABLED: "true"}
+        ):
+            credentials.refresh(request)
+
+        assert credentials.valid
+        assert credentials.token == token
+        assert credentials._trust_boundary == self.VALID_TRUST_BOUNDARY
+        mock_lookup_trust_boundary.assert_called_once_with(
+            request,
+            self.EXPECTED_TRUST_BOUNDARY_LOOKUP_URL_DEFAULT_UNIVERSE,
+            headers={"authorization": "Bearer token"},
+        )
+
+        # Second refresh: Mock lookup to fail, but expect cached data to be preserved.
+        mock_lookup_trust_boundary.reset_mock()
+        mock_lookup_trust_boundary.side_effect = exceptions.RefreshError(
+            "Lookup failed"
+        )
+
+        with mock.patch.dict(
+            os.environ, {environment_vars.GOOGLE_AUTH_TRUST_BOUNDARY_ENABLED: "true"}
+        ):
+            credentials.refresh(request)  # This should NOT raise an exception
+
+        assert credentials.valid  # Credentials should still be valid
+        assert (
+            credentials._trust_boundary == self.VALID_TRUST_BOUNDARY
+        )  # Cached data should be preserved
+        mock_lookup_trust_boundary.assert_called_once_with(
+            request,
+            self.EXPECTED_TRUST_BOUNDARY_LOOKUP_URL_DEFAULT_UNIVERSE,
+            headers={
+                "authorization": "Bearer token",
+                "x-allowed-locations": self.VALID_TRUST_BOUNDARY["encodedLocations"],
+            },
+        )  # Lookup should have been attempted again
+
+    def test_build_trust_boundary_lookup_url_no_email(self):
+        credentials = self.make_credentials()
+        credentials._service_account_email = None
+
+        with pytest.raises(ValueError) as excinfo:
+            credentials._build_trust_boundary_lookup_url()
+
+        assert "Service account email is required" in str(excinfo.value)
 
 
 class TestIDTokenCredentials(object):
@@ -378,10 +879,24 @@ class TestIDTokenCredentials(object):
     TARGET_AUDIENCE = "https://example.com"
 
     @classmethod
-    def make_credentials(cls):
+    def make_credentials(cls, universe_domain=DEFAULT_UNIVERSE_DOMAIN):
         return service_account.IDTokenCredentials(
-            SIGNER, cls.SERVICE_ACCOUNT_EMAIL, cls.TOKEN_URI, cls.TARGET_AUDIENCE
+            SIGNER,
+            cls.SERVICE_ACCOUNT_EMAIL,
+            cls.TOKEN_URI,
+            cls.TARGET_AUDIENCE,
+            universe_domain=universe_domain,
         )
+
+    def test_constructor_no_universe_domain(self):
+        credentials = service_account.IDTokenCredentials(
+            SIGNER,
+            self.SERVICE_ACCOUNT_EMAIL,
+            self.TOKEN_URI,
+            self.TARGET_AUDIENCE,
+            universe_domain=None,
+        )
+        assert credentials._universe_domain == DEFAULT_UNIVERSE_DOMAIN
 
     def test_from_service_account_info(self):
         credentials = service_account.IDTokenCredentials.from_service_account_info(
@@ -392,6 +907,23 @@ class TestIDTokenCredentials(object):
         assert credentials.service_account_email == SERVICE_ACCOUNT_INFO["client_email"]
         assert credentials._token_uri == SERVICE_ACCOUNT_INFO["token_uri"]
         assert credentials._target_audience == self.TARGET_AUDIENCE
+        assert not credentials._use_iam_endpoint
+
+    def test_from_service_account_info_non_gdu(self):
+        credentials = service_account.IDTokenCredentials.from_service_account_info(
+            SERVICE_ACCOUNT_INFO_NON_GDU, target_audience=self.TARGET_AUDIENCE
+        )
+
+        assert (
+            credentials._signer.key_id == SERVICE_ACCOUNT_INFO_NON_GDU["private_key_id"]
+        )
+        assert (
+            credentials.service_account_email
+            == SERVICE_ACCOUNT_INFO_NON_GDU["client_email"]
+        )
+        assert credentials._token_uri == SERVICE_ACCOUNT_INFO_NON_GDU["token_uri"]
+        assert credentials._target_audience == self.TARGET_AUDIENCE
+        assert credentials._use_iam_endpoint
 
     def test_from_service_account_file(self):
         info = SERVICE_ACCOUNT_INFO.copy()
@@ -404,6 +936,20 @@ class TestIDTokenCredentials(object):
         assert credentials._signer.key_id == info["private_key_id"]
         assert credentials._token_uri == info["token_uri"]
         assert credentials._target_audience == self.TARGET_AUDIENCE
+        assert not credentials._use_iam_endpoint
+
+    def test_from_service_account_file_non_gdu(self):
+        info = SERVICE_ACCOUNT_INFO_NON_GDU.copy()
+
+        credentials = service_account.IDTokenCredentials.from_service_account_file(
+            SERVICE_ACCOUNT_NON_GDU_JSON_FILE, target_audience=self.TARGET_AUDIENCE
+        )
+
+        assert credentials.service_account_email == info["client_email"]
+        assert credentials._signer.key_id == info["private_key_id"]
+        assert credentials._token_uri == info["token_uri"]
+        assert credentials._target_audience == self.TARGET_AUDIENCE
+        assert credentials._use_iam_endpoint
 
     def test_default_state(self):
         credentials = self.make_credentials()
@@ -430,17 +976,38 @@ class TestIDTokenCredentials(object):
         new_credentials = credentials.with_target_audience("https://new.example.com")
         assert new_credentials._target_audience == "https://new.example.com"
 
+    def test__with_use_iam_endpoint(self):
+        credentials = self.make_credentials()
+        new_credentials = credentials._with_use_iam_endpoint(True)
+        assert new_credentials._use_iam_endpoint
+
+    def test__with_use_iam_endpoint_non_default_universe_domain(self):
+        credentials = self.make_credentials(universe_domain=FAKE_UNIVERSE_DOMAIN)
+        with pytest.raises(exceptions.InvalidValue) as excinfo:
+            credentials._with_use_iam_endpoint(False)
+
+        assert excinfo.match(
+            "use_iam_endpoint should be True for non-default universe domain"
+        )
+
     def test_with_quota_project(self):
         credentials = self.make_credentials()
         new_credentials = credentials.with_quota_project("project-foo")
         assert new_credentials._quota_project_id == "project-foo"
+
+    def test_with_token_uri(self):
+        credentials = self.make_credentials()
+        new_token_uri = "https://example2.com/oauth2/token"
+        assert credentials._token_uri == self.TOKEN_URI
+        creds_with_new_token_uri = credentials.with_token_uri(new_token_uri)
+        assert creds_with_new_token_uri._token_uri == new_token_uri
 
     def test__make_authorization_grant_assertion(self):
         credentials = self.make_credentials()
         token = credentials._make_authorization_grant_assertion()
         payload = jwt.decode(token, PUBLIC_CERT_BYTES)
         assert payload["iss"] == self.SERVICE_ACCOUNT_EMAIL
-        assert payload["aud"] == self.TOKEN_URI
+        assert payload["aud"] == service_account._GOOGLE_OAUTH2_TOKEN_ENDPOINT
         assert payload["target_audience"] == self.TARGET_AUDIENCE
 
     @mock.patch("google.oauth2._client.id_token_jwt_grant", autospec=True)
@@ -473,6 +1040,64 @@ class TestIDTokenCredentials(object):
         # Check that the credentials are valid (have a token and are not
         # expired)
         assert credentials.valid
+
+    @mock.patch(
+        "google.oauth2._client.call_iam_generate_id_token_endpoint", autospec=True
+    )
+    def test_refresh_iam_flow(self, call_iam_generate_id_token_endpoint):
+        credentials = self.make_credentials()
+        credentials._use_iam_endpoint = True
+        token = "id_token"
+        call_iam_generate_id_token_endpoint.return_value = (
+            token,
+            _helpers.utcnow() + datetime.timedelta(seconds=500),
+        )
+        request = mock.Mock()
+        credentials.refresh(request)
+        (
+            req,
+            iam_endpoint,
+            signer_email,
+            target_audience,
+            access_token,
+            universe_domain,
+        ) = call_iam_generate_id_token_endpoint.call_args[0]
+        assert req == request
+        assert iam_endpoint == iam._IAM_IDTOKEN_ENDPOINT
+        assert signer_email == "service-account@example.com"
+        assert target_audience == "https://example.com"
+        decoded_access_token = jwt.decode(access_token, verify=False)
+        assert decoded_access_token["scope"] == "https://www.googleapis.com/auth/iam"
+
+    @mock.patch(
+        "google.oauth2._client.call_iam_generate_id_token_endpoint", autospec=True
+    )
+    def test_refresh_iam_flow_non_gdu(self, call_iam_generate_id_token_endpoint):
+        credentials = self.make_credentials(universe_domain="fake-universe")
+        token = "id_token"
+        call_iam_generate_id_token_endpoint.return_value = (
+            token,
+            _helpers.utcnow() + datetime.timedelta(seconds=500),
+        )
+        request = mock.Mock()
+        credentials.refresh(request)
+        (
+            req,
+            iam_endpoint,
+            signer_email,
+            target_audience,
+            access_token,
+            universe_domain,
+        ) = call_iam_generate_id_token_endpoint.call_args[0]
+        assert req == request
+        assert (
+            iam_endpoint
+            == "https://iamcredentials.fake-universe/v1/projects/-/serviceAccounts/{}:generateIdToken"
+        )
+        assert signer_email == "service-account@example.com"
+        assert target_audience == "https://example.com"
+        decoded_access_token = jwt.decode(access_token, verify=False)
+        assert decoded_access_token["scope"] == "https://www.googleapis.com/auth/iam"
 
     @mock.patch("google.oauth2._client.id_token_jwt_grant", autospec=True)
     def test_before_request_refreshes(self, id_token_jwt_grant):

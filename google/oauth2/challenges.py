@@ -20,13 +20,21 @@ import base64
 import getpass
 import sys
 
-import six
-
 from google.auth import _helpers
 from google.auth import exceptions
+from google.oauth2 import webauthn_handler_factory
+from google.oauth2.webauthn_types import (
+    AuthenticationExtensionsClientInputs,
+    GetRequest,
+    PublicKeyCredentialDescriptor,
+)
 
 
 REAUTH_ORIGIN = "https://accounts.google.com"
+SAML_CHALLENGE_MESSAGE = (
+    "Please run `gcloud auth login` to complete reauthentication with SAML."
+)
+WEBAUTHN_TIMEOUT_MS = 120000  # Two minute timeout
 
 
 def get_user_password(text):
@@ -44,8 +52,7 @@ def get_user_password(text):
     return getpass.getpass(text)
 
 
-@six.add_metaclass(abc.ABCMeta)
-class ReauthChallenge(object):
+class ReauthChallenge(metaclass=abc.ABCMeta):
     """Base class for reauth challenges."""
 
     @property
@@ -110,10 +117,21 @@ class SecurityKeyChallenge(ReauthChallenge):
 
     @_helpers.copy_docstring(ReauthChallenge)
     def obtain_challenge_input(self, metadata):
+        # Check if there is an available Webauthn Handler, if not use pyu2f
         try:
-            import pyu2f.convenience.authenticator
-            import pyu2f.errors
-            import pyu2f.model
+            factory = webauthn_handler_factory.WebauthnHandlerFactory()
+            webauthn_handler = factory.get_handler()
+            if webauthn_handler is not None:
+                sys.stderr.write("Please insert and touch your security key\n")
+                return self._obtain_challenge_input_webauthn(metadata, webauthn_handler)
+        except Exception:
+            # Attempt pyu2f if exception in webauthn flow
+            pass
+
+        try:
+            import pyu2f.convenience.authenticator  # type: ignore
+            import pyu2f.errors  # type: ignore
+            import pyu2f.model  # type: ignore
         except ImportError:
             raise exceptions.ReauthFailError(
                 "pyu2f dependency is required to use Security key reauth feature. "
@@ -121,7 +139,16 @@ class SecurityKeyChallenge(ReauthChallenge):
             )
         sk = metadata["securityKey"]
         challenges = sk["challenges"]
-        app_id = sk["applicationId"]
+        # Read both 'applicationId' and 'relyingPartyId', if they are the same, use
+        # applicationId, if they are different, use relyingPartyId first and retry
+        # with applicationId
+        application_id = sk["applicationId"]
+        relying_party_id = sk["relyingPartyId"]
+
+        if application_id != relying_party_id:
+            application_parameters = [relying_party_id, application_id]
+        else:
+            application_parameters = [application_id]
 
         challenge_data = []
         for c in challenges:
@@ -131,27 +158,124 @@ class SecurityKeyChallenge(ReauthChallenge):
             challenge = base64.urlsafe_b64decode(challenge)
             challenge_data.append({"key": key, "challenge": challenge})
 
+        # Track number of tries to suppress error message until all application_parameters
+        # are tried.
+        tries = 0
+        for app_id in application_parameters:
+            try:
+                tries += 1
+                api = pyu2f.convenience.authenticator.CreateCompositeAuthenticator(
+                    REAUTH_ORIGIN
+                )
+                response = api.Authenticate(
+                    app_id, challenge_data, print_callback=sys.stderr.write
+                )
+                return {"securityKey": response}
+            except pyu2f.errors.U2FError as e:
+                if e.code == pyu2f.errors.U2FError.DEVICE_INELIGIBLE:
+                    # Only show error if all app_ids have been tried
+                    if tries == len(application_parameters):
+                        sys.stderr.write("Ineligible security key.\n")
+                        return None
+                    continue
+                if e.code == pyu2f.errors.U2FError.TIMEOUT:
+                    sys.stderr.write(
+                        "Timed out while waiting for security key touch.\n"
+                    )
+                else:
+                    raise e
+            except pyu2f.errors.PluginError as e:
+                sys.stderr.write("Plugin error: {}.\n".format(e))
+                continue
+            except pyu2f.errors.NoDeviceFoundError:
+                sys.stderr.write("No security key found.\n")
+            return None
+
+    def _obtain_challenge_input_webauthn(self, metadata, webauthn_handler):
+        sk = metadata.get("securityKey")
+        if sk is None:
+            raise exceptions.InvalidValue("securityKey is None")
+        challenges = sk.get("challenges")
+        application_id = sk.get("applicationId")
+        relying_party_id = sk.get("relyingPartyId")
+        if challenges is None or len(challenges) < 1:
+            raise exceptions.InvalidValue("challenges is None or empty")
+        if application_id is None:
+            raise exceptions.InvalidValue("application_id is None")
+        if relying_party_id is None:
+            raise exceptions.InvalidValue("relying_party_id is None")
+
+        allow_credentials = []
+        for challenge in challenges:
+            kh = challenge.get("keyHandle")
+            if kh is None:
+                raise exceptions.InvalidValue("keyHandle is None")
+            key_handle = self._unpadded_urlsafe_b64recode(kh)
+            allow_credentials.append(PublicKeyCredentialDescriptor(id=key_handle))
+
+        extension = AuthenticationExtensionsClientInputs(appid=application_id)
+
+        challenge = challenges[0].get("challenge")
+        if challenge is None:
+            raise exceptions.InvalidValue("challenge is None")
+
+        get_request = GetRequest(
+            origin=REAUTH_ORIGIN,
+            rpid=relying_party_id,
+            challenge=self._unpadded_urlsafe_b64recode(challenge),
+            timeout_ms=WEBAUTHN_TIMEOUT_MS,
+            allow_credentials=allow_credentials,
+            user_verification="required",
+            extensions=extension,
+        )
+
         try:
-            api = pyu2f.convenience.authenticator.CreateCompositeAuthenticator(
-                REAUTH_ORIGIN
-            )
-            response = api.Authenticate(
-                app_id, challenge_data, print_callback=sys.stderr.write
-            )
-            return {"securityKey": response}
-        except pyu2f.errors.U2FError as e:
-            if e.code == pyu2f.errors.U2FError.DEVICE_INELIGIBLE:
-                sys.stderr.write("Ineligible security key.\n")
-            elif e.code == pyu2f.errors.U2FError.TIMEOUT:
-                sys.stderr.write("Timed out while waiting for security key touch.\n")
-            else:
-                raise e
-        except pyu2f.errors.NoDeviceFoundError:
-            sys.stderr.write("No security key found.\n")
-        return None
+            get_response = webauthn_handler.get(get_request)
+        except Exception as e:
+            sys.stderr.write("Webauthn Error: {}.\n".format(e))
+            raise e
+
+        response = {
+            "clientData": get_response.response.client_data_json,
+            "authenticatorData": get_response.response.authenticator_data,
+            "signatureData": get_response.response.signature,
+            "applicationId": application_id,
+            "keyHandle": get_response.id,
+            "securityKeyReplyType": 2,
+        }
+        return {"securityKey": response}
+
+    def _unpadded_urlsafe_b64recode(self, s):
+        """Converts standard b64 encoded string to url safe b64 encoded string
+        with no padding."""
+        b = base64.urlsafe_b64decode(s)
+        return base64.urlsafe_b64encode(b).decode().rstrip("=")
+
+
+class SamlChallenge(ReauthChallenge):
+    """Challenge that asks the users to browse to their ID Providers.
+
+    Currently SAML challenge is not supported. When obtaining the challenge
+    input, exception will be raised to instruct the users to run
+    `gcloud auth login` for reauthentication.
+    """
+
+    @property
+    def name(self):
+        return "SAML"
+
+    @property
+    def is_locally_eligible(self):
+        return True
+
+    def obtain_challenge_input(self, metadata):
+        # Magic Arch has not fully supported returning a proper dedirect URL
+        # for programmatic SAML users today. So we error our here and request
+        # users to use gcloud to complete a login.
+        raise exceptions.ReauthSamlChallengeFailError(SAML_CHALLENGE_MESSAGE)
 
 
 AVAILABLE_CHALLENGES = {
     challenge.name: challenge
-    for challenge in [SecurityKeyChallenge(), PasswordChallenge()]
+    for challenge in [SecurityKeyChallenge(), PasswordChallenge(), SamlChallenge()]
 }

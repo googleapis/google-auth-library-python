@@ -27,12 +27,13 @@ import datetime
 from google.auth import _helpers
 from google.auth import credentials
 from google.auth import crypt
+from google.auth import exceptions
 
 # pytype: disable=import-error
 try:
-    from google.appengine.api import app_identity
+    from google.appengine.api import app_identity  # type: ignore
 except ImportError:
-    app_identity = None
+    app_identity = None  # type: ignore
 # pytype: enable=import-error
 
 
@@ -67,13 +68,13 @@ def get_project_id():
         str: The project ID
 
     Raises:
-        EnvironmentError: If the App Engine APIs are unavailable.
+        google.auth.exceptions.OSError: If the App Engine APIs are unavailable.
     """
     # pylint: disable=missing-raises-doc
-    # Pylint rightfully thinks EnvironmentError is OSError, but doesn't
+    # Pylint rightfully thinks google.auth.exceptions.OSError is OSError, but doesn't
     # realize it's a valid alias.
     if app_identity is None:
-        raise EnvironmentError("The App Engine APIs are not available.")
+        raise exceptions.OSError("The App Engine APIs are not available.")
     return app_identity.get_application_id()
 
 
@@ -107,13 +108,13 @@ class Credentials(
                 and billing.
 
         Raises:
-            EnvironmentError: If the App Engine APIs are unavailable.
+            google.auth.exceptions.OSError: If the App Engine APIs are unavailable.
         """
         # pylint: disable=missing-raises-doc
-        # Pylint rightfully thinks EnvironmentError is OSError, but doesn't
+        # Pylint rightfully thinks google.auth.exceptions.OSError is OSError, but doesn't
         # realize it's a valid alias.
         if app_identity is None:
-            raise EnvironmentError("The App Engine APIs are not available.")
+            raise exceptions.OSError("The App Engine APIs are not available.")
 
         super(Credentials, self).__init__()
         self._scopes = scopes
@@ -168,12 +169,12 @@ class Credentials(
     def sign_bytes(self, message):
         return self._signer.sign(message)
 
-    @property
+    @property  # type: ignore
     @_helpers.copy_docstring(credentials.Signing)
     def signer_email(self):
         return self.service_account_email
 
-    @property
+    @property  # type: ignore
     @_helpers.copy_docstring(credentials.Signing)
     def signer(self):
         return self._signer

@@ -17,25 +17,17 @@
 from __future__ import absolute_import
 
 import logging
-import os
 
-import six
-
-from google.auth import environment_vars
 from google.auth import exceptions
 from google.auth.transport import _mtls_helper
 from google.oauth2 import service_account
 
 try:
-    import grpc
+    import grpc  # type: ignore
 except ImportError as caught_exc:  # pragma: NO COVER
-    six.raise_from(
-        ImportError(
-            "gRPC is not installed, please install the grpcio package "
-            "to use the gRPC transport."
-        ),
-        caught_exc,
-    )
+    raise ImportError(
+        "gRPC is not installed from please install the grpcio package to use the gRPC transport."
+    ) from caught_exc
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -88,7 +80,7 @@ class AuthMetadataPlugin(grpc.AuthMetadataPlugin):
             self._request, context.method_name, context.service_url, headers
         )
 
-        return list(six.iteritems(headers))
+        return list(headers.items())
 
     def __call__(self, context, callback):
         """Passes authorization metadata into the given callback.
@@ -255,23 +247,21 @@ def secure_authorized_channel(
     google_auth_credentials = grpc.metadata_call_credentials(metadata_plugin)
 
     if ssl_credentials and client_cert_callback:
-        raise ValueError(
+        raise exceptions.MalformedError(
             "Received both ssl_credentials and client_cert_callback; "
             "these are mutually exclusive."
         )
 
     # If SSL credentials are not explicitly set, try client_cert_callback and ADC.
     if not ssl_credentials:
-        use_client_cert = os.getenv(
-            environment_vars.GOOGLE_API_USE_CLIENT_CERTIFICATE, "false"
-        )
-        if use_client_cert == "true" and client_cert_callback:
+        use_client_cert = _mtls_helper.check_use_client_cert()
+        if use_client_cert and client_cert_callback:
             # Use the callback if provided.
             cert, key = client_cert_callback()
             ssl_credentials = grpc.ssl_channel_credentials(
                 certificate_chain=cert, private_key=key
             )
-        elif use_client_cert == "true":
+        elif use_client_cert:
             # Use application default SSL credentials.
             adc_ssl_credentils = SslCredentials()
             ssl_credentials = adc_ssl_credentils.ssl_credentials
@@ -301,14 +291,12 @@ class SslCredentials:
     """
 
     def __init__(self):
-        use_client_cert = os.getenv(
-            environment_vars.GOOGLE_API_USE_CLIENT_CERTIFICATE, "false"
-        )
-        if use_client_cert != "true":
+        use_client_cert = _mtls_helper.check_use_client_cert()
+        if not use_client_cert:
             self._is_mtls = False
         else:
             # Load client SSL credentials.
-            metadata_path = _mtls_helper._check_dca_metadata_path(
+            metadata_path = _mtls_helper._check_config_path(
                 _mtls_helper.CONTEXT_AWARE_METADATA_PATH
             )
             self._is_mtls = metadata_path is not None
@@ -337,7 +325,7 @@ class SslCredentials:
                 )
             except exceptions.ClientCertError as caught_exc:
                 new_exc = exceptions.MutualTLSChannelError(caught_exc)
-                six.raise_from(new_exc, caught_exc)
+                raise new_exc from caught_exc
         else:
             self._ssl_credentials = grpc.ssl_channel_credentials()
 

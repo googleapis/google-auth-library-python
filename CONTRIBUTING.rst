@@ -16,10 +16,10 @@ A few notes on making changes to ``google-auth-library-python``.
 - If you've added a new feature or modified an existing feature, be sure to
   add or update any applicable documentation in docstrings and in the
   documentation (in ``docs/``). You can re-generate the reference documentation
-  using ``nox -s docgen``.
+  using ``nox -s docs``.
 
-- The change must work fully on the following CPython versions: 2.7,
-  3.5, 3.6, 3.7, 3.8 across macOS, Linux, and Windows.
+- The change must work fully on the following CPython versions:
+  3.7, 3.8, 3.9, 3.10, 3.11, 3.12 and 3.13 across macOS, Linux, and Windows.
 
 - The codebase *must* have 100% test statement coverage after each commit.
   You can test coverage via ``nox -e cover``.
@@ -97,6 +97,7 @@ Grant the account associated with ``service_account.json`` the following roles.
 - Pub/Sub Viewer (for gRPC tests)
 - Storage Object Viewer (for impersonated credentials tests)
 - DNS Viewer (for workload identity federation tests)
+- GCE Storage Bucket Admin (for downscoping tests)
 
 ``impersonated_service_account.json``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -16,8 +16,8 @@
 
 from __future__ import absolute_import
 
+import http.client as http_client
 import logging
-import os
 import warnings
 
 # Certifi is Mozilla's certificate bundle. Urllib3 needs a certificate bundle
@@ -29,27 +29,37 @@ import warnings
 try:
     import certifi
 except ImportError:  # pragma: NO COVER
-    certifi = None
+    certifi = None  # type: ignore
 
 try:
-    import urllib3
+    import urllib3  # type: ignore
+    import urllib3.exceptions  # type: ignore
+    from packaging import version  # type: ignore
 except ImportError as caught_exc:  # pragma: NO COVER
-    import six
+    raise ImportError(
+        ""
+        f"Error: {caught_exc}."
+        " The 'google-auth' library requires the extras installed "
+        "for urllib3 network transport."
+        "\n"
+        "Please install the necessary dependencies using pip:\n"
+        "  pip install google-auth[urllib3]\n"
+        "\n"
+        "(Note: Using '[urllib3]' ensures the specific dependencies needed for this feature are installed. "
+        "We recommend running this command in your virtual environment.)"
+    ) from caught_exc
 
-    six.raise_from(
-        ImportError(
-            "The urllib3 library is not installed, please install the "
-            "urllib3 package to use the urllib3 transport."
-        ),
-        caught_exc,
-    )
-import six
-import urllib3.exceptions  # pylint: disable=ungrouped-imports
 
-from google.auth import environment_vars
+from google.auth import _helpers
 from google.auth import exceptions
 from google.auth import transport
+from google.auth.transport import _mtls_helper
 from google.oauth2 import service_account
+
+if version.parse(urllib3.__version__) >= version.parse("2.0.0"):  # pragma: NO COVER
+    RequestMethods = urllib3._request_methods.RequestMethods  # type: ignore
+else:  # pragma: NO COVER
+    RequestMethods = urllib3.request.RequestMethods  # type: ignore
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -135,14 +145,15 @@ class Request(transport.Request):
             kwargs["timeout"] = timeout
 
         try:
-            _LOGGER.debug("Making request: %s %s", method, url)
+            _helpers.request_log(_LOGGER, method, url, body, headers)
             response = self.http.request(
                 method, url, body=body, headers=headers, **kwargs
             )
+            _helpers.response_log(_LOGGER, response)
             return _Response(response)
         except urllib3.exceptions.HTTPError as caught_exc:
             new_exc = exceptions.TransportError(caught_exc)
-            six.raise_from(new_exc, caught_exc)
+            raise new_exc from caught_exc
 
 
 def _make_default_http():
@@ -169,7 +180,7 @@ def _make_mutual_tls_http(cert, key):
     """
     import certifi
     from OpenSSL import crypto
-    import urllib3.contrib.pyopenssl
+    import urllib3.contrib.pyopenssl  # type: ignore
 
     urllib3.contrib.pyopenssl.inject_into_urllib3()
     ctx = urllib3.util.ssl_.create_urllib3_context()
@@ -185,7 +196,7 @@ def _make_mutual_tls_http(cert, key):
     return http
 
 
-class AuthorizedHttp(urllib3.request.RequestMethods):
+class AuthorizedHttp(RequestMethods):  # type: ignore
     """A urllib3 HTTP class with credentials.
 
     This class is used to perform requests to API endpoints that require
@@ -290,6 +301,7 @@ class AuthorizedHttp(urllib3.request.RequestMethods):
         # Request instance used by internal methods (for example,
         # credentials.refresh).
         self._request = Request(self.http)
+        self._is_mtls = False
 
         # https://google.aip.dev/auth/4111
         # Attempt to use self-signed JWTs when a service account is used.
@@ -324,17 +336,17 @@ class AuthorizedHttp(urllib3.request.RequestMethods):
             google.auth.exceptions.MutualTLSChannelError: If mutual TLS channel
                 creation failed for any reason.
         """
-        use_client_cert = os.getenv(
-            environment_vars.GOOGLE_API_USE_CLIENT_CERTIFICATE, "false"
-        )
-        if use_client_cert != "true":
+        use_client_cert = transport._mtls_helper.check_use_client_cert()
+        if not use_client_cert:
+            self._is_mtls = False
             return False
-
+        else:
+            self._is_mtls = True
         try:
             import OpenSSL
         except ImportError as caught_exc:
             new_exc = exceptions.MutualTLSChannelError(caught_exc)
-            six.raise_from(new_exc, caught_exc)
+            raise new_exc from caught_exc
 
         try:
             found_cert_key, cert, key = transport._mtls_helper.get_client_cert_and_key(
@@ -343,6 +355,7 @@ class AuthorizedHttp(urllib3.request.RequestMethods):
 
             if found_cert_key:
                 self.http = _make_mutual_tls_http(cert, key)
+                self._cached_cert = cert
             else:
                 self.http = _make_default_http()
         except (
@@ -351,7 +364,7 @@ class AuthorizedHttp(urllib3.request.RequestMethods):
             OpenSSL.crypto.Error,
         ) as caught_exc:
             new_exc = exceptions.MutualTLSChannelError(caught_exc)
-            six.raise_from(new_exc, caught_exc)
+            raise new_exc from caught_exc
 
         if self._has_user_provided_http:
             self._has_user_provided_http = False
@@ -375,6 +388,11 @@ class AuthorizedHttp(urllib3.request.RequestMethods):
         if headers is None:
             headers = self.headers
 
+        use_mtls = False
+        if self._is_mtls:
+            MTLS_URL_PREFIXES = ["mtls.googleapis.com", "mtls.sandbox.googleapis.com"]
+            use_mtls = any([prefix in url for prefix in MTLS_URL_PREFIXES])
+
         # Make a copy of the headers. They will be modified by the credentials
         # and we want to pass the original headers if we recurse.
         request_headers = headers.copy()
@@ -396,6 +414,39 @@ class AuthorizedHttp(urllib3.request.RequestMethods):
             response.status in self._refresh_status_codes
             and _credential_refresh_attempt < self._max_refresh_attempts
         ):
+            if response.status == http_client.UNAUTHORIZED:
+                if use_mtls:
+                    (
+                        call_cert_bytes,
+                        call_key_bytes,
+                        cached_fingerprint,
+                        current_cert_fingerprint,
+                    ) = _mtls_helper.check_parameters_for_unauthorized_response(
+                        self._cached_cert
+                    )
+                    if cached_fingerprint != current_cert_fingerprint:
+                        try:
+                            _LOGGER.info(
+                                "Client certificate has changed, reconfiguring mTLS "
+                                "channel."
+                            )
+                            self.configure_mtls_channel(
+                                client_cert_callback=lambda: (
+                                    call_cert_bytes,
+                                    call_key_bytes,
+                                )
+                            )
+                        except Exception as e:
+                            _LOGGER.error("Failed to reconfigure mTLS channel: %s", e)
+                            raise exceptions.MutualTLSChannelError(
+                                "Failed to reconfigure mTLS channel"
+                            ) from e
+
+                    else:
+                        _LOGGER.info(
+                            "Skipping reconfiguration of mTLS channel because the "
+                            "client certificate has not changed."
+                        )
 
             _LOGGER.info(
                 "Refreshing credentials due to a %s response. Attempt %s/%s.",
@@ -413,7 +464,7 @@ class AuthorizedHttp(urllib3.request.RequestMethods):
                 body=body,
                 headers=headers,
                 _credential_refresh_attempt=_credential_refresh_attempt + 1,
-                **kwargs
+                **kwargs,
             )
 
         return response
@@ -427,6 +478,10 @@ class AuthorizedHttp(urllib3.request.RequestMethods):
     def __exit__(self, exc_type, exc_val, exc_tb):
         """Proxy to ``self.http``."""
         return self.http.__exit__(exc_type, exc_val, exc_tb)
+
+    def __del__(self):
+        if hasattr(self, "http") and self.http is not None:
+            self.http.clear()
 
     @property
     def headers(self):

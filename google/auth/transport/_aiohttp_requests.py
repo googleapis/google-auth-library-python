@@ -22,14 +22,19 @@ from __future__ import absolute_import
 
 import asyncio
 import functools
+import logging
 
-import aiohttp
-import six
-import urllib3
+import aiohttp  # type: ignore
+import urllib3  # type: ignore
 
+from google.auth import _helpers
 from google.auth import exceptions
 from google.auth import transport
+from google.auth.aio import _helpers as _helpers_async
 from google.auth.transport import requests
+
+
+_LOGGER = logging.getLogger(__name__)
 
 # Timeout can be re-defined depending on async requirement. Currently made 60s more than
 # sync timeout.
@@ -140,7 +145,7 @@ class Request(transport.Request):
     def __init__(self, session=None):
         # TODO: Use auto_decompress property for aiohttp 3.7+
         if session is not None and session._auto_decompress:
-            raise ValueError(
+            raise exceptions.InvalidOperation(
                 "Client sessions with auto_decompress=True are not supported."
             )
         self.session = session
@@ -183,19 +188,20 @@ class Request(transport.Request):
                 self.session = aiohttp.ClientSession(
                     auto_decompress=False
                 )  # pragma: NO COVER
-            requests._LOGGER.debug("Making request: %s %s", method, url)
+            _helpers.request_log(_LOGGER, method, url, body, headers)
             response = await self.session.request(
                 method, url, data=body, headers=headers, timeout=timeout, **kwargs
             )
+            await _helpers_async.response_log_async(_LOGGER, response)
             return _CombinedResponse(response)
 
         except aiohttp.ClientError as caught_exc:
             new_exc = exceptions.TransportError(caught_exc)
-            six.raise_from(new_exc, caught_exc)
+            raise new_exc from caught_exc
 
         except asyncio.TimeoutError as caught_exc:
             new_exc = exceptions.TransportError(caught_exc)
-            six.raise_from(new_exc, caught_exc)
+            raise new_exc from caught_exc
 
 
 class AuthorizedSession(aiohttp.ClientSession):
@@ -233,6 +239,8 @@ class AuthorizedSession(aiohttp.ClientSession):
             refreshing credentials. If not passed,
             an instance of :class:`~google.auth.transport.aiohttp_requests.Request`
             is created.
+        kwargs: Additional arguments passed through to the underlying
+            ClientSession :meth:`aiohttp.ClientSession` object.
     """
 
     def __init__(
@@ -243,8 +251,9 @@ class AuthorizedSession(aiohttp.ClientSession):
         refresh_timeout=None,
         auth_request=None,
         auto_decompress=False,
+        **kwargs,
     ):
-        super(AuthorizedSession, self).__init__()
+        super(AuthorizedSession, self).__init__(**kwargs)
         self.credentials = credentials
         self._refresh_status_codes = refresh_status_codes
         self._max_refresh_attempts = max_refresh_attempts
@@ -267,7 +276,6 @@ class AuthorizedSession(aiohttp.ClientSession):
         auto_decompress=False,
         **kwargs,
     ):
-
         """Implementation of Authorized Session aiohttp request.
 
         Args:
@@ -305,7 +313,8 @@ class AuthorizedSession(aiohttp.ClientSession):
                     headers[key] = headers[key].decode("utf-8")
 
         async with aiohttp.ClientSession(
-            auto_decompress=self._auto_decompress
+            auto_decompress=self._auto_decompress,
+            trust_env=kwargs.get("trust_env", False),
         ) as self._auth_request_session:
             auth_request = Request(self._auth_request_session)
             self._auth_request = auth_request
@@ -348,7 +357,6 @@ class AuthorizedSession(aiohttp.ClientSession):
                 response.status in self._refresh_status_codes
                 and _credential_refresh_attempt < self._max_refresh_attempts
             ):
-
                 requests._LOGGER.info(
                     "Refreshing credentials due to a %s response. Attempt %s/%s.",
                     response.status,

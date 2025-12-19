@@ -34,9 +34,8 @@ Those steps are:
 
 import sys
 
-from six.moves import range
-
 from google.auth import exceptions
+from google.auth import metrics
 from google.oauth2 import _client
 from google.oauth2 import challenges
 
@@ -94,9 +93,15 @@ def _get_challenges(
     body = {"supportedChallengeTypes": supported_challenge_types}
     if requested_scopes:
         body["oauthScopesForDomainPolicyLookup"] = requested_scopes
+    metrics_header = {metrics.API_CLIENT_HEADER: metrics.reauth_start()}
 
     return _client._token_endpoint_request(
-        request, _REAUTH_API + ":start", body, access_token=access_token, use_json=True
+        request,
+        _REAUTH_API + ":start",
+        body,
+        access_token=access_token,
+        use_json=True,
+        headers=metrics_header,
     )
 
 
@@ -123,6 +128,7 @@ def _send_challenge_result(
         "action": "RESPOND",
         "proposalResponse": client_input,
     }
+    metrics_header = {metrics.API_CLIENT_HEADER: metrics.reauth_continue()}
 
     return _client._token_endpoint_request(
         request,
@@ -130,6 +136,7 @@ def _send_challenge_result(
         body,
         access_token=access_token,
         use_json=True,
+        headers=metrics_header,
     )
 
 
@@ -225,6 +232,8 @@ def _obtain_rapt(request, access_token, requested_scopes):
 
         msg = _run_next_challenge(msg, request, access_token)
 
+        if not msg:
+            raise exceptions.ReauthFailError("Failed to obtain rapt token.")
         if msg["status"] == _AUTHENTICATED:
             return msg["encodedProofOfReauthToken"]
 
@@ -265,6 +274,7 @@ def get_rapt_token(
 
     # Get rapt token from reauth API.
     rapt_token = _obtain_rapt(request, access_token, requested_scopes=scopes)
+    sys.stderr.write("Reauthentication successful.\n")
 
     return rapt_token
 
@@ -277,6 +287,7 @@ def refresh_grant(
     client_secret,
     scopes=None,
     rapt_token=None,
+    enable_reauth_refresh=False,
 ):
     """Implements the reauthentication flow.
 
@@ -294,6 +305,9 @@ def refresh_grant(
             token has a wild card scope (e.g.
             'https://www.googleapis.com/auth/any-api').
         rapt_token (Optional(str)): The rapt token for reauth.
+        enable_reauth_refresh (Optional[bool]): Whether reauth refresh flow
+            should be used. The default value is False. This option is for
+            gcloud only, other users should use the default value.
 
     Returns:
         Tuple[str, Optional[str], Optional[datetime], Mapping[str, str], str]: The
@@ -314,10 +328,19 @@ def refresh_grant(
         body["scope"] = " ".join(scopes)
     if rapt_token:
         body["rapt"] = rapt_token
+    metrics_header = {metrics.API_CLIENT_HEADER: metrics.token_request_user()}
 
-    response_status_ok, response_data = _client._token_endpoint_request_no_throw(
-        request, token_uri, body
+    (
+        response_status_ok,
+        response_data,
+        retryable_error,
+    ) = _client._token_endpoint_request_no_throw(
+        request, token_uri, body, headers=metrics_header
     )
+
+    if not response_status_ok and isinstance(response_data, str):
+        raise exceptions.RefreshError(response_data, retryable=False)
+
     if (
         not response_status_ok
         and response_data.get("error") == _REAUTH_NEEDED_ERROR
@@ -326,16 +349,25 @@ def refresh_grant(
             or response_data.get("error_subtype") == _REAUTH_NEEDED_ERROR_RAPT_REQUIRED
         )
     ):
+        if not enable_reauth_refresh:
+            raise exceptions.RefreshError(
+                "Reauthentication is needed. Please run `gcloud auth application-default login` to reauthenticate."
+            )
+
         rapt_token = get_rapt_token(
             request, client_id, client_secret, refresh_token, token_uri, scopes=scopes
         )
         body["rapt"] = rapt_token
-        (response_status_ok, response_data) = _client._token_endpoint_request_no_throw(
-            request, token_uri, body
+        (
+            response_status_ok,
+            response_data,
+            retryable_error,
+        ) = _client._token_endpoint_request_no_throw(
+            request, token_uri, body, headers=metrics_header
         )
 
     if not response_status_ok:
-        _client._handle_error_response(response_data)
+        _client._handle_error_response(response_data, retryable_error)
     return _client._handle_refresh_grant_response(response_data, refresh_token) + (
         rapt_token,
     )

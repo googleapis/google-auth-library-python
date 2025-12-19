@@ -23,11 +23,22 @@ credentials.
 
 Credentials from external accounts (workload identity federation) are used to
 identify a particular application from an on-prem or non-Google Cloud platform
-including Amazon Web Services (AWS), Microsoft Azure or any identity provider
-that supports OpenID Connect (OIDC).
+including Amazon Web Services (AWS), Microsoft Azure, any identity provider
+that supports OpenID Connect (OIDC), or via X.509 certificates.
 
 Obtaining credentials
 ---------------------
+
+.. warning::
+    Important: If you accept a credential configuration (credential JSON/File/Stream)
+    from an external source for authentication to Google Cloud Platform, you must
+    validate it before providing it to any Google API or client library. Providing an
+    unvalidated credential configuration to Google APIs or libraries can compromise
+    the security of your systems and data. For more information, refer to
+    `Validate credential configurations from external sources`_.
+
+.. _Validate credential configurations from external sources:
+    https://cloud.google.com/docs/authentication/external/externally-sourced-credentials
 
 .. _application-default:
 
@@ -61,57 +72,6 @@ store service account private keys locally.
     application-default-credentials
 .. _Google Cloud SDK: https://cloud.google.com/sdk
 
-
-Service account private key files
-+++++++++++++++++++++++++++++++++
-
-A service account private key file can be used to obtain credentials for a
-service account. You can create a private key using the `Credentials page of the
-Google Cloud Console`_. Once you have a private key you can either obtain
-credentials one of three ways:
-
-1. Set the ``GOOGLE_APPLICATION_CREDENTIALS`` environment variable to the full
-   path to your service account private key file
-
-   .. code-block:: bash
-
-        $ export GOOGLE_APPLICATION_CREDENTIALS=/path/to/key.json
-
-   Then, use :ref:`application default credentials <application-default>`.
-   :func:`default` checks for the ``GOOGLE_APPLICATION_CREDENTIALS``
-   environment variable before all other checks, so this will always use the
-   credentials you explicitly specify.
-
-2. Use :meth:`service_account.Credentials.from_service_account_file
-   <google.oauth2.service_account.Credentials.from_service_account_file>`::
-
-        from google.oauth2 import service_account
-
-        credentials = service_account.Credentials.from_service_account_file(
-            '/path/to/key.json')
-
-        scoped_credentials = credentials.with_scopes(
-            ['https://www.googleapis.com/auth/cloud-platform'])
-
-3. Use :meth:`service_account.Credentials.from_service_account_info
-   <google.oauth2.service_account.Credentials.from_service_account_info>`::
-
-        import json
-
-        from google.oauth2 import service_account
-
-        json_acct_info = json.loads(function_to_get_json_creds())
-        credentials = service_account.Credentials.from_service_account_info(
-            json_acct_info)
-
-        scoped_credentials = credentials.with_scopes(
-            ['https://www.googleapis.com/auth/cloud-platform'])
-
-.. warning:: Private keys must be kept secret. If you expose your private key it
-    is recommended to revoke it immediately from the Google Cloud Console.
-
-.. _Credentials page of the Google Cloud Console:
-    https://console.cloud.google.com/apis/credentials
 
 Compute Engine, Container Engine, and the App Engine flexible environment
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -212,7 +172,7 @@ There is a separate library, `google-auth-oauthlib`_, that has some helpers
 for integrating with `requests-oauthlib`_ to provide support for obtaining
 user credentials. You can use
 :func:`google_auth_oauthlib.helpers.credentials_from_session` to obtain
-:class:`google.oauth2.credentials.Credentials` from a 
+:class:`google.oauth2.credentials.Credentials` from a
 :class:`requests_oauthlib.OAuth2Session` as above::
 
     from google_auth_oauthlib.helpers import credentials_from_session
@@ -231,12 +191,13 @@ You can also use :class:`google_auth_oauthlib.flow.Flow` to perform the OAuth
 .. _requests-oauthlib:
     https://requests-oauthlib.readthedocs.io/en/latest/
 
+
 External credentials (Workload identity federation)
 +++++++++++++++++++++++++++++++++++++++++++++++++++
 
 Using workload identity federation, your application can access Google Cloud
-resources from Amazon Web Services (AWS), Microsoft Azure or any identity
-provider that supports OpenID Connect (OIDC).
+resources from Amazon Web Services (AWS), Microsoft Azure, any identity
+provider that supports OpenID Connect (OIDC), or via X.509 certificates.
 
 Traditionally, applications running outside Google Cloud have used service
 account keys to access Google Cloud resources. Using identity federation,
@@ -259,6 +220,9 @@ following requirements are needed:
   credential files, the generated credential configuration file will only
   contain non-sensitive metadata to instruct the library on how to retrieve
   external subject tokens and exchange them for service account access tokens.
+- If you want to use IDMSv2, then below field needs to be added to credential_source
+  section of credential configuration.
+  "imdsv2_session_token_url": "http://169.254.169.254/latest/api/token"
 
 Follow the detailed instructions on how to
 `Configure Workload Identity Federation from AWS`_.
@@ -326,6 +290,348 @@ Follow the detailed instructions on how to
 .. _Configure Workload Identity Federation from an OIDC identity provider:
     https://cloud.google.com/iam/docs/access-resources-oidc
 
+.. _accessing-resources-using-x509-certificate-sourced-credentials:
+
+Accessing resources using X.509 certificate-sourced credentials
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+For `X.509 certificate-sourced credentials`_, the authentication library uses an X.509 certificate and private key to prove your application's identity. The certificate has a built-in expiration date and must be renewed to maintain access.
+
+The library constructs a subject token by creating a JSON array containing the base64-encoded leaf certificate, followed by any intermediate certificates from a provided trust chain.
+
+**Generating Configuration Files for X.509 Federation**
+
+To configure X.509 certificate-sourced credentials, you need to generate two separate configuration files: a primary **credential configuration file** and a **certificate configuration file**. The ``gcloud iam workload-identity-pools create-cred-config`` command can be used to create both.
+
+The location where the certificate configuration file is created depends on whether you use the ``--credential-cert-configuration-output-file`` flag.
+
+**Default Behavior (Recommended)**
+
+If you omit the ``--credential-cert-configuration-output-file`` flag, gcloud creates the certificate configuration file at a default, well-known location that the auth library can automatically discover. This is the simplest approach for most use cases.
+
+**Example Command (Default Behavior):**
+
+.. code-block:: bash
+
+    gcloud iam workload-identity-pools create-cred-config \
+        projects/$PROJECT_NUMBER/locations/global/workloadIdentityPools/$POOL_ID/providers/$PROVIDER_ID \
+        --service-account $SERVICE_ACCOUNT_EMAIL \
+        --credential-cert-path "$PATH_TO_CERTIFICATE" \
+        --credential-cert-private-key-path "$PATH_TO_PRIVATE_KEY" \
+        --credential-cert-trust-chain-path "$PATH_TO_TRUST_CHAIN" \
+        --output-file /path/to/config.json
+
+Where the following variables need to be substituted:
+
+* ``$PROJECT_NUMBER``: The unique, numerical identifier for your Google Cloud project. This is not the Project ID string.
+* ``$POOL_ID``: The workload identity pool ID.
+* ``$PROVIDER_ID``: The provider ID.
+* ``$SERVICE_ACCOUNT_EMAIL``: The email of the service account to impersonate.
+* ``$PATH_TO_CERTIFICATE``: The file path where your leaf X.509 certificate is located.
+* ``$PATH_TO_PRIVATE_KEY``: The file path where the corresponding private key for the leaf certificate is located.
+* ``$PATH_TO_TRUST_CHAIN``: The file path of the X.509 certificate trust chain file. This file should be a PEM-formatted file containing any intermediate certificates required to complete the trust chain between the leaf certificate and the trust store configured in the Workload Identity Federation pool. The leaf certificate is optional in this file.
+
+This command results in:
+
+* ``/path/to/config.json``: Created at the path you specified. This file will contain ``"use_default_certificate_config": true`` to instruct clients to look for the certificate configuration at the default path.
+* ``certificate_config.json``: Created at the default gcloud configuration path, which is typically ``~/.config/gcloud/certificate_config.json`` on Linux and macOS, or ``%APPDATA%\gcloud\certificate_config.json`` on Windows.
+
+
+**Custom Location Behavior**
+
+If you need to store the certificate configuration file in a non-default location, use the ``--credential-cert-configuration-output-file`` flag.
+
+**Example Command (Custom Location):**
+
+.. code-block:: bash
+
+    gcloud iam workload-identity-pools create-cred-config \
+        projects/$PROJECT_NUMBER/locations/global/workloadIdentityPools/$POOL_ID/providers/$PROVIDER_ID \
+        --service-account $SERVICE_ACCOUNT_EMAIL \
+        --credential-cert-path "$PATH_TO_CERTIFICATE" \
+        --credential-cert-private-key-path "$PATH_TO_PRIVATE_KEY" \
+        --credential-cert-trust-chain-path "$PATH_TO_TRUST_CHAIN" \
+        --credential-cert-configuration-output-file "/custom/path/cert_config.json" \
+        --output-file /path/to/config.json
+
+
+This command results in:
+
+* ``/path/to/config.json``: Created at the path you specified. This file will contain a ``"certificate_config_location"`` field that points to your custom path.
+* ``cert_config.json``: Created at ``/custom/path/cert_config.json``, as specified by the flag.
+
+You can now use the Auth library to call Google Cloud resources with X.509 certificate-sourced credentials.
+
+.. _X.509 certificate-sourced credentials: https://cloud.google.com/iam/docs/workload-identity-federation-with-x509-certificates
+
+
+Using Executable-sourced credentials with OIDC and SAML
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Executable-sourced credentials** For executable-sourced credentials, a
+local executable is used to retrieve the 3rd party token. The executable
+must handle providing a valid, unexpired OIDC ID token or SAML assertion
+in JSON format to stdout.
+
+To use executable-sourced credentials, the
+``GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES`` environment variable must
+be set to ``1``.
+
+To generate an executable-sourced workload identity configuration, run
+the following command:
+
+.. code:: bash
+
+   # Generate a configuration file for executable-sourced credentials.
+   gcloud iam workload-identity-pools create-cred-config \
+       projects/$PROJECT_NUMBER/locations/global/workloadIdentityPools/$POOL_ID/providers/$PROVIDER_ID \
+       --service-account=$SERVICE_ACCOUNT_EMAIL \
+       --subject-token-type=$SUBJECT_TOKEN_TYPE \
+       # The absolute path for the program, including arguments.
+       # e.g. --executable-command="/path/to/command --foo=bar"
+       --executable-command=$EXECUTABLE_COMMAND \
+       # Optional argument for the executable timeout. Defaults to 30s.
+       # --executable-timeout-millis=$EXECUTABLE_TIMEOUT \
+       # Optional argument for the absolute path to the executable output file.
+       # See below on how this argument impacts the library behaviour.
+       # --executable-output-file=$EXECUTABLE_OUTPUT_FILE \
+       --output-file /path/to/generated/config.json
+
+Where the following variables need to be substituted: -
+``$PROJECT_NUMBER``: The Google Cloud project number. - ``$POOL_ID``:
+The workload identity pool ID. - ``$PROVIDER_ID``: The OIDC or SAML
+provider ID. - ``$SERVICE_ACCOUNT_EMAIL``: The email of the service
+account to impersonate. - ``$SUBJECT_TOKEN_TYPE``: The subject token
+type. - ``$EXECUTABLE_COMMAND``: The full command to run, including
+arguments. Must be an absolute path to the program.
+
+The ``--executable-timeout-millis`` flag is optional. This is the
+duration for which the auth library will wait for the executable to
+finish, in milliseconds. Defaults to 30 seconds when not provided. The
+maximum allowed value is 2 minutes. The minimum is 5 seconds.
+
+The ``--executable-output-file`` flag is optional. If provided, the file
+path must point to the 3PI credential response generated by the
+executable. This is useful for caching the credentials. By specifying
+this path, the Auth libraries will first check for its existence before
+running the executable. By caching the executable JSON response to this
+file, it improves performance as it avoids the need to run the
+executable until the cached credentials in the output file are expired.
+The executable must handle writing to this file - the auth libraries
+will only attempt to read from this location. The format of contents in
+the file should match the JSON format expected by the executable shown
+below.
+
+To retrieve the 3rd party token, the library will call the executable
+using the command specified. The executable’s output must adhere to the
+response format specified below. It must output the response to stdout.
+
+A sample successful executable OIDC response:
+
+.. code:: json
+
+   {
+     "version": 1,
+     "success": true,
+     "token_type": "urn:ietf:params:oauth:token-type:id_token",
+     "id_token": "HEADER.PAYLOAD.SIGNATURE",
+     "expiration_time": 1620499962
+   }
+
+A sample successful executable SAML response:
+
+.. code:: json
+
+   {
+     "version": 1,
+     "success": true,
+     "token_type": "urn:ietf:params:oauth:token-type:saml2",
+     "saml_response": "...",
+     "expiration_time": 1620499962
+   }
+
+A sample executable error response:
+
+.. code:: json
+
+   {
+     "version": 1,
+     "success": false,
+     "code": "401",
+     "message": "Caller not authorized."
+   }
+
+These are all required fields for an error response. The code and
+message fields will be used by the library as part of the thrown
+exception.
+
+Response format fields summary:
+
+- ``version``: The version of the JSON output. Currently only version 1 is
+  supported.
+- ``success``: The status of the response.
+    - When true, the response must contain the 3rd party token, token type, and
+      expiration. The executable must also exit with exit code 0.
+    - When false, the response must contain the error code and message fields
+      and exit with a non-zero value.
+- ``token_type``: The 3rd party subject token type. Must be
+    - *urn:ietf:params:oauth:token-type:jwt*
+    - *urn:ietf:params:oauth:token-type:id_token*
+    - *urn:ietf:params:oauth:token-type:saml2*
+- ``id_token``: The 3rd party OIDC token.
+- ``saml_response``: The 3rd party SAML response.
+- ``expiration_time``: The 3rd party subject token expiration time in seconds
+  (unix epoch time).
+- ``code``: The error code string.
+- ``message``: The error message.
+
+All response types must include both the ``version`` and ``success`` fields.
+Successful responses must include the ``token_type``, and one of ``id_token``
+or ``saml_response``.
+``expiration_time`` is optional. If the output file does not contain the
+``expiration_time`` field, the response will be considered expired and the
+executable will be called.
+Error responses must include both the ``code`` and ``message`` fields.
+
+The library will populate the following environment variables when the
+executable is run: ``GOOGLE_EXTERNAL_ACCOUNT_AUDIENCE``: The audience
+field from the credential configuration. Always present.
+``GOOGLE_EXTERNAL_ACCOUNT_IMPERSONATED_EMAIL``: The service account
+email. Only present when service account impersonation is used.
+``GOOGLE_EXTERNAL_ACCOUNT_OUTPUT_FILE``: The output file location from
+the credential configuration. Only present when specified in the
+credential configuration.
+
+These environment variables can be used by the executable to avoid
+hard-coding these values.
+
+Security considerations
+
+  The following security practices are highly recommended:
+  Access to the script should be restricted as it will be displaying
+  credentials to stdout. This ensures that rogue processes do not gain
+  access to the script.  The configuration file should not be
+  modifiable. Write access should be restricted to avoid processes
+  modifying the executable command portion.
+
+Given the complexity of using executable-sourced credentials, it is
+recommended to use the existing supported mechanisms
+(file-sourced/URL-sourced) for providing 3rd party credentials unless
+they do not meet your specific requirements.
+
+You can now `use the Auth library <#using-external-identities>`__ to
+call Google Cloud resources from an OIDC or SAML provider.
+
+
+Accessing resources using a custom supplier with OIDC or SAML
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This library also allows for a custom implementation of :class:`google.auth.identity_pool.SubjectTokenSupplier`
+to be specificed when creating a :class:`google.auth.identity_pool.Credential`. The supplier must
+return a valid OIDC or SAML2.0 subject token, which will then be exchanged for a
+Google Cloud access token. If an error occurs during token retrieval, the supplier
+should return a :class:`google.auth.exceptions.RefreshError` and indicate via the error
+whether the subject token retrieval is retryable.
+Any call to the supplier from the Identity Pool credential will send a :class:`google.auth.external_account.SupplierContext`
+object, which contains the requested audience and subject type. Additionally, the credential will
+send the :class:`google.auth.transport.requests.Request` passed in the credential refresh call which
+can be used to make HTTP requests.::
+
+    from google.auth import exceptions
+    from google.auth import identity_pool
+
+    class CustomSubjectTokenSupplier(identity_pool.SubjectTokenSupplier):
+
+        def get_subject_token(self, context, request):
+            audience = context.audience
+            subject_token_type = context.subject_token_type
+            try:
+                # Attempt to return the valid subject token of the requested type for the requested audience.
+            except Exception as e:
+                # If token retrieval fails, raise a refresh error, setting retryable to true if the client should
+                # attempt to retrieve the subject token again.
+                raise exceptions.RefreshError(e, retryable=True)
+
+    supplier = CustomSubjectTokenSupplier()
+
+    credentials = identity_pool.Credentials(
+        AUDIENCE, # Set GCP Audience.
+        "urn:ietf:params:aws:token-type:jwt", # Set subject token type.
+        subject_token_supplier=supplier, # Set supplier.
+        scopes=SCOPES # Set desired scopes.
+    )
+
+Where the `audience`_ is: ``///iam.googleapis.com/projects/PROJECT_NUMBER/locations/global/workloadIdentityPools/POOL_ID/providers/PROVIDER_ID``
+Where the following variables need to be substituted:
+
+* ``$PROJECT_NUMBER``: The project number.
+* ``$POOL_ID``: The workload pool ID.
+* ``$PROVIDER_ID``: The provider ID.
+
+The values for audience, service account impersonation URL, and any other builder field can also be found
+by generating a `credential configuration file with the gcloud CLI`_.
+
+.. _audience:
+    https://cloud.google.com/iam/docs/best-practices-for-using-workload-identity-federation#provider-audience
+.. _credential configuration file with the gcloud CLI:
+    https://cloud.google.com/sdk/gcloud/reference/iam/workload-identity-pools/create-cred-config
+
+Accessing resources using a custom supplier with AWS
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This library also allows for a custom implementation of :class:`google.auth.aws.AwsSecurityCredentialsSupplier`
+to be specificed when creating a :class:`google.auth.aws.Credential`. The supplier must
+return valid AWS security credentials, which will then be exchanged for a
+Google Cloud access token. If an error occurs during credential retrieval, the supplier
+should return a :class:`google.auth.exceptions.RefreshError` and indicate via the error
+whether the credential retrieval is retryable.
+Any call to the supplier from the Identity Pool credential will send a :class:`google.auth.external_account.SupplierContext`
+object, which contains the requested audience and subject type. Additionally, the credential will
+send the :class:`google.auth.transport.requests.Request` passed in the credential refresh call which
+can be used to make HTTP requests.::
+
+    from google.auth import aws
+    from google.auth import exceptions
+
+    class CustomAwsSecurityCredentialsSupplier(aws.AwsSecurityCredentialsSupplier):
+
+        def get_aws_security_credentials(self, context, request):
+            audience = context.audience
+            try:
+                # Return valid AWS security credentials. These credentials are not cached by
+                # the google credential, so caching should be implemented in the supplier.
+                return aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, SESSION_TOKEN)
+            except Exception as e:
+                # If credentials retrieval fails, raise a refresh error, setting retryable to true if the client should
+                # attempt to retrieve the subject token again.
+                raise exceptions.RefreshError(e, retryable=True)
+
+        def get_aws_region(self, context, request):
+            # Return active AWS region.
+
+    supplier = CustomAwsSecurityCredentialsSupplier()
+
+    credentials = aws.Credentials(
+        AUDIENCE, # Set GCP Audience.
+        "urn:ietf:params:aws:token-type:aws4_request", # Set AWS subject token type.
+        aws_security_credentials_supplier=supplier, # Set supplier.
+        scopes=SCOPES # Set desired scopes.
+    )
+
+Where the `audience`_ is: ``///iam.googleapis.com/projects/PROJECT_NUMBER/locations/global/workloadIdentityPools/POOL_ID/providers/PROVIDER_ID``
+Where the following variables need to be substituted:
+
+* ``$PROJECT_NUMBER``: The project number.
+* ``$POOL_ID``: The workload pool ID.
+* ``$PROVIDER_ID``: The provider ID.
+
+The values for audience, service account impersonation URL, and any other builder field can also be found
+by generating a `credential configuration file with the gcloud CLI`_.
+
+.. _audience:
+    https://cloud.google.com/iam/docs/best-practices-for-using-workload-identity-federation#provider-audience
+.. _credential configuration file with the gcloud CLI:
+    https://cloud.google.com/sdk/gcloud/reference/iam/workload-identity-pools/create-cred-config
+
 Using External Identities
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -388,11 +694,330 @@ For AWS providers, use :meth:`aws.Credentials.from_info
         ['https://www.googleapis.com/auth/cloud-platform'])
 
 
+Security considerations
+~~~~~~~~~~~~~~~~~~~~~~~
+
+Note that this library does not perform any validation on the token_url,
+token_info_url, or service_account_impersonation_url fields of the credential
+configuration. It is not recommended to use a credential configuration that you
+did not generate with the gcloud CLI unless you verify that the URL fields point
+to a googleapis.com domain.
+
+
+External credentials (Workforce identity federation)
+++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+`Workforce identity federation`_ lets you use an external identify provider
+(IdP) to authenticate and authorize a workforce—a group of users, such as
+employees, partners, and contractors—using IAM, so that the users can access
+Google Cloud services. Workforce identity federation extends Google Cloud's
+identity capabilities to support syncless, attribute-based single sign on.
+
+With workforce identity federation, your workforce can access Google Cloud
+resources using an external identity provider (IdP) that supports OpenID
+Connect (OIDC) or SAML 2.0 such as Azure Active Directory (Azure AD), Active
+Directory Federation Services (AD FS), Okta, and others.
+
+
+Accessing resources using an OIDC or SAML 2.0 identity provider
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+In order to access Google Cloud resources from an identity provider that
+supports `OpenID Connect (OIDC)`_, the following requirements are needed:
+
+- A workforce identity pool needs to be created.
+- An OIDC or SAML 2.0 identity provider needs to be added in the workforce pool.
+
+Follow the detailed `instructions`_ on how to configure workforce identity
+federation.
+
+After configuring an OIDC or SAML 2.0 provider, a credential configuration file
+needs to be generated. The generated credential configuration file contains
+non-sensitive metadata to instruct the library on how to retrieve external
+subject tokens and exchange them for GCP access tokens. The configuration file
+can be generated by using the `gcloud CLI`_.
+
+The Auth library can retrieve external subject tokens from a local file
+location (file-sourced credentials), from a local server (URL-sourced
+credentials) or by calling an executable (executable-sourced credentials).
+
+File-sourced credentials
+++++++++++++++++++++++++
+
+For file-sourced credentials, a background process needs to be continuously
+refreshing the file location with a new subject token prior to expiration. For
+tokens with one hour lifetimes, the token needs to be updated in the file every
+hour. The token can be stored directly as plain text or in JSON format.
+
+To generate a file-sourced OIDC configuration, run the following command:
+
+.. code-block:: bash
+
+    # Generate an OIDC configuration file for file-sourced credentials.
+    gcloud iam workforce-pools create-cred-config \
+        locations/global/workforcePools/$WORKFORCE_POOL_ID/providers/$PROVIDER_ID \
+        --subject-token-type=urn:ietf:params:oauth:token-type:id_token \
+        --credential-source-file=$PATH_TO_OIDC_ID_TOKEN \
+        --workforce-pool-user-project=$WORKFORCE_POOL_USER_PROJECT \
+        # Optional arguments for file types. Default is "text":
+        # --credential-source-type "json" \
+        # Optional argument for the field that contains the OIDC credential.
+        # This is required for json.
+        # --credential-source-field-name "id_token" \
+        --output-file=/path/to/generated/config.json
+
+Where the following variables need to be substituted:
+
+* ``$WORKFORCE_POOL_ID``: The workforce pool ID.
+* ``$PROVIDER_ID``: The provider ID.
+* ``$PATH_TO_OIDC_ID_TOKEN``: The file path used to retrieve the OIDC token.
+* ``$WORKFORCE_POOL_USER_PROJECT``: The project number associated with the
+  `workforce pools user project`_.
+
+To generate a file-sourced SAML configuration, run the following command:
+
+.. code-block:: bash
+
+    # Generate a SAML configuration file for file-sourced credentials.
+    gcloud iam workforce-pools create-cred-config \
+        locations/global/workforcePools/$WORKFORCE_POOL_ID/providers/$PROVIDER_ID \
+        --credential-source-file=$PATH_TO_SAML_ASSERTION \
+        --subject-token-type=urn:ietf:params:oauth:token-type:saml2 \
+        --workforce-pool-user-project=$WORKFORCE_POOL_USER_PROJECT \
+        --output-file=/path/to/generated/config.json
+
+Where the following variables need to be substituted:
+
+* ``$WORKFORCE_POOL_ID``: The workforce pool ID.
+* ``$PROVIDER_ID``: The provider ID.
+* ``$PATH_TO_SAML_ASSERTION``: The file path used to retrieve the
+  base64-encoded SAML assertion.
+* ``$WORKFORCE_POOL_USER_PROJECT``: The project number associated with the
+  `workforce pools user project`_.
+
+These commands generate the configuration file in the specified output file.
+
+URL-sourced credentials
++++++++++++++++++++++++
+
+For URL-sourced credentials, a local server needs to host a GET endpoint to
+return the OIDC token. The response can be in plain text or JSON. Additional
+required request headers can also be specified.
+
+To generate a URL-sourced OIDC workforce identity configuration, run the
+following command:
+
+.. code-block:: bash
+
+    # Generate an OIDC configuration file for URL-sourced credentials.
+    gcloud iam workforce-pools create-cred-config \
+        locations/global/workforcePools/$WORKFORCE_POOL_ID/providers/$PROVIDER_ID \
+        --subject-token-type=urn:ietf:params:oauth:token-type:id_token \
+        --credential-source-url=$URL_TO_RETURN_OIDC_ID_TOKEN \
+        --credential-source-headers $HEADER_KEY=$HEADER_VALUE \
+        --workforce-pool-user-project=$WORKFORCE_POOL_USER_PROJECT \
+        --output-file=/path/to/generated/config.json
+
+Where the following variables need to be substituted:
+
+* ``$WORKFORCE_POOL_ID``: The workforce pool ID.
+* ``$PROVIDER_ID``: The provider ID.
+* ``$URL_TO_RETURN_OIDC_ID_TOKEN``: The URL of the local server endpoint.
+* ``$HEADER_KEY`` and ``$HEADER_VALUE``: The additional header key/value
+  pairs to pass along the GET request to ``$URL_TO_GET_OIDC_TOKEN``, e.g.
+  ``Metadata-Flavor=Google``.
+* ``$WORKFORCE_POOL_USER_PROJECT``: The project number associated with the
+  `workforce pools user project`_.
+
+To generate a URL-sourced SAML configuration, run the following command:
+
+.. code-block:: bash
+
+    # Generate a SAML configuration file for file-sourced credentials.
+    gcloud iam workforce-pools create-cred-config \
+        locations/global/workforcePools/$WORKFORCE_POOL_ID/providers/$PROVIDER_ID \
+        --subject-token-type=urn:ietf:params:oauth:token-type:saml2 \
+        --credential-source-url=$URL_TO_GET_SAML_ASSERTION \
+        --credential-source-headers $HEADER_KEY=$HEADER_VALUE \
+        --workforce-pool-user-project=$WORKFORCE_POOL_USER_PROJECT \
+        --output-file=/path/to/generated/config.json
+
+These commands generate the configuration file in the specified output file.
+
+Where the following variables need to be substituted:
+
+* ``$WORKFORCE_POOL_ID``: The workforce pool ID.
+* ``$PROVIDER_ID``: The provider ID.
+* ``$URL_TO_GET_SAML_ASSERTION``: The URL of the local server endpoint.
+* ``$HEADER_KEY`` and ``$HEADER_VALUE``: The additional header key/value
+  pairs to pass along the GET request to ``$URL_TO_GET_SAML_ASSERTION``, e.g.
+  ``Metadata-Flavor=Google``.
+* ``$WORKFORCE_POOL_USER_PROJECT``: The project number associated with the
+  `workforce pools user project`_.
+
+Using Executable-sourced workforce credentials with OIDC and SAML
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Executable-sourced credentials** For executable-sourced credentials, a local
+executable is used to retrieve the 3rd party token. The executable must handle
+providing a valid, unexpired OIDC ID token or SAML assertion in JSON format to
+stdout.
+
+To use executable-sourced credentials, the
+``GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES`` environment variable must be set
+to ``1``.
+
+To generate an executable-sourced workforce identity configuration, run the
+following command:
+
+.. code-block:: bash
+
+    # Generate a configuration file for executable-sourced credentials.
+    gcloud iam workforce-pools create-cred-config \
+        locations/global/workforcePools/$WORKFORCE_POOL_ID/providers/$PROVIDER_ID \
+        --subject-token-type=$SUBJECT_TOKEN_TYPE \
+        # The absolute path for the program, including arguments.
+        # e.g. --executable-command="/path/to/command --foo=bar"
+        --executable-command=$EXECUTABLE_COMMAND \
+        # Optional argument for the executable timeout. Defaults to 30s.
+        # --executable-timeout-millis=$EXECUTABLE_TIMEOUT \
+        # Optional argument for the absolute path to the executable output file.
+        # See below on how this argument impacts the library behaviour.
+        # --executable-output-file=$EXECUTABLE_OUTPUT_FILE \
+        --workforce-pool-user-project=$WORKFORCE_POOL_USER_PROJECT \
+        --output-file /path/to/generated/config.json
+
+Where the following variables need to be substituted:
+
+* ``$WORKFORCE_POOL_ID``: The workforce pool ID.
+* ``$PROVIDER_ID``: The provider ID.
+* ``$SUBJECT_TOKEN_TYPE``: The subject token type.
+* ``$EXECUTABLE_COMMAND``: The full command to run, including arguments. Must be
+  an absolute path to the program.
+* ``$WORKFORCE_POOL_USER_PROJECT``: The project number associated with the
+  workforce pools user project.
+
+The ``--executable-timeout-millis`` flag is optional. This is the duration for
+which the auth library will wait for the executable to finish, in milliseconds.
+Defaults to 30 seconds when not provided. The maximum allowed value is 2
+minutes. The minimum is 5 seconds.
+
+The ``--executable-output-file`` flag is optional. If provided, the file path
+must point to the 3rd party credential response generated by the executable.
+This is useful for caching the credentials. By specifying this path, the Auth
+libraries will first check for its existence before running the executable. By
+caching the executable JSON response to this file, it improves performance as it
+avoids the need to run the executable until the cached credentials in the output
+file are expired. The executable must handle writing to this file - the auth
+libraries will only attempt to read from this location. The format of contents
+in the file should match the JSON format expected by the executable shown below.
+
+To retrieve the 3rd party token, the library will call the executable using the
+command specified. The executable's output must adhere to the response format
+specified below. It must output the response to stdout.
+
+Refer to the `using executable-sourced credentials with Workload Identity
+Federation <Using-Executable-sourced-credentials-with-OIDC-and-SAML>`__ above
+for the executable response specification.
+
+Accessing resources using a custom supplier with OIDC or SAML
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This library also allows for a custom implementation of :class:`google.auth.identity_pool.SubjectTokenSupplier`
+to be specificed when creating a :class:`google.auth.identity_pool.Credential`. The supplier must
+return a valid OIDC or SAML2.0 subject token, which will then be exchanged for a
+Google Cloud access token. If an error occurs during token retrieval, the supplier
+should return a :class:`google.auth.exceptions.RefreshError` and indicate via the error
+whether the subject token retrieval is retryable.
+Any call to the supplier from the Identity Pool credential will send a :class:`google.auth.external_account.SupplierContext`
+object, which contains the requested audience and subject type. Additionally, the credential will
+send the :class:`google.auth.transport.requests.Request` passed in the credential refresh call which
+can be used to make HTTP requests.::
+
+    from google.auth import exceptions
+    from google.auth import identity_pool
+
+    class CustomSubjectTokenSupplier(identity_pool.SubjectTokenSupplier):
+
+        def get_subject_token(self, context, request):
+            audience = context.audience
+            subject_token_type = context.subject_token_type
+            try:
+                # Attempt to return the valid subject token of the requested type for the requested audience.
+            except Exception as e:
+                # If token retrieval fails, raise a refresh error, setting retryable to true if the client should
+                # attempt to retrieve the subject token again.
+                raise exceptions.RefreshError(e, retryable=True)
+
+
+    supplier = CustomSubjectTokenSupplier()
+
+    credentials = identity_pool.Credentials(
+        AUDIENCE, # Set GCP Audience.
+        "urn:ietf:params:aws:token-type:jwt", # Set subject token type.
+        subject_token_supplier=supplier, # Set supplier.
+        scopes=SCOPES, # Set desired scopes.
+        workforce_pool_user_project=USER_PROJECT # Set workforce pool user project.
+    )
+
+Where the audience is: ``//iam.googleapis.com/locations/global/workforcePools/$WORKFORCE_POOL_ID/providers/$PROVIDER_ID``
+Where the following variables need to be substituted:
+
+* ``$WORKFORCE_POOL_ID``: The workforce pool ID.
+* ``$PROVIDER_ID``: The provider ID.
+
+and the workforce pool user project is the project number associated with the `workforce pools user project`_.
+
+The values for audience, service account impersonation URL, and any other builder field can also be found
+by generating a `credential configuration file`_ with the gcloud CLI.
+
+.. _workforce pools user project:
+    https://cloud.google.com/iam/docs/workforce-identity-federation#workforce-pools-user-project
+.. _credential configuration file:
+    https://cloud.google.com/iam/docs/workforce-obtaining-short-lived-credentials#use_configuration_files_for_sign-in
+
+Security considerations
+~~~~~~~~~~~~~~~~~~~~~~~
+
+The following security practices are highly recommended:
+
+* Access to the script should be restricted as it will be displaying credentials
+  to stdout. This ensures that rogue processes do not gain access to the script.
+* The configuration file should not be modifiable. Write access should be
+  restricted to avoid processes modifying the executable command portion.
+
+Given the complexity of using executable-sourced credentials, it is recommended
+to use the existing supported mechanisms (file-sourced/URL-sourced) for
+providing 3rd party credentials unless they do not meet your specific
+requirements.
+
+You can now `use the Auth library <#using-external-identities>`__ to call Google
+Cloud resources from an OIDC or SAML provider.
+
+
+.. _Workforce Identity Federation:
+    https://cloud.google.com/iam/docs/workforce-identity-federation
+.. _OpenID Connect (OIDC): https://openid.net/connect/
+.. _instructions:
+    https://cloud.google.com/iam/docs/configuring-workforce-identity-federation
+.. _gcloud CLI: https://cloud.google.com/sdk/
+.. _workforce pools user project:
+    https://cloud.google.com/iam/docs/workforce-identity-federation#workforce-pools-user-project
+
+
+Note that this library does not perform any validation on the token_url,
+token_info_url, or service_account_impersonation_url fields of the credential
+configuration. It is not recommended to use a credential configuration that you
+did not generate with the gcloud CLI unless you verify that the URL fields point
+to a googleapis.com domain.
+
+
 Impersonated credentials
 ++++++++++++++++++++++++
 
 Impersonated Credentials allows one set of credentials issued to a user or service account
-to impersonate another.  The source credentials must be granted 
+to impersonate a service account. Impersonation is the preferred way of using service account for
+local development over downloading the service account key. The source credentials must be granted
 the "Service Account Token Creator" IAM role. ::
 
     from google.auth import impersonated_credentials
@@ -414,8 +1039,197 @@ the "Service Account Token Creator" IAM role. ::
 
 
 In the example above `source_credentials` does not have direct access to list buckets
-in the target project.  Using `ImpersonatedCredentials` will allow the source_credentials
+in the target project. Using `ImpersonatedCredentials` will allow the source_credentials
 to assume the identity of a target_principal that does have access.
+
+It is possible to provide a delegation chain through `delegates` paramter while
+initializing the impersonated credential. Refer `create short lived credentials delegated`_ for more details on delegation chain.
+
+.. _create short lived credentials delegated: https://cloud.google.com/iam/docs/create-short-lived-credentials-delegated
+
+
+Service account private key files
++++++++++++++++++++++++++++++++++
+
+A service account private key file can be used to obtain credentials for a service account. If you are not
+able to use any of the authentication methods listed above, you can create a private key using `Credentials page of the
+Google Cloud Console`_. Once you have a private key you can obtain
+credentials one of three ways:
+
+1. Set the ``GOOGLE_APPLICATION_CREDENTIALS`` environment variable to the full
+   path to your service account private key file
+
+   .. code-block:: bash
+
+        $ export GOOGLE_APPLICATION_CREDENTIALS=/path/to/key.json
+
+   Then, use :ref:`application default credentials <application-default>`.
+   :func:`default` checks for the ``GOOGLE_APPLICATION_CREDENTIALS``
+   environment variable before all other checks, so this will always use the
+   credentials you explicitly specify.
+
+2. Use :meth:`service_account.Credentials.from_service_account_file
+   <google.oauth2.service_account.Credentials.from_service_account_file>`::
+
+        from google.oauth2 import service_account
+
+        credentials = service_account.Credentials.from_service_account_file(
+            '/path/to/key.json')
+
+        scoped_credentials = credentials.with_scopes(
+            ['https://www.googleapis.com/auth/cloud-platform'])
+
+3. Use :meth:`service_account.Credentials.from_service_account_info
+   <google.oauth2.service_account.Credentials.from_service_account_info>`::
+
+        import json
+
+        from google.oauth2 import service_account
+
+        json_acct_info = json.loads(function_to_get_json_creds())
+        credentials = service_account.Credentials.from_service_account_info(
+            json_acct_info)
+
+        scoped_credentials = credentials.with_scopes(
+            ['https://www.googleapis.com/auth/cloud-platform'])
+
+.. warning:: Private keys must be kept secret. If you expose your private key it
+    is recommended to revoke it immediately from the Google Cloud Console.
+
+.. _Credentials page of the Google Cloud Console:
+    https://console.cloud.google.com/apis/credentials
+
+
+Downscoped credentials
+++++++++++++++++++++++
+
+`Downscoping with Credential Access Boundaries`_ is used to restrict the
+Identity and Access Management (IAM) permissions that a short-lived credential
+can use.
+
+To downscope permissions of a source credential, a `Credential Access Boundary`
+that specifies which resources the new credential can access, as well as
+an upper bound on the permissions that are available on each resource, has to
+be defined. A downscoped credential can then be instantiated using the
+`source_credential` and the `Credential Access Boundary`.
+
+The common pattern of usage is to have a token broker with elevated access
+generate these downscoped credentials from higher access source credentials and
+pass the downscoped short-lived access tokens to a token consumer via some
+secure authenticated channel for limited access to Google Cloud Storage
+resources.
+
+.. _Downscoping with Credential Access Boundaries: https://cloud.google.com/iam/docs/downscoping-short-lived-credentials
+
+Token broker ::
+
+    import google.auth
+
+    from google.auth import downscoped
+    from google.auth.transport import requests
+
+    # Initialize the credential access boundary rules.
+    available_resource = '//storage.googleapis.com/projects/_/buckets/bucket-123'
+    available_permissions = ['inRole:roles/storage.objectViewer']
+    availability_expression = (
+        "resource.name.startsWith('projects/_/buckets/bucket-123/objects/customer-a')"
+    )
+
+    availability_condition = downscoped.AvailabilityCondition(
+        availability_expression)
+    rule = downscoped.AccessBoundaryRule(
+        available_resource=available_resource,
+        available_permissions=available_permissions,
+        availability_condition=availability_condition)
+    credential_access_boundary = downscoped.CredentialAccessBoundary(
+        rules=[rule])
+
+    # Retrieve the source credentials via ADC.
+    source_credentials, _ = google.auth.default()
+
+    # Create the downscoped credentials.
+    downscoped_credentials = downscoped.Credentials(
+        source_credentials=source_credentials,
+        credential_access_boundary=credential_access_boundary)
+
+    # Refresh the tokens.
+    downscoped_credentials.refresh(requests.Request())
+
+    # These values will need to be passed to the Token Consumer.
+    access_token = downscoped_credentials.token
+    expiry = downscoped_credentials.expiry
+
+
+For example, a token broker can be set up on a server in a private network.
+Various workloads (token consumers) in the same network will send authenticated
+requests to that broker for downscoped tokens to access or modify specific google
+cloud storage buckets.
+
+The broker will instantiate downscoped credentials instances that can be used to
+generate short lived downscoped access tokens that can be passed to the token
+consumer. These downscoped access tokens can be injected by the consumer into
+`google.oauth2.Credentials` and used to initialize a storage client instance to
+access Google Cloud Storage resources with restricted access.
+
+Token Consumer ::
+
+    import google.oauth2
+
+    from google.auth.transport import requests
+    from google.cloud import storage
+
+    # Downscoped token retrieved from token broker.
+    # The `get_token_from_broker` callable requests a token and an expiry
+    # from the token broker.
+    downscoped_token, expiry = get_token_from_broker(
+        requests.Request(),
+        scopes=['https://www.googleapis.com/auth/cloud-platform'])
+
+    # Create the OAuth credentials from the downscoped token and pass a
+    # refresh handler to handle token expiration. Passing the original
+    # downscoped token or the expiry here is optional, as the refresh_handler
+    # will generate the downscoped token on demand.
+    credentials = google.oauth2.credentials.Credentials(
+        downscoped_token,
+        expiry=expiry,
+        scopes=['https://www.googleapis.com/auth/cloud-platform'],
+        refresh_handler=get_token_from_broker)
+
+    # Initialize a storage client with the oauth2 credentials.
+    storage_client = storage.Client(
+        project='my_project_id', credentials=credentials)
+    # Call GCS APIs.
+    # The token broker has readonly access to objects starting with "customer-a"
+    # in bucket "bucket-123".
+    bucket = storage_client.bucket('bucket-123')
+    blob = bucket.blob('customer-a-data.txt')
+    print(blob.download_as_bytes().decode("utf-8"))
+
+
+Another reason to use downscoped credentials is to ensure tokens in flight
+always have the least privileges, e.g. Principle of Least Privilege. ::
+
+    # Create the downscoped credentials.
+    downscoped_credentials = downscoped.Credentials(
+        # source_credentials have elevated access but only a subset of
+        # these permissions are needed here.
+        source_credentials=source_credentials,
+        credential_access_boundary=credential_access_boundary)
+
+    # Pass the token directly.
+    storage_client = storage.Client(
+        project='my_project_id', credentials=downscoped_credentials)
+    # If the source credentials have elevated levels of access, the
+    # token in flight here will have limited readonly access to objects
+    # starting with "customer-a" in bucket "bucket-123".
+    bucket = storage_client.bucket('bucket-123')
+    blob = bucket.blob('customer-a-data.txt')
+    print(blob.download_as_string())
+
+
+Note: Only Cloud Storage supports Credential Access Boundaries. Other Google
+Cloud services do not support this feature.
+
 
 Identity Tokens
 +++++++++++++++

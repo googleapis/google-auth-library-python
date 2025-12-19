@@ -12,12 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import http.client as http_client
 import json
+import urllib
 
 import mock
-import pytest
-from six.moves import http_client
-from six.moves import urllib
+import pytest  # type: ignore
 
 from google.auth import exceptions
 from google.auth import transport
@@ -41,6 +41,9 @@ class TestStsClient(object):
     ACTOR_TOKEN = "HEADER.ACTOR_TOKEN_PAYLOAD.SIGNATURE"
     ACTOR_TOKEN_TYPE = "urn:ietf:params:oauth:token-type:jwt"
     TOKEN_EXCHANGE_ENDPOINT = "https://example.com/token.oauth2"
+    REVOKE_URL = "https://example.com/revoke.oauth2"
+    TOKEN_TO_REVOKE = "TOKEN_TO_REVOKE"
+    TOKEN_TYPE_HINT = "refresh_token"
     ADDON_HEADERS = {"x-client-version": "0.1.2"}
     ADDON_OPTIONS = {"additional": {"non-standard": ["options"], "other": "some-value"}}
     SUCCESS_RESPONSE = {
@@ -49,6 +52,11 @@ class TestStsClient(object):
         "token_type": "Bearer",
         "expires_in": 3600,
         "scope": "scope1 scope2",
+    }
+    SUCCESS_RESPONSE_WITH_REFRESH = {
+        "access_token": "abc",
+        "refresh_token": "xyz",
+        "expires_in": 3600,
     }
     ERROR_RESPONSE = {
         "error": "invalid_request",
@@ -67,10 +75,13 @@ class TestStsClient(object):
         return sts.Client(cls.TOKEN_EXCHANGE_ENDPOINT, client_auth)
 
     @classmethod
-    def make_mock_request(cls, data, status=http_client.OK):
+    def make_mock_request(cls, data, status=http_client.OK, use_json=True):
         response = mock.create_autospec(transport.Response, instance=True)
         response.status = status
-        response.data = json.dumps(data).encode("utf-8")
+        if use_json:
+            response.data = json.dumps(data).encode("utf-8")
+        else:
+            response.data = data.encode("utf-8")
 
         request = mock.create_autospec(transport.Request)
         request.return_value = response
@@ -78,15 +89,15 @@ class TestStsClient(object):
         return request
 
     @classmethod
-    def assert_request_kwargs(cls, request_kwargs, headers, request_data):
-        """Asserts the request was called with the expected parameters.
-        """
-        assert request_kwargs["url"] == cls.TOKEN_EXCHANGE_ENDPOINT
+    def assert_request_kwargs(cls, request_kwargs, headers, request_data, url=None):
+        """Asserts the request was called with the expected parameters."""
+        url = url or cls.TOKEN_EXCHANGE_ENDPOINT
+        assert request_kwargs["url"] == url
         assert request_kwargs["method"] == "POST"
         assert request_kwargs["headers"] == headers
         assert request_kwargs["body"] is not None
         body_tuples = urllib.parse.parse_qsl(request_kwargs["body"])
-        for (k, v) in body_tuples:
+        for k, v in body_tuples:
             assert v.decode("utf-8") == request_data[k.decode("utf-8")]
         assert len(body_tuples) == len(request_data.keys())
 
@@ -161,8 +172,7 @@ class TestStsClient(object):
         assert response == self.SUCCESS_RESPONSE
 
     def test_exchange_token_non200_without_auth(self):
-        """Test token exchange without client auth responding with non-200 status.
-        """
+        """Test token exchange without client auth responding with non-200 status."""
         client = self.make_client()
         request = self.make_mock_request(
             status=http_client.BAD_REQUEST, data=self.ERROR_RESPONSE
@@ -393,3 +403,149 @@ class TestStsClient(object):
         assert excinfo.match(
             r"Error code invalid_request: Invalid subject token - https://tools.ietf.org/html/rfc6749"
         )
+
+    def test_refresh_token_success(self):
+        """Test refresh token with successful response."""
+        client = self.make_client(self.CLIENT_AUTH_BASIC)
+        request = self.make_mock_request(
+            status=http_client.OK, data=self.SUCCESS_RESPONSE
+        )
+
+        response = client.refresh_token(request, "refreshtoken")
+
+        headers = {
+            "Authorization": "Basic dXNlcm5hbWU6cGFzc3dvcmQ=",
+            "Content-Type": "application/x-www-form-urlencoded",
+        }
+        request_data = {"grant_type": "refresh_token", "refresh_token": "refreshtoken"}
+        self.assert_request_kwargs(request.call_args[1], headers, request_data)
+        assert response == self.SUCCESS_RESPONSE
+
+    def test_refresh_token_success_with_refresh(self):
+        """Test refresh token with successful response."""
+        client = self.make_client(self.CLIENT_AUTH_BASIC)
+        request = self.make_mock_request(
+            status=http_client.OK, data=self.SUCCESS_RESPONSE_WITH_REFRESH
+        )
+
+        response = client.refresh_token(request, "refreshtoken")
+
+        headers = {
+            "Authorization": "Basic dXNlcm5hbWU6cGFzc3dvcmQ=",
+            "Content-Type": "application/x-www-form-urlencoded",
+        }
+        request_data = {"grant_type": "refresh_token", "refresh_token": "refreshtoken"}
+        self.assert_request_kwargs(request.call_args[1], headers, request_data)
+        assert response == self.SUCCESS_RESPONSE_WITH_REFRESH
+
+    def test_refresh_token_failure(self):
+        """Test refresh token with failure response."""
+        client = self.make_client(self.CLIENT_AUTH_BASIC)
+        request = self.make_mock_request(
+            status=http_client.BAD_REQUEST, data=self.ERROR_RESPONSE
+        )
+
+        with pytest.raises(exceptions.OAuthError) as excinfo:
+            client.refresh_token(request, "refreshtoken")
+
+        assert excinfo.match(
+            r"Error code invalid_request: Invalid subject token - https://tools.ietf.org/html/rfc6749"
+        )
+
+    def test_revoke_token_success(self):
+        """Test revoke token with successful response."""
+        client = self.make_client(self.CLIENT_AUTH_BASIC)
+        request = self.make_mock_request(data="", status=http_client.OK, use_json=False)
+
+        response = client.revoke_token(
+            request, self.TOKEN_TO_REVOKE, self.TOKEN_TYPE_HINT, self.REVOKE_URL
+        )
+
+        headers = {
+            "Authorization": "Basic {}".format(BASIC_AUTH_ENCODING),
+            "Content-Type": "application/x-www-form-urlencoded",
+        }
+        request_data = {
+            "token": self.TOKEN_TO_REVOKE,
+            "token_type_hint": self.TOKEN_TYPE_HINT,
+        }
+        self.assert_request_kwargs(
+            request.call_args[1], headers, request_data, url=self.REVOKE_URL
+        )
+        assert response == {}
+
+    def test_revoke_token_success_no_hint(self):
+        """Test revoke token with successful response."""
+        client = self.make_client(self.CLIENT_AUTH_BASIC)
+        request = self.make_mock_request(data="", status=http_client.OK, use_json=False)
+
+        response = client.revoke_token(
+            request, self.TOKEN_TO_REVOKE, None, self.REVOKE_URL
+        )
+
+        headers = {
+            "Authorization": "Basic {}".format(BASIC_AUTH_ENCODING),
+            "Content-Type": "application/x-www-form-urlencoded",
+        }
+        request_data = {"token": self.TOKEN_TO_REVOKE}
+        self.assert_request_kwargs(
+            request.call_args[1], headers, request_data, url=self.REVOKE_URL
+        )
+        assert response == {}
+
+    def test_revoke_token_failure(self):
+        """Test revoke token with failure response."""
+        client = self.make_client(self.CLIENT_AUTH_BASIC)
+        request = self.make_mock_request(
+            status=http_client.BAD_REQUEST, data=self.ERROR_RESPONSE
+        )
+
+        with pytest.raises(exceptions.OAuthError) as excinfo:
+            client.revoke_token(
+                request, self.TOKEN_TO_REVOKE, self.TOKEN_TYPE_HINT, self.REVOKE_URL
+            )
+
+        assert excinfo.match(
+            r"Error code invalid_request: Invalid subject token - https://tools.ietf.org/html/rfc6749"
+        )
+
+    def test__make_request_success(self):
+        """Test base method with successful response."""
+        client = self.make_client(self.CLIENT_AUTH_BASIC)
+        request = self.make_mock_request(
+            status=http_client.OK, data=self.SUCCESS_RESPONSE
+        )
+
+        response = client._make_request(request, {"a": "b"}, {"c": "d"})
+
+        headers = {
+            "Authorization": "Basic dXNlcm5hbWU6cGFzc3dvcmQ=",
+            "Content-Type": "application/x-www-form-urlencoded",
+            "a": "b",
+        }
+        request_data = {"c": "d"}
+        self.assert_request_kwargs(request.call_args[1], headers, request_data)
+        assert response == self.SUCCESS_RESPONSE
+
+    def test_make_request_failure(self):
+        """Test refresh token with failure response."""
+        client = self.make_client(self.CLIENT_AUTH_BASIC)
+        request = self.make_mock_request(
+            status=http_client.BAD_REQUEST, data=self.ERROR_RESPONSE
+        )
+
+        with pytest.raises(exceptions.OAuthError) as excinfo:
+            client._make_request(request, {"a": "b"}, {"c": "d"})
+
+        assert excinfo.match(
+            r"Error code invalid_request: Invalid subject token - https://tools.ietf.org/html/rfc6749"
+        )
+
+    def test__make_request_empty_response(self):
+        """Test _make_request with a successful but empty response body."""
+        client = self.make_client()
+        request = self.make_mock_request(data="", status=http_client.OK, use_json=False)
+
+        response = client._make_request(request, {}, {})
+
+        assert response == {}

@@ -13,48 +13,152 @@
 # limitations under the License.
 
 import datetime
+import http.client as http_client
 import json
+import os
+import urllib.parse
 
 import mock
-import pytest
-from six.moves import http_client
-from six.moves import urllib
+import pytest  # type: ignore
 
-from google.auth import _helpers
+from google.auth import _helpers, external_account
 from google.auth import aws
 from google.auth import environment_vars
 from google.auth import exceptions
 from google.auth import transport
+from google.auth.credentials import DEFAULT_UNIVERSE_DOMAIN
 
+IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE = (
+    "gl-python/3.7 auth/1.1 auth-request-type/at cred-type/imp"
+)
+
+LANG_LIBRARY_METRICS_HEADER_VALUE = "gl-python/3.7 auth/1.1"
 
 CLIENT_ID = "username"
 CLIENT_SECRET = "password"
 # Base64 encoding of "username:password".
 BASIC_AUTH_ENCODING = "dXNlcm5hbWU6cGFzc3dvcmQ="
 SERVICE_ACCOUNT_EMAIL = "service-1234@service-name.iam.gserviceaccount.com"
+SERVICE_ACCOUNT_IMPERSONATION_URL_BASE = (
+    "https://us-east1-iamcredentials.googleapis.com"
+)
+SERVICE_ACCOUNT_IMPERSONATION_URL_ROUTE = (
+    "/v1/projects/-/serviceAccounts/{}:generateAccessToken".format(
+        SERVICE_ACCOUNT_EMAIL
+    )
+)
 SERVICE_ACCOUNT_IMPERSONATION_URL = (
-    "https://us-east1-iamcredentials.googleapis.com/v1/projects/-"
-    + "/serviceAccounts/{}:generateAccessToken".format(SERVICE_ACCOUNT_EMAIL)
+    SERVICE_ACCOUNT_IMPERSONATION_URL_BASE + SERVICE_ACCOUNT_IMPERSONATION_URL_ROUTE
 )
 QUOTA_PROJECT_ID = "QUOTA_PROJECT_ID"
 SCOPES = ["scope1", "scope2"]
 TOKEN_URL = "https://sts.googleapis.com/v1/token"
+TOKEN_INFO_URL = "https://sts.googleapis.com/v1/introspect"
 SUBJECT_TOKEN_TYPE = "urn:ietf:params:aws:token-type:aws4_request"
 AUDIENCE = "//iam.googleapis.com/projects/123456/locations/global/workloadIdentityPools/POOL_ID/providers/PROVIDER_ID"
 REGION_URL = "http://169.254.169.254/latest/meta-data/placement/availability-zone"
+IMDSV2_SESSION_TOKEN_URL = "http://169.254.169.254/latest/api/token"
 SECURITY_CREDS_URL = "http://169.254.169.254/latest/meta-data/iam/security-credentials"
+REGION_URL_IPV6 = "http://[fd00:ec2::254]/latest/meta-data/placement/availability-zone"
+IMDSV2_SESSION_TOKEN_URL_IPV6 = "http://[fd00:ec2::254]/latest/api/token"
+SECURITY_CREDS_URL_IPV6 = (
+    "http://[fd00:ec2::254]/latest/meta-data/iam/security-credentials"
+)
 CRED_VERIFICATION_URL = (
     "https://sts.{region}.amazonaws.com?Action=GetCallerIdentity&Version=2011-06-15"
 )
-# Sample AWS security credentials to be used with tests that require a session token.
-ACCESS_KEY_ID = "ASIARD4OQDT6A77FR3CL"
-SECRET_ACCESS_KEY = "Y8AfSaucF37G4PpvfguKZ3/l7Id4uocLXxX0+VTx"
-TOKEN = "IQoJb3JpZ2luX2VjEIz//////////wEaCXVzLWVhc3QtMiJGMEQCIH7MHX/Oy/OB8OlLQa9GrqU1B914+iMikqWQW7vPCKlgAiA/Lsv8Jcafn14owfxXn95FURZNKaaphj0ykpmS+Ki+CSq0AwhlEAAaDDA3NzA3MTM5MTk5NiIMx9sAeP1ovlMTMKLjKpEDwuJQg41/QUKx0laTZYjPlQvjwSqS3OB9P1KAXPWSLkliVMMqaHqelvMF/WO/glv3KwuTfQsavRNs3v5pcSEm4SPO3l7mCs7KrQUHwGP0neZhIKxEXy+Ls//1C/Bqt53NL+LSbaGv6RPHaX82laz2qElphg95aVLdYgIFY6JWV5fzyjgnhz0DQmy62/Vi8pNcM2/VnxeCQ8CC8dRDSt52ry2v+nc77vstuI9xV5k8mPtnaPoJDRANh0bjwY5Sdwkbp+mGRUJBAQRlNgHUJusefXQgVKBCiyJY4w3Csd8Bgj9IyDV+Azuy1jQqfFZWgP68LSz5bURyIjlWDQunO82stZ0BgplKKAa/KJHBPCp8Qi6i99uy7qh76FQAqgVTsnDuU6fGpHDcsDSGoCls2HgZjZFPeOj8mmRhFk1Xqvkbjuz8V1cJk54d3gIJvQt8gD2D6yJQZecnuGWd5K2e2HohvCc8Fc9kBl1300nUJPV+k4tr/A5R/0QfEKOZL1/k5lf1g9CREnrM8LVkGxCgdYMxLQow1uTL+QU67AHRRSp5PhhGX4Rek+01vdYSnJCMaPhSEgcLqDlQkhk6MPsyT91QMXcWmyO+cAZwUPwnRamFepuP4K8k2KVXs/LIJHLELwAZ0ekyaS7CptgOqS7uaSTFG3U+vzFZLEnGvWQ7y9IPNQZ+Dffgh4p3vF4J68y9049sI6Sr5d5wbKkcbm8hdCDHZcv4lnqohquPirLiFQ3q7B17V9krMPu3mz1cg4Ekgcrn/E09NTsxAqD8NcZ7C7ECom9r+X3zkDOxaajW6hu3Az8hGlyylDaMiFfRbBJpTIlxp7jfa7CxikNgNtEKLH9iCzvuSg2vhA=="
+# Sample fictitious AWS security credentials to be used with tests that require a session token.
+ACCESS_KEY_ID = "AKIAIOSFODNN7EXAMPLE"
+SECRET_ACCESS_KEY = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
+TOKEN = "AQoEXAMPLEH4aoAH0gNCAPyJxz4BlCFFxWNE1OPTgk5TthT+FvwqnKwRcOIfrRh3c/LTo6UDdyJwOOvEVPvLXCrrrUtdnniCEXAMPLE/IvU1dYUg2RVAJBanLiHb4IgRmpRV3zrkuWJOgQs8IZZaIv2BXIa2R4OlgkBN9bkUDNCJiBeb/AXlzBBko7b15fjrBs2+cTQtpZ3CYWFXG8C5zqx37wnOE49mRl/+OtkIKGO7fAE"
 # To avoid json.dumps() differing behavior from one version to other,
 # the JSON payload is hardcoded.
 REQUEST_PARAMS = '{"KeySchema":[{"KeyType":"HASH","AttributeName":"Id"}],"TableName":"TestTable","AttributeDefinitions":[{"AttributeName":"Id","AttributeType":"S"}],"ProvisionedThroughput":{"WriteCapacityUnits":5,"ReadCapacityUnits":5}}'
 # Each tuple contains the following entries:
 # region, time, credentials, original_request, signed_request
+
+VALID_TOKEN_URLS = [
+    "https://sts.googleapis.com",
+    "https://us-east-1.sts.googleapis.com",
+    "https://US-EAST-1.sts.googleapis.com",
+    "https://sts.us-east-1.googleapis.com",
+    "https://sts.US-WEST-1.googleapis.com",
+    "https://us-east-1-sts.googleapis.com",
+    "https://US-WEST-1-sts.googleapis.com",
+    "https://us-west-1-sts.googleapis.com/path?query",
+    "https://sts-us-east-1.p.googleapis.com",
+]
+INVALID_TOKEN_URLS = [
+    "https://iamcredentials.googleapis.com",
+    "sts.googleapis.com",
+    "https://",
+    "http://sts.googleapis.com",
+    "https://st.s.googleapis.com",
+    "https://us-eas\t-1.sts.googleapis.com",
+    "https:/us-east-1.sts.googleapis.com",
+    "https://US-WE/ST-1-sts.googleapis.com",
+    "https://sts-us-east-1.googleapis.com",
+    "https://sts-US-WEST-1.googleapis.com",
+    "testhttps://us-east-1.sts.googleapis.com",
+    "https://us-east-1.sts.googleapis.comevil.com",
+    "https://us-east-1.us-east-1.sts.googleapis.com",
+    "https://us-ea.s.t.sts.googleapis.com",
+    "https://sts.googleapis.comevil.com",
+    "hhttps://us-east-1.sts.googleapis.com",
+    "https://us- -1.sts.googleapis.com",
+    "https://-sts.googleapis.com",
+    "https://us-east-1.sts.googleapis.com.evil.com",
+    "https://sts.pgoogleapis.com",
+    "https://p.googleapis.com",
+    "https://sts.p.com",
+    "http://sts.p.googleapis.com",
+    "https://xyz-sts.p.googleapis.com",
+    "https://sts-xyz.123.p.googleapis.com",
+    "https://sts-xyz.p1.googleapis.com",
+    "https://sts-xyz.p.foo.com",
+    "https://sts-xyz.p.foo.googleapis.com",
+]
+VALID_SERVICE_ACCOUNT_IMPERSONATION_URLS = [
+    "https://iamcredentials.googleapis.com",
+    "https://us-east-1.iamcredentials.googleapis.com",
+    "https://US-EAST-1.iamcredentials.googleapis.com",
+    "https://iamcredentials.us-east-1.googleapis.com",
+    "https://iamcredentials.US-WEST-1.googleapis.com",
+    "https://us-east-1-iamcredentials.googleapis.com",
+    "https://US-WEST-1-iamcredentials.googleapis.com",
+    "https://us-west-1-iamcredentials.googleapis.com/path?query",
+    "https://iamcredentials-us-east-1.p.googleapis.com",
+]
+INVALID_SERVICE_ACCOUNT_IMPERSONATION_URLS = [
+    "https://sts.googleapis.com",
+    "iamcredentials.googleapis.com",
+    "https://",
+    "http://iamcredentials.googleapis.com",
+    "https://iamcre.dentials.googleapis.com",
+    "https://us-eas\t-1.iamcredentials.googleapis.com",
+    "https:/us-east-1.iamcredentials.googleapis.com",
+    "https://US-WE/ST-1-iamcredentials.googleapis.com",
+    "https://iamcredentials-us-east-1.googleapis.com",
+    "https://iamcredentials-US-WEST-1.googleapis.com",
+    "testhttps://us-east-1.iamcredentials.googleapis.com",
+    "https://us-east-1.iamcredentials.googleapis.comevil.com",
+    "https://us-east-1.us-east-1.iamcredentials.googleapis.com",
+    "https://us-ea.s.t.iamcredentials.googleapis.com",
+    "https://iamcredentials.googleapis.comevil.com",
+    "hhttps://us-east-1.iamcredentials.googleapis.com",
+    "https://us- -1.iamcredentials.googleapis.com",
+    "https://-iamcredentials.googleapis.com",
+    "https://us-east-1.iamcredentials.googleapis.com.evil.com",
+    "https://iamcredentials.pgoogleapis.com",
+    "https://p.googleapis.com",
+    "https://iamcredentials.p.com",
+    "http://iamcredentials.p.googleapis.com",
+    "https://xyz-iamcredentials.p.googleapis.com",
+    "https://iamcredentials-xyz.123.p.googleapis.com",
+    "https://iamcredentials-xyz.p1.googleapis.com",
+    "https://iamcredentials-xyz.p.foo.com",
+    "https://iamcredentials-xyz.p.foo.googleapis.com",
+]
 TEST_FIXTURES = [
     # GET request (AWS botocore tests).
     # https://github.com/boto/botocore/blob/879f8440a4e9ace5d3cf145ce8b3d5e5ffb892ef/tests/unit/auth/aws4_testsuite/get-vanilla.req
@@ -413,7 +517,7 @@ TEST_FIXTURES = [
             "headers": {
                 "Authorization": "AWS4-HMAC-SHA256 Credential="
                 + ACCESS_KEY_ID
-                + "/20200811/us-east-2/ec2/aws4_request, SignedHeaders=host;x-amz-date;x-amz-security-token, Signature=631ea80cddfaa545fdadb120dc92c9f18166e38a5c47b50fab9fce476e022855",
+                + "/20200811/us-east-2/ec2/aws4_request, SignedHeaders=host;x-amz-date;x-amz-security-token, Signature=41e226f997bf917ec6c9b2b14218df0874225f13bb153236c247881e614fafc9",
                 "host": "ec2.us-east-2.amazonaws.com",
                 "x-amz-date": "20200811T065522Z",
                 "x-amz-security-token": TOKEN,
@@ -439,7 +543,7 @@ TEST_FIXTURES = [
             "headers": {
                 "Authorization": "AWS4-HMAC-SHA256 Credential="
                 + ACCESS_KEY_ID
-                + "/20200811/us-east-2/sts/aws4_request, SignedHeaders=host;x-amz-date;x-amz-security-token, Signature=73452984e4a880ffdc5c392355733ec3f5ba310d5e0609a89244440cadfe7a7a",
+                + "/20200811/us-east-2/sts/aws4_request, SignedHeaders=host;x-amz-date;x-amz-security-token, Signature=596aa990b792d763465d73703e684ca273c45536c6d322c31be01a41d02e5b60",
                 "host": "sts.us-east-2.amazonaws.com",
                 "x-amz-date": "20200811T065522Z",
                 "x-amz-security-token": TOKEN,
@@ -461,7 +565,7 @@ TEST_FIXTURES = [
             "headers": {
                 "Authorization": "AWS4-HMAC-SHA256 Credential="
                 + ACCESS_KEY_ID
-                + "/20200811/us-east-2/sts/aws4_request, SignedHeaders=host;x-amz-date, Signature=d095ba304919cd0d5570ba8a3787884ee78b860f268ed040ba23831d55536d56",
+                + "/20200811/us-east-2/sts/aws4_request, SignedHeaders=host;x-amz-date, Signature=9e722e5b7bfa163447e2a14df118b45ebd283c5aea72019bdf921d6e7dc01a9a",
                 "host": "sts.us-east-2.amazonaws.com",
                 "x-amz-date": "20200811T065522Z",
             },
@@ -491,7 +595,7 @@ TEST_FIXTURES = [
             "headers": {
                 "Authorization": "AWS4-HMAC-SHA256 Credential="
                 + ACCESS_KEY_ID
-                + "/20200811/us-east-2/dynamodb/aws4_request, SignedHeaders=content-type;host;x-amz-date;x-amz-security-token;x-amz-target, Signature=fdaa5b9cc9c86b80fe61eaf504141c0b3523780349120f2bd8145448456e0385",
+                + "/20200811/us-east-2/dynamodb/aws4_request, SignedHeaders=content-type;host;x-amz-date;x-amz-security-token;x-amz-target, Signature=eb8bce0e63654bba672d4a8acb07e72d69210c1797d56ce024dbbc31beb2a2c7",
                 "host": "dynamodb.us-east-2.amazonaws.com",
                 "x-amz-date": "20200811T065522Z",
                 "Content-Type": "application/x-amz-json-1.0",
@@ -514,8 +618,13 @@ class TestRequestSigner(object):
     ):
         utcnow.return_value = datetime.datetime.strptime(time, "%Y-%m-%dT%H:%M:%SZ")
         request_signer = aws.RequestSigner(region)
+        credentials_object = aws.AwsSecurityCredentials(
+            credentials.get("access_key_id"),
+            credentials.get("secret_access_key"),
+            credentials.get("security_token"),
+        )
         actual_signed_request = request_signer.get_request_options(
-            credentials,
+            credentials_object,
             original_request.get("url"),
             original_request.get("method"),
             original_request.get("data"),
@@ -529,10 +638,7 @@ class TestRequestSigner(object):
 
         with pytest.raises(ValueError) as excinfo:
             request_signer.get_request_options(
-                {
-                    "access_key_id": ACCESS_KEY_ID,
-                    "secret_access_key": SECRET_ACCESS_KEY,
-                },
+                aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY),
                 "invalid",
                 "POST",
             )
@@ -544,10 +650,7 @@ class TestRequestSigner(object):
 
         with pytest.raises(ValueError) as excinfo:
             request_signer.get_request_options(
-                {
-                    "access_key_id": ACCESS_KEY_ID,
-                    "secret_access_key": SECRET_ACCESS_KEY,
-                },
+                aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY),
                 "http://invalid",
                 "POST",
             )
@@ -559,15 +662,42 @@ class TestRequestSigner(object):
 
         with pytest.raises(ValueError) as excinfo:
             request_signer.get_request_options(
-                {
-                    "access_key_id": ACCESS_KEY_ID,
-                    "secret_access_key": SECRET_ACCESS_KEY,
-                },
+                aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY),
                 "https://",
                 "POST",
             )
 
         assert excinfo.match(r"Invalid AWS service URL")
+
+
+class TestAwsSecurityCredentialsSupplier(aws.AwsSecurityCredentialsSupplier):
+    def __init__(
+        self,
+        security_credentials=None,
+        region=None,
+        credentials_exception=None,
+        region_exception=None,
+        expected_context=None,
+    ):
+        self._security_credentials = security_credentials
+        self._region = region
+        self._credentials_exception = credentials_exception
+        self._region_exception = region_exception
+        self._expected_context = expected_context
+
+    def get_aws_security_credentials(self, context, request):
+        if self._expected_context is not None:
+            assert self._expected_context == context
+        if self._credentials_exception is not None:
+            raise self._credentials_exception
+        return self._security_credentials
+
+    def get_aws_region(self, context, request):
+        if self._expected_context is not None:
+            assert self._expected_context == context
+        if self._region_exception is not None:
+            raise self._region_exception
+        return self._region
 
 
 class TestCredentials(object):
@@ -578,12 +708,20 @@ class TestCredentials(object):
         "SecretAccessKey": SECRET_ACCESS_KEY,
         "Token": TOKEN,
     }
+    AWS_IMDSV2_SESSION_TOKEN = "awsimdsv2sessiontoken"
     AWS_SIGNATURE_TIME = "2020-08-11T06:55:22Z"
     CREDENTIAL_SOURCE = {
         "environment_id": "aws1",
         "region_url": REGION_URL,
         "url": SECURITY_CREDS_URL,
         "regional_cred_verification_url": CRED_VERIFICATION_URL,
+    }
+    CREDENTIAL_SOURCE_IPV6 = {
+        "environment_id": "aws1",
+        "region_url": REGION_URL_IPV6,
+        "url": SECURITY_CREDS_URL_IPV6,
+        "regional_cred_verification_url": CRED_VERIFICATION_URL,
+        "imdsv2_session_token_url": IMDSV2_SESSION_TOKEN_URL_IPV6,
     }
     SUCCESS_RESPONSE = {
         "access_token": "ACCESS_TOKEN",
@@ -624,7 +762,7 @@ class TestCredentials(object):
             ],
         }
         # Include security token if available.
-        if "security_token" in aws_security_credentials:
+        if aws_security_credentials.session_token is not None:
             reformatted_signed_request.get("headers").append(
                 {
                     "key": "x-amz-security-token",
@@ -654,6 +792,8 @@ class TestCredentials(object):
         token_data=None,
         impersonation_status=None,
         impersonation_data=None,
+        imdsv2_session_token_status=None,
+        imdsv2_session_token_data=None,
     ):
         """Utility function to generate a mock HTTP request object.
         This will facilitate testing various edge cases by specify how the
@@ -661,13 +801,32 @@ class TestCredentials(object):
         in an AWS environment.
         """
         responses = []
+
         if region_status:
+            if imdsv2_session_token_status:
+                # AWS session token request
+                imdsv2_session_response = mock.create_autospec(
+                    transport.Response, instance=True
+                )
+                imdsv2_session_response.status = imdsv2_session_token_status
+                imdsv2_session_response.data = imdsv2_session_token_data
+                responses.append(imdsv2_session_response)
+
             # AWS region request.
             region_response = mock.create_autospec(transport.Response, instance=True)
             region_response.status = region_status
             if region_name:
                 region_response.data = "{}b".format(region_name).encode("utf-8")
             responses.append(region_response)
+
+        if imdsv2_session_token_status:
+            # AWS session token request
+            imdsv2_session_response = mock.create_autospec(
+                transport.Response, instance=True
+            )
+            imdsv2_session_response.status = imdsv2_session_token_status
+            imdsv2_session_response.data = imdsv2_session_token_data
+            responses.append(imdsv2_session_response)
 
         if role_status:
             # AWS role name request.
@@ -713,7 +872,10 @@ class TestCredentials(object):
     @classmethod
     def make_credentials(
         cls,
-        credential_source,
+        credential_source=None,
+        aws_security_credentials_supplier=None,
+        token_url=TOKEN_URL,
+        token_info_url=TOKEN_INFO_URL,
         client_id=None,
         client_secret=None,
         quota_project_id=None,
@@ -724,9 +886,11 @@ class TestCredentials(object):
         return aws.Credentials(
             audience=AUDIENCE,
             subject_token_type=SUBJECT_TOKEN_TYPE,
-            token_url=TOKEN_URL,
+            token_url=token_url,
+            token_info_url=token_info_url,
             service_account_impersonation_url=service_account_impersonation_url,
             credential_source=credential_source,
+            aws_security_credentials_supplier=aws_security_credentials_supplier,
             client_id=client_id,
             client_secret=client_secret,
             quota_project_id=quota_project_id,
@@ -735,14 +899,16 @@ class TestCredentials(object):
         )
 
     @classmethod
-    def assert_aws_metadata_request_kwargs(cls, request_kwargs, url, headers=None):
+    def assert_aws_metadata_request_kwargs(
+        cls, request_kwargs, url, headers=None, method="GET"
+    ):
         assert request_kwargs["url"] == url
         # All used AWS metadata server endpoints use GET HTTP method.
-        assert request_kwargs["method"] == "GET"
+        assert request_kwargs["method"] == method
         if headers:
             assert request_kwargs["headers"] == headers
         else:
-            assert "headers" not in request_kwargs
+            assert "headers" not in request_kwargs or request_kwargs["headers"] is None
         # None of the endpoints used require any data in request.
         assert "body" not in request_kwargs
 
@@ -756,7 +922,7 @@ class TestCredentials(object):
         assert request_kwargs["body"] is not None
         body_tuples = urllib.parse.parse_qsl(request_kwargs["body"])
         assert len(body_tuples) == len(request_data.keys())
-        for (k, v) in body_tuples:
+        for k, v in body_tuples:
             assert v.decode("utf-8") == request_data[k.decode("utf-8")]
 
     @classmethod
@@ -781,7 +947,9 @@ class TestCredentials(object):
                 "audience": AUDIENCE,
                 "subject_token_type": SUBJECT_TOKEN_TYPE,
                 "token_url": TOKEN_URL,
+                "token_info_url": TOKEN_INFO_URL,
                 "service_account_impersonation_url": SERVICE_ACCOUNT_IMPERSONATION_URL,
+                "service_account_impersonation": {"token_lifetime_seconds": 2800},
                 "client_id": CLIENT_ID,
                 "client_secret": CLIENT_SECRET,
                 "quota_project_id": QUOTA_PROJECT_ID,
@@ -795,11 +963,17 @@ class TestCredentials(object):
             audience=AUDIENCE,
             subject_token_type=SUBJECT_TOKEN_TYPE,
             token_url=TOKEN_URL,
+            token_info_url=TOKEN_INFO_URL,
             service_account_impersonation_url=SERVICE_ACCOUNT_IMPERSONATION_URL,
+            service_account_impersonation_options={"token_lifetime_seconds": 2800},
             client_id=CLIENT_ID,
             client_secret=CLIENT_SECRET,
             credential_source=self.CREDENTIAL_SOURCE,
+            aws_security_credentials_supplier=None,
             quota_project_id=QUOTA_PROJECT_ID,
+            workforce_pool_user_project=None,
+            universe_domain=DEFAULT_UNIVERSE_DOMAIN,
+            trust_boundary=None,
         )
 
     @mock.patch.object(aws.Credentials, "__init__", return_value=None)
@@ -819,11 +993,49 @@ class TestCredentials(object):
             audience=AUDIENCE,
             subject_token_type=SUBJECT_TOKEN_TYPE,
             token_url=TOKEN_URL,
+            token_info_url=None,
             service_account_impersonation_url=None,
+            service_account_impersonation_options={},
             client_id=None,
             client_secret=None,
             credential_source=self.CREDENTIAL_SOURCE,
+            aws_security_credentials_supplier=None,
             quota_project_id=None,
+            workforce_pool_user_project=None,
+            universe_domain=DEFAULT_UNIVERSE_DOMAIN,
+            trust_boundary=None,
+        )
+
+    @mock.patch.object(aws.Credentials, "__init__", return_value=None)
+    def test_from_info_supplier(self, mock_init):
+        supplier = TestAwsSecurityCredentialsSupplier()
+
+        credentials = aws.Credentials.from_info(
+            {
+                "audience": AUDIENCE,
+                "subject_token_type": SUBJECT_TOKEN_TYPE,
+                "token_url": TOKEN_URL,
+                "aws_security_credentials_supplier": supplier,
+            }
+        )
+
+        # Confirm aws.Credentials instance initialized with the expected parameters.
+        assert isinstance(credentials, aws.Credentials)
+        mock_init.assert_called_once_with(
+            audience=AUDIENCE,
+            subject_token_type=SUBJECT_TOKEN_TYPE,
+            token_url=TOKEN_URL,
+            token_info_url=None,
+            service_account_impersonation_url=None,
+            service_account_impersonation_options={},
+            client_id=None,
+            client_secret=None,
+            credential_source=None,
+            aws_security_credentials_supplier=supplier,
+            quota_project_id=None,
+            workforce_pool_user_project=None,
+            universe_domain=DEFAULT_UNIVERSE_DOMAIN,
+            trust_boundary=None,
         )
 
     @mock.patch.object(aws.Credentials, "__init__", return_value=None)
@@ -832,11 +1044,14 @@ class TestCredentials(object):
             "audience": AUDIENCE,
             "subject_token_type": SUBJECT_TOKEN_TYPE,
             "token_url": TOKEN_URL,
+            "token_info_url": TOKEN_INFO_URL,
             "service_account_impersonation_url": SERVICE_ACCOUNT_IMPERSONATION_URL,
+            "service_account_impersonation": {"token_lifetime_seconds": 2800},
             "client_id": CLIENT_ID,
             "client_secret": CLIENT_SECRET,
             "quota_project_id": QUOTA_PROJECT_ID,
             "credential_source": self.CREDENTIAL_SOURCE,
+            "universe_domain": DEFAULT_UNIVERSE_DOMAIN,
         }
         config_file = tmpdir.join("config.json")
         config_file.write(json.dumps(info))
@@ -848,11 +1063,17 @@ class TestCredentials(object):
             audience=AUDIENCE,
             subject_token_type=SUBJECT_TOKEN_TYPE,
             token_url=TOKEN_URL,
+            token_info_url=TOKEN_INFO_URL,
             service_account_impersonation_url=SERVICE_ACCOUNT_IMPERSONATION_URL,
+            service_account_impersonation_options={"token_lifetime_seconds": 2800},
             client_id=CLIENT_ID,
             client_secret=CLIENT_SECRET,
             credential_source=self.CREDENTIAL_SOURCE,
+            aws_security_credentials_supplier=None,
             quota_project_id=QUOTA_PROJECT_ID,
+            workforce_pool_user_project=None,
+            universe_domain=DEFAULT_UNIVERSE_DOMAIN,
+            trust_boundary=None,
         )
 
     @mock.patch.object(aws.Credentials, "__init__", return_value=None)
@@ -873,11 +1094,17 @@ class TestCredentials(object):
             audience=AUDIENCE,
             subject_token_type=SUBJECT_TOKEN_TYPE,
             token_url=TOKEN_URL,
+            token_info_url=None,
             service_account_impersonation_url=None,
+            service_account_impersonation_options={},
             client_id=None,
             client_secret=None,
             credential_source=self.CREDENTIAL_SOURCE,
+            aws_security_credentials_supplier=None,
             quota_project_id=None,
+            workforce_pool_user_project=None,
+            universe_domain=DEFAULT_UNIVERSE_DOMAIN,
+            trust_boundary=None,
         )
 
     def test_constructor_invalid_credential_source(self):
@@ -888,6 +1115,27 @@ class TestCredentials(object):
             self.make_credentials(credential_source=credential_source)
 
         assert excinfo.match(r"No valid AWS 'credential_source' provided")
+
+    def test_constructor_invalid_credential_source_and_supplier(self):
+        # Provide both a credential source and supplier.
+        with pytest.raises(ValueError) as excinfo:
+            self.make_credentials(
+                credential_source=self.CREDENTIAL_SOURCE,
+                aws_security_credentials_supplier="test",
+            )
+
+        assert excinfo.match(
+            r"AWS credential cannot have both a credential source and an AWS security credentials supplier."
+        )
+
+    def test_constructor_invalid_no_credential_source_or_supplier(self):
+        # Provide no credential source or supplier.
+        with pytest.raises(ValueError) as excinfo:
+            self.make_credentials()
+
+        assert excinfo.match(
+            r"A valid credential source or AWS security credentials supplier must be provided."
+        )
 
     def test_constructor_invalid_environment_id(self):
         # Provide invalid environment_id.
@@ -929,7 +1177,87 @@ class TestCredentials(object):
             "audience": AUDIENCE,
             "subject_token_type": SUBJECT_TOKEN_TYPE,
             "token_url": TOKEN_URL,
+            "token_info_url": TOKEN_INFO_URL,
             "credential_source": self.CREDENTIAL_SOURCE,
+            "universe_domain": DEFAULT_UNIVERSE_DOMAIN,
+        }
+
+    def test_token_info_url(self):
+        credentials = self.make_credentials(
+            credential_source=self.CREDENTIAL_SOURCE.copy()
+        )
+
+        assert credentials.token_info_url == TOKEN_INFO_URL
+
+    def test_token_info_url_custom(self):
+        for url in VALID_TOKEN_URLS:
+            credentials = self.make_credentials(
+                credential_source=self.CREDENTIAL_SOURCE.copy(),
+                token_info_url=(url + "/introspect"),
+            )
+
+            assert credentials.token_info_url == (url + "/introspect")
+
+    def test_token_info_url_negative(self):
+        credentials = self.make_credentials(
+            credential_source=self.CREDENTIAL_SOURCE.copy(), token_info_url=None
+        )
+
+        assert not credentials.token_info_url
+
+    def test_token_url_custom(self):
+        for url in VALID_TOKEN_URLS:
+            credentials = self.make_credentials(
+                credential_source=self.CREDENTIAL_SOURCE.copy(),
+                token_url=(url + "/token"),
+            )
+
+            assert credentials._token_url == (url + "/token")
+
+    def test_service_account_impersonation_url_custom(self):
+        for url in VALID_SERVICE_ACCOUNT_IMPERSONATION_URLS:
+            credentials = self.make_credentials(
+                credential_source=self.CREDENTIAL_SOURCE.copy(),
+                service_account_impersonation_url=(
+                    url + SERVICE_ACCOUNT_IMPERSONATION_URL_ROUTE
+                ),
+            )
+
+            assert credentials._service_account_impersonation_url == (
+                url + SERVICE_ACCOUNT_IMPERSONATION_URL_ROUTE
+            )
+
+    def test_info_with_default_token_url(self):
+        credentials = aws.Credentials(
+            audience=AUDIENCE,
+            subject_token_type=SUBJECT_TOKEN_TYPE,
+            credential_source=self.CREDENTIAL_SOURCE.copy(),
+        )
+
+        assert credentials.info == {
+            "type": "external_account",
+            "audience": AUDIENCE,
+            "subject_token_type": SUBJECT_TOKEN_TYPE,
+            "token_url": TOKEN_URL,
+            "credential_source": self.CREDENTIAL_SOURCE.copy(),
+            "universe_domain": DEFAULT_UNIVERSE_DOMAIN,
+        }
+
+    def test_info_with_default_token_url_with_universe_domain(self):
+        credentials = aws.Credentials(
+            audience=AUDIENCE,
+            subject_token_type=SUBJECT_TOKEN_TYPE,
+            credential_source=self.CREDENTIAL_SOURCE.copy(),
+            universe_domain="testdomain.org",
+        )
+
+        assert credentials.info == {
+            "type": "external_account",
+            "audience": AUDIENCE,
+            "subject_token_type": SUBJECT_TOKEN_TYPE,
+            "token_url": "https://sts.testdomain.org/v1/token",
+            "credential_source": self.CREDENTIAL_SOURCE.copy(),
+            "universe_domain": "testdomain.org",
         }
 
     def test_retrieve_subject_token_missing_region_url(self):
@@ -964,11 +1292,7 @@ class TestCredentials(object):
         subject_token = credentials.retrieve_subject_token(request)
 
         assert subject_token == self.make_serialized_aws_signed_request(
-            {
-                "access_key_id": ACCESS_KEY_ID,
-                "secret_access_key": SECRET_ACCESS_KEY,
-                "security_token": TOKEN,
-            }
+            aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
         )
         # Assert region request.
         self.assert_aws_metadata_request_kwargs(
@@ -995,7 +1319,7 @@ class TestCredentials(object):
 
         credentials.retrieve_subject_token(new_request)
 
-        # Only 2 requests should be sent as the region is cached.
+        # Only 3 requests should be sent as the region is cached.
         assert len(new_request.call_args_list) == 2
         # Assert role request.
         self.assert_aws_metadata_request_kwargs(
@@ -1006,6 +1330,393 @@ class TestCredentials(object):
             new_request.call_args_list[1][1],
             "{}/{}".format(SECURITY_CREDS_URL, self.AWS_ROLE),
             {"Content-Type": "application/json"},
+        )
+
+    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch.dict(os.environ, {})
+    def test_retrieve_subject_token_success_temp_creds_no_environment_vars_idmsv2(
+        self, utcnow
+    ):
+        utcnow.return_value = datetime.datetime.strptime(
+            self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
+        )
+        request = self.make_mock_request(
+            region_status=http_client.OK,
+            region_name=self.AWS_REGION,
+            role_status=http_client.OK,
+            role_name=self.AWS_ROLE,
+            security_credentials_status=http_client.OK,
+            security_credentials_data=self.AWS_SECURITY_CREDENTIALS_RESPONSE,
+            imdsv2_session_token_status=http_client.OK,
+            imdsv2_session_token_data=self.AWS_IMDSV2_SESSION_TOKEN,
+        )
+        credential_source_token_url = self.CREDENTIAL_SOURCE.copy()
+        credential_source_token_url[
+            "imdsv2_session_token_url"
+        ] = IMDSV2_SESSION_TOKEN_URL
+        credentials = self.make_credentials(
+            credential_source=credential_source_token_url
+        )
+
+        subject_token = credentials.retrieve_subject_token(request)
+
+        assert subject_token == self.make_serialized_aws_signed_request(
+            aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
+        )
+        # Assert session token request
+        self.assert_aws_metadata_request_kwargs(
+            request.call_args_list[0][1],
+            IMDSV2_SESSION_TOKEN_URL,
+            {"X-aws-ec2-metadata-token-ttl-seconds": "300"},
+            "PUT",
+        )
+        # Assert region request.
+        self.assert_aws_metadata_request_kwargs(
+            request.call_args_list[1][1],
+            REGION_URL,
+            {"X-aws-ec2-metadata-token": self.AWS_IMDSV2_SESSION_TOKEN},
+        )
+        # Assert session token request
+        self.assert_aws_metadata_request_kwargs(
+            request.call_args_list[2][1],
+            IMDSV2_SESSION_TOKEN_URL,
+            {"X-aws-ec2-metadata-token-ttl-seconds": "300"},
+            "PUT",
+        )
+        # Assert role request.
+        self.assert_aws_metadata_request_kwargs(
+            request.call_args_list[3][1],
+            SECURITY_CREDS_URL,
+            {"X-aws-ec2-metadata-token": self.AWS_IMDSV2_SESSION_TOKEN},
+        )
+        # Assert security credentials request.
+        self.assert_aws_metadata_request_kwargs(
+            request.call_args_list[4][1],
+            "{}/{}".format(SECURITY_CREDS_URL, self.AWS_ROLE),
+            {
+                "Content-Type": "application/json",
+                "X-aws-ec2-metadata-token": self.AWS_IMDSV2_SESSION_TOKEN,
+            },
+        )
+
+        # Retrieve subject_token again. Region should not be queried again.
+        new_request = self.make_mock_request(
+            role_status=http_client.OK,
+            role_name=self.AWS_ROLE,
+            security_credentials_status=http_client.OK,
+            security_credentials_data=self.AWS_SECURITY_CREDENTIALS_RESPONSE,
+            imdsv2_session_token_status=http_client.OK,
+            imdsv2_session_token_data=self.AWS_IMDSV2_SESSION_TOKEN,
+        )
+
+        credentials.retrieve_subject_token(new_request)
+
+        # Only 3 requests should be sent as the region is cached.
+        assert len(new_request.call_args_list) == 3
+        # Assert session token request.
+        self.assert_aws_metadata_request_kwargs(
+            request.call_args_list[0][1],
+            IMDSV2_SESSION_TOKEN_URL,
+            {"X-aws-ec2-metadata-token-ttl-seconds": "300"},
+            "PUT",
+        )
+        # Assert role request.
+        self.assert_aws_metadata_request_kwargs(
+            new_request.call_args_list[1][1],
+            SECURITY_CREDS_URL,
+            {"X-aws-ec2-metadata-token": self.AWS_IMDSV2_SESSION_TOKEN},
+        )
+        # Assert security credentials request.
+        self.assert_aws_metadata_request_kwargs(
+            new_request.call_args_list[2][1],
+            "{}/{}".format(SECURITY_CREDS_URL, self.AWS_ROLE),
+            {
+                "Content-Type": "application/json",
+                "X-aws-ec2-metadata-token": self.AWS_IMDSV2_SESSION_TOKEN,
+            },
+        )
+
+    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch.dict(
+        os.environ,
+        {
+            environment_vars.AWS_REGION: AWS_REGION,
+            environment_vars.AWS_ACCESS_KEY_ID: ACCESS_KEY_ID,
+        },
+    )
+    def test_retrieve_subject_token_success_temp_creds_environment_vars_missing_secret_access_key_idmsv2(
+        self, utcnow
+    ):
+        utcnow.return_value = datetime.datetime.strptime(
+            self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
+        )
+        request = self.make_mock_request(
+            role_status=http_client.OK,
+            role_name=self.AWS_ROLE,
+            security_credentials_status=http_client.OK,
+            security_credentials_data=self.AWS_SECURITY_CREDENTIALS_RESPONSE,
+            imdsv2_session_token_status=http_client.OK,
+            imdsv2_session_token_data=self.AWS_IMDSV2_SESSION_TOKEN,
+        )
+        credential_source_token_url = self.CREDENTIAL_SOURCE.copy()
+        credential_source_token_url[
+            "imdsv2_session_token_url"
+        ] = IMDSV2_SESSION_TOKEN_URL
+        credentials = self.make_credentials(
+            credential_source=credential_source_token_url
+        )
+
+        subject_token = credentials.retrieve_subject_token(request)
+        assert subject_token == self.make_serialized_aws_signed_request(
+            aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
+        )
+        # Assert session token request.
+        self.assert_aws_metadata_request_kwargs(
+            request.call_args_list[0][1],
+            IMDSV2_SESSION_TOKEN_URL,
+            {"X-aws-ec2-metadata-token-ttl-seconds": "300"},
+            "PUT",
+        )
+        # Assert role request.
+        self.assert_aws_metadata_request_kwargs(
+            request.call_args_list[1][1],
+            SECURITY_CREDS_URL,
+            {"X-aws-ec2-metadata-token": self.AWS_IMDSV2_SESSION_TOKEN},
+        )
+        # Assert security credentials request.
+        self.assert_aws_metadata_request_kwargs(
+            request.call_args_list[2][1],
+            "{}/{}".format(SECURITY_CREDS_URL, self.AWS_ROLE),
+            {
+                "Content-Type": "application/json",
+                "X-aws-ec2-metadata-token": self.AWS_IMDSV2_SESSION_TOKEN,
+            },
+        )
+
+    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch.dict(
+        os.environ,
+        {
+            environment_vars.AWS_REGION: AWS_REGION,
+            environment_vars.AWS_SECRET_ACCESS_KEY: SECRET_ACCESS_KEY,
+        },
+    )
+    def test_retrieve_subject_token_success_temp_creds_environment_vars_missing_access_key_id_idmsv2(
+        self, utcnow
+    ):
+        utcnow.return_value = datetime.datetime.strptime(
+            self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
+        )
+        request = self.make_mock_request(
+            role_status=http_client.OK,
+            role_name=self.AWS_ROLE,
+            security_credentials_status=http_client.OK,
+            security_credentials_data=self.AWS_SECURITY_CREDENTIALS_RESPONSE,
+            imdsv2_session_token_status=http_client.OK,
+            imdsv2_session_token_data=self.AWS_IMDSV2_SESSION_TOKEN,
+        )
+        credential_source_token_url = self.CREDENTIAL_SOURCE.copy()
+        credential_source_token_url[
+            "imdsv2_session_token_url"
+        ] = IMDSV2_SESSION_TOKEN_URL
+        credentials = self.make_credentials(
+            credential_source=credential_source_token_url
+        )
+
+        subject_token = credentials.retrieve_subject_token(request)
+        assert subject_token == self.make_serialized_aws_signed_request(
+            aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
+        )
+        # Assert session token request.
+        self.assert_aws_metadata_request_kwargs(
+            request.call_args_list[0][1],
+            IMDSV2_SESSION_TOKEN_URL,
+            {"X-aws-ec2-metadata-token-ttl-seconds": "300"},
+            "PUT",
+        )
+        # Assert role request.
+        self.assert_aws_metadata_request_kwargs(
+            request.call_args_list[1][1],
+            SECURITY_CREDS_URL,
+            {"X-aws-ec2-metadata-token": self.AWS_IMDSV2_SESSION_TOKEN},
+        )
+        # Assert security credentials request.
+        self.assert_aws_metadata_request_kwargs(
+            request.call_args_list[2][1],
+            "{}/{}".format(SECURITY_CREDS_URL, self.AWS_ROLE),
+            {
+                "Content-Type": "application/json",
+                "X-aws-ec2-metadata-token": self.AWS_IMDSV2_SESSION_TOKEN,
+            },
+        )
+
+    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch.dict(os.environ, {environment_vars.AWS_REGION: AWS_REGION})
+    def test_retrieve_subject_token_success_temp_creds_environment_vars_missing_creds_idmsv2(
+        self, utcnow
+    ):
+        utcnow.return_value = datetime.datetime.strptime(
+            self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
+        )
+        request = self.make_mock_request(
+            role_status=http_client.OK,
+            role_name=self.AWS_ROLE,
+            security_credentials_status=http_client.OK,
+            security_credentials_data=self.AWS_SECURITY_CREDENTIALS_RESPONSE,
+            imdsv2_session_token_status=http_client.OK,
+            imdsv2_session_token_data=self.AWS_IMDSV2_SESSION_TOKEN,
+        )
+        credential_source_token_url = self.CREDENTIAL_SOURCE.copy()
+        credential_source_token_url[
+            "imdsv2_session_token_url"
+        ] = IMDSV2_SESSION_TOKEN_URL
+        credentials = self.make_credentials(
+            credential_source=credential_source_token_url
+        )
+
+        subject_token = credentials.retrieve_subject_token(request)
+        assert subject_token == self.make_serialized_aws_signed_request(
+            aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
+        )
+        # Assert session token request.
+        self.assert_aws_metadata_request_kwargs(
+            request.call_args_list[0][1],
+            IMDSV2_SESSION_TOKEN_URL,
+            {"X-aws-ec2-metadata-token-ttl-seconds": "300"},
+            "PUT",
+        )
+        # Assert role request.
+        self.assert_aws_metadata_request_kwargs(
+            request.call_args_list[1][1],
+            SECURITY_CREDS_URL,
+            {"X-aws-ec2-metadata-token": self.AWS_IMDSV2_SESSION_TOKEN},
+        )
+        # Assert security credentials request.
+        self.assert_aws_metadata_request_kwargs(
+            request.call_args_list[2][1],
+            "{}/{}".format(SECURITY_CREDS_URL, self.AWS_ROLE),
+            {
+                "Content-Type": "application/json",
+                "X-aws-ec2-metadata-token": self.AWS_IMDSV2_SESSION_TOKEN,
+            },
+        )
+
+    @mock.patch("google.auth._helpers.utcnow")
+    @mock.patch.dict(
+        os.environ,
+        {
+            environment_vars.AWS_REGION: AWS_REGION,
+            environment_vars.AWS_ACCESS_KEY_ID: ACCESS_KEY_ID,
+            environment_vars.AWS_SECRET_ACCESS_KEY: SECRET_ACCESS_KEY,
+        },
+    )
+    def test_retrieve_subject_token_success_temp_creds_idmsv2(self, utcnow):
+        utcnow.return_value = datetime.datetime.strptime(
+            self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
+        )
+        request = self.make_mock_request(
+            role_status=http_client.OK, role_name=self.AWS_ROLE
+        )
+        credential_source_token_url = self.CREDENTIAL_SOURCE.copy()
+        credential_source_token_url[
+            "imdsv2_session_token_url"
+        ] = IMDSV2_SESSION_TOKEN_URL
+        credentials = self.make_credentials(
+            credential_source=credential_source_token_url
+        )
+
+        credentials.retrieve_subject_token(request)
+        assert not request.called
+
+    @mock.patch("google.auth._helpers.utcnow")
+    def test_retrieve_subject_token_success_ipv6(self, utcnow):
+        utcnow.return_value = datetime.datetime.strptime(
+            self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
+        )
+        request = self.make_mock_request(
+            region_status=http_client.OK,
+            region_name=self.AWS_REGION,
+            role_status=http_client.OK,
+            role_name=self.AWS_ROLE,
+            security_credentials_status=http_client.OK,
+            security_credentials_data=self.AWS_SECURITY_CREDENTIALS_RESPONSE,
+            imdsv2_session_token_status=http_client.OK,
+            imdsv2_session_token_data=self.AWS_IMDSV2_SESSION_TOKEN,
+        )
+        credential_source_token_url = self.CREDENTIAL_SOURCE_IPV6.copy()
+        credentials = self.make_credentials(
+            credential_source=credential_source_token_url
+        )
+
+        subject_token = credentials.retrieve_subject_token(request)
+
+        assert subject_token == self.make_serialized_aws_signed_request(
+            aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
+        )
+        # Assert session token request.
+        self.assert_aws_metadata_request_kwargs(
+            request.call_args_list[0][1],
+            IMDSV2_SESSION_TOKEN_URL_IPV6,
+            {"X-aws-ec2-metadata-token-ttl-seconds": "300"},
+            "PUT",
+        )
+        # Assert region request.
+        self.assert_aws_metadata_request_kwargs(
+            request.call_args_list[1][1],
+            REGION_URL_IPV6,
+            {"X-aws-ec2-metadata-token": self.AWS_IMDSV2_SESSION_TOKEN},
+        )
+        # Assert session token request.
+        self.assert_aws_metadata_request_kwargs(
+            request.call_args_list[2][1],
+            IMDSV2_SESSION_TOKEN_URL_IPV6,
+            {"X-aws-ec2-metadata-token-ttl-seconds": "300"},
+            "PUT",
+        )
+        # Assert role request.
+        self.assert_aws_metadata_request_kwargs(
+            request.call_args_list[3][1],
+            SECURITY_CREDS_URL_IPV6,
+            {"X-aws-ec2-metadata-token": self.AWS_IMDSV2_SESSION_TOKEN},
+        )
+        # Assert security credentials request.
+        self.assert_aws_metadata_request_kwargs(
+            request.call_args_list[4][1],
+            "{}/{}".format(SECURITY_CREDS_URL_IPV6, self.AWS_ROLE),
+            {
+                "Content-Type": "application/json",
+                "X-aws-ec2-metadata-token": self.AWS_IMDSV2_SESSION_TOKEN,
+            },
+        )
+
+    @mock.patch("google.auth._helpers.utcnow")
+    def test_retrieve_subject_token_session_error_idmsv2(self, utcnow):
+        utcnow.return_value = datetime.datetime.strptime(
+            self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
+        )
+        request = self.make_mock_request(
+            imdsv2_session_token_status=http_client.UNAUTHORIZED,
+            imdsv2_session_token_data="unauthorized",
+        )
+        credential_source_token_url = self.CREDENTIAL_SOURCE.copy()
+        credential_source_token_url[
+            "imdsv2_session_token_url"
+        ] = IMDSV2_SESSION_TOKEN_URL
+        credentials = self.make_credentials(
+            credential_source=credential_source_token_url
+        )
+
+        with pytest.raises(exceptions.RefreshError) as excinfo:
+            credentials.retrieve_subject_token(request)
+
+        assert excinfo.match(r"Unable to retrieve AWS Session Token")
+
+        # Assert session token request
+        self.assert_aws_metadata_request_kwargs(
+            request.call_args_list[0][1],
+            IMDSV2_SESSION_TOKEN_URL,
+            {"X-aws-ec2-metadata-token-ttl-seconds": "300"},
+            "PUT",
         )
 
     @mock.patch("google.auth._helpers.utcnow")
@@ -1032,7 +1743,7 @@ class TestCredentials(object):
         subject_token = credentials.retrieve_subject_token(request)
 
         assert subject_token == self.make_serialized_aws_signed_request(
-            {"access_key_id": ACCESS_KEY_ID, "secret_access_key": SECRET_ACCESS_KEY}
+            aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY)
         )
 
     @mock.patch("google.auth._helpers.utcnow")
@@ -1049,11 +1760,7 @@ class TestCredentials(object):
         subject_token = credentials.retrieve_subject_token(None)
 
         assert subject_token == self.make_serialized_aws_signed_request(
-            {
-                "access_key_id": ACCESS_KEY_ID,
-                "secret_access_key": SECRET_ACCESS_KEY,
-                "security_token": TOKEN,
-            }
+            aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
         )
 
     @mock.patch("google.auth._helpers.utcnow")
@@ -1072,11 +1779,7 @@ class TestCredentials(object):
         subject_token = credentials.retrieve_subject_token(None)
 
         assert subject_token == self.make_serialized_aws_signed_request(
-            {
-                "access_key_id": ACCESS_KEY_ID,
-                "secret_access_key": SECRET_ACCESS_KEY,
-                "security_token": TOKEN,
-            }
+            aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
         )
 
     @mock.patch("google.auth._helpers.utcnow")
@@ -1099,11 +1802,7 @@ class TestCredentials(object):
         subject_token = credentials.retrieve_subject_token(None)
 
         assert subject_token == self.make_serialized_aws_signed_request(
-            {
-                "access_key_id": ACCESS_KEY_ID,
-                "secret_access_key": SECRET_ACCESS_KEY,
-                "security_token": TOKEN,
-            }
+            aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
         )
 
     @mock.patch("google.auth._helpers.utcnow")
@@ -1121,7 +1820,7 @@ class TestCredentials(object):
         subject_token = credentials.retrieve_subject_token(None)
 
         assert subject_token == self.make_serialized_aws_signed_request(
-            {"access_key_id": ACCESS_KEY_ID, "secret_access_key": SECRET_ACCESS_KEY}
+            aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY)
         )
 
     @mock.patch("google.auth._helpers.utcnow")
@@ -1143,11 +1842,7 @@ class TestCredentials(object):
         subject_token = credentials.retrieve_subject_token(request)
 
         assert subject_token == self.make_serialized_aws_signed_request(
-            {
-                "access_key_id": ACCESS_KEY_ID,
-                "secret_access_key": SECRET_ACCESS_KEY,
-                "security_token": TOKEN,
-            }
+            aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
         )
 
     def test_retrieve_subject_token_error_determining_aws_region(self):
@@ -1207,21 +1902,24 @@ class TestCredentials(object):
 
         assert excinfo.match(r"Unable to retrieve AWS security credentials")
 
+    @mock.patch(
+        "google.auth.metrics.python_and_auth_lib_version",
+        return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
+    )
     @mock.patch("google.auth._helpers.utcnow")
-    def test_refresh_success_without_impersonation_ignore_default_scopes(self, utcnow):
+    def test_refresh_success_without_impersonation_ignore_default_scopes(
+        self, utcnow, mock_auth_lib_value
+    ):
         utcnow.return_value = datetime.datetime.strptime(
             self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
         )
         expected_subject_token = self.make_serialized_aws_signed_request(
-            {
-                "access_key_id": ACCESS_KEY_ID,
-                "secret_access_key": SECRET_ACCESS_KEY,
-                "security_token": TOKEN,
-            }
+            aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
         )
         token_headers = {
             "Content-Type": "application/x-www-form-urlencoded",
             "Authorization": "Basic " + BASIC_AUTH_ENCODING,
+            "x-goog-api-client": "gl-python/3.7 auth/1.1 google-byoid-sdk sa-impersonation/false config-lifetime/false source/aws",
         }
         token_request_data = {
             "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
@@ -1263,21 +1961,24 @@ class TestCredentials(object):
         assert credentials.scopes == SCOPES
         assert credentials.default_scopes == ["ignored"]
 
+    @mock.patch(
+        "google.auth.metrics.python_and_auth_lib_version",
+        return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
+    )
     @mock.patch("google.auth._helpers.utcnow")
-    def test_refresh_success_without_impersonation_use_default_scopes(self, utcnow):
+    def test_refresh_success_without_impersonation_use_default_scopes(
+        self, utcnow, mock_auth_lib_value
+    ):
         utcnow.return_value = datetime.datetime.strptime(
             self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
         )
         expected_subject_token = self.make_serialized_aws_signed_request(
-            {
-                "access_key_id": ACCESS_KEY_ID,
-                "secret_access_key": SECRET_ACCESS_KEY,
-                "security_token": TOKEN,
-            }
+            aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
         )
         token_headers = {
             "Content-Type": "application/x-www-form-urlencoded",
             "Authorization": "Basic " + BASIC_AUTH_ENCODING,
+            "x-goog-api-client": "gl-python/3.7 auth/1.1 google-byoid-sdk sa-impersonation/false config-lifetime/false source/aws",
         }
         token_request_data = {
             "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
@@ -1319,8 +2020,18 @@ class TestCredentials(object):
         assert credentials.scopes is None
         assert credentials.default_scopes == SCOPES
 
+    @mock.patch(
+        "google.auth.metrics.token_request_access_token_impersonate",
+        return_value=IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
+    )
+    @mock.patch(
+        "google.auth.metrics.python_and_auth_lib_version",
+        return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
+    )
     @mock.patch("google.auth._helpers.utcnow")
-    def test_refresh_success_with_impersonation_ignore_default_scopes(self, utcnow):
+    def test_refresh_success_with_impersonation_ignore_default_scopes(
+        self, utcnow, mock_metrics_header_value, mock_auth_lib_value
+    ):
         utcnow.return_value = datetime.datetime.strptime(
             self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
         )
@@ -1328,15 +2039,12 @@ class TestCredentials(object):
             _helpers.utcnow().replace(microsecond=0) + datetime.timedelta(seconds=3600)
         ).isoformat("T") + "Z"
         expected_subject_token = self.make_serialized_aws_signed_request(
-            {
-                "access_key_id": ACCESS_KEY_ID,
-                "secret_access_key": SECRET_ACCESS_KEY,
-                "security_token": TOKEN,
-            }
+            aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
         )
         token_headers = {
             "Content-Type": "application/x-www-form-urlencoded",
             "Authorization": "Basic " + BASIC_AUTH_ENCODING,
+            "x-goog-api-client": "gl-python/3.7 auth/1.1 google-byoid-sdk sa-impersonation/true config-lifetime/false source/aws",
         }
         token_request_data = {
             "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
@@ -1355,6 +2063,10 @@ class TestCredentials(object):
             "Content-Type": "application/json",
             "authorization": "Bearer {}".format(self.SUCCESS_RESPONSE["access_token"]),
             "x-goog-user-project": QUOTA_PROJECT_ID,
+            "x-goog-api-client": IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
+            # TODO(negarb): Uncomment and update when trust boundary is supported
+            # for external account credentials.
+            # "x-allowed-locations": "0x0",
         }
         impersonation_request_data = {
             "delegates": None,
@@ -1403,8 +2115,18 @@ class TestCredentials(object):
         assert credentials.scopes == SCOPES
         assert credentials.default_scopes == ["ignored"]
 
+    @mock.patch(
+        "google.auth.metrics.token_request_access_token_impersonate",
+        return_value=IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
+    )
+    @mock.patch(
+        "google.auth.metrics.python_and_auth_lib_version",
+        return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
+    )
     @mock.patch("google.auth._helpers.utcnow")
-    def test_refresh_success_with_impersonation_use_default_scopes(self, utcnow):
+    def test_refresh_success_with_impersonation_use_default_scopes(
+        self, utcnow, mock_metrics_header_value, mock_auth_lib_value
+    ):
         utcnow.return_value = datetime.datetime.strptime(
             self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
         )
@@ -1412,15 +2134,12 @@ class TestCredentials(object):
             _helpers.utcnow().replace(microsecond=0) + datetime.timedelta(seconds=3600)
         ).isoformat("T") + "Z"
         expected_subject_token = self.make_serialized_aws_signed_request(
-            {
-                "access_key_id": ACCESS_KEY_ID,
-                "secret_access_key": SECRET_ACCESS_KEY,
-                "security_token": TOKEN,
-            }
+            aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
         )
         token_headers = {
             "Content-Type": "application/x-www-form-urlencoded",
             "Authorization": "Basic " + BASIC_AUTH_ENCODING,
+            "x-goog-api-client": "gl-python/3.7 auth/1.1 google-byoid-sdk sa-impersonation/true config-lifetime/false source/aws",
         }
         token_request_data = {
             "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
@@ -1439,6 +2158,8 @@ class TestCredentials(object):
             "Content-Type": "application/json",
             "authorization": "Bearer {}".format(self.SUCCESS_RESPONSE["access_token"]),
             "x-goog-user-project": QUOTA_PROJECT_ID,
+            "x-goog-api-client": IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
+            # "x-allowed-locations": "0x0",
         }
         impersonation_request_data = {
             "delegates": None,
@@ -1495,3 +2216,249 @@ class TestCredentials(object):
             credentials.refresh(request)
 
         assert excinfo.match(r"Unable to retrieve AWS region")
+
+    @mock.patch("google.auth._helpers.utcnow")
+    def test_retrieve_subject_token_success_with_supplier(self, utcnow):
+        utcnow.return_value = datetime.datetime.strptime(
+            self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
+        )
+        request = self.make_mock_request()
+
+        security_credentials = aws.AwsSecurityCredentials(
+            ACCESS_KEY_ID, SECRET_ACCESS_KEY
+        )
+        supplier = TestAwsSecurityCredentialsSupplier(
+            security_credentials=security_credentials, region=self.AWS_REGION
+        )
+
+        credentials = self.make_credentials(aws_security_credentials_supplier=supplier)
+
+        subject_token = credentials.retrieve_subject_token(request)
+        assert subject_token == self.make_serialized_aws_signed_request(
+            aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY)
+        )
+
+    @mock.patch("google.auth._helpers.utcnow")
+    def test_retrieve_subject_token_success_with_supplier_session_token(self, utcnow):
+        utcnow.return_value = datetime.datetime.strptime(
+            self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
+        )
+        request = self.make_mock_request()
+
+        security_credentials = aws.AwsSecurityCredentials(
+            ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN
+        )
+        supplier = TestAwsSecurityCredentialsSupplier(
+            security_credentials=security_credentials, region=self.AWS_REGION
+        )
+
+        credentials = self.make_credentials(aws_security_credentials_supplier=supplier)
+
+        subject_token = credentials.retrieve_subject_token(request)
+        assert subject_token == self.make_serialized_aws_signed_request(
+            aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
+        )
+
+    @mock.patch("google.auth._helpers.utcnow")
+    def test_retrieve_subject_token_success_with_supplier_correct_context(self, utcnow):
+        utcnow.return_value = datetime.datetime.strptime(
+            self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
+        )
+        request = self.make_mock_request()
+        expected_context = external_account.SupplierContext(
+            SUBJECT_TOKEN_TYPE, AUDIENCE
+        )
+
+        security_credentials = aws.AwsSecurityCredentials(
+            ACCESS_KEY_ID, SECRET_ACCESS_KEY
+        )
+        supplier = TestAwsSecurityCredentialsSupplier(
+            security_credentials=security_credentials,
+            region=self.AWS_REGION,
+            expected_context=expected_context,
+        )
+
+        credentials = self.make_credentials(aws_security_credentials_supplier=supplier)
+
+        credentials.retrieve_subject_token(request)
+
+    def test_retrieve_subject_token_error_with_supplier(self):
+        request = self.make_mock_request()
+        expected_exception = exceptions.RefreshError("Test error")
+        supplier = TestAwsSecurityCredentialsSupplier(
+            region=self.AWS_REGION, credentials_exception=expected_exception
+        )
+
+        credentials = self.make_credentials(aws_security_credentials_supplier=supplier)
+
+        with pytest.raises(exceptions.RefreshError) as excinfo:
+            credentials.refresh(request)
+
+        assert excinfo.match(r"Test error")
+
+    def test_retrieve_subject_token_error_with_supplier_region(self):
+        request = self.make_mock_request()
+        expected_exception = exceptions.RefreshError("Test error")
+        security_credentials = aws.AwsSecurityCredentials(
+            ACCESS_KEY_ID, SECRET_ACCESS_KEY
+        )
+        supplier = TestAwsSecurityCredentialsSupplier(
+            security_credentials=security_credentials,
+            region_exception=expected_exception,
+        )
+
+        credentials = self.make_credentials(aws_security_credentials_supplier=supplier)
+
+        with pytest.raises(exceptions.RefreshError) as excinfo:
+            credentials.refresh(request)
+
+        assert excinfo.match(r"Test error")
+
+    @mock.patch(
+        "google.auth.metrics.python_and_auth_lib_version",
+        return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
+    )
+    @mock.patch("google.auth._helpers.utcnow")
+    def test_refresh_success_with_supplier_with_impersonation(
+        self, utcnow, mock_auth_lib_value
+    ):
+        utcnow.return_value = datetime.datetime.strptime(
+            self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
+        )
+        expire_time = (
+            _helpers.utcnow().replace(microsecond=0) + datetime.timedelta(seconds=3600)
+        ).isoformat("T") + "Z"
+        expected_subject_token = self.make_serialized_aws_signed_request(
+            aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
+        )
+        token_headers = {
+            "Content-Type": "application/x-www-form-urlencoded",
+            "Authorization": "Basic " + BASIC_AUTH_ENCODING,
+            "x-goog-api-client": "gl-python/3.7 auth/1.1 google-byoid-sdk sa-impersonation/true config-lifetime/false source/programmatic",
+        }
+        token_request_data = {
+            "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
+            "audience": AUDIENCE,
+            "requested_token_type": "urn:ietf:params:oauth:token-type:access_token",
+            "scope": "https://www.googleapis.com/auth/iam",
+            "subject_token": expected_subject_token,
+            "subject_token_type": SUBJECT_TOKEN_TYPE,
+        }
+        # Service account impersonation request/response.
+        impersonation_response = {
+            "accessToken": "SA_ACCESS_TOKEN",
+            "expireTime": expire_time,
+        }
+        impersonation_headers = {
+            "Content-Type": "application/json",
+            "authorization": "Bearer {}".format(self.SUCCESS_RESPONSE["access_token"]),
+            "x-goog-user-project": QUOTA_PROJECT_ID,
+            "x-goog-api-client": IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
+            # "x-allowed-locations": "0x0",
+        }
+        impersonation_request_data = {
+            "delegates": None,
+            "scope": SCOPES,
+            "lifetime": "3600s",
+        }
+        request = self.make_mock_request(
+            token_status=http_client.OK,
+            token_data=self.SUCCESS_RESPONSE,
+            impersonation_status=http_client.OK,
+            impersonation_data=impersonation_response,
+        )
+
+        supplier = TestAwsSecurityCredentialsSupplier(
+            security_credentials=aws.AwsSecurityCredentials(
+                ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN
+            ),
+            region=self.AWS_REGION,
+        )
+
+        credentials = self.make_credentials(
+            client_id=CLIENT_ID,
+            client_secret=CLIENT_SECRET,
+            aws_security_credentials_supplier=supplier,
+            service_account_impersonation_url=SERVICE_ACCOUNT_IMPERSONATION_URL,
+            quota_project_id=QUOTA_PROJECT_ID,
+            scopes=SCOPES,
+            # Default scopes should be ignored.
+            default_scopes=["ignored"],
+        )
+
+        credentials.refresh(request)
+
+        assert len(request.call_args_list) == 2
+        # First request should be sent to GCP STS endpoint.
+        self.assert_token_request_kwargs(
+            request.call_args_list[0][1], token_headers, token_request_data
+        )
+        # Second request should be sent to iamcredentials endpoint for service
+        # account impersonation.
+        self.assert_impersonation_request_kwargs(
+            request.call_args_list[1][1],
+            impersonation_headers,
+            impersonation_request_data,
+        )
+        assert credentials.token == impersonation_response["accessToken"]
+        assert credentials.quota_project_id == QUOTA_PROJECT_ID
+        assert credentials.scopes == SCOPES
+        assert credentials.default_scopes == ["ignored"]
+
+    @mock.patch(
+        "google.auth.metrics.python_and_auth_lib_version",
+        return_value=LANG_LIBRARY_METRICS_HEADER_VALUE,
+    )
+    @mock.patch("google.auth._helpers.utcnow")
+    def test_refresh_success_with_supplier(self, utcnow, mock_auth_lib_value):
+        utcnow.return_value = datetime.datetime.strptime(
+            self.AWS_SIGNATURE_TIME, "%Y-%m-%dT%H:%M:%SZ"
+        )
+        expected_subject_token = self.make_serialized_aws_signed_request(
+            aws.AwsSecurityCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN)
+        )
+        token_headers = {
+            "Content-Type": "application/x-www-form-urlencoded",
+            "Authorization": "Basic " + BASIC_AUTH_ENCODING,
+            "x-goog-api-client": "gl-python/3.7 auth/1.1 google-byoid-sdk sa-impersonation/false config-lifetime/false source/programmatic",
+        }
+        token_request_data = {
+            "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
+            "audience": AUDIENCE,
+            "requested_token_type": "urn:ietf:params:oauth:token-type:access_token",
+            "scope": " ".join(SCOPES),
+            "subject_token": expected_subject_token,
+            "subject_token_type": SUBJECT_TOKEN_TYPE,
+        }
+        request = self.make_mock_request(
+            token_status=http_client.OK, token_data=self.SUCCESS_RESPONSE
+        )
+
+        supplier = TestAwsSecurityCredentialsSupplier(
+            security_credentials=aws.AwsSecurityCredentials(
+                ACCESS_KEY_ID, SECRET_ACCESS_KEY, TOKEN
+            ),
+            region=self.AWS_REGION,
+        )
+
+        credentials = self.make_credentials(
+            client_id=CLIENT_ID,
+            client_secret=CLIENT_SECRET,
+            aws_security_credentials_supplier=supplier,
+            quota_project_id=QUOTA_PROJECT_ID,
+            scopes=SCOPES,
+            # Default scopes should be ignored.
+            default_scopes=["ignored"],
+        )
+
+        credentials.refresh(request)
+
+        assert len(request.call_args_list) == 1
+        # First request should be sent to GCP STS endpoint.
+        self.assert_token_request_kwargs(
+            request.call_args_list[0][1], token_headers, token_request_data
+        )
+        assert credentials.token == self.SUCCESS_RESPONSE["access_token"]
+        assert credentials.quota_project_id == QUOTA_PROJECT_ID
+        assert credentials.scopes == SCOPES
+        assert credentials.default_scopes == ["ignored"]

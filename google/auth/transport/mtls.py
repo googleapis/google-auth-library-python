@@ -14,8 +14,6 @@
 
 """Utilites for mutual TLS."""
 
-import six
-
 from google.auth import exceptions
 from google.auth.transport import _mtls_helper
 
@@ -26,10 +24,19 @@ def has_default_client_cert_source():
     Returns:
         bool: indicating if the default client cert source exists.
     """
-    metadata_path = _mtls_helper._check_dca_metadata_path(
-        _mtls_helper.CONTEXT_AWARE_METADATA_PATH
-    )
-    return metadata_path is not None
+    if (
+        _mtls_helper._check_config_path(_mtls_helper.CONTEXT_AWARE_METADATA_PATH)
+        is not None
+    ):
+        return True
+    if (
+        _mtls_helper._check_config_path(
+            _mtls_helper.CERTIFICATE_CONFIGURATION_DEFAULT_PATH
+        )
+        is not None
+    ):
+        return True
+    return False
 
 
 def default_client_cert_source():
@@ -53,7 +60,7 @@ def default_client_cert_source():
             _, cert_bytes, key_bytes = _mtls_helper.get_client_cert_and_key()
         except (OSError, RuntimeError, ValueError) as caught_exc:
             new_exc = exceptions.MutualTLSChannelError(caught_exc)
-            six.raise_from(new_exc, caught_exc)
+            raise new_exc from caught_exc
 
         return cert_bytes, key_bytes
 
@@ -98,8 +105,25 @@ def default_client_encrypted_cert_source(cert_path, key_path):
                 key_file.write(key_bytes)
         except (exceptions.ClientCertError, OSError) as caught_exc:
             new_exc = exceptions.MutualTLSChannelError(caught_exc)
-            six.raise_from(new_exc, caught_exc)
+            raise new_exc from caught_exc
 
         return cert_path, key_path, passphrase_bytes
 
     return callback
+
+
+def should_use_client_cert():
+    """Returns boolean for whether the client certificate should be used for mTLS.
+
+    This is a wrapper around _mtls_helper.check_use_client_cert().
+    If GOOGLE_API_USE_CLIENT_CERTIFICATE is set to true or false, a corresponding
+    bool value will be returned
+    If GOOGLE_API_USE_CLIENT_CERTIFICATE is unset, the value will be inferred by
+    reading a file pointed at by GOOGLE_API_CERTIFICATE_CONFIG, and verifying it
+    contains a "workload" section. If so, the function will return True,
+    otherwise False.
+
+    Returns:
+       bool: indicating whether the client certificate should be used for mTLS.
+    """
+    return _mtls_helper.check_use_client_cert()

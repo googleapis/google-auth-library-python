@@ -13,15 +13,22 @@
 # limitations under the License.
 
 import datetime
+import importlib
 import os
 import sys
 
 import mock
-import oauth2client.client
-import oauth2client.contrib.gce
-import oauth2client.service_account
-import pytest
-from six.moves import reload_module
+import pytest  # type: ignore
+
+try:
+    import oauth2client.client  # type: ignore
+    import oauth2client.contrib.gce  # type: ignore
+    import oauth2client.service_account  # type: ignore
+except ImportError:  # pragma: NO COVER
+    pytest.skip(
+        "Skipping oauth2client tests since oauth2client is not installed.",
+        allow_module_level=True,
+    )
 
 from google.auth import _oauth2client
 
@@ -108,8 +115,15 @@ def mock_oauth2client_gae_imports(mock_non_existent_module):
 def test__convert_appengine_app_assertion_credentials(
     app_identity, mock_oauth2client_gae_imports
 ):
+    # `oauth2client` requires `cgi` which was removed in Python 3.13
+    # See https://github.com/googleapis/oauth2client/blob/50d20532a748f18e53f7d24ccbe6647132c979a9/oauth2client/contrib/appengine.py#L20
+    # oauth2client is no longer being updated so this test must be skipped on newer Python Runtimes
+    if sys.version_info >= (3, 13):  # pragma: NO COVER
+        pytest.skip(
+            "Skipping test for Python 3.13+ due to oauth2client incompatibility."
+        )
 
-    import oauth2client.contrib.appengine
+    import oauth2client.contrib.appengine  # type: ignore
 
     service_account_id = "service_account_id"
     old_credentials = oauth2client.contrib.appengine.AppAssertionCredentials(
@@ -152,19 +166,27 @@ def test_convert_not_found():
 @pytest.fixture
 def reset__oauth2client_module():
     """Reloads the _oauth2client module after a test."""
-    reload_module(_oauth2client)
+    importlib.reload(_oauth2client)
 
 
 def test_import_has_app_engine(
     mock_oauth2client_gae_imports, reset__oauth2client_module
 ):
-    reload_module(_oauth2client)
+    # `oauth2client` requires `cgi` which was removed in Python 3.13
+    # See https://github.com/googleapis/oauth2client/blob/50d20532a748f18e53f7d24ccbe6647132c979a9/oauth2client/contrib/appengine.py#L20
+    # oauth2client is no longer being updated so this test must be skipped on newer Python Runtimes
+    if sys.version_info >= (3, 13):  # pragma: NO COVER
+        pytest.skip(
+            "Skipping test for Python 3.13+ due to oauth2client incompatibility."
+        )
+
+    importlib.reload(_oauth2client)
     assert _oauth2client._HAS_APPENGINE
 
 
 def test_import_without_oauth2client(monkeypatch, reset__oauth2client_module):
     monkeypatch.setitem(sys.modules, "oauth2client", None)
     with pytest.raises(ImportError) as excinfo:
-        reload_module(_oauth2client)
+        importlib.reload(_oauth2client)
 
     assert excinfo.match("oauth2client")

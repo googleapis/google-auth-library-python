@@ -75,6 +75,7 @@ class Credentials(oauth2_credentials.Credentials):
             self._client_secret,
             scopes=self._scopes,
             rapt_token=self._rapt_token,
+            enable_reauth_refresh=self._enable_reauth_refresh,
         )
 
         self.token = access_token
@@ -94,6 +95,12 @@ class Credentials(oauth2_credentials.Credentials):
                         ", ".join(scopes_requested_but_not_granted)
                     )
                 )
+
+    @_helpers.copy_docstring(credentials.Credentials)
+    async def before_request(self, request, method, url, headers):
+        if not self.valid:
+            await self.refresh(request)
+        self.apply(headers)
 
 
 class UserAccessTokenCredentials(oauth2_credentials.UserAccessTokenCredentials):

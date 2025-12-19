@@ -52,6 +52,7 @@ import datetime
 
 from google.auth import _helpers
 from google.auth import credentials
+from google.auth import exceptions
 from google.oauth2 import sts
 
 # The maximum number of access boundary rules a Credential Access Boundary can
@@ -62,7 +63,7 @@ _STS_GRANT_TYPE = "urn:ietf:params:oauth:grant-type:token-exchange"
 # The token exchange requested_token_type. This is always an access_token.
 _STS_REQUESTED_TOKEN_TYPE = "urn:ietf:params:oauth:token-type:access_token"
 # The STS token URL used to exchanged a short lived access token for a downscoped one.
-_STS_TOKEN_URL = "https://sts.googleapis.com/v1/token"
+_STS_TOKEN_URL_PATTERN = "https://sts.{}/v1/token"
 # The subject token type to use when exchanging a short lived access token for a
 # downscoped token.
 _STS_SUBJECT_TOKEN_TYPE = "urn:ietf:params:oauth:token-type:access_token"
@@ -84,8 +85,8 @@ class CredentialAccessBoundary(object):
                 access boundary rules limiting the access that a downscoped credential
                 will have.
         Raises:
-            TypeError: If any of the rules are not a valid type.
-            ValueError: If the provided rules exceed the maximum allowed.
+            InvalidType: If any of the rules are not a valid type.
+            InvalidValue: If the provided rules exceed the maximum allowed.
         """
         self.rules = rules
 
@@ -111,18 +112,18 @@ class CredentialAccessBoundary(object):
                 access boundary rules limiting the access that a downscoped credential
                 will have.
         Raises:
-            TypeError: If any of the rules are not a valid type.
-            ValueError: If the provided rules exceed the maximum allowed.
+            InvalidType: If any of the rules are not a valid type.
+            InvalidValue: If the provided rules exceed the maximum allowed.
         """
         if len(value) > _MAX_ACCESS_BOUNDARY_RULES_COUNT:
-            raise ValueError(
+            raise exceptions.InvalidValue(
                 "Credential access boundary rules can have a maximum of {} rules.".format(
                     _MAX_ACCESS_BOUNDARY_RULES_COUNT
                 )
             )
         for access_boundary_rule in value:
             if not isinstance(access_boundary_rule, AccessBoundaryRule):
-                raise TypeError(
+                raise exceptions.InvalidType(
                     "List of rules provided do not contain a valid 'google.auth.downscoped.AccessBoundaryRule'."
                 )
         # Make a copy of the original list.
@@ -136,17 +137,17 @@ class CredentialAccessBoundary(object):
                 limiting the access that a downscoped credential will have, to be added to
                 the existing rules.
         Raises:
-            TypeError: If any of the rules are not a valid type.
-            ValueError: If the provided rules exceed the maximum allowed.
+            InvalidType: If any of the rules are not a valid type.
+            InvalidValue: If the provided rules exceed the maximum allowed.
         """
         if len(self.rules) == _MAX_ACCESS_BOUNDARY_RULES_COUNT:
-            raise ValueError(
+            raise exceptions.InvalidValue(
                 "Credential access boundary rules can have a maximum of {} rules.".format(
                     _MAX_ACCESS_BOUNDARY_RULES_COUNT
                 )
             )
         if not isinstance(rule, AccessBoundaryRule):
-            raise TypeError(
+            raise exceptions.InvalidType(
                 "The provided rule does not contain a valid 'google.auth.downscoped.AccessBoundaryRule'."
             )
         self._rules.append(rule)
@@ -195,8 +196,8 @@ class AccessBoundaryRule(object):
                 specific Cloud Storage objects.
 
         Raises:
-            TypeError: If any of the parameters are not of the expected types.
-            ValueError: If any of the parameters are not of the expected values.
+            InvalidType: If any of the parameters are not of the expected types.
+            InvalidValue: If any of the parameters are not of the expected values.
         """
         self.available_resource = available_resource
         self.available_permissions = available_permissions
@@ -219,10 +220,12 @@ class AccessBoundaryRule(object):
             value (str): The updated value of the available resource.
 
         Raises:
-            TypeError: If the value is not a string.
+            google.auth.exceptions.InvalidType: If the value is not a string.
         """
         if not isinstance(value, str):
-            raise TypeError("The provided available_resource is not a string.")
+            raise exceptions.InvalidType(
+                "The provided available_resource is not a string."
+            )
         self._available_resource = value
 
     @property
@@ -243,16 +246,16 @@ class AccessBoundaryRule(object):
             value (Sequence[str]): The updated value of the available permissions.
 
         Raises:
-            TypeError: If the value is not a list of strings.
-            ValueError: If the value is not valid.
+            InvalidType: If the value is not a list of strings.
+            InvalidValue: If the value is not valid.
         """
         for available_permission in value:
             if not isinstance(available_permission, str):
-                raise TypeError(
+                raise exceptions.InvalidType(
                     "Provided available_permissions are not a list of strings."
                 )
             if available_permission.find("inRole:") != 0:
-                raise ValueError(
+                raise exceptions.InvalidValue(
                     "available_permissions must be prefixed with 'inRole:'."
                 )
         # Make a copy of the original list.
@@ -277,11 +280,11 @@ class AccessBoundaryRule(object):
                 value of the availability condition.
 
         Raises:
-            TypeError: If the value is not of type google.auth.downscoped.AvailabilityCondition
+            google.auth.exceptions.InvalidType: If the value is not of type google.auth.downscoped.AvailabilityCondition
                 or None.
         """
         if not isinstance(value, AvailabilityCondition) and value is not None:
-            raise TypeError(
+            raise exceptions.InvalidType(
                 "The provided availability_condition is not a 'google.auth.downscoped.AvailabilityCondition' or None."
             )
         self._availability_condition = value
@@ -324,8 +327,8 @@ class AvailabilityCondition(object):
             description (Optional[str]): Optional details about the purpose of the condition.
 
         Raises:
-            TypeError: If any of the parameters are not of the expected types.
-            ValueError: If any of the parameters are not of the expected values.
+            InvalidType: If any of the parameters are not of the expected types.
+            InvalidValue: If any of the parameters are not of the expected values.
         """
         self.expression = expression
         self.title = title
@@ -348,10 +351,10 @@ class AvailabilityCondition(object):
             value (str): The updated value of the condition expression.
 
         Raises:
-            TypeError: If the value is not of type string.
+            google.auth.exceptions.InvalidType: If the value is not of type string.
         """
         if not isinstance(value, str):
-            raise TypeError("The provided expression is not a string.")
+            raise exceptions.InvalidType("The provided expression is not a string.")
         self._expression = value
 
     @property
@@ -371,10 +374,10 @@ class AvailabilityCondition(object):
             value (Optional[str]): The updated value of the title.
 
         Raises:
-            TypeError: If the value is not of type string or None.
+            google.auth.exceptions.InvalidType: If the value is not of type string or None.
         """
         if not isinstance(value, str) and value is not None:
-            raise TypeError("The provided title is not a string or None.")
+            raise exceptions.InvalidType("The provided title is not a string or None.")
         self._title = value
 
     @property
@@ -394,10 +397,12 @@ class AvailabilityCondition(object):
             value (Optional[str]): The updated value of the description.
 
         Raises:
-            TypeError: If the value is not of type string or None.
+            google.auth.exceptions.InvalidType: If the value is not of type string or None.
         """
         if not isinstance(value, str) and value is not None:
-            raise TypeError("The provided description is not a string or None.")
+            raise exceptions.InvalidType(
+                "The provided description is not a string or None."
+            )
         self._description = value
 
     def to_json(self):
@@ -432,7 +437,11 @@ class Credentials(credentials.CredentialsWithQuotaProject):
     """
 
     def __init__(
-        self, source_credentials, credential_access_boundary, quota_project_id=None
+        self,
+        source_credentials,
+        credential_access_boundary,
+        quota_project_id=None,
+        universe_domain=credentials.DEFAULT_UNIVERSE_DOMAIN,
     ):
         """Instantiates a downscoped credentials object using the provided source
         credentials and credential access boundary rules.
@@ -451,6 +460,7 @@ class Credentials(credentials.CredentialsWithQuotaProject):
                 the upper bound of the permissions that are available on that resource and an
                 optional condition to further restrict permissions.
             quota_project_id (Optional[str]): The optional quota project ID.
+            universe_domain (Optional[str]): The universe domain value, default is googleapis.com
         Raises:
             google.auth.exceptions.RefreshError: If the source credentials
                 return an error on token refresh.
@@ -462,7 +472,10 @@ class Credentials(credentials.CredentialsWithQuotaProject):
         self._source_credentials = source_credentials
         self._credential_access_boundary = credential_access_boundary
         self._quota_project_id = quota_project_id
-        self._sts_client = sts.Client(_STS_TOKEN_URL)
+        self._universe_domain = universe_domain or credentials.DEFAULT_UNIVERSE_DOMAIN
+        self._sts_client = sts.Client(
+            _STS_TOKEN_URL_PATTERN.format(self.universe_domain)
+        )
 
     @_helpers.copy_docstring(credentials.Credentials)
     def refresh(self, request):

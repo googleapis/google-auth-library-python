@@ -1,4 +1,4 @@
-# Copyright 2020 Google LLC
+# Copyright 2024 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,19 +12,28 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Template for .trampolinerc
-
 # Add required env vars here.
 required_envvars+=(
-    "STAGING_BUCKET"
-    "V2_STAGING_BUCKET"
 )
 
 # Add env vars which are passed down into the container here.
 pass_down_envvars+=(
+    "NOX_SESSION"
+    ###############
+    # Docs builds
+    ###############
     "STAGING_BUCKET"
     "V2_STAGING_BUCKET"
-    "NOX_SESSION"
+    ##################
+    # Samples builds
+    ##################
+    "INSTALL_LIBRARY_FROM_SOURCE"
+    "RUN_TESTS_SESSION"
+    "BUILD_SPECIFIC_GCLOUD_PROJECT"
+    # Target directories.
+    "RUN_TESTS_DIRS"
+    # The nox session to run.
+    "RUN_TESTS_SESSION"
 )
 
 # Prevent unintentional override on the default image.

@@ -17,33 +17,27 @@
 from __future__ import absolute_import
 
 import functools
+import http.client as http_client
 import logging
 import numbers
-import os
 import time
 
 try:
     import requests
 except ImportError as caught_exc:  # pragma: NO COVER
-    import six
-
-    six.raise_from(
-        ImportError(
-            "The requests library is not installed, please install the "
-            "requests package to use the requests transport."
-        ),
-        caught_exc,
-    )
+    raise ImportError(
+        "The requests library is not installed from please install the requests package to use the requests transport."
+    ) from caught_exc
 import requests.adapters  # pylint: disable=ungrouped-imports
 import requests.exceptions  # pylint: disable=ungrouped-imports
-from requests.packages.urllib3.util.ssl_ import (
+from requests.packages.urllib3.util.ssl_ import (  # type: ignore
     create_urllib3_context,
 )  # pylint: disable=ungrouped-imports
-import six  # pylint: disable=ungrouped-imports
 
-from google.auth import environment_vars
+from google.auth import _helpers
 from google.auth import exceptions
 from google.auth import transport
+from google.auth.transport import _mtls_helper
 import google.auth.transport._mtls_helper
 from google.oauth2 import service_account
 
@@ -149,6 +143,16 @@ class Request(transport.Request):
 
         self.session = session
 
+    def __del__(self):
+        try:
+            if hasattr(self, "session") and self.session is not None:
+                self.session.close()
+        except TypeError:
+            # NOTE: For certain Python binary built, the queue.Empty exception
+            # might not be considered a normal Python exception causing
+            # TypeError.
+            pass
+
     def __call__(
         self,
         url,
@@ -179,14 +183,15 @@ class Request(transport.Request):
             google.auth.exceptions.TransportError: If any exception occurred.
         """
         try:
-            _LOGGER.debug("Making request: %s %s", method, url)
+            _helpers.request_log(_LOGGER, method, url, body, headers)
             response = self.session.request(
                 method, url, data=body, headers=headers, timeout=timeout, **kwargs
             )
+            _helpers.response_log(_LOGGER, response)
             return _Response(response)
         except requests.exceptions.RequestException as caught_exc:
             new_exc = exceptions.TransportError(caught_exc)
-            six.raise_from(new_exc, caught_exc)
+            raise new_exc from caught_exc
 
 
 class _MutualTlsAdapter(requests.adapters.HTTPAdapter):
@@ -205,7 +210,7 @@ class _MutualTlsAdapter(requests.adapters.HTTPAdapter):
     def __init__(self, cert, key):
         import certifi
         from OpenSSL import crypto
-        import urllib3.contrib.pyopenssl
+        import urllib3.contrib.pyopenssl  # type: ignore
 
         urllib3.contrib.pyopenssl.inject_into_urllib3()
 
@@ -233,6 +238,60 @@ class _MutualTlsAdapter(requests.adapters.HTTPAdapter):
     def proxy_manager_for(self, *args, **kwargs):
         kwargs["ssl_context"] = self._ctx_proxymanager
         return super(_MutualTlsAdapter, self).proxy_manager_for(*args, **kwargs)
+
+
+class _MutualTlsOffloadAdapter(requests.adapters.HTTPAdapter):
+    """
+    A TransportAdapter that enables mutual TLS and offloads the client side
+    signing operation to the signing library.
+
+    Args:
+        enterprise_cert_file_path (str): the path to a enterprise cert JSON
+            file. The file should contain the following field:
+
+                {
+                    "libs": {
+                        "signer_library": "...",
+                        "offload_library": "..."
+                    }
+                }
+
+    Raises:
+        ImportError: if certifi or pyOpenSSL is not installed
+        google.auth.exceptions.MutualTLSChannelError: If mutual TLS channel
+            creation failed for any reason.
+    """
+
+    def __init__(self, enterprise_cert_file_path):
+        import certifi
+        from google.auth.transport import _custom_tls_signer
+
+        self.signer = _custom_tls_signer.CustomTlsSigner(enterprise_cert_file_path)
+        self.signer.load_libraries()
+
+        import urllib3.contrib.pyopenssl
+
+        urllib3.contrib.pyopenssl.inject_into_urllib3()
+
+        poolmanager = create_urllib3_context()
+        poolmanager.load_verify_locations(cafile=certifi.where())
+        self.signer.attach_to_ssl_context(poolmanager)
+        self._ctx_poolmanager = poolmanager
+
+        proxymanager = create_urllib3_context()
+        proxymanager.load_verify_locations(cafile=certifi.where())
+        self.signer.attach_to_ssl_context(proxymanager)
+        self._ctx_proxymanager = proxymanager
+
+        super(_MutualTlsOffloadAdapter, self).__init__()
+
+    def init_poolmanager(self, *args, **kwargs):
+        kwargs["ssl_context"] = self._ctx_poolmanager
+        super(_MutualTlsOffloadAdapter, self).init_poolmanager(*args, **kwargs)
+
+    def proxy_manager_for(self, *args, **kwargs):
+        kwargs["ssl_context"] = self._ctx_proxymanager
+        return super(_MutualTlsOffloadAdapter, self).proxy_manager_for(*args, **kwargs)
 
 
 class AuthorizedSession(requests.Session):
@@ -385,18 +444,15 @@ class AuthorizedSession(requests.Session):
             google.auth.exceptions.MutualTLSChannelError: If mutual TLS channel
                 creation failed for any reason.
         """
-        use_client_cert = os.getenv(
-            environment_vars.GOOGLE_API_USE_CLIENT_CERTIFICATE, "false"
-        )
-        if use_client_cert != "true":
+        use_client_cert = google.auth.transport._mtls_helper.check_use_client_cert()
+        if not use_client_cert:
             self._is_mtls = False
             return
-
         try:
             import OpenSSL
         except ImportError as caught_exc:
             new_exc = exceptions.MutualTLSChannelError(caught_exc)
-            six.raise_from(new_exc, caught_exc)
+            raise new_exc from caught_exc
 
         try:
             (
@@ -409,6 +465,7 @@ class AuthorizedSession(requests.Session):
 
             if self._is_mtls:
                 mtls_adapter = _MutualTlsAdapter(cert, key)
+                self._cached_cert = cert
                 self.mount("https://", mtls_adapter)
         except (
             exceptions.ClientCertError,
@@ -416,7 +473,7 @@ class AuthorizedSession(requests.Session):
             OpenSSL.crypto.Error,
         ) as caught_exc:
             new_exc = exceptions.MutualTLSChannelError(caught_exc)
-            six.raise_from(new_exc, caught_exc)
+            raise new_exc from caught_exc
 
     def request(
         self,
@@ -448,6 +505,10 @@ class AuthorizedSession(requests.Session):
                 itself does not timeout, e.g. if a large file is being
                 transmitted. The timout error will be raised after such
                 request completes.
+        Raises:
+            google.auth.exceptions.MutualTLSChannelError: If mutual TLS
+                channel creation fails for any reason.
+            ValueError: If the client certificate is invalid.
         """
         # pylint: disable=arguments-differ
         # Requests has a ton of arguments to request, but only two
@@ -477,6 +538,7 @@ class AuthorizedSession(requests.Session):
         remaining_time = guard.remaining_timeout
 
         with TimeoutGuard(remaining_time) as guard:
+            _helpers.request_log(_LOGGER, method, url, data, headers)
             response = super(AuthorizedSession, self).request(
                 method,
                 url,
@@ -496,7 +558,36 @@ class AuthorizedSession(requests.Session):
             response.status_code in self._refresh_status_codes
             and _credential_refresh_attempt < self._max_refresh_attempts
         ):
-
+            # Handle unauthorized permission error(401 status code)
+            if response.status_code == http_client.UNAUTHORIZED:
+                if self.is_mtls:
+                    (
+                        call_cert_bytes,
+                        call_key_bytes,
+                        cached_fingerprint,
+                        current_cert_fingerprint,
+                    ) = _mtls_helper.check_parameters_for_unauthorized_response(
+                        self._cached_cert
+                    )
+                    if cached_fingerprint != current_cert_fingerprint:
+                        try:
+                            _LOGGER.info(
+                                "Client certificate has changed, reconfiguring mTLS "
+                                "channel."
+                            )
+                            self.configure_mtls_channel(
+                                lambda: (call_cert_bytes, call_key_bytes)
+                            )
+                        except Exception as e:
+                            _LOGGER.error("Failed to reconfigure mTLS channel: %s", e)
+                            raise exceptions.MutualTLSChannelError(
+                                "Failed to reconfigure mTLS channel"
+                            ) from e
+                    else:
+                        _LOGGER.info(
+                            "Skipping reconfiguration of mTLS channel because the client"
+                            " certificate has not changed."
+                        )
             _LOGGER.info(
                 "Refreshing credentials due to a %s response. Attempt %s/%s.",
                 response.status_code,

@@ -34,8 +34,6 @@ Those steps are:
 
 import sys
 
-from six.moves import range
-
 from google.auth import exceptions
 from google.oauth2 import _client
 from google.oauth2 import _client_async
@@ -250,6 +248,7 @@ async def refresh_grant(
     client_secret,
     scopes=None,
     rapt_token=None,
+    enable_reauth_refresh=False,
 ):
     """Implements the reauthentication flow.
 
@@ -267,6 +266,9 @@ async def refresh_grant(
             token has a wild card scope (e.g.
             'https://www.googleapis.com/auth/any-api').
         rapt_token (Optional(str)): The rapt token for reauth.
+        enable_reauth_refresh (Optional[bool]): Whether reauth refresh flow
+            should be used. The default value is False. This option is for
+            gcloud only, other users should use the default value.
 
     Returns:
         Tuple[str, Optional[str], Optional[datetime], Mapping[str, str], str]: The
@@ -288,9 +290,11 @@ async def refresh_grant(
     if rapt_token:
         body["rapt"] = rapt_token
 
-    response_status_ok, response_data = await _client_async._token_endpoint_request_no_throw(
-        request, token_uri, body
-    )
+    (
+        response_status_ok,
+        response_data,
+        retryable_error,
+    ) = await _client_async._token_endpoint_request_no_throw(request, token_uri, body)
     if (
         not response_status_ok
         and response_data.get("error") == reauth._REAUTH_NEEDED_ERROR
@@ -301,6 +305,11 @@ async def refresh_grant(
             == reauth._REAUTH_NEEDED_ERROR_RAPT_REQUIRED
         )
     ):
+        if not enable_reauth_refresh:
+            raise exceptions.RefreshError(
+                "Reauthentication is needed. Please run `gcloud auth application-default login` to reauthenticate."
+            )
+
         rapt_token = await get_rapt_token(
             request, client_id, client_secret, refresh_token, token_uri, scopes=scopes
         )
@@ -308,12 +317,13 @@ async def refresh_grant(
         (
             response_status_ok,
             response_data,
+            retryable_error,
         ) = await _client_async._token_endpoint_request_no_throw(
             request, token_uri, body
         )
 
     if not response_status_ok:
-        _client._handle_error_response(response_data)
+        _client._handle_error_response(response_data, retryable_error)
     refresh_response = _client._handle_refresh_grant_response(
         response_data, refresh_token
     )

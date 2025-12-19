@@ -14,12 +14,10 @@
 
 """Helpers for reading the Google Cloud SDK's configuration."""
 
-import json
 import os
 import subprocess
 
-import six
-
+from google.auth import _helpers
 from google.auth import environment_vars
 from google.auth import exceptions
 
@@ -35,7 +33,7 @@ _CREDENTIALS_FILENAME = "application_default_credentials.json"
 _CLOUD_SDK_POSIX_COMMAND = "gcloud"
 _CLOUD_SDK_WINDOWS_COMMAND = "gcloud.cmd"
 # The command to get the Cloud SDK configuration
-_CLOUD_SDK_CONFIG_COMMAND = ("config", "config-helper", "--format", "json")
+_CLOUD_SDK_CONFIG_GET_PROJECT_COMMAND = ("config", "get", "project")
 # The command to get google user access token
 _CLOUD_SDK_USER_ACCESS_TOKEN_COMMAND = ("auth", "print-access-token")
 # Cloud SDK's application-default client ID
@@ -85,7 +83,7 @@ def get_application_default_credentials_path():
 
 
 def _run_subprocess_ignore_stderr(command):
-    """ Return subprocess.check_output with the given command and ignores stderr."""
+    """Return subprocess.check_output with the given command and ignores stderr."""
     with open(os.devnull, "w") as devnull:
         output = subprocess.check_output(command, stderr=devnull)
     return output
@@ -105,18 +103,14 @@ def get_project_id():
     try:
         # Ignore the stderr coming from gcloud, so it won't be mixed into the output.
         # https://github.com/googleapis/google-auth-library-python/issues/673
-        output = _run_subprocess_ignore_stderr((command,) + _CLOUD_SDK_CONFIG_COMMAND)
+        project = _run_subprocess_ignore_stderr(
+            (command,) + _CLOUD_SDK_CONFIG_GET_PROJECT_COMMAND
+        )
+
+        # Turn bytes into a string and remove "\n"
+        project = _helpers.from_bytes(project).strip()
+        return project if project else None
     except (subprocess.CalledProcessError, OSError, IOError):
-        return None
-
-    try:
-        configuration = json.loads(output.decode("utf-8"))
-    except ValueError:
-        return None
-
-    try:
-        return configuration["configuration"]["properties"]["core"]["project"]
-    except KeyError:
         return None
 
 
@@ -156,4 +150,4 @@ def get_auth_access_token(account=None):
         new_exc = exceptions.UserAccessTokenError(
             "Failed to obtain access token", caught_exc
         )
-        six.raise_from(new_exc, caught_exc)
+        raise new_exc from caught_exc

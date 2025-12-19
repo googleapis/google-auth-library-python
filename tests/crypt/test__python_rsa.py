@@ -12,14 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import io
 import json
 import os
 
 import mock
-from pyasn1_modules import pem
-import pytest
-import rsa
-import six
+from pyasn1_modules import pem  # type: ignore
+import pytest  # type: ignore
+import rsa  # type: ignore
 
 from google.auth import _helpers
 from google.auth.crypt import _python_rsa
@@ -58,7 +58,7 @@ with open(os.path.join(DATA_DIR, "privatekey.p12"), "rb") as fh:
 # The service account JSON file can be generated from the Google Cloud Console.
 SERVICE_ACCOUNT_JSON_FILE = os.path.join(DATA_DIR, "service_account.json")
 
-with open(SERVICE_ACCOUNT_JSON_FILE, "r") as fh:
+with open(SERVICE_ACCOUNT_JSON_FILE, "rb") as fh:
     SERVICE_ACCOUNT_INFO = json.load(fh)
 
 
@@ -72,7 +72,7 @@ class TestRSAVerifier(object):
         assert verifier.verify(to_sign, actual_signature)
 
     def test_verify_unicode_success(self):
-        to_sign = u"foo"
+        to_sign = "foo"
         signer = _python_rsa.RSASigner.from_string(PRIVATE_KEY_BYTES)
         actual_signature = signer.sign(to_sign)
 
@@ -141,7 +141,7 @@ class TestRSASigner(object):
     def test_from_string_pkcs8_extra_bytes(self):
         key_bytes = PKCS8_KEY_BYTES
         _, pem_bytes = pem.readPemBlocksFromFile(
-            six.StringIO(_helpers.from_bytes(key_bytes)), _python_rsa._PKCS8_MARKER
+            io.StringIO(_helpers.from_bytes(key_bytes)), _python_rsa._PKCS8_MARKER
         )
 
         key_info, remaining = None, "extra"

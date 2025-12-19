@@ -19,7 +19,7 @@ import pickle
 import sys
 
 import mock
-import pytest
+import pytest  # type: ignore
 
 from google.auth import _helpers
 from google.auth import exceptions
@@ -29,7 +29,6 @@ from tests.oauth2 import test_credentials
 
 
 class TestCredentials:
-
     TOKEN_URI = "https://example.com/oauth2/token"
     REFRESH_TOKEN = "refresh_token"
     CLIENT_ID = "client_id"
@@ -43,6 +42,7 @@ class TestCredentials:
             token_uri=cls.TOKEN_URI,
             client_id=cls.CLIENT_ID,
             client_secret=cls.CLIENT_SECRET,
+            enable_reauth_refresh=True,
         )
 
     def test_default_state(self):
@@ -61,7 +61,7 @@ class TestCredentials:
     @mock.patch("google.oauth2._reauth_async.refresh_grant", autospec=True)
     @mock.patch(
         "google.auth._helpers.utcnow",
-        return_value=datetime.datetime.min + _helpers.CLOCK_SKEW,
+        return_value=datetime.datetime.min + _helpers.REFRESH_THRESHOLD,
     )
     @pytest.mark.asyncio
     async def test_refresh_success(self, unused_utcnow, refresh_grant):
@@ -97,6 +97,7 @@ class TestCredentials:
             self.CLIENT_SECRET,
             None,
             None,
+            True,
         )
 
         # Check that the credentials have the token and expiry
@@ -122,7 +123,7 @@ class TestCredentials:
     @mock.patch("google.oauth2._reauth_async.refresh_grant", autospec=True)
     @mock.patch(
         "google.auth._helpers.utcnow",
-        return_value=datetime.datetime.min + _helpers.CLOCK_SKEW,
+        return_value=datetime.datetime.min + _helpers.REFRESH_THRESHOLD,
     )
     @pytest.mark.asyncio
     async def test_credentials_with_scopes_requested_refresh_success(
@@ -169,6 +170,7 @@ class TestCredentials:
             self.CLIENT_SECRET,
             scopes,
             "old_rapt_token",
+            False,
         )
 
         # Check that the credentials have the token and expiry
@@ -185,7 +187,7 @@ class TestCredentials:
     @mock.patch("google.oauth2._reauth_async.refresh_grant", autospec=True)
     @mock.patch(
         "google.auth._helpers.utcnow",
-        return_value=datetime.datetime.min + _helpers.CLOCK_SKEW,
+        return_value=datetime.datetime.min + _helpers.REFRESH_THRESHOLD,
     )
     @pytest.mark.asyncio
     async def test_credentials_with_scopes_returned_refresh_success(
@@ -231,6 +233,7 @@ class TestCredentials:
             self.CLIENT_SECRET,
             scopes,
             None,
+            False,
         )
 
         # Check that the credentials have the token and expiry
@@ -247,7 +250,7 @@ class TestCredentials:
     @mock.patch("google.oauth2._reauth_async.refresh_grant", autospec=True)
     @mock.patch(
         "google.auth._helpers.utcnow",
-        return_value=datetime.datetime.min + _helpers.CLOCK_SKEW,
+        return_value=datetime.datetime.min + _helpers.REFRESH_THRESHOLD,
     )
     @pytest.mark.asyncio
     async def test_credentials_with_scopes_refresh_failure_raises_refresh_error(
@@ -301,6 +304,7 @@ class TestCredentials:
             self.CLIENT_SECRET,
             scopes,
             None,
+            False,
         )
 
         # Check that the credentials have the token and expiry
@@ -428,7 +432,10 @@ class TestCredentials:
         assert list(creds.__dict__).sort() == list(unpickled.__dict__).sort()
 
         for attr in list(creds.__dict__):
-            assert getattr(creds, attr) == getattr(unpickled, attr)
+            if attr == "_refresh_worker":
+                assert getattr(unpickled, attr) is None
+            else:
+                assert getattr(creds, attr) == getattr(unpickled, attr)
 
     def test_pickle_with_missing_attribute(self):
         creds = self.make_credentials()
@@ -457,6 +464,29 @@ class TestCredentials:
         ) as f:
             credentials = pickle.load(f)
             assert credentials.quota_project_id is None
+
+    @mock.patch("google.oauth2._credentials_async.Credentials.apply", autospec=True)
+    @mock.patch("google.oauth2._credentials_async.Credentials.refresh", autospec=True)
+    @pytest.mark.asyncio
+    async def test_before_request(self, refresh, apply):
+        cred = self.make_credentials()
+        assert not cred.valid
+        await cred.before_request(mock.Mock(), "GET", "https://example.com", {})
+        refresh.assert_called()
+        apply.assert_called()
+
+    @mock.patch("google.oauth2._credentials_async.Credentials.apply", autospec=True)
+    @mock.patch("google.oauth2._credentials_async.Credentials.refresh", autospec=True)
+    @pytest.mark.asyncio
+    async def test_before_request_no_refresh(self, refresh, apply):
+        cred = self.make_credentials()
+        cred.token = refresh
+        cred.expiry = None
+
+        assert cred.valid
+        await cred.before_request(mock.Mock(), "GET", "https://example.com", {})
+        refresh.assert_not_called()
+        apply.assert_called()
 
 
 class TestUserAccessTokenCredentials(object):
