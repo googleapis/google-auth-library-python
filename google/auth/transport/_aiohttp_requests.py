@@ -79,7 +79,7 @@ class _CombinedResponse(transport.Response):
 
     async def raw_content(self):
         if self._raw_content is None:
-            self._raw_content = await self._response.content.read()
+            self._raw_content = await self._response.read()
         return self._raw_content
 
     async def content(self):
@@ -276,7 +276,6 @@ class AuthorizedSession(aiohttp.ClientSession):
         auto_decompress=False,
         **kwargs,
     ):
-
         """Implementation of Authorized Session aiohttp request.
 
         Args:
@@ -358,7 +357,6 @@ class AuthorizedSession(aiohttp.ClientSession):
                 response.status in self._refresh_status_codes
                 and _credential_refresh_attempt < self._max_refresh_attempts
             ):
-
                 requests._LOGGER.info(
                     "Refreshing credentials due to a %s response. Attempt %s/%s.",
                     response.status,
