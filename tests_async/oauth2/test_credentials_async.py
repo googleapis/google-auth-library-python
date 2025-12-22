@@ -29,7 +29,6 @@ from tests.oauth2 import test_credentials
 
 
 class TestCredentials:
-
     TOKEN_URI = "https://example.com/oauth2/token"
     REFRESH_TOKEN = "refresh_token"
     CLIENT_ID = "client_id"
@@ -433,7 +432,10 @@ class TestCredentials:
         assert list(creds.__dict__).sort() == list(unpickled.__dict__).sort()
 
         for attr in list(creds.__dict__):
-            assert getattr(creds, attr) == getattr(unpickled, attr)
+            if attr == "_refresh_worker":
+                assert getattr(unpickled, attr) is None
+            else:
+                assert getattr(creds, attr) == getattr(unpickled, attr)
 
     def test_pickle_with_missing_attribute(self):
         creds = self.make_credentials()
@@ -462,6 +464,29 @@ class TestCredentials:
         ) as f:
             credentials = pickle.load(f)
             assert credentials.quota_project_id is None
+
+    @mock.patch("google.oauth2._credentials_async.Credentials.apply", autospec=True)
+    @mock.patch("google.oauth2._credentials_async.Credentials.refresh", autospec=True)
+    @pytest.mark.asyncio
+    async def test_before_request(self, refresh, apply):
+        cred = self.make_credentials()
+        assert not cred.valid
+        await cred.before_request(mock.Mock(), "GET", "https://example.com", {})
+        refresh.assert_called()
+        apply.assert_called()
+
+    @mock.patch("google.oauth2._credentials_async.Credentials.apply", autospec=True)
+    @mock.patch("google.oauth2._credentials_async.Credentials.refresh", autospec=True)
+    @pytest.mark.asyncio
+    async def test_before_request_no_refresh(self, refresh, apply):
+        cred = self.make_credentials()
+        cred.token = refresh
+        cred.expiry = None
+
+        assert cred.valid
+        await cred.before_request(mock.Mock(), "GET", "https://example.com", {})
+        refresh.assert_not_called()
+        apply.assert_called()
 
 
 class TestUserAccessTokenCredentials(object):

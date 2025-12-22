@@ -15,6 +15,7 @@
 import base64
 import json
 import os
+import pickle
 
 from cryptography.hazmat.primitives.asymmetric import ec
 import pytest  # type: ignore
@@ -59,7 +60,7 @@ class TestES256Verifier(object):
         assert verifier.verify(to_sign, actual_signature)
 
     def test_verify_unicode_success(self):
-        to_sign = u"foo"
+        to_sign = "foo"
         signer = es256.ES256Signer.from_string(PRIVATE_KEY_BYTES)
         actual_signature = signer.sign(to_sign)
 
@@ -138,6 +139,18 @@ class TestES256Signer(object):
 
     def test_from_service_account_file(self):
         signer = es256.ES256Signer.from_service_account_file(SERVICE_ACCOUNT_JSON_FILE)
+
+        assert signer.key_id == SERVICE_ACCOUNT_INFO[base._JSON_FILE_PRIVATE_KEY_ID]
+        assert isinstance(signer._key, ec.EllipticCurvePrivateKey)
+
+    def test_pickle(self):
+        signer = es256.ES256Signer.from_service_account_file(SERVICE_ACCOUNT_JSON_FILE)
+
+        assert signer.key_id == SERVICE_ACCOUNT_INFO[base._JSON_FILE_PRIVATE_KEY_ID]
+        assert isinstance(signer._key, ec.EllipticCurvePrivateKey)
+
+        pickled_signer = pickle.dumps(signer)
+        signer = pickle.loads(pickled_signer)
 
         assert signer.key_id == SERVICE_ACCOUNT_INFO[base._JSON_FILE_PRIVATE_KEY_ID]
         assert isinstance(signer._key, ec.EllipticCurvePrivateKey)

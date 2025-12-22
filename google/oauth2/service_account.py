@@ -73,16 +73,17 @@ specific subject using :meth:`~Credentials.with_subject`.
 import copy
 import datetime
 
+from google.auth import _constants
 from google.auth import _helpers
 from google.auth import _service_account_info
 from google.auth import credentials
 from google.auth import exceptions
+from google.auth import iam
 from google.auth import jwt
 from google.auth import metrics
 from google.oauth2 import _client
 
 _DEFAULT_TOKEN_LIFETIME_SECS = 3600  # 1 hour in seconds
-_DEFAULT_UNIVERSE_DOMAIN = "googleapis.com"
 _GOOGLE_OAUTH2_TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token"
 
 
@@ -91,6 +92,7 @@ class Credentials(
     credentials.Scoped,
     credentials.CredentialsWithQuotaProject,
     credentials.CredentialsWithTokenUri,
+    credentials.CredentialsWithTrustBoundary,
 ):
     """Service account credentials
 
@@ -139,7 +141,7 @@ class Credentials(
         quota_project_id=None,
         additional_claims=None,
         always_use_jwt_access=False,
-        universe_domain=_DEFAULT_UNIVERSE_DOMAIN,
+        universe_domain=credentials.DEFAULT_UNIVERSE_DOMAIN,
         trust_boundary=None,
     ):
         """
@@ -164,7 +166,7 @@ class Credentials(
             universe_domain (str): The universe domain. The default
                 universe domain is googleapis.com. For default value self
                 signed jwt is used for token refresh.
-            trust_boundary (str): String representation of trust boundary meta.
+            trust_boundary (Mapping[str,str]): A credential trust boundary.
 
         .. note:: Typically one of the helper constructors
             :meth:`from_service_account_file` or
@@ -173,6 +175,7 @@ class Credentials(
         """
         super(Credentials, self).__init__()
 
+        self._cred_file_path = None
         self._scopes = scopes
         self._default_scopes = default_scopes
         self._signer = signer
@@ -182,12 +185,9 @@ class Credentials(
         self._quota_project_id = quota_project_id
         self._token_uri = token_uri
         self._always_use_jwt_access = always_use_jwt_access
-        if not universe_domain:
-            self._universe_domain = _DEFAULT_UNIVERSE_DOMAIN
-        else:
-            self._universe_domain = universe_domain
+        self._universe_domain = universe_domain or credentials.DEFAULT_UNIVERSE_DOMAIN
 
-        if universe_domain != _DEFAULT_UNIVERSE_DOMAIN:
+        if universe_domain != credentials.DEFAULT_UNIVERSE_DOMAIN:
             self._always_use_jwt_access = True
 
         self._jwt_credentials = None
@@ -196,7 +196,7 @@ class Credentials(
             self._additional_claims = additional_claims
         else:
             self._additional_claims = {}
-        self._trust_boundary = {"locations": [], "encoded_locations": "0x0"}
+        self._trust_boundary = trust_boundary
 
     @classmethod
     def _from_signer_and_info(cls, signer, info, **kwargs):
@@ -219,9 +219,11 @@ class Credentials(
             service_account_email=info["client_email"],
             token_uri=info["token_uri"],
             project_id=info.get("project_id"),
-            universe_domain=info.get("universe_domain", _DEFAULT_UNIVERSE_DOMAIN),
+            universe_domain=info.get(
+                "universe_domain", credentials.DEFAULT_UNIVERSE_DOMAIN
+            ),
             trust_boundary=info.get("trust_boundary"),
-            **kwargs
+            **kwargs,
         )
 
     @classmethod
@@ -294,7 +296,9 @@ class Credentials(
             additional_claims=self._additional_claims.copy(),
             always_use_jwt_access=self._always_use_jwt_access,
             universe_domain=self._universe_domain,
+            trust_boundary=self._trust_boundary,
         )
+        cred._cred_file_path = self._cred_file_path
         return cred
 
     @_helpers.copy_docstring(credentials.Scoped)
@@ -319,13 +323,21 @@ class Credentials(
         """
         cred = self._make_copy()
         if (
-            cred._universe_domain != _DEFAULT_UNIVERSE_DOMAIN
+            cred._universe_domain != credentials.DEFAULT_UNIVERSE_DOMAIN
             and not always_use_jwt_access
         ):
             raise exceptions.InvalidValue(
                 "always_use_jwt_access should be True for non-default universe domain"
             )
         cred._always_use_jwt_access = always_use_jwt_access
+        return cred
+
+    @_helpers.copy_docstring(credentials.CredentialsWithUniverseDomain)
+    def with_universe_domain(self, universe_domain):
+        cred = self._make_copy()
+        cred._universe_domain = universe_domain
+        if universe_domain != credentials.DEFAULT_UNIVERSE_DOMAIN:
+            cred._always_use_jwt_access = True
         return cred
 
     def with_subject(self, subject):
@@ -372,6 +384,12 @@ class Credentials(
         cred._token_uri = token_uri
         return cred
 
+    @_helpers.copy_docstring(credentials.CredentialsWithTrustBoundary)
+    def with_trust_boundary(self, trust_boundary):
+        cred = self._make_copy()
+        cred._trust_boundary = trust_boundary
+        return cred
+
     def _make_authorization_grant_assertion(self):
         """Create the OAuth 2.0 assertion.
 
@@ -415,16 +433,17 @@ class Credentials(
             return metrics.CRED_TYPE_SA_JWT
         return metrics.CRED_TYPE_SA_ASSERTION
 
-    @_helpers.copy_docstring(credentials.Credentials)
-    def refresh(self, request):
+    @_helpers.copy_docstring(credentials.CredentialsWithTrustBoundary)
+    def _refresh_token(self, request):
+        if self._always_use_jwt_access and not self._jwt_credentials:
+            # If self signed jwt should be used but jwt credential is not
+            # created, try to create one with scopes
+            self._create_self_signed_jwt(None)
+
         if (
-            self._universe_domain != _DEFAULT_UNIVERSE_DOMAIN
-            and not self._jwt_credentials
+            self._universe_domain != credentials.DEFAULT_UNIVERSE_DOMAIN
+            and self._subject
         ):
-            raise exceptions.RefreshError(
-                "self._jwt_credentials is missing for non-default universe domain"
-            )
-        if self._universe_domain != _DEFAULT_UNIVERSE_DOMAIN and self._subject:
             raise exceptions.RefreshError(
                 "domain wide delegation is not supported for non-default universe domain"
             )
@@ -463,7 +482,6 @@ class Credentials(
                     self._jwt_credentials is None
                     or self._jwt_credentials._audience != audience
                 ):
-
                     self._jwt_credentials = jwt.Credentials.from_signing_credentials(
                         self, audience
                     )
@@ -481,6 +499,29 @@ class Credentials(
                 self, audience
             )
 
+    def _build_trust_boundary_lookup_url(self):
+        """Builds and returns the URL for the trust boundary lookup API.
+
+        This method constructs the specific URL for the IAM Credentials API's
+        `allowedLocations` endpoint, using the credential's universe domain
+        and service account email.
+
+        Raises:
+            ValueError: If `self.service_account_email` is None or an empty
+                string, as it's required to form the URL.
+
+        Returns:
+            str: The URL for the trust boundary lookup endpoint.
+        """
+        if not self.service_account_email:
+            raise ValueError(
+                "Service account email is required to build the trust boundary lookup URL."
+            )
+        return _constants._SERVICE_ACCOUNT_TRUST_BOUNDARY_LOOKUP_ENDPOINT.format(
+            universe_domain=self._universe_domain,
+            service_account_email=self._service_account_email,
+        )
+
     @_helpers.copy_docstring(credentials.Signing)
     def sign_bytes(self, message):
         return self._signer.sign(message)
@@ -494,6 +535,16 @@ class Credentials(
     @_helpers.copy_docstring(credentials.Signing)
     def signer_email(self):
         return self._service_account_email
+
+    @_helpers.copy_docstring(credentials.Credentials)
+    def get_cred_info(self):
+        if self._cred_file_path:
+            return {
+                "credential_source": self._cred_file_path,
+                "credential_type": "service account credentials",
+                "principal": self.service_account_email,
+            }
+        return None
 
 
 class IDTokenCredentials(
@@ -553,7 +604,7 @@ class IDTokenCredentials(
         target_audience,
         additional_claims=None,
         quota_project_id=None,
-        universe_domain=_DEFAULT_UNIVERSE_DOMAIN,
+        universe_domain=credentials.DEFAULT_UNIVERSE_DOMAIN,
     ):
         """
         Args:
@@ -571,6 +622,7 @@ class IDTokenCredentials(
                 token endponint is used for token refresh. Note that
                 iam.serviceAccountTokenCreator role is required to use the IAM
                 endpoint.
+
         .. note:: Typically one of the helper constructors
             :meth:`from_service_account_file` or
             :meth:`from_service_account_info` are used instead of calling the
@@ -585,11 +637,14 @@ class IDTokenCredentials(
         self._use_iam_endpoint = False
 
         if not universe_domain:
-            self._universe_domain = _DEFAULT_UNIVERSE_DOMAIN
+            self._universe_domain = credentials.DEFAULT_UNIVERSE_DOMAIN
         else:
             self._universe_domain = universe_domain
+        self._iam_id_token_endpoint = iam._IAM_IDTOKEN_ENDPOINT.replace(
+            "googleapis.com", self._universe_domain
+        )
 
-        if universe_domain != _DEFAULT_UNIVERSE_DOMAIN:
+        if self._universe_domain != credentials.DEFAULT_UNIVERSE_DOMAIN:
             self._use_iam_endpoint = True
 
         if additional_claims is not None:
@@ -705,7 +760,10 @@ class IDTokenCredentials(
                 default and use_iam_endpoint is False.
         """
         cred = self._make_copy()
-        if cred._universe_domain != _DEFAULT_UNIVERSE_DOMAIN and not use_iam_endpoint:
+        if (
+            cred._universe_domain != credentials.DEFAULT_UNIVERSE_DOMAIN
+            and not use_iam_endpoint
+        ):
             raise exceptions.InvalidValue(
                 "use_iam_endpoint should be True for non-default universe domain"
             )
@@ -780,11 +838,14 @@ class IDTokenCredentials(
             additional_claims={"scope": "https://www.googleapis.com/auth/iam"},
         )
         jwt_credentials.refresh(request)
+
         self.token, self.expiry = _client.call_iam_generate_id_token_endpoint(
             request,
+            self._iam_id_token_endpoint,
             self.signer_email,
             self._target_audience,
             jwt_credentials.token.decode(),
+            self._universe_domain,
         )
 
     @_helpers.copy_docstring(credentials.Credentials)
