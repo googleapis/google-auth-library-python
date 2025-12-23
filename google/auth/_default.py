@@ -17,16 +17,17 @@
 Implements application default credentials and project ID detection.
 """
 
+from collections.abc import Sequence
 import io
 import json
 import logging
 import os
-from collections.abc import Sequence
-from typing import TYPE_CHECKING, Optional
+from typing import Optional, TYPE_CHECKING
 import warnings
 
 from google.auth import environment_vars
 from google.auth import exceptions
+
 if TYPE_CHECKING:
     from google.auth.credentials import Credentials
     from google.auth.transport import Request
@@ -594,11 +595,11 @@ def _apply_quota_project_id(credentials, quota_project_id):
 
 
 def default(
-        scopes: Optional[Sequence[str]] = None,
-        request: Optional["Request"] = None,
-        quota_project_id: Optional[str] = None,
-        default_scopes: Optional[Sequence[str]] = None,
-        ) -> tuple["Credentials", Optional[str]]:
+    scopes: Optional[Sequence[str]] = None,
+    request: Optional["Request"] = None,
+    quota_project_id: Optional[str] = None,
+    default_scopes: Optional[Sequence[str]] = None,
+) -> tuple["Credentials", Optional[str]]:
     """Gets the default credentials for the current environment.
 
     `Application Default Credentials`_ provides an easy way to obtain
