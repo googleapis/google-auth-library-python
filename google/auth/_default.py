@@ -28,7 +28,7 @@ import warnings
 from google.auth import environment_vars
 from google.auth import exceptions
 
-if TYPE_CHECKING:
+if TYPE_CHECKING: # pragma: NO COVER
     from google.auth.credentials import Credentials
     from google.auth.transport import Request
 import google.auth.transport._http_client
@@ -596,10 +596,10 @@ def _apply_quota_project_id(credentials, quota_project_id):
 
 def default(
     scopes: Optional[Sequence[str]] = None,
-    request: Optional["Request"] = None,
+    request: Optional["google.auth.transport.Request"] = None,
     quota_project_id: Optional[str] = None,
     default_scopes: Optional[Sequence[str]] = None,
-) -> tuple["Credentials", Optional[str]]:
+) -> tuple["google.auth.credentials.Credentials", Optional[str]]:
     """Gets the default credentials for the current environment.
 
     `Application Default Credentials`_ provides an easy way to obtain
