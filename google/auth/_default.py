@@ -594,7 +594,7 @@ def _apply_quota_project_id(credentials, quota_project_id):
 
 def default(
         scopes: Optional[Sequence[str]] = None,
-        request: Optional[Request] = None,
+        request: Optional["Request"] = None,
         quota_project_id: Optional[str] = None,
         default_scopes: Optional[Sequence[str]] = None,
         ) -> tuple[Credentials, Optional[str]]:
