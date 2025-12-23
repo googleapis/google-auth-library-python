@@ -138,11 +138,7 @@ class Request(transport.Request):
     .. automethod:: __call__
     """
 
-<<<<<<< HEAD
     def __init__(self, session: Optional[requests.Session] = None) -> None:
-=======
-    def __init__(self, session: [Optional[requests.Session] = None) -> None:
->>>>>>> 2d61ed9 (Update google/auth/transport/requests.py)
         if not session:
             session = requests.Session()
 
