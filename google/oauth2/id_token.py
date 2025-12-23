@@ -110,7 +110,7 @@ def _fetch_certs(request, certs_url):
 def verify_token(
     id_token: str | bytes,
     request: transport.Request,
-    audience: str | list[str] | None = None,
+    audience: Union[str, list[str], None] = None,
     certs_url: str = _GOOGLE_OAUTH2_CERTS_URL,
     clock_skew_in_seconds: int = 0,
 ) -> Mapping[str, Any]:
