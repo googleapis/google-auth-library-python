@@ -21,6 +21,7 @@ import http.client as http_client
 import logging
 import numbers
 import time
+from typing import Optional
 
 try:
     import requests
