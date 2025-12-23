@@ -28,7 +28,7 @@ import warnings
 from google.auth import environment_vars
 from google.auth import exceptions
 
-if TYPE_CHECKING: # pragma: NO COVER
+if TYPE_CHECKING:  # pragma: NO COVER
     from google.auth.credentials import Credentials
     from google.auth.transport import Request
 import google.auth.transport._http_client
