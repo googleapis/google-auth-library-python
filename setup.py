@@ -20,7 +20,7 @@ from setuptools import setup
 
 
 DEPENDENCIES = (
-    "cachetools>=2.0.0,<6.0",
+    "cachetools>=2.0.0,<7.0",
     "pyasn1-modules>=0.2.1",
     # rsa==4.5 is the last version to support 2.7
     # https://github.com/sybrenstuvel/python-rsa/issues/152#issuecomment-643470233
@@ -81,6 +81,7 @@ testing_extra_require = [
 ]
 
 extras = {
+    "cryptography": cryptography_base_require,
     "aiohttp": aiohttp_extra_require,
     "enterprise_cert": enterprise_cert_extra_require,
     "pyopenssl": pyopenssl_extra_require,
@@ -129,6 +130,7 @@ setup(
         "Programming Language :: Python :: 3.11",
         "Programming Language :: Python :: 3.12",
         "Programming Language :: Python :: 3.13",
+        "Programming Language :: Python :: 3.14",
         "Development Status :: 5 - Production/Stable",
         "Intended Audience :: Developers",
         "License :: OSI Approved :: Apache Software License",
