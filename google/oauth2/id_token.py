@@ -58,13 +58,12 @@ library like `CacheControl`_ to create a cache-aware
 import http.client as http_client
 import json
 import os
+from typing import Any, Mapping, Union
 
 from google.auth import environment_vars
 from google.auth import exceptions
 from google.auth import jwt
 from google.auth import transport
-
-from typing import Any, Mapping, Union
 
 
 # The URL that provides public certificates for verifying ID tokens issued

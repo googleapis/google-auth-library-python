@@ -17,12 +17,12 @@
 Implements application default credentials and project ID detection.
 """
 
+from collections.abc import Sequence
 import io
 import json
 import logging
 import os
-from collections.abc import Sequence
-from typing import TYPE_CHECKING, Optional
+from typing import Optional, TYPE_CHECKING
 import warnings
 
 from google.auth import environment_vars
