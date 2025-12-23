@@ -22,7 +22,7 @@ import json
 import logging
 import os
 from collections.abc import Sequence
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 import warnings
 
 from google.auth import environment_vars
