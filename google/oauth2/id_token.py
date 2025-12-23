@@ -108,7 +108,7 @@ def _fetch_certs(request, certs_url):
 
 
 def verify_token(
-    id_token: Union[str, bytes],
+    id_token: str | bytes,
     request: transport.Request,
     audience: Union[str, list[str], None] = None,
     certs_url: str = _GOOGLE_OAUTH2_CERTS_URL,
