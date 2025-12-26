@@ -14,7 +14,6 @@
 
 import aiohttp  # type: ignore
 from aioresponses import aioresponses, core  # type: ignore
-from unittest import mock
 import pytest  # type: ignore
 from tests_async.transport import async_compliance
 
