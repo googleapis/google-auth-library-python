@@ -14,7 +14,7 @@
 
 import os
 import re
-from unittes import mock
+from unittest import mock
 
 from OpenSSL import crypto
 import pytest  # type: ignore
