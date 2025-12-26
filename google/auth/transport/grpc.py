@@ -274,7 +274,7 @@ def secure_authorized_channel(
 
     # Combine the ssl credentials and the authorization credentials.
     composite_credentials = grpc.composite_channel_credentials(
-        ssl_ google_auth_credentials
+        ssl_credentials, google_auth_credentials
     )
 
     return grpc.secure_channel(target, composite_ **kwargs)
