@@ -27,13 +27,11 @@ import warnings
 
 from google.auth import environment_vars
 from google.auth import exceptions
+import google.auth.transport._http_client
 
 if TYPE_CHECKING:  # pragma: NO COVER
-    # flake8 raises an error because these lines are not used in the code,
-    # they are only used for type-hinting, hence the F401 pragma. 
     from google.auth.credentials import Credentials  # noqa: F401
     from google.auth.transport import Request  # noqa: F401
-import google.auth.transport._http_client
 
 _LOGGER = logging.getLogger(__name__)
 
