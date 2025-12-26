@@ -209,7 +209,7 @@ def secure_authorized_channel(
     calls using this channel will be rejected::
 
         channel = google.auth.transport.grpc.secure_authorized_channel(
-             request, mtls_endpoint)
+            credentials, request, mtls_endpoint)
 
     Args:
         credentials (google.auth.credentials.Credentials): The credentials to
