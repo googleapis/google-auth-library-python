@@ -56,7 +56,7 @@ def test__convert_oauth2_credentials():
     assert new_credentials._client_id == old_credentials.client_id
     assert new_credentials._client_secret == old_credentials.client_secret
     assert new_credentials._token_uri == old_credentials.token_uri
-    assert new_credentials.scopes == old_credentials.scopes
+    assert set(new_credentials.scopes) == set(old_credentials.scopes)
 
 
 def test__convert_service_account_credentials():
@@ -115,6 +115,13 @@ def mock_oauth2client_gae_imports(mock_non_existent_module):
 def test__convert_appengine_app_assertion_credentials(
     app_identity, mock_oauth2client_gae_imports
 ):
+    # `oauth2client` requires `cgi` which was removed in Python 3.13
+    # See https://github.com/googleapis/oauth2client/blob/50d20532a748f18e53f7d24ccbe6647132c979a9/oauth2client/contrib/appengine.py#L20
+    # oauth2client is no longer being updated so this test must be skipped on newer Python Runtimes
+    if sys.version_info >= (3, 13):  # pragma: NO COVER
+        pytest.skip(
+            "Skipping test for Python 3.13+ due to oauth2client incompatibility."
+        )
 
     import oauth2client.contrib.appengine  # type: ignore
 
@@ -165,6 +172,14 @@ def reset__oauth2client_module():
 def test_import_has_app_engine(
     mock_oauth2client_gae_imports, reset__oauth2client_module
 ):
+    # `oauth2client` requires `cgi` which was removed in Python 3.13
+    # See https://github.com/googleapis/oauth2client/blob/50d20532a748f18e53f7d24ccbe6647132c979a9/oauth2client/contrib/appengine.py#L20
+    # oauth2client is no longer being updated so this test must be skipped on newer Python Runtimes
+    if sys.version_info >= (3, 13):  # pragma: NO COVER
+        pytest.skip(
+            "Skipping test for Python 3.13+ due to oauth2client incompatibility."
+        )
+
     importlib.reload(_oauth2client)
     assert _oauth2client._HAS_APPENGINE
 
