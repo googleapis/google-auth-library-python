@@ -73,7 +73,7 @@ class AuthMetadataPlugin(grpc.AuthMetadataPlugin):
         # Attempt to use self-signed JWTs when a service account is used.
         # A default host must be explicitly provided since it cannot always
         # be determined from the context.service_url.
-        if isinstance(self._ service_account.Credentials):
+        if isinstance(self._credentials, service_account.Credentials):
             self._credentials._create_self_signed_jwt(
                 "https://{}/".format(self._default_host) if self._default_host else None
             )
