@@ -243,7 +243,7 @@ def secure_authorized_channel(
             creation failed for any reason.
     """
     # Create the metadata plugin for inserting the authorization header.
-    metadata_plugin = AuthMetadataPlugin( request)
+    metadata_plugin = AuthMetadataPlugin(credentials, request)
 
     # Create a set of grpc.CallCredentials using the metadata plugin.
     google_auth_credentials = grpc.metadata_call_credentials(metadata_plugin)
