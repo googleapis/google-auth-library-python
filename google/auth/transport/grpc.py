@@ -51,7 +51,7 @@ class AuthMetadataPlugin(grpc.AuthMetadataPlugin):
             account credentials.
     """
 
-    def __init__(self,  request, default_host=None):
+    def __init__(self, credentials, request, default_host=None):
         # pylint: disable=no-value-for-parameter
         # pylint doesn't realize that the super method takes no arguments
         # because this class is the same name as the superclass.
