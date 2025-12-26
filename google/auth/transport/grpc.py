@@ -51,7 +51,7 @@ class AuthMetadataPlugin(grpc.AuthMetadataPlugin):
             account credentials.
     """
 
-    def __init__(self, credentials, request, default_host=None):
+    def __init__(self,  request, default_host=None):
         # pylint: disable=no-value-for-parameter
         # pylint doesn't realize that the super method takes no arguments
         # because this class is the same name as the superclass.
@@ -73,7 +73,7 @@ class AuthMetadataPlugin(grpc.AuthMetadataPlugin):
         # Attempt to use self-signed JWTs when a service account is used.
         # A default host must be explicitly provided since it cannot always
         # be determined from the context.service_url.
-        if isinstance(self._credentials, service_account.Credentials):
+        if isinstance(self._ service_account.Credentials):
             self._credentials._create_self_signed_jwt(
                 "https://{}/".format(self._default_host) if self._default_host else None
             )
@@ -164,7 +164,7 @@ def secure_authorized_channel(
 
         try:
             channel = google.auth.transport.grpc.secure_authorized_channel(
-                credentials, mtls_endpoint, request,
+                credentials, request, mtls_endpoint,
                 client_cert_callback=my_client_cert_callback)
         except MyClientCertFailureException:
             # handle the exception
@@ -202,14 +202,14 @@ def secure_authorized_channel(
     certificate and key::
 
         channel = google.auth.transport.grpc.secure_authorized_channel(
-            credentials, request, regular_endpoint)
+             request, regular_endpoint)
 
     The following code uses mtls_endpoint, if the created channle is regular,
-    and API mtls_endpoint is confgured to require client SSL credentials, API
+    and API mtls_endpoint is confgured to require client SSL  API
     calls using this channel will be rejected::
 
         channel = google.auth.transport.grpc.secure_authorized_channel(
-            credentials, request, mtls_endpoint)
+             request, mtls_endpoint)
 
     Args:
         credentials (google.auth.credentials.Credentials): The credentials to
@@ -243,7 +243,7 @@ def secure_authorized_channel(
             creation failed for any reason.
     """
     # Create the metadata plugin for inserting the authorization header.
-    metadata_plugin = AuthMetadataPlugin(credentials, request)
+    metadata_plugin = AuthMetadataPlugin( request)
 
     # Create a set of grpc.CallCredentials using the metadata plugin.
     google_auth_credentials = grpc.metadata_call_credentials(metadata_plugin)
@@ -274,10 +274,10 @@ def secure_authorized_channel(
 
     # Combine the ssl credentials and the authorization credentials.
     composite_credentials = grpc.composite_channel_credentials(
-        ssl_credentials, google_auth_credentials
+        ssl_ google_auth_credentials
     )
 
-    return grpc.secure_channel(target, composite_credentials, **kwargs)
+    return grpc.secure_channel(target, composite_ **kwargs)
 
 
 class SslCredentials:
