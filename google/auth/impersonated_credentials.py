@@ -27,7 +27,7 @@ service account.
 
 import base64
 import copy
-from datetime import datetime
+from datetime import datetime, timezone
 import http.client as http_client
 import json
 
@@ -649,8 +649,8 @@ class IDTokenCredentials(credentials.CredentialsWithQuotaProject):
             raise new_exc from caught_exc
 
         self.token = id_token
-        self.expiry = datetime.utcfromtimestamp(
-            jwt.decode(id_token, verify=False)["exp"]
+        self.expiry = datetime.fromtimestamp(
+            jwt.decode(id_token, verify=False)["exp"], tz=timezone.utc
         )
 
 
