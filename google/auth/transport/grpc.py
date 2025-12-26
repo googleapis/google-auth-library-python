@@ -205,7 +205,7 @@ def secure_authorized_channel(
             credentials, request, regular_endpoint)
 
     The following code uses mtls_endpoint, if the created channle is regular,
-    and API mtls_endpoint is confgured to require client SSL  API
+    and API mtls_endpoint is confgured to require client SSL credentials, API
     calls using this channel will be rejected::
 
         channel = google.auth.transport.grpc.secure_authorized_channel(
