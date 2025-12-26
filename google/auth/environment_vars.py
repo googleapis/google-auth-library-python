@@ -37,6 +37,9 @@ CREDENTIALS = "GOOGLE_APPLICATION_CREDENTIALS"
 """Environment variable defining the location of Google application default
 credentials."""
 
+TEMPORARY_ACCESS_TOKEN = "GOOGLE_TEMPORARY_ACCESS_TOKEN"
+"""Environment variable defining access token value. This could be generated using print-access-token cli command"""
+
 # The environment variable name which can replace ~/.config if set.
 CLOUD_SDK_CONFIG_DIR = "CLOUDSDK_CONFIG"
 """Environment variable defines the location of Google Cloud SDK's config
