@@ -202,7 +202,7 @@ def secure_authorized_channel(
     certificate and key::
 
         channel = google.auth.transport.grpc.secure_authorized_channel(
-             request, regular_endpoint)
+            credentials, request, regular_endpoint)
 
     The following code uses mtls_endpoint, if the created channle is regular,
     and API mtls_endpoint is confgured to require client SSL  API
