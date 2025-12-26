@@ -16,8 +16,8 @@ import datetime
 import http.client as http_client
 import json
 import os
-import urllib.parse
 from unittest import mock
+import urllib.parse
 
 import pytest  # type: ignore
 
