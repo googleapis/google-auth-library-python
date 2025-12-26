@@ -16,9 +16,9 @@ import base64
 import hashlib
 import json
 import urllib.parse
+from unittest import mock
 
 from cryptography import x509
-import mock
 import pytest
 
 from google.auth import _agent_identity_utils
