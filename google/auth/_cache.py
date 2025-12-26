@@ -24,7 +24,13 @@ class LRUCache(dict):
     def clear(self):
         super().clear()
         self._order.clear()
-
+    def get(self, key, default=None):
+        try:
+            value = super().__getitem__(key)
+            self._update(key)
+            return value
+        except KeyError:
+            return default
     def __getitem__(self, key):
         value = super().__getitem__(key)
         self._update(key)
