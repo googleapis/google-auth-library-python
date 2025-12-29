@@ -29,6 +29,7 @@ import json
 import urllib
 
 from google.auth import _exponential_backoff
+from google.auth import _helpers
 from google.auth import exceptions
 from google.auth import jwt
 from google.oauth2 import _client as client
@@ -227,7 +228,7 @@ async def id_token_jwt_grant(request, token_uri, assertion, can_retry=True):
         raise new_exc from caught_exc
 
     payload = jwt.decode(id_token, verify=False)
-    expiry = datetime.datetime.fromtimestamp(payload["exp"], tz=datetime.timezone.utc)
+    expiry = _helpers.utcfromtimestamp(payload["exp"])
 
     return id_token, expiry, response_data
 
