@@ -128,7 +128,7 @@ class Credentials(
         scopes = self._scopes if self._scopes is not None else self._default_scopes
         # pylint: disable=unused-argument
         token, ttl = app_identity.get_access_token(scopes, self._service_account_id)
-        expiry = datetime.datetime.utcfromtimestamp(ttl)
+        expiry = _helpers.utcfromtimestamp(ttl)
 
         self.token, self.expiry = token, expiry
 
