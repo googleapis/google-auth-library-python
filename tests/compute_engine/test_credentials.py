@@ -1181,7 +1181,11 @@ class TestIDTokenCredentials(object):
         ]
         sign.side_effect = [b"signature"]
         id_token_jwt_grant.side_effect = [
-            ("idtoken", datetime.datetime.fromtimestamp(3600, tz=datetime.timezone.utc), {})
+            (
+                "idtoken",
+                datetime.datetime.fromtimestamp(3600, tz=datetime.timezone.utc),
+                {},
+            )
         ]
 
         request = mock.create_autospec(transport.Request, instance=True)
@@ -1194,7 +1198,9 @@ class TestIDTokenCredentials(object):
 
         # Check that the credentials have the token and proper expiration
         assert self.credentials.token == "idtoken"
-        assert self.credentials.expiry == (datetime.datetime.fromtimestamp(3600, tz=datetime.timezone.utc))
+        assert self.credentials.expiry == (
+            datetime.datetime.fromtimestamp(3600, tz=datetime.timezone.utc)
+        )
 
         # Check the credential info
         assert self.credentials.service_account_email == "service-account@example.com"
@@ -1243,7 +1249,11 @@ class TestIDTokenCredentials(object):
         ]
         sign.side_effect = [b"signature"]
         id_token_jwt_grant.side_effect = [
-            ("idtoken", datetime.datetime.fromtimestamp(3600, tz=datetime.timezone.utc), {})
+            (
+                "idtoken",
+                datetime.datetime.fromtimestamp(3600, tz=datetime.timezone.utc),
+                {},
+            )
         ]
 
         request = mock.create_autospec(transport.Request, instance=True)
@@ -1312,7 +1322,9 @@ class TestIDTokenCredentials(object):
         }
 
         assert cred.token == SAMPLE_ID_TOKEN
-        assert cred.expiry == datetime.datetime.fromtimestamp(SAMPLE_ID_TOKEN_EXP, tz=datetime.timezone.utc)
+        assert cred.expiry == datetime.datetime.fromtimestamp(
+            SAMPLE_ID_TOKEN_EXP, tz=datetime.timezone.utc
+        ).replace(tzinfo=None)
         assert cred._use_metadata_identity_endpoint
         assert cred._signer is None
         assert cred._token_uri is None
