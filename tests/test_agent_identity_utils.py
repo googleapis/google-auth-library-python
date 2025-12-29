@@ -15,8 +15,8 @@
 import base64
 import hashlib
 import json
-import urllib.parse
 from unittest import mock
+import urllib.parse
 
 from cryptography import x509
 import pytest
