@@ -26,6 +26,7 @@ service account.
 """
 
 import base64
+import copy
 import datetime
 from datetime import datetime
 import http.client as http_client
