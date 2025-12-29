@@ -27,7 +27,7 @@ service account.
 
 import base64
 import copy
-from datetime import datetime, timezone
+from datetime import datetime
 import http.client as http_client
 import json
 

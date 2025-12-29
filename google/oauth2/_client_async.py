@@ -23,7 +23,6 @@ For more information about the token endpoint, see
 .. _Section 3.1 of rfc6749: https://tools.ietf.org/html/rfc6749#section-3.2
 """
 
-import datetime
 import http.client as http_client
 import json
 import urllib
