@@ -46,15 +46,15 @@ def test_lru_cache_get_missing():
     lru_cache = LRUCache(2)
     assert lru_cache.get("missing") is None
     assert lru_cache.get("missing", "default") == "default"
-    
-    
+
+
 def test_lru_cache_clear():
     """Confirm the LRUCache clears the cache properly."""
     lru_cache = LRUCache(2)
     lru_cache["a"] = 1
     lru_cache["b"] = 2
     assert len(lru_cache) == 2
-    
+
     lru_cache.clear()
     assert len(lru_cache) == 0
     assert "a" not in lru_cache
@@ -68,13 +68,13 @@ def test_lru_cache_delitem():
     lru_cache = LRUCache(2)
     lru_cache["a"] = 1
     lru_cache["b"] = 2
-    
+
     del lru_cache["a"]
     assert "a" not in lru_cache
     assert len(lru_cache) == 1
     # Ensure it's removed from internal order
     assert "a" not in lru_cache._order
-    
+
     # Test that we can continue using the cache
     lru_cache["c"] = 3
     assert "c" in lru_cache
