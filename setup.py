@@ -56,7 +56,6 @@ testing_extra_require = [
     "grpcio",
     "flask",
     "freezegun",
-    "mock",
     # TODO(https://github.com/googleapis/google-auth-library-python/issues/1736): Remove `oauth2client` from testing requirements once an extra is added for `oauth2client` dependency.
     "oauth2client",
     *pyjwt_extra_require,
@@ -81,6 +80,7 @@ testing_extra_require = [
 ]
 
 extras = {
+    "cryptography": cryptography_base_require,
     "aiohttp": aiohttp_extra_require,
     "enterprise_cert": enterprise_cert_extra_require,
     "pyopenssl": pyopenssl_extra_require,
@@ -129,6 +129,7 @@ setup(
         "Programming Language :: Python :: 3.11",
         "Programming Language :: Python :: 3.12",
         "Programming Language :: Python :: 3.13",
+        "Programming Language :: Python :: 3.14",
         "Development Status :: 5 - Production/Stable",
         "Intended Audience :: Developers",
         "License :: OSI Approved :: Apache Software License",
