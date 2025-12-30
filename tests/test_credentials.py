@@ -72,6 +72,68 @@ def test_with_non_blocking_refresh():
     assert c._use_non_blocking_refresh
 
 
+class TestWithHeaders:
+    def test_add_new_header(self):
+        credentials = CredentialsImpl()
+        request = mock.Mock()
+
+        creds_with_header = credentials.with_headers({"X-Custom-Header": "value1"})
+        headers = {}
+        creds_with_header.before_request(request, "http://example.com", "GET", headers)
+
+        assert headers["X-Custom-Header"] == "value1"
+        assert "authorization" in headers
+        # Ensure it is a new instance
+        assert creds_with_header is not credentials
+        # Ensure original credentials are not modified
+        assert (
+            not hasattr(credentials, "_custom_headers") or not credentials._custom_headers
+        )
+
+    def test_update_existing_header(self):
+        credentials = CredentialsImpl()
+        request = mock.Mock()
+
+        creds_with_header = credentials.with_headers({"X-Custom-Header": "value1"})
+        creds_updated = creds_with_header.with_headers({"X-Custom-Header": "value2"})
+        headers = {}
+        creds_updated.before_request(request, "http://example.com", "GET", headers)
+
+        assert headers["X-Custom-Header"] == "value2"
+
+    def test_chaining_headers(self):
+        credentials = CredentialsImpl()
+        request = mock.Mock()
+
+        creds_chained = credentials.with_headers({"X-Header-1": "v1"}).with_headers(
+            {"X-Header-2": "v2"}
+        )
+        headers = {}
+        creds_chained.before_request(request, "http://example.com", "GET", headers)
+
+        assert headers["X-Header-1"] == "v1"
+        assert headers["X-Header-2"] == "v2"
+
+    @pytest.mark.parametrize(
+        "header_key",
+        ["Authorization", "X-Goog-User-Project", "authorization", "x-allowed-locations"],
+    )
+    def test_protected_headers(self, header_key):
+        credentials = CredentialsImpl()
+        with pytest.raises(ValueError, match="is protected and cannot be set"):
+            credentials.with_headers({header_key: "value"})
+
+    def test_original_credentials_not_modified(self):
+        credentials = CredentialsImpl()
+        request = mock.Mock()
+
+        credentials.with_headers({"X-Custom-Header": "value1"})
+        headers = {}
+        credentials.before_request(request, "http://example.com", "GET", headers)
+
+        assert "X-Custom-Header" not in headers
+
+
 def test_expired_and_valid():
     credentials = CredentialsImpl()
     credentials.token = "token"
