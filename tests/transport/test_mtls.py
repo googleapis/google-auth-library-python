@@ -21,6 +21,55 @@ from google.auth.transport import _mtls_helper
 from google.auth.transport import mtls
 
 
+@mock.patch("google.auth.transport._mtls_helper._check_config_path")
+def test_has_default_client_cert_source_with_context_aware_metadata(mock_check):
+    """
+    Directly tests the logic: if CONTEXT_AWARE_METADATA_PATH is found, return True.
+    """
+
+    # Setup: Return a path only for the Context Aware Metadata Path
+    def side_effect(path):
+        if path == _mtls_helper.CONTEXT_AWARE_METADATA_PATH:
+            return "/path/to/context_aware_metadata.json"
+        return None
+
+    mock_check.side_effect = side_effect
+
+    # Execute
+    result = mtls.has_default_client_cert_source()
+
+    # Assert
+    assert result is True
+    mock_check.assert_any_call(_mtls_helper.CONTEXT_AWARE_METADATA_PATH)
+
+
+@mock.patch("google.auth.transport._mtls_helper._check_config_path")
+def test_has_default_client_cert_source_falls_back(mock_check):
+    """
+    Tests that it skips CONTEXT_AWARE_METADATA_PATH if None, and checks the next path.
+    """
+
+    # Setup: First path is None, second path is valid
+    def side_effect(path):
+        if path == _mtls_helper.CERTIFICATE_CONFIGURATION_DEFAULT_PATH:
+            return "/path/to/default_cert.json"
+        return None
+
+    mock_check.side_effect = side_effect
+
+    # Execute
+    result = mtls.has_default_client_cert_source()
+
+    # Assert
+    assert result is True
+    # Verify the sequence of calls
+    expected_calls = [
+        mock.call(_mtls_helper.CONTEXT_AWARE_METADATA_PATH),
+        mock.call(_mtls_helper.CERTIFICATE_CONFIGURATION_DEFAULT_PATH),
+    ]
+    mock_check.assert_has_calls(expected_calls)
+
+
 @mock.patch("google.auth.transport.mtls.getenv", autospec=True)
 @mock.patch("google.auth.transport._mtls_helper._check_config_path", autospec=True)
 def test_has_default_client_cert_source_env_var_success(check_config_path, mock_getenv):
