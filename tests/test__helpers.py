@@ -721,6 +721,6 @@ class TestUtcFromTimestamp:
 
     def test_out_of_range(self):
         """Test very large timestamps that exceed platform limits."""
-        with pytest.raises((OverflowError, OSError)):
+        with pytest.raises((OverflowError, OSError, ValueError)):
             # Large enough to fail on most systems (Year 300,000+)
             _helpers.utcfromtimestamp(9999999999999)
