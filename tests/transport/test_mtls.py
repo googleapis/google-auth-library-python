@@ -17,6 +17,7 @@ from unittest import mock
 import pytest  # type: ignore
 
 from google.auth import exceptions
+from google.auth.transport import _mtls_helper
 from google.auth.transport import mtls
 
 
@@ -43,34 +44,6 @@ def test_has_default_client_cert_source_env_var_success(check_config_path, mock_
     assert mtls.has_default_client_cert_source()
 
     # 4. Verify the env var path was checked
-    check_config_path.assert_called_with("path/to/cert.json")
-
-
-@mock.patch("google.auth.transport.mtls.getenv", autospec=True)
-@mock.patch("google.auth.transport._mtls_helper._check_config_path", autospec=True)
-def test_has_default_client_cert_source_config_path_success(
-    check_config_path, mock_getenv
-):
-    # 1. Mock getenv to return our custom path for the env var
-    mock_getenv.side_effect = (
-        lambda var: "path/to/cert.json"
-        if var == "GOOGLE_API_CERTIFICATE_CONFIG"
-        else None
-    )
-
-    # 2. Configure side_effect to return None for default paths,
-    # and a value ONLY for our custom path.
-    def side_effect(path):
-        if path == "path/to/cert.json":
-            return "/absolute/path/to/cert.json"
-        return None
-
-    check_config_path.side_effect = side_effect
-
-    # 3. Now the first two checks will return None, reaching the third check.
-    assert mtls.has_default_client_cert_source()
-
-    # 4. Verify that the last call made was indeed with our env var path.
     check_config_path.assert_called_with("path/to/cert.json")
 
 
