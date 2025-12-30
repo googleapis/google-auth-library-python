@@ -696,8 +696,8 @@ class TestUtcFromTimestamp:
             "unix_epoch",
             "subsecond_precision",
             "negative_timestamp",
-            "timezone_independence"
-        ]
+            "timezone_independence",
+        ],
     )
     def test_success_cases(self, ts, expected):
         """Verify correct UTC conversion and that the result is offset-naive."""
@@ -710,9 +710,9 @@ class TestUtcFromTimestamp:
         assert result.tzinfo is None
 
     @pytest.mark.parametrize(
-        "invalid_input", 
-        ["string", None, [123]], 
-        ids=["type_string", "type_none", "type_list"]
+        "invalid_input",
+        ["string", None, [123]],
+        ids=["type_string", "type_none", "type_list"],
     )
     def test_invalid_types(self, invalid_input):
         """Verify that passing invalid types raises a TypeError."""
