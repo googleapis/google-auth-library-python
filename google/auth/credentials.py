@@ -75,7 +75,7 @@ class Credentials(_BaseCredentials):
     _PROTECTED_HEADERS = {
         "authorization",
         "x-goog-user-project",
-        "x-goog-api-client",
+        metrics.API_CLIENT_HEADER,
         "x-allowed-locations",
     }
 
