@@ -41,6 +41,7 @@ def test_has_default_client_cert_source_with_context_aware_metadata(mock_check):
     # Assert
     assert result is True
     mock_check.assert_any_call(_mtls_helper.CONTEXT_AWARE_METADATA_PATH)
+    assert side_effect("non-matching-path") is None
 
 
 @mock.patch("google.auth.transport._mtls_helper._check_config_path")
