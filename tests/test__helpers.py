@@ -702,10 +702,10 @@ class TestUtcFromTimestamp:
     def test_success_cases(self, ts, expected):
         """Verify correct UTC conversion and that the result is offset-naive."""
         result = _helpers.utcfromtimestamp(ts)
-        
+
         # 1. Check the datetime value is correct
         assert result == expected
-        
+
         # 2. Check it is naive (tzinfo is None) for backward compatibility
         assert result.tzinfo is None
 
