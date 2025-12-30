@@ -38,6 +38,8 @@ requests_extra_require = ["requests >= 2.20.0, < 3.0.0"]
 
 aiohttp_extra_require = ["aiohttp >= 3.6.2, < 4.0.0", *requests_extra_require]
 
+httpx_extra_require = ["httpx >= 0.23.0"]
+
 pyjwt_extra_require = ["pyjwt>=2.0", *cryptography_base_require]
 
 reauth_extra_require = ["pyu2f>=0.1.5"]
@@ -70,6 +72,7 @@ testing_extra_require = [
     *aiohttp_extra_require,
     "aioresponses",
     "pytest-asyncio",
+    *httpx_extra_require,
     # TODO(https://github.com/googleapis/google-auth-library-python/issues/1665): Remove the pinned version of pyopenssl
     # once `TestDecryptPrivateKey::test_success` is updated to remove the deprecated `OpenSSL.crypto.sign` and
     # `OpenSSL.crypto.verify` methods. See: https://www.pyopenssl.org/en/latest/changelog.html#id3.
@@ -82,6 +85,7 @@ testing_extra_require = [
 extras = {
     "cryptography": cryptography_base_require,
     "aiohttp": aiohttp_extra_require,
+    "httpx": httpx_extra_require,
     "enterprise_cert": enterprise_cert_extra_require,
     "pyopenssl": pyopenssl_extra_require,
     "pyjwt": pyjwt_extra_require,
