@@ -24,14 +24,22 @@ import logging
 import os
 from urllib.parse import urljoin
 
+import requests
+
 from google.auth import _helpers
 from google.auth import environment_vars
 from google.auth import exceptions
 from google.auth import metrics
 from google.auth import transport
 from google.auth._exponential_backoff import ExponentialBackoff
+from google.auth.compute_engine import _mtls
+
 
 _LOGGER = logging.getLogger(__name__)
+
+_GCE_DEFAULT_MDS_IP = "169.254.169.254"
+_GCE_DEFAULT_HOST = "metadata.google.internal"
+_GCE_DEFAULT_MDS_HOSTS = [_GCE_DEFAULT_HOST, _GCE_DEFAULT_MDS_IP]
 
 # Environment variable GCE_METADATA_HOST is originally named
 # GCE_METADATA_ROOT. For compatibility reasons, here it checks
@@ -40,15 +48,48 @@ _LOGGER = logging.getLogger(__name__)
 _GCE_METADATA_HOST = os.getenv(environment_vars.GCE_METADATA_HOST, None)
 if not _GCE_METADATA_HOST:
     _GCE_METADATA_HOST = os.getenv(
-        environment_vars.GCE_METADATA_ROOT, "metadata.google.internal"
+        environment_vars.GCE_METADATA_ROOT, _GCE_DEFAULT_HOST
     )
-_METADATA_ROOT = "http://{}/computeMetadata/v1/".format(_GCE_METADATA_HOST)
 
-# This is used to ping the metadata server, it avoids the cost of a DNS
-# lookup.
-_METADATA_IP_ROOT = "http://{}".format(
-    os.getenv(environment_vars.GCE_METADATA_IP, "169.254.169.254")
-)
+
+def _validate_gce_mds_configured_environment():
+    """Validates the GCE metadata server environment configuration for mTLS.
+
+    mTLS is only supported when connecting to the default metadata server hosts.
+    If we are in strict mode (which requires mTLS), ensure that the metadata host
+    has not been overridden to a custom value (which means mTLS will fail).
+
+    Raises:
+        google.auth.exceptions.MutualTLSChannelError: if the environment
+            configuration is invalid for mTLS.
+    """
+    mode = _mtls._parse_mds_mode()
+    if mode == _mtls.MdsMtlsMode.STRICT:
+        # mTLS is only supported when connecting to the default metadata host.
+        # Raise an exception if we are in strict mode (which requires mTLS)
+        # but the metadata host has been overridden to a custom MDS. (which means mTLS will fail)
+        if _GCE_METADATA_HOST not in _GCE_DEFAULT_MDS_HOSTS:
+            raise exceptions.MutualTLSChannelError(
+                "Mutual TLS is required, but the metadata host has been overridden. "
+                "mTLS is only supported when connecting to the default metadata host."
+            )
+
+
+def _get_metadata_root(use_mtls: bool):
+    """Returns the metadata server root URL."""
+
+    scheme = "https" if use_mtls else "http"
+    return "{}://{}/computeMetadata/v1/".format(scheme, _GCE_METADATA_HOST)
+
+
+def _get_metadata_ip_root(use_mtls: bool):
+    """Returns the metadata server IP root URL."""
+    scheme = "https" if use_mtls else "http"
+    return "{}://{}".format(
+        scheme, os.getenv(environment_vars.GCE_METADATA_IP, _GCE_DEFAULT_MDS_IP)
+    )
+
+
 _METADATA_FLAVOR_HEADER = "metadata-flavor"
 _METADATA_FLAVOR_VALUE = "Google"
 _METADATA_HEADERS = {_METADATA_FLAVOR_HEADER: _METADATA_FLAVOR_VALUE}
@@ -109,6 +150,33 @@ def detect_gce_residency_linux():
     return content.startswith(_GOOGLE)
 
 
+def _prepare_request_for_mds(request, use_mtls=False) -> None:
+    """Prepares a request for the metadata server.
+
+    This will check if mTLS should be used and mount the mTLS adapter if needed.
+
+    Args:
+        request (google.auth.transport.Request): A callable used to make
+            HTTP requests.
+        use_mtls (bool): Whether to use mTLS for the request.
+
+    Returns:
+        google.auth.transport.Request: A request object to use.
+            If mTLS is enabled, the request will have the mTLS adapter mounted.
+            Otherwise, the original request will be returned unchanged.
+    """
+    # Only modify the request if mTLS is enabled.
+    if use_mtls:
+        # Ensure the request has a session to mount the adapter to.
+        if not request.session:
+            request.session = requests.Session()
+
+        adapter = _mtls.MdsMtlsAdapter()
+        # Mount the adapter for all default GCE metadata hosts.
+        for host in _GCE_DEFAULT_MDS_HOSTS:
+            request.session.mount(f"https://{host}/", adapter)
+
+
 def ping(request, timeout=_METADATA_DEFAULT_TIMEOUT, retry_count=3):
     """Checks to see if the metadata server is available.
 
@@ -122,6 +190,8 @@ def ping(request, timeout=_METADATA_DEFAULT_TIMEOUT, retry_count=3):
     Returns:
         bool: True if the metadata server is reachable, False otherwise.
     """
+    use_mtls = _mtls.should_use_mds_mtls()
+    _prepare_request_for_mds(request, use_mtls=use_mtls)
     # NOTE: The explicit ``timeout`` is a workaround. The underlying
     #       issue is that resolving an unknown host on some networks will take
     #       20-30 seconds; making this timeout short fixes the issue, but
@@ -136,7 +206,10 @@ def ping(request, timeout=_METADATA_DEFAULT_TIMEOUT, retry_count=3):
     for attempt in backoff:
         try:
             response = request(
-                url=_METADATA_IP_ROOT, method="GET", headers=headers, timeout=timeout
+                url=_get_metadata_ip_root(use_mtls),
+                method="GET",
+                headers=headers,
+                timeout=timeout,
             )
 
             metadata_flavor = response.headers.get(_METADATA_FLAVOR_HEADER)
@@ -160,12 +233,13 @@ def ping(request, timeout=_METADATA_DEFAULT_TIMEOUT, retry_count=3):
 def get(
     request,
     path,
-    root=_METADATA_ROOT,
+    root=None,
     params=None,
     recursive=False,
     retry_count=5,
     headers=None,
     return_none_for_not_found_error=False,
+    timeout=_METADATA_DEFAULT_TIMEOUT,
 ):
     """Fetch a resource from the metadata server.
 
@@ -174,7 +248,8 @@ def get(
             HTTP requests.
         path (str): The resource to retrieve. For example,
             ``'instance/service-accounts/default'``.
-        root (str): The full path to the metadata server root.
+        root (Optional[str]): The full path to the metadata server root. If not
+            provided, the default root will be used.
         params (Optional[Mapping[str, str]]): A mapping of query parameter
             keys to values.
         recursive (bool): Whether to do a recursive query of metadata. See
@@ -185,6 +260,7 @@ def get(
         headers (Optional[Mapping[str, str]]): Headers for the request.
         return_none_for_not_found_error (Optional[bool]): If True, returns None
             for 404 error instead of throwing an exception.
+        timeout (int): How long to wait, in seconds for the metadata server to respond.
 
     Returns:
         Union[Mapping, str]: If the metadata server returns JSON, a mapping of
@@ -194,7 +270,24 @@ def get(
     Raises:
         google.auth.exceptions.TransportError: if an error occurred while
             retrieving metadata.
+        google.auth.exceptions.MutualTLSChannelError: if using mtls and the environment
+            configuration is invalid for mTLS (for example, the metadata host
+            has been overridden in strict mTLS mode).
+
     """
+    use_mtls = _mtls.should_use_mds_mtls()
+    # Prepare the request object for mTLS if needed.
+    # This will create a new request object with the mTLS session.
+    _prepare_request_for_mds(request, use_mtls=use_mtls)
+
+    if root is None:
+        root = _get_metadata_root(use_mtls)
+
+    # mTLS is only supported when connecting to the default metadata host.
+    # If we are in strict mode (which requires mTLS), ensure that the metadata host
+    # has not been overridden to a non-default host value (which means mTLS will fail).
+    _validate_gce_mds_configured_environment()
+
     base_url = urljoin(root, path)
     query_params = {} if params is None else params
 
@@ -208,10 +301,12 @@ def get(
     url = _helpers.update_query(base_url, query_params)
 
     backoff = ExponentialBackoff(total_attempts=retry_count)
-
+    last_exception = None
     for attempt in backoff:
         try:
-            response = request(url=url, method="GET", headers=headers_to_use)
+            response = request(
+                url=url, method="GET", headers=headers_to_use, timeout=timeout
+            )
             if response.status in transport.DEFAULT_RETRYABLE_STATUS_CODES:
                 _LOGGER.warning(
                     "Compute Engine Metadata server unavailable on "
@@ -220,8 +315,10 @@ def get(
                     retry_count,
                     response.status,
                 )
+                last_exception = None
                 continue
             else:
+                last_exception = None
                 break
 
         except exceptions.TransportError as e:
@@ -232,11 +329,27 @@ def get(
                 retry_count,
                 e,
             )
+            last_exception = e
     else:
-        raise exceptions.TransportError(
-            "Failed to retrieve {} from the Google Compute Engine "
-            "metadata service. Compute Engine Metadata server unavailable".format(url)
-        )
+        if last_exception:
+            raise exceptions.TransportError(
+                "Failed to retrieve {} from the Google Compute Engine "
+                "metadata service. Compute Engine Metadata server unavailable. "
+                "Last exception: {}".format(url, last_exception)
+            ) from last_exception
+        else:
+            error_details = (
+                response.data.decode("utf-8")
+                if hasattr(response.data, "decode")
+                else response.data
+            )
+            raise exceptions.TransportError(
+                "Failed to retrieve {} from the Google Compute Engine "
+                "metadata service. Compute Engine Metadata server unavailable. "
+                "Response status: {}\nResponse details:\n{}".format(
+                    url, response.status, error_details
+                )
+            )
 
     content = _helpers.from_bytes(response.data)
 
@@ -301,7 +414,7 @@ def get_universe_domain(request):
             404 occurs while retrieving metadata.
     """
     universe_domain = get(
-        request, "universe/universe_domain", return_none_for_not_found_error=True
+        request, "universe/universe-domain", return_none_for_not_found_error=True
     )
     if not universe_domain:
         return "googleapis.com"
@@ -355,12 +468,19 @@ def get_service_account_token(request, service_account="default", scopes=None):
         google.auth.exceptions.TransportError: if an error occurred while
             retrieving metadata.
     """
+    from google.auth import _agent_identity_utils
+
+    params = {}
     if scopes:
         if not isinstance(scopes, str):
             scopes = ",".join(scopes)
-        params = {"scopes": scopes}
-    else:
-        params = None
+        params["scopes"] = scopes
+
+    cert = _agent_identity_utils.get_and_parse_agent_identity_certificate()
+    if cert:
+        if _agent_identity_utils.should_request_bound_token(cert):
+            fingerprint = _agent_identity_utils.calculate_certificate_fingerprint(cert)
+            params["bindCertificateFingerprint"] = fingerprint
 
     metrics_header = {
         metrics.API_CLIENT_HEADER: metrics.token_request_access_token_mds()
