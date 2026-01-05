@@ -758,7 +758,7 @@ class TestIDTokenCredentials(object):
 
     @mock.patch(
         "google.auth._helpers.utcnow",
-        return_value=datetime.datetime.fromtimestamp(0, tz=datetime.timezone.utc),
+        return_value=_helpers.utcfromtimestamp(0),
     )
     @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
     @mock.patch("google.auth.iam.Signer.sign", autospec=True)
@@ -791,7 +791,7 @@ class TestIDTokenCredentials(object):
 
     @mock.patch(
         "google.auth._helpers.utcnow",
-        return_value=datetime.datetime.fromtimestamp(0, tz=datetime.timezone.utc),
+        return_value=_helpers.utcfromtimestamp(0),
     )
     @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
     @mock.patch("google.auth.iam.Signer.sign", autospec=True)
@@ -823,7 +823,7 @@ class TestIDTokenCredentials(object):
 
     @mock.patch(
         "google.auth._helpers.utcnow",
-        return_value=datetime.datetime.fromtimestamp(0, tz=datetime.timezone.utc),
+        return_value=_helpers.utcfromtimestamp(0),
     )
     @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
     @mock.patch("google.auth.iam.Signer.sign", autospec=True)
@@ -879,7 +879,7 @@ class TestIDTokenCredentials(object):
 
     @mock.patch(
         "google.auth._helpers.utcnow",
-        return_value=datetime.datetime.fromtimestamp(0, tz=datetime.timezone.utc),
+        return_value=_helpers.utcfromtimestamp(0),
     )
     @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
     @mock.patch("google.auth.iam.Signer.sign", autospec=True)
@@ -1001,7 +1001,7 @@ class TestIDTokenCredentials(object):
 
     @mock.patch(
         "google.auth._helpers.utcnow",
-        return_value=datetime.datetime.fromtimestamp(0, tz=datetime.timezone.utc),
+        return_value=_helpers.utcfromtimestamp(0),
     )
     @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
     @mock.patch("google.auth.iam.Signer.sign", autospec=True)
@@ -1040,7 +1040,7 @@ class TestIDTokenCredentials(object):
 
     @mock.patch(
         "google.auth._helpers.utcnow",
-        return_value=datetime.datetime.fromtimestamp(0, tz=datetime.timezone.utc),
+        return_value=_helpers.utcfromtimestamp(0),
     )
     @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
     @mock.patch("google.auth.iam.Signer.sign", autospec=True)
@@ -1062,7 +1062,7 @@ class TestIDTokenCredentials(object):
 
     @mock.patch(
         "google.auth._helpers.utcnow",
-        return_value=datetime.datetime.fromtimestamp(0, tz=datetime.timezone.utc),
+        return_value=_helpers.utcfromtimestamp(0),
     )
     @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
     @mock.patch("google.auth.iam.Signer.sign", autospec=True)
@@ -1170,7 +1170,7 @@ class TestIDTokenCredentials(object):
 
     @mock.patch(
         "google.auth._helpers.utcnow",
-        return_value=datetime.datetime.fromtimestamp(0, tz=datetime.timezone.utc),
+        return_value=_helpers.utcfromtimestamp(0),
     )
     @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
     @mock.patch("google.auth.iam.Signer.sign", autospec=True)
@@ -1183,7 +1183,7 @@ class TestIDTokenCredentials(object):
         id_token_jwt_grant.side_effect = [
             (
                 "idtoken",
-                datetime.datetime.fromtimestamp(3600, tz=datetime.timezone.utc),
+                _helpers.utcfromtimestamp(3600),
                 {},
             )
         ]
@@ -1198,9 +1198,7 @@ class TestIDTokenCredentials(object):
 
         # Check that the credentials have the token and proper expiration
         assert self.credentials.token == "idtoken"
-        assert self.credentials.expiry == (
-            datetime.datetime.fromtimestamp(3600, tz=datetime.timezone.utc)
-        )
+        assert self.credentials.expiry == _helpers.utcfromtimestamp(3600)
 
         # Check the credential info
         assert self.credentials.service_account_email == "service-account@example.com"
@@ -1211,7 +1209,7 @@ class TestIDTokenCredentials(object):
 
     @mock.patch(
         "google.auth._helpers.utcnow",
-        return_value=datetime.datetime.fromtimestamp(0, tz=datetime.timezone.utc),
+        return_value=_helpers.utcfromtimestamp(0),
     )
     @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
     @mock.patch("google.auth.iam.Signer.sign", autospec=True)
@@ -1238,7 +1236,7 @@ class TestIDTokenCredentials(object):
 
     @mock.patch(
         "google.auth._helpers.utcnow",
-        return_value=datetime.datetime.fromtimestamp(0, tz=datetime.timezone.utc),
+        return_value=_helpers.utcfromtimestamp(0),
     )
     @mock.patch("google.auth.compute_engine._metadata.get", autospec=True)
     @mock.patch("google.auth.iam.Signer.sign", autospec=True)
@@ -1251,7 +1249,7 @@ class TestIDTokenCredentials(object):
         id_token_jwt_grant.side_effect = [
             (
                 "idtoken",
-                datetime.datetime.fromtimestamp(3600, tz=datetime.timezone.utc),
+                _helpers.utcfromtimestamp(3600),
                 {},
             )
         ]
@@ -1322,9 +1320,7 @@ class TestIDTokenCredentials(object):
         }
 
         assert cred.token == SAMPLE_ID_TOKEN
-        assert cred.expiry == datetime.datetime.fromtimestamp(
-            SAMPLE_ID_TOKEN_EXP, tz=datetime.timezone.utc
-        ).replace(tzinfo=None)
+        assert cred.expiry == _helpers.utcfromtimestamp(SAMPLE_ID_TOKEN_EXP)
         assert cred._use_metadata_identity_endpoint
         assert cred._signer is None
         assert cred._token_uri is None

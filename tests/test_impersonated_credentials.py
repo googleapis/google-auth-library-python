@@ -1046,9 +1046,7 @@ class TestImpersonatedCredentials(object):
         id_creds.refresh(request)
 
         assert id_creds.token == ID_TOKEN_DATA
-        expected_expiry = datetime.datetime.fromtimestamp(
-            ID_TOKEN_EXPIRY, tz=datetime.timezone.utc
-        ).replace(tzinfo=None)
+        expected_expiry = _helpers.utcfromtimestamp(ID_TOKEN_EXPIRY)
         assert id_creds.expiry == expected_expiry
 
     def test_id_token_metrics(self, mock_donor_credentials):
@@ -1073,9 +1071,7 @@ class TestImpersonatedCredentials(object):
                 id_creds.refresh(None)
 
                 assert id_creds.token == ID_TOKEN_DATA
-                expected_expiry = datetime.datetime.fromtimestamp(
-                    ID_TOKEN_EXPIRY, tz=datetime.timezone.utc
-                ).replace(tzinfo=None)
+                expected_expiry = _helpers.utcfromtimestamp(ID_TOKEN_EXPIRY)
                 assert id_creds.expiry == expected_expiry
                 assert (
                     mock_post.call_args.kwargs["headers"]["x-goog-api-client"]
@@ -1184,9 +1180,7 @@ class TestImpersonatedCredentials(object):
         id_creds.refresh(request)
 
         assert id_creds.token == ID_TOKEN_DATA
-        expected_expiry = datetime.datetime.fromtimestamp(
-            ID_TOKEN_EXPIRY, tz=datetime.timezone.utc
-        ).replace(tzinfo=None)
+        expected_expiry = _helpers.utcfromtimestamp(ID_TOKEN_EXPIRY)
         assert id_creds.expiry == expected_expiry
         assert id_creds._include_email is True
 
