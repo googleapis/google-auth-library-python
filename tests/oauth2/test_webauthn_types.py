@@ -78,11 +78,11 @@ def test_GetRequest(has_allow_credentials):
         {"type": "public-key", "id": "fake_id_1"},
         {"type": "public-key", "id": "fake_id_2"},
     ]
-    exepcted_dict = {
+    expected_dict = {
         "type": "get",
         "origin": "fake_origin",
         "requestData": {
-            "rpid": "fake_rpid",
+            "rpId": "fake_rpid",
             "timeout": 123,
             "challenge": "fake_challenge",
             "userVerification": "preferred",
@@ -90,8 +90,8 @@ def test_GetRequest(has_allow_credentials):
         },
     }
     if has_allow_credentials:
-        exepcted_dict["requestData"]["allowCredentials"] = expected_allow_credentials
-    assert json.loads(test_get_request.to_json()) == exepcted_dict
+        expected_dict["requestData"]["allowCredentials"] = expected_allow_credentials
+    assert json.loads(test_get_request.to_json()) == expected_dict
 
 
 @pytest.mark.parametrize(
