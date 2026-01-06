@@ -13,12 +13,7 @@
 # limitations under the License.
 
 import asyncio
-from unittest.mock import Mock, patch
-try:
-    from unittest.mock import AsyncMock
-except ImportError:
-    # Fallback for Python < 3.8
-    from mock import AsyncMock
+from unittest.mock import AsyncMock, Mock, patch
 
 from aioresponses import aioresponses  # type: ignore
 import pytest  # type: ignore
