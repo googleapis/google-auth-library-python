@@ -17,7 +17,7 @@
 Implements application default credentials and project ID detection.
 """
 
-from collections.abc import Sequence
+from typing import Sequence
 import io
 import json
 import logging
