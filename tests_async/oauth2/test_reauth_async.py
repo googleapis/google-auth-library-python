@@ -14,6 +14,11 @@
 
 import copy
 from unittest import mock
+try:
+    from unittest.mock import AsyncMock
+except ImportError:
+    # Fallback for Python < 3.8
+    from mock import AsyncMock
 
 import pytest  # type: ignore
 
@@ -22,7 +27,7 @@ from google.oauth2 import _reauth_async
 from google.oauth2 import reauth
 
 
-MOCK_REQUEST = mock.AsyncMock(spec=["transport.Request"])
+MOCK_REQUEST = AsyncMock(spec=["transport.Request"])
 CHALLENGES_RESPONSE_TEMPLATE = {
     "status": "CHALLENGE_REQUIRED",
     "sessionId": "123",
