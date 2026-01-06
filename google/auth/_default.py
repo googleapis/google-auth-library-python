@@ -16,6 +16,7 @@
 
 Implements application default credentials and project ID detection.
 """
+from __future__ import annotations
 
 from typing import Sequence
 import io
