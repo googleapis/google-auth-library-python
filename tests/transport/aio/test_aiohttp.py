@@ -17,7 +17,7 @@ import sys
 
 if sys.version_info >= (3, 8):
     from unittest.mock import Mock, patch, AsyncMock
-else:
+else:  # pragma: NO COVER
     from unittest.mock import Mock, patch
     from mock import AsyncMock
 
