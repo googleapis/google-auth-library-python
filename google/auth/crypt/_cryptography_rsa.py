@@ -49,13 +49,14 @@ _SHA256 = hashes.SHA256()
 
 def _warn_rsa_type(key_type):
     global _RSA_DEPRECATION_WARNED
-    deprecation_msg = (
-        "The 'rsa' library is deprecated and unmaintained. Support for "
-        f"{key_type.__module__}.{key_type.__name__} keys will be removed in a future release. Please migrate to "
-        "'cryptography' keys or use the '.from_string()' factory method."
-    )
-    warnings.warn(deprecation_msg, DeprecationWarning, stacklevel=3)
-    _RSA_DEPRECATION_WARNED = True
+    if not _RSA_DEPRECATION_WARNED:
+        deprecation_msg = (
+            "The 'rsa' library is deprecated and unmaintained. Support for "
+            f"{key_type.__module__}.{key_type.__name__} keys will be removed in a future release. Please migrate to "
+            "'cryptography' keys or use the '.from_string()' factory method."
+        )
+        warnings.warn(deprecation_msg, DeprecationWarning, stacklevel=3)
+        _RSA_DEPRECATION_WARNED = True
 
 
 class RSAVerifier(base.Verifier):
