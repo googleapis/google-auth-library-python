@@ -15,7 +15,6 @@
 import json
 import os
 import pickle
-import warnings
 
 from cryptography.hazmat.primitives.asymmetric import rsa
 import pytest  # type: ignore
@@ -24,6 +23,10 @@ from google.auth import _helpers
 from google.auth.crypt import _cryptography_rsa
 from google.auth.crypt import base
 
+try:
+    import rsa
+except ImportError:
+    rsa = None
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
 
@@ -184,7 +187,6 @@ class TestRSATransparency(object):
     """
     @classmethod
     def setup_class(cls):
-        import rsa
         (cls.pub_key_rsa, cls.priv_key_rsa) = rsa.newkeys(512)
         cls.message = b"test message"
 
