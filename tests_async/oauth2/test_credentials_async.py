@@ -100,9 +100,9 @@ class TestCredentials:
             self.REFRESH_TOKEN,
             self.CLIENT_ID,
             self.CLIENT_SECRET,
-            None,
-            None,
-            True,
+            scopes=None,
+            rapt_token=None,
+            enable_reauth_refresh=True,
         )
 
         # Check that the credentials have the token and expiry
@@ -173,9 +173,9 @@ class TestCredentials:
             self.REFRESH_TOKEN,
             self.CLIENT_ID,
             self.CLIENT_SECRET,
-            scopes,
-            "old_rapt_token",
-            False,
+            scopes=scopes,
+            rapt_token="old_rapt_token",
+            enable_reauth_refresh=False,
         )
 
         # Check that the credentials have the token and expiry
@@ -236,9 +236,9 @@ class TestCredentials:
             self.REFRESH_TOKEN,
             self.CLIENT_ID,
             self.CLIENT_SECRET,
-            scopes,
-            None,
-            False,
+            scopes=scopes,
+            rapt_token=None,
+            enable_reauth_refresh=False,
         )
 
         # Check that the credentials have the token and expiry
@@ -307,9 +307,9 @@ class TestCredentials:
             self.REFRESH_TOKEN,
             self.CLIENT_ID,
             self.CLIENT_SECRET,
-            scopes,
-            None,
-            False,
+            scopes=scopes,
+            rapt_token=None,
+            enable_reauth_refresh=False,
         )
 
         # Check that the credentials have the token and expiry
