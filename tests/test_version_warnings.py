@@ -14,8 +14,8 @@
 
 import importlib
 import sys
-import warnings
 from unittest import mock
+import warnings
 
 import pytest
 
