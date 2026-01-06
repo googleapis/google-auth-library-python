@@ -179,6 +179,9 @@ class TestRSASigner(object):
 
 @pytest.mark.skipif(rsa is None, reason="rsa library is not installed")
 class TestRSATransparency(object):
+    """
+    RSASigner and RSAVerifier should be backwards compatible with rsa keys
+    """
     @classmethod
     def setup_class(cls):
         import rsa

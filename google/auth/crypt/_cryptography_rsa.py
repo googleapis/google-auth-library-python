@@ -62,6 +62,10 @@ def _warn_rsa_type(key_type):
 class RSAVerifier(base.Verifier):
     """Verifies RSA cryptographic signatures using public keys.
 
+    Note: rsa.key.PublicKey keys are currently supported, but the `rsa` library
+    is deprecated. Please migrate to `cryptography` keys or use
+    `.from_string()` instead
+
     Args:
         public_key (
                 cryptography.hazmat.primitives.asymmetric.rsa.RSAPublicKey):
@@ -116,6 +120,10 @@ class RSAVerifier(base.Verifier):
 
 class RSASigner(base.Signer, base.FromServiceAccountMixin):
     """Signs messages with an RSA private key.
+
+    Note: rsa.key.PrivateKey keys are currently supported, but the `rsa` library
+    is deprecated. Please migrate to `cryptography` keys or use
+    `.from_string()` instead
 
     Args:
         private_key (
