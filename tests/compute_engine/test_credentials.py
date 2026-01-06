@@ -1307,7 +1307,7 @@ class TestIDTokenCredentials(object):
         )
         cred.refresh(request=mock.Mock())
 
-        assert get.call_args.kwargs["headers"] == {
+        assert get.call_args[1]["headers"] == {
             "x-goog-api-client": ID_TOKEN_REQUEST_METRICS_HEADER_VALUE
         }
 

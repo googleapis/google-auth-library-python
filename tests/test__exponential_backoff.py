@@ -57,8 +57,12 @@ def test_minimum_total_attempts():
     _exponential_backoff.ExponentialBackoff(total_attempts=1)
 
 
+async def async_sleep(delay):
+    pass
+
+
 @pytest.mark.asyncio
-@mock.patch("asyncio.sleep", return_value=None)
+@mock.patch("asyncio.sleep", side_effect=async_sleep)
 async def test_exponential_backoff_async(mock_time_async):
     eb = _exponential_backoff.AsyncExponentialBackoff()
     curr_wait = eb._current_wait_in_seconds

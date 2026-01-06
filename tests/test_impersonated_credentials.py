@@ -344,7 +344,7 @@ class TestImpersonatedCredentials(object):
         assert credentials.valid
         assert not credentials.expired
         assert (
-            request.call_args.kwargs["headers"]["x-goog-api-client"]
+            request.call_args[1]["headers"]["x-goog-api-client"]
             == ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE
         )
 
@@ -1075,7 +1075,7 @@ class TestImpersonatedCredentials(object):
                     ID_TOKEN_EXPIRY
                 )
                 assert (
-                    mock_post.call_args.kwargs["headers"]["x-goog-api-client"]
+                    mock_post.call_args[1]["headers"]["x-goog-api-client"]
                     == ID_TOKEN_REQUEST_METRICS_HEADER_VALUE
                 )
 
@@ -1145,9 +1145,11 @@ class TestImpersonatedCredentials(object):
         id_creds = id_creds.from_credentials(target_credentials=target_credentials)
         id_creds.refresh(request)
 
-        args = mock_authorizedsession_idtoken.call_args.args
-
-        assert args[2] == expected_url
+        # In Python 3.7, self might not be in call_args for autospecced methods
+        args = mock_authorizedsession_idtoken.call_args[0]
+        
+        # Look for expected_url in args
+        assert expected_url in args
 
         assert id_creds.token == ID_TOKEN_DATA
         assert id_creds._include_email is True

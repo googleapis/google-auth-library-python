@@ -261,9 +261,12 @@ class TestAsyncAuthorizedSession(object):
     @pytest.mark.parametrize("retry_status", DEFAULT_RETRYABLE_STATUS_CODES)
     @pytest.mark.asyncio
     async def test_request_max_retries(self, retry_status):
+        async def async_sleep(delay):
+            pass
+
         mocked_response = MockResponse(status_code=retry_status)
         auth_request = MockRequest(mocked_response)
-        with patch("asyncio.sleep", return_value=None):
+        with patch("asyncio.sleep", side_effect=async_sleep):
             authed_session = sessions.AsyncAuthorizedSession(
                 self.credentials, auth_request
             )

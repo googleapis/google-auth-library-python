@@ -107,7 +107,7 @@ def test_success_get_assertion(os_get_stub, subprocess_run_stub):
     os_get_stub.assert_called_once()
     subprocess_run_stub.assert_called_once()
 
-    stdin_input = subprocess_run_stub.call_args.kwargs["input"]
+    stdin_input = subprocess_run_stub.call_args[1]["input"]
     input_json_len_le = stdin_input[:4]
     input_json_len = struct.unpack("<I", input_json_len_le)[0]
     input_json = stdin_input[4:]
