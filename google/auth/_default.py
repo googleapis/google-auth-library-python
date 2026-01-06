@@ -17,6 +17,7 @@
 Implements application default credentials and project ID detection.
 """
 from __future__ import annotations
+
 import io
 import json
 import logging

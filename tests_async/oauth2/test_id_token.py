@@ -15,6 +15,7 @@
 import json
 import os
 import sys
+
 if sys.version_info >= (3, 8):
     from unittest import mock
     from unittest.mock import AsyncMock
@@ -39,9 +40,9 @@ def make_request(status, data=None):
 
     if data is not None:
         response.data = AsyncMock(spec=["__call__", "read"])
-        
+
         async def get_content(*args, **kwargs):
-             return json.dumps(data).encode("utf-8")
+            return json.dumps(data).encode("utf-8")
 
         response.data.read = AsyncMock(spec=["__call__"], side_effect=get_content)
         response.content = AsyncMock(spec=["__call__"], side_effect=get_content)

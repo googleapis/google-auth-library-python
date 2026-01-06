@@ -17,6 +17,7 @@ import json
 import os
 import pickle
 import sys
+
 if sys.version_info >= (3, 8):
     from unittest import mock
     from unittest.mock import AsyncMock
@@ -63,7 +64,9 @@ class TestCredentials:
         assert credentials.client_id == self.CLIENT_ID
         assert credentials.client_secret == self.CLIENT_SECRET
 
-    @mock.patch("google.oauth2._credentials_async.reauth.refresh_grant", new_callable=AsyncMock)
+    @mock.patch(
+        "google.oauth2._credentials_async.reauth.refresh_grant", new_callable=AsyncMock
+    )
     @mock.patch(
         "google.auth._helpers.utcnow",
         return_value=datetime.datetime.min + _helpers.REFRESH_THRESHOLD,
@@ -125,7 +128,9 @@ class TestCredentials:
 
         request.assert_not_called()
 
-    @mock.patch("google.oauth2._credentials_async.reauth.refresh_grant", new_callable=AsyncMock)
+    @mock.patch(
+        "google.oauth2._credentials_async.reauth.refresh_grant", new_callable=AsyncMock
+    )
     @mock.patch(
         "google.auth._helpers.utcnow",
         return_value=datetime.datetime.min + _helpers.REFRESH_THRESHOLD,
@@ -189,7 +194,9 @@ class TestCredentials:
         # expired.)
         assert creds.valid
 
-    @mock.patch("google.oauth2._credentials_async.reauth.refresh_grant", new_callable=AsyncMock)
+    @mock.patch(
+        "google.oauth2._credentials_async.reauth.refresh_grant", new_callable=AsyncMock
+    )
     @mock.patch(
         "google.auth._helpers.utcnow",
         return_value=datetime.datetime.min + _helpers.REFRESH_THRESHOLD,
@@ -252,7 +259,9 @@ class TestCredentials:
         # expired.)
         assert creds.valid
 
-    @mock.patch("google.oauth2._credentials_async.reauth.refresh_grant", new_callable=AsyncMock)
+    @mock.patch(
+        "google.oauth2._credentials_async.reauth.refresh_grant", new_callable=AsyncMock
+    )
     @mock.patch(
         "google.auth._helpers.utcnow",
         return_value=datetime.datetime.min + _helpers.REFRESH_THRESHOLD,
@@ -471,7 +480,9 @@ class TestCredentials:
             assert credentials.quota_project_id is None
 
     @mock.patch("google.oauth2._credentials_async.Credentials.apply", autospec=True)
-    @mock.patch("google.oauth2._credentials_async.Credentials.refresh", new_callable=AsyncMock)
+    @mock.patch(
+        "google.oauth2._credentials_async.Credentials.refresh", new_callable=AsyncMock
+    )
     @pytest.mark.asyncio
     async def test_before_request(self, refresh, apply):
         cred = self.make_credentials()

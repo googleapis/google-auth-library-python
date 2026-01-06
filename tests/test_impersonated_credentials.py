@@ -1147,7 +1147,7 @@ class TestImpersonatedCredentials(object):
 
         # In Python 3.7, self might not be in call_args for autospecced methods
         args = mock_authorizedsession_idtoken.call_args[0]
-        
+
         # Look for expected_url in args
         assert expected_url in args
 
