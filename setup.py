@@ -76,6 +76,7 @@ testing_extra_require = [
     # TODO(https://github.com/googleapis/google-auth-library-python/issues/1722): `test_aiohttp_requests` depend on
     # aiohttp < 3.10.0 which is a bug. Investigate and remove the pinned aiohttp version.
     "aiohttp < 3.10.0",
+    "mock; python_version < '3.8'",
 ]
 
 extras = {
