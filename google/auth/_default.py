@@ -17,19 +17,21 @@
 Implements application default credentials and project ID detection.
 """
 
-from collections.abc import Sequence
+from __future__ import annotations
+
 import io
 import json
 import logging
 import os
-from typing import Optional, TYPE_CHECKING
 import warnings
+from typing import TYPE_CHECKING
 
-from google.auth import environment_vars
-from google.auth import exceptions
 import google.auth.transport._http_client
+from google.auth import environment_vars, exceptions
 
-if TYPE_CHECKING:  # pragma: NO COVER
+if TYPE_CHECKING:  # pragma: NO COVER    
+    from typing import Optional, Sequence
+
     from google.auth.credentials import Credentials  # noqa: F401
     from google.auth.transport import Request  # noqa: F401
 
@@ -696,8 +698,10 @@ def default(
             If no credentials were found, or if the credentials found were
             invalid.
     """
-    from google.auth.credentials import with_scopes_if_required
-    from google.auth.credentials import CredentialsWithQuotaProject
+    from google.auth.credentials import (
+        CredentialsWithQuotaProject,
+        with_scopes_if_required,
+    )
 
     explicit_project_id = os.environ.get(
         environment_vars.PROJECT, os.environ.get(environment_vars.LEGACY_PROJECT)
