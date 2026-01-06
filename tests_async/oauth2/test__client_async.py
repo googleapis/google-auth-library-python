@@ -15,13 +15,19 @@
 import datetime
 import http.client as http_client
 import json
-from unittest import mock
-try:
-    from unittest.mock import AsyncMock
-except ImportError:
-    # Fallback for Python < 3.8
-    from mock import AsyncMock
+import sys
 import urllib
+
+if sys.version_info >= (3, 8):
+    from unittest import mock
+    from unittest.mock import AsyncMock
+else:
+    import mock
+
+    try:
+        from mock import AsyncMock
+    except ImportError:
+        from asyncmock import AsyncMock
 
 import freezegun
 import pytest  # type: ignore

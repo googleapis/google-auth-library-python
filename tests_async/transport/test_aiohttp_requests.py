@@ -12,11 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from unittest import mock
-try:
+import sys
+if sys.version_info >= (3, 8):
+    from unittest import mock
     from unittest.mock import AsyncMock
-except ImportError:
-    from mock import AsyncMock
+else:
+    import mock
+
+    try:
+        from mock import AsyncMock
+    except ImportError:
+        from asyncmock import AsyncMock
 
 import aiohttp  # type: ignore
 from aioresponses import aioresponses, core  # type: ignore
@@ -44,7 +50,7 @@ class TestCombinedResponse:
 
     @pytest.mark.asyncio
     async def test_raw_content(self):
-        mock_response = mock.AsyncMock()
+        mock_response = AsyncMock()
         mock_response.content.read.return_value = mock.sentinel.read
         combined_response = aiohttp_requests._CombinedResponse(response=mock_response)
         raw_content = await combined_response.raw_content()
@@ -57,7 +63,7 @@ class TestCombinedResponse:
 
     @pytest.mark.asyncio
     async def test_content(self):
-        mock_response = mock.AsyncMock()
+        mock_response = AsyncMock()
         mock_response.content.read.return_value = mock.sentinel.read
         combined_response = aiohttp_requests._CombinedResponse(response=mock_response)
         content = await combined_response.content()
@@ -104,7 +110,7 @@ class TestResponse:
 
     @pytest.mark.asyncio
     async def test_data_prop(self):
-        mock_response = mock.AsyncMock()
+        mock_response = AsyncMock()
         mock_response.content.read.return_value = mock.sentinel.read
         response = aiohttp_requests._Response(mock_response)
         data = await response.data.read()
