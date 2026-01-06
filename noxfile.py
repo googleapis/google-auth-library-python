@@ -42,8 +42,8 @@ nox.options.sessions = [
     "lint",
     "blacken",
     "mypy",
-    # TODO(https://github.com/googleapis/google-auth-library-python/issues/1787):
-    # Remove or restore testing for Python 3.7/3.8
+    "unit-3.7",
+    "unit-3.8",
     "unit-3.9",
     "unit-3.10",
     "unit-3.11",
