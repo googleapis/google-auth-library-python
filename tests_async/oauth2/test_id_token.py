@@ -72,7 +72,7 @@ async def test__fetch_certs_failure():
 
 
 @mock.patch("google.auth.jwt.decode", autospec=True)
-@mock.patch("google.oauth2._id_token_async._fetch_certs", autospec=True)
+@mock.patch("google.oauth2._id_token_async._fetch_certs", new_callable=AsyncMock)
 @pytest.mark.asyncio
 async def test_verify_token(_fetch_certs, decode):
     result = await id_token.verify_token(mock.sentinel.token, mock.sentinel.request)
@@ -90,7 +90,7 @@ async def test_verify_token(_fetch_certs, decode):
 
 
 @mock.patch("google.auth.jwt.decode", autospec=True)
-@mock.patch("google.oauth2._id_token_async._fetch_certs", autospec=True)
+@mock.patch("google.oauth2._id_token_async._fetch_certs", new_callable=AsyncMock)
 @pytest.mark.asyncio
 async def test_verify_token_clock_skew(_fetch_certs, decode):
     result = await id_token.verify_token(
@@ -110,7 +110,7 @@ async def test_verify_token_clock_skew(_fetch_certs, decode):
 
 
 @mock.patch("google.auth.jwt.decode", autospec=True)
-@mock.patch("google.oauth2._id_token_async._fetch_certs", autospec=True)
+@mock.patch("google.oauth2._id_token_async._fetch_certs", new_callable=AsyncMock)
 @pytest.mark.asyncio
 async def test_verify_token_args(_fetch_certs, decode):
     result = await id_token.verify_token(
@@ -130,7 +130,7 @@ async def test_verify_token_args(_fetch_certs, decode):
     )
 
 
-@mock.patch("google.oauth2._id_token_async.verify_token", autospec=True)
+@mock.patch("google.oauth2._id_token_async.verify_token", new_callable=AsyncMock)
 @pytest.mark.asyncio
 async def test_verify_oauth2_token(verify_token):
     verify_token.return_value = {"iss": "accounts.google.com"}
@@ -148,7 +148,7 @@ async def test_verify_oauth2_token(verify_token):
     )
 
 
-@mock.patch("google.oauth2._id_token_async.verify_token", autospec=True)
+@mock.patch("google.oauth2._id_token_async.verify_token", new_callable=AsyncMock)
 @pytest.mark.asyncio
 async def test_verify_oauth2_token_clock_skew(verify_token):
     verify_token.return_value = {"iss": "accounts.google.com"}
@@ -169,7 +169,7 @@ async def test_verify_oauth2_token_clock_skew(verify_token):
     )
 
 
-@mock.patch("google.oauth2._id_token_async.verify_token", autospec=True)
+@mock.patch("google.oauth2._id_token_async.verify_token", new_callable=AsyncMock)
 @pytest.mark.asyncio
 async def test_verify_oauth2_token_invalid_iss(verify_token):
     verify_token.return_value = {"iss": "invalid_issuer"}
@@ -180,7 +180,7 @@ async def test_verify_oauth2_token_invalid_iss(verify_token):
         )
 
 
-@mock.patch("google.oauth2._id_token_async.verify_token", autospec=True)
+@mock.patch("google.oauth2._id_token_async.verify_token", new_callable=AsyncMock)
 @pytest.mark.asyncio
 async def test_verify_firebase_token(verify_token):
     result = await id_token.verify_firebase_token(
@@ -197,7 +197,7 @@ async def test_verify_firebase_token(verify_token):
     )
 
 
-@mock.patch("google.oauth2._id_token_async.verify_token", autospec=True)
+@mock.patch("google.oauth2._id_token_async.verify_token", new_callable=AsyncMock)
 @pytest.mark.asyncio
 async def test_verify_firebase_token_clock_skew(verify_token):
     result = await id_token.verify_firebase_token(

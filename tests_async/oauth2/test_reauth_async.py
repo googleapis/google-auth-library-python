@@ -60,7 +60,7 @@ class MockChallenge(object):
 @pytest.mark.asyncio
 async def test__get_challenges():
     with mock.patch(
-        "google.oauth2._client_async._token_endpoint_request"
+        "google.oauth2._client_async._token_endpoint_request", new_callable=AsyncMock
     ) as mock_token_endpoint_request:
         await _reauth_async._get_challenges(MOCK_REQUEST, ["SAML"], "token")
         mock_token_endpoint_request.assert_called_with(
@@ -75,7 +75,7 @@ async def test__get_challenges():
 @pytest.mark.asyncio
 async def test__get_challenges_with_scopes():
     with mock.patch(
-        "google.oauth2._client_async._token_endpoint_request"
+        "google.oauth2._client_async._token_endpoint_request", new_callable=AsyncMock
     ) as mock_token_endpoint_request:
         await _reauth_async._get_challenges(
             MOCK_REQUEST, ["SAML"], "token", requested_scopes=["scope"]
@@ -95,7 +95,7 @@ async def test__get_challenges_with_scopes():
 @pytest.mark.asyncio
 async def test__send_challenge_result():
     with mock.patch(
-        "google.oauth2._client_async._token_endpoint_request"
+        "google.oauth2._client_async._token_endpoint_request", new_callable=AsyncMock
     ) as mock_token_endpoint_request:
         await _reauth_async._send_challenge_result(
             MOCK_REQUEST, "123", "1", {"credential": "password"}, "token"
@@ -171,7 +171,7 @@ async def test__run_next_challenge_success():
         "google.oauth2.challenges.AVAILABLE_CHALLENGES", {"PASSWORD": mock_challenge}
     ):
         with mock.patch(
-            "google.oauth2._reauth_async._send_challenge_result"
+            "google.oauth2._reauth_async._send_challenge_result", new_callable=AsyncMock
         ) as mock_send_challenge_result:
             await _reauth_async._run_next_challenge(
                 CHALLENGES_RESPONSE_TEMPLATE, MOCK_REQUEST, "token"
@@ -185,6 +185,7 @@ async def test__run_next_challenge_success():
 async def test__obtain_rapt_authenticated():
     with mock.patch(
         "google.oauth2._reauth_async._get_challenges",
+        new_callable=AsyncMock,
         return_value=CHALLENGES_RESPONSE_AUTHENTICATED,
     ):
         new_rapt_token = await _reauth_async._obtain_rapt(MOCK_REQUEST, "token", None)
@@ -195,10 +196,12 @@ async def test__obtain_rapt_authenticated():
 async def test__obtain_rapt_authenticated_after_run_next_challenge():
     with mock.patch(
         "google.oauth2._reauth_async._get_challenges",
+        new_callable=AsyncMock,
         return_value=CHALLENGES_RESPONSE_TEMPLATE,
     ):
         with mock.patch(
             "google.oauth2._reauth_async._run_next_challenge",
+            new_callable=AsyncMock,
             side_effect=[
                 CHALLENGES_RESPONSE_TEMPLATE,
                 CHALLENGES_RESPONSE_AUTHENTICATED,
@@ -216,7 +219,7 @@ async def test__obtain_rapt_unsupported_status():
     challenges_response = copy.deepcopy(CHALLENGES_RESPONSE_TEMPLATE)
     challenges_response["status"] = "STATUS_UNSPECIFIED"
     with mock.patch(
-        "google.oauth2._reauth_async._get_challenges", return_value=challenges_response
+        "google.oauth2._reauth_async._get_challenges", new_callable=AsyncMock, return_value=challenges_response
     ):
         with pytest.raises(exceptions.ReauthFailError) as excinfo:
             await _reauth_async._obtain_rapt(MOCK_REQUEST, "token", None)
@@ -227,6 +230,7 @@ async def test__obtain_rapt_unsupported_status():
 async def test__obtain_rapt_not_interactive():
     with mock.patch(
         "google.oauth2._reauth_async._get_challenges",
+        new_callable=AsyncMock,
         return_value=CHALLENGES_RESPONSE_TEMPLATE,
     ):
         with mock.patch("google.oauth2.reauth.is_interactive", return_value=False):
@@ -239,6 +243,7 @@ async def test__obtain_rapt_not_interactive():
 async def test__obtain_rapt_not_authenticated():
     with mock.patch(
         "google.oauth2._reauth_async._get_challenges",
+        new_callable=AsyncMock,
         return_value=CHALLENGES_RESPONSE_TEMPLATE,
     ):
         with mock.patch("google.oauth2.reauth.RUN_CHALLENGE_RETRY_LIMIT", 0):
@@ -251,10 +256,11 @@ async def test__obtain_rapt_not_authenticated():
 async def test_get_rapt_token():
     with mock.patch(
         "google.oauth2._client_async.refresh_grant",
+        new_callable=AsyncMock,
         return_value=("token", None, None, None),
     ) as mock_refresh_grant:
         with mock.patch(
-            "google.oauth2._reauth_async._obtain_rapt", return_value="new_rapt_token"
+            "google.oauth2._reauth_async._obtain_rapt", new_callable=AsyncMock, return_value="new_rapt_token"
         ) as mock_obtain_rapt:
             assert (
                 await _reauth_async.get_rapt_token(
@@ -282,7 +288,7 @@ async def test_get_rapt_token():
 @pytest.mark.asyncio
 async def test_refresh_grant_failed():
     with mock.patch(
-        "google.oauth2._client_async._token_endpoint_request_no_throw"
+        "google.oauth2._client_async._token_endpoint_request_no_throw", new_callable=AsyncMock
     ) as mock_token_request:
         mock_token_request.return_value = (False, {"error": "Bad request"}, True)
         with pytest.raises(exceptions.RefreshError) as excinfo:
@@ -314,14 +320,14 @@ async def test_refresh_grant_failed():
 @pytest.mark.asyncio
 async def test_refresh_grant_success():
     with mock.patch(
-        "google.oauth2._client_async._token_endpoint_request_no_throw"
+        "google.oauth2._client_async._token_endpoint_request_no_throw", new_callable=AsyncMock
     ) as mock_token_request:
         mock_token_request.side_effect = [
             (False, {"error": "invalid_grant", "error_subtype": "rapt_required"}, True),
             (True, {"access_token": "access_token"}, None),
         ]
         with mock.patch(
-            "google.oauth2._reauth_async.get_rapt_token", return_value="new_rapt_token"
+            "google.oauth2._reauth_async.get_rapt_token", new_callable=AsyncMock, return_value="new_rapt_token"
         ):
             assert await _reauth_async.refresh_grant(
                 MOCK_REQUEST,
@@ -342,7 +348,7 @@ async def test_refresh_grant_success():
 @pytest.mark.asyncio
 async def test_refresh_grant_reauth_refresh_disabled():
     with mock.patch(
-        "google.oauth2._client_async._token_endpoint_request_no_throw"
+        "google.oauth2._client_async._token_endpoint_request_no_throw", new_callable=AsyncMock
     ) as mock_token_request:
         mock_token_request.side_effect = [
             (

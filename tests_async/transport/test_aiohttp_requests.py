@@ -13,6 +13,10 @@
 # limitations under the License.
 
 from unittest import mock
+try:
+    from unittest.mock import AsyncMock
+except ImportError:
+    from mock import AsyncMock
 
 import aiohttp  # type: ignore
 from aioresponses import aioresponses, core  # type: ignore
