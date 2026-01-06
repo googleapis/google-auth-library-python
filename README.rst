@@ -39,7 +39,7 @@ Python >= 3.8
 
 **NOTE**:
 Python 3.8 and Python 3.9 were marked as `unsupported`_ by the python community in 
-October 2024 and October 2025 respectively.
+October 2024 and October 2025, respectively.
 We recommend that all developers upgrade to Python 3.10 and newer as soon as
 they can. Support for end-of-life Python runtimes will be removed from this
 library in future updates.
