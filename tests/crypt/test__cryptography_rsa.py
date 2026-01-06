@@ -24,9 +24,9 @@ from google.auth.crypt import _cryptography_rsa
 from google.auth.crypt import base
 
 try:
-    import rsa
+    import rsa as old_rsa_lib
 except ImportError:
-    rsa = None
+    old_rsa_lib = None
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
 
@@ -187,7 +187,7 @@ class TestRSATransparency(object):
     """
     @classmethod
     def setup_class(cls):
-        (cls.pub_key_rsa, cls.priv_key_rsa) = rsa.newkeys(512)
+        (cls.pub_key_rsa, cls.priv_key_rsa) = old_rsa_lib.newkeys(2048)
         cls.message = b"test message"
 
     @pytest.mark.filterwarnings("ignore::DeprecationWarning")
