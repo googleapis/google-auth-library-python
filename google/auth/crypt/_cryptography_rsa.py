@@ -29,10 +29,33 @@ import cryptography.x509
 from google.auth import _helpers
 from google.auth.crypt import base
 
+import warnings
+
+try:
+    # attempt to import deprecated rsa module if available,
+    # for backwards compatibility
+    import rsa
+except ImportError:
+    rsa = None
+
+# Global flag for the module
+_RSA_DEPRECATION_WARNED = False
+
 _CERTIFICATE_MARKER = b"-----BEGIN CERTIFICATE-----"
 _BACKEND = backends.default_backend()
 _PADDING = padding.PKCS1v15()
 _SHA256 = hashes.SHA256()
+
+
+def _warn_rsa_type(key_type):
+    global _RSA_DEPRECATION_WARNED
+    deprecation_msg = (
+        "The 'rsa' library is deprecated and unmaintained. Support for "
+        f"{key_type.__module__}.{key_type.__name__} keys will be removed in a future release. Please migrate to "
+        "'cryptography' keys or use the '.from_string()' factory method."
+    )
+    warnings.warn(deprecation_msg, DeprecationWarning, stacklevel=3)
+    _RSA_DEPRECATION_WARNED = True
 
 
 class RSAVerifier(base.Verifier):
@@ -45,6 +68,11 @@ class RSAVerifier(base.Verifier):
     """
 
     def __init__(self, public_key):
+        if rsa is not None and isinstance(public_key, rsa.key.PublicKey):
+            # convert rsa.key.PublicKey to cryptography type
+            _warn_rsa_type(type(public_key))
+            der_bytes = public_key.save_pkcs1(format='DER')
+            public_key = serialization.load_der_public_key(der_bytes)
         self._pubkey = public_key
 
     @_helpers.copy_docstring(base.Verifier)
@@ -98,6 +126,11 @@ class RSASigner(base.Signer, base.FromServiceAccountMixin):
     """
 
     def __init__(self, private_key, key_id=None):
+        if rsa is not None and isinstance(private_key, rsa.key.PrivateKey):
+            # convert rsa.key.PublicKey to cryptography type
+            _warn_rsa_type(type(private_key))
+            der_bytes = private_key.save_pkcs1(format='DER')
+            private_key = serialization.load_der_private_key(der_bytes, password=None)
         self._key = private_key
         self._key_id = key_id
 
