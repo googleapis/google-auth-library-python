@@ -63,7 +63,7 @@ class TestCredentials:
         assert credentials.client_id == self.CLIENT_ID
         assert credentials.client_secret == self.CLIENT_SECRET
 
-    @mock.patch("google.oauth2._reauth_async.refresh_grant", autospec=True)
+    @mock.patch("google.oauth2._credentials_async.reauth.refresh_grant")
     @mock.patch(
         "google.auth._helpers.utcnow",
         return_value=datetime.datetime.min + _helpers.REFRESH_THRESHOLD,
@@ -125,7 +125,7 @@ class TestCredentials:
 
         request.assert_not_called()
 
-    @mock.patch("google.oauth2._reauth_async.refresh_grant", autospec=True)
+    @mock.patch("google.oauth2._credentials_async.reauth.refresh_grant")
     @mock.patch(
         "google.auth._helpers.utcnow",
         return_value=datetime.datetime.min + _helpers.REFRESH_THRESHOLD,
@@ -189,7 +189,7 @@ class TestCredentials:
         # expired.)
         assert creds.valid
 
-    @mock.patch("google.oauth2._reauth_async.refresh_grant", autospec=True)
+    @mock.patch("google.oauth2._credentials_async.reauth.refresh_grant")
     @mock.patch(
         "google.auth._helpers.utcnow",
         return_value=datetime.datetime.min + _helpers.REFRESH_THRESHOLD,
@@ -252,7 +252,7 @@ class TestCredentials:
         # expired.)
         assert creds.valid
 
-    @mock.patch("google.oauth2._reauth_async.refresh_grant", autospec=True)
+    @mock.patch("google.oauth2._credentials_async.reauth.refresh_grant")
     @mock.patch(
         "google.auth._helpers.utcnow",
         return_value=datetime.datetime.min + _helpers.REFRESH_THRESHOLD,

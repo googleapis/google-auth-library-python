@@ -23,6 +23,7 @@ except ImportError:
     from mock import AsyncMock
 import urllib
 
+import freezegun
 import pytest  # type: ignore
 
 from google.auth import _helpers
@@ -212,26 +213,26 @@ def verify_request_params(request, params):
 
 
 @pytest.mark.asyncio
-@mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
-async def test_jwt_grant(utcnow):
+async def test_jwt_grant():
     request = make_request(
         {"access_token": "token", "expires_in": 500, "extra": "data"}
     )
 
-    token, expiry, extra_data = await _client.jwt_grant(
-        request, "http://example.com", "assertion_value"
-    )
+    with freezegun.freeze_time("2020-01-01 00:00:00"):
+        token, expiry, extra_data = await _client.jwt_grant(
+            request, "http://example.com", "assertion_value"
+        )
 
-    # Check request call
-    verify_request_params(
-        request,
-        {"grant_type": sync_client._JWT_GRANT_TYPE, "assertion": "assertion_value"},
-    )
+        # Check request call
+        verify_request_params(
+            request,
+            {"grant_type": sync_client._JWT_GRANT_TYPE, "assertion": "assertion_value"},
+        )
 
-    # Check result
-    assert token == "token"
-    assert expiry == utcnow() + datetime.timedelta(seconds=500)
-    assert extra_data["extra"] == "data"
+        # Check result
+        assert token == "token"
+        assert expiry == datetime.datetime(2020, 1, 1) + datetime.timedelta(seconds=500)
+        assert extra_data["extra"] == "data"
 
 
 @pytest.mark.asyncio
@@ -292,8 +293,7 @@ async def test_id_token_jwt_grant_no_access_token():
 
 
 @pytest.mark.asyncio
-@mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
-async def test_refresh_grant(unused_utcnow):
+async def test_refresh_grant():
     request = make_request(
         {
             "access_token": "token",
@@ -303,37 +303,37 @@ async def test_refresh_grant(unused_utcnow):
         }
     )
 
-    token, refresh_token, expiry, extra_data = await _client.refresh_grant(
-        request,
-        "http://example.com",
-        "refresh_token",
-        "client_id",
-        "client_secret",
-        rapt_token="rapt_token",
-    )
+    with freezegun.freeze_time("2020-01-01 00:00:00"):
+        token, refresh_token, expiry, extra_data = await _client.refresh_grant(
+            request,
+            "http://example.com",
+            "refresh_token",
+            "client_id",
+            "client_secret",
+            rapt_token="rapt_token",
+        )
 
-    # Check request call
-    verify_request_params(
-        request,
-        {
-            "grant_type": sync_client._REFRESH_GRANT_TYPE,
-            "refresh_token": "refresh_token",
-            "client_id": "client_id",
-            "client_secret": "client_secret",
-            "rapt": "rapt_token",
-        },
-    )
+        # Check request call
+        verify_request_params(
+            request,
+            {
+                "grant_type": sync_client._REFRESH_GRANT_TYPE,
+                "refresh_token": "refresh_token",
+                "client_id": "client_id",
+                "client_secret": "client_secret",
+                "rapt": "rapt_token",
+            },
+        )
 
-    # Check result
-    assert token == "token"
-    assert refresh_token == "new_refresh_token"
-    assert expiry == datetime.datetime.min + datetime.timedelta(seconds=500)
-    assert extra_data["extra"] == "data"
+        # Check result
+        assert token == "token"
+        assert refresh_token == "new_refresh_token"
+        assert expiry == datetime.datetime(2020, 1, 1) + datetime.timedelta(seconds=500)
+        assert extra_data["extra"] == "data"
 
 
 @pytest.mark.asyncio
-@mock.patch("google.auth._helpers.utcnow", return_value=datetime.datetime.min)
-async def test_refresh_grant_with_scopes(unused_utcnow):
+async def test_refresh_grant_with_scopes():
     request = make_request(
         {
             "access_token": "token",
@@ -344,32 +344,33 @@ async def test_refresh_grant_with_scopes(unused_utcnow):
         }
     )
 
-    token, refresh_token, expiry, extra_data = await _client.refresh_grant(
-        request,
-        "http://example.com",
-        "refresh_token",
-        "client_id",
-        "client_secret",
-        test_client.SCOPES_AS_LIST,
-    )
+    with freezegun.freeze_time("2020-01-01 00:00:00"):
+        token, refresh_token, expiry, extra_data = await _client.refresh_grant(
+            request,
+            "http://example.com",
+            "refresh_token",
+            "client_id",
+            "client_secret",
+            test_client.SCOPES_AS_LIST,
+        )
 
-    # Check request call.
-    verify_request_params(
-        request,
-        {
-            "grant_type": sync_client._REFRESH_GRANT_TYPE,
-            "refresh_token": "refresh_token",
-            "client_id": "client_id",
-            "client_secret": "client_secret",
-            "scope": test_client.SCOPES_AS_STRING,
-        },
-    )
+        # Check request call.
+        verify_request_params(
+            request,
+            {
+                "grant_type": sync_client._REFRESH_GRANT_TYPE,
+                "refresh_token": "refresh_token",
+                "client_id": "client_id",
+                "client_secret": "client_secret",
+                "scope": test_client.SCOPES_AS_STRING,
+            },
+        )
 
-    # Check result.
-    assert token == "token"
-    assert refresh_token == "new_refresh_token"
-    assert expiry == datetime.datetime.min + datetime.timedelta(seconds=500)
-    assert extra_data["extra"] == "data"
+        # Check result.
+        assert token == "token"
+        assert refresh_token == "new_refresh_token"
+        assert expiry == datetime.datetime(2020, 1, 1) + datetime.timedelta(seconds=500)
+        assert extra_data["extra"] == "data"
 
 
 @pytest.mark.asyncio
@@ -390,11 +391,19 @@ async def test_refresh_grant_no_access_token():
     assert not excinfo.value.retryable
 
 
+def create_async_mock():
+    m = mock.Mock()
+    async def async_response(*args, **kwargs):
+        return mock.Mock()
+    m.side_effect = async_response
+    return m
+
+
 @pytest.mark.asyncio
 @mock.patch("google.oauth2._client._parse_expiry", return_value=None)
 @mock.patch.object(_client, "_token_endpoint_request", autospec=True)
 async def test_jwt_grant_retry_default(mock_token_endpoint_request, mock_expiry):
-    _ = await _client.jwt_grant(mock.Mock(), mock.Mock(), mock.Mock())
+    _ = await _client.jwt_grant(create_async_mock(), mock.Mock(), mock.Mock())
     mock_token_endpoint_request.assert_called_with(
         mock.ANY, mock.ANY, mock.ANY, can_retry=True
     )
@@ -408,7 +417,7 @@ async def test_jwt_grant_retry_with_retry(
     mock_token_endpoint_request, mock_expiry, can_retry
 ):
     _ = await _client.jwt_grant(
-        AsyncMock(), mock.Mock(), mock.Mock(), can_retry=can_retry
+        create_async_mock(), mock.Mock(), mock.Mock(), can_retry=can_retry
     )
     mock_token_endpoint_request.assert_called_with(
         mock.ANY, mock.ANY, mock.ANY, can_retry=can_retry
@@ -421,7 +430,7 @@ async def test_jwt_grant_retry_with_retry(
 async def test_id_token_jwt_grant_retry_default(
     mock_token_endpoint_request, mock_jwt_decode
 ):
-    _ = await _client.id_token_jwt_grant(mock.Mock(), mock.Mock(), mock.Mock())
+    _ = await _client.id_token_jwt_grant(create_async_mock(), mock.Mock(), mock.Mock())
     mock_token_endpoint_request.assert_called_with(
         mock.ANY, mock.ANY, mock.ANY, can_retry=True
     )
@@ -435,7 +444,7 @@ async def test_id_token_jwt_grant_retry_with_retry(
     mock_token_endpoint_request, mock_jwt_decode, can_retry
 ):
     _ = await _client.id_token_jwt_grant(
-        AsyncMock(), AsyncMock(), AsyncMock(), can_retry=can_retry
+        create_async_mock(), AsyncMock(), AsyncMock(), can_retry=can_retry
     )
     mock_token_endpoint_request.assert_called_with(
         mock.ANY, mock.ANY, mock.ANY, can_retry=can_retry

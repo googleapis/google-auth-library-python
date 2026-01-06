@@ -13,6 +13,11 @@
 # limitations under the License.
 
 from unittest import mock
+try:
+    from unittest.mock import AsyncMock
+except ImportError:
+    # Fallback for Python < 3.8
+    from mock import AsyncMock
 
 import pytest  # type: ignore
 
@@ -57,12 +62,8 @@ def test_minimum_total_attempts():
     _exponential_backoff.ExponentialBackoff(total_attempts=1)
 
 
-async def async_sleep(delay):
-    pass
-
-
 @pytest.mark.asyncio
-@mock.patch("asyncio.sleep", side_effect=async_sleep)
+@mock.patch("asyncio.sleep", new_callable=AsyncMock)
 async def test_exponential_backoff_async(mock_time_async):
     eb = _exponential_backoff.AsyncExponentialBackoff()
     curr_wait = eb._current_wait_in_seconds
