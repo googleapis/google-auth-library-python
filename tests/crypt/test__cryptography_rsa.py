@@ -15,6 +15,7 @@
 import json
 import os
 import pickle
+import warnings
 
 from cryptography.hazmat.primitives.asymmetric import rsa
 import pytest  # type: ignore
@@ -174,3 +175,37 @@ class TestRSASigner(object):
 
         assert signer.key_id == SERVICE_ACCOUNT_INFO[base._JSON_FILE_PRIVATE_KEY_ID]
         assert isinstance(signer._key, rsa.RSAPrivateKey)
+
+
+@pytest.mark.skipif(rsa is None, reason="rsa library is not installed")
+class TestRSATransparency(object):
+    @classmethod
+    def setup_class(cls):
+        import rsa
+        (cls.pub_key_rsa, cls.priv_key_rsa) = rsa.newkeys(512)
+        cls.message = b"test message"
+
+    @pytest.mark.filterwarnings("ignore::DeprecationWarning")
+    def test_rsa_key_signing_and_verification(self):
+        # Test RSASigner with rsa.key.PrivateKey
+        signer = _cryptography_rsa.RSASigner(self.priv_key_rsa)
+        signature = signer.sign(self.message)
+        assert isinstance(signer._key, rsa.RSAPrivateKey)
+
+        # Test RSAVerifier with rsa.key.PublicKey
+        verifier = _cryptography_rsa.RSAVerifier(self.pub_key_rsa)
+        assert verifier.verify(self.message, signature) is True
+        assert isinstance(verifier._pubkey, rsa.RSAPublicKey)
+
+    def test_rsa_key_warning(self):
+        # Reset the global flag to ensure the warning is issued
+        _cryptography_rsa._RSA_DEPRECATION_WARNED = False
+        with pytest.warns(DeprecationWarning) as record:
+            _cryptography_rsa.RSASigner(self.priv_key_rsa)
+            # duplicates should be ignored
+            _cryptography_rsa.RSAVerifier(self.pub_key_rsa)
+            _cryptography_rsa.RSASigner(self.priv_key_rsa)
+            _cryptography_rsa.RSAVerifier(self.pub_key_rsa)
+
+        assert len(record) == 1
+        assert "The 'rsa' library is deprecated" in str(record[0].message)
