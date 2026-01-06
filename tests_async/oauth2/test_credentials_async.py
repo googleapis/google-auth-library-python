@@ -22,10 +22,7 @@ if sys.version_info >= (3, 8):
     from unittest.mock import AsyncMock
 else:
     import mock
-    try:
-        from mock import AsyncMock
-    except ImportError:
-        from asyncmock import AsyncMock
+    from mock import AsyncMock
 
 import pytest  # type: ignore
 

@@ -13,11 +13,12 @@
 # limitations under the License.
 
 import copy
-from unittest import mock
-try:
+import sys
+if sys.version_info >= (3, 8):
+    from unittest import mock
     from unittest.mock import AsyncMock
-except ImportError:
-    # Fallback for Python < 3.8
+else:
+    import mock
     from mock import AsyncMock
 
 import pytest  # type: ignore
