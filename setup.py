@@ -20,7 +20,6 @@ from setuptools import setup
 
 
 DEPENDENCIES = (
-    "cachetools>=2.0.0,<7.0",
     "pyasn1-modules>=0.2.1",
     "cryptography >= 38.0.3",
     "cryptography < 39.0.0; python_version < '3.8'",
@@ -48,7 +47,6 @@ testing_extra_require = [
     "grpcio",
     "flask",
     "freezegun",
-    "mock",
     # TODO(https://github.com/googleapis/google-auth-library-python/issues/1736): Remove `oauth2client` from testing requirements once an extra is added for `oauth2client` dependency.
     "oauth2client",
     *pyjwt_extra_require,
