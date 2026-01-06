@@ -16,6 +16,11 @@ import datetime
 import http.client as http_client
 import json
 from unittest import mock
+try:
+    from unittest.mock import AsyncMock
+except ImportError:
+    # Fallback for Python < 3.8
+    from mock import AsyncMock
 import urllib
 
 import pytest  # type: ignore
@@ -29,13 +34,13 @@ from tests.oauth2 import test__client as test_client
 
 
 def make_request(response_data, status=http_client.OK, text=False):
-    response = mock.AsyncMock(spec=["transport.Response"])
+    response = AsyncMock(spec=["transport.Response"])
     response.status = status
     data = response_data if text else json.dumps(response_data).encode("utf-8")
-    response.data = mock.AsyncMock(spec=["__call__", "read"])
-    response.data.read = mock.AsyncMock(spec=["__call__"], return_value=data)
-    response.content = mock.AsyncMock(spec=["__call__"], return_value=data)
-    request = mock.AsyncMock(spec=["transport.Request"])
+    response.data = AsyncMock(spec=["__call__", "read"])
+    response.data.read = AsyncMock(spec=["__call__"], return_value=data)
+    response.content = AsyncMock(spec=["__call__"], return_value=data)
+    request = AsyncMock(spec=["transport.Request"])
     request.return_value = response
     return request
 
@@ -142,21 +147,21 @@ async def test__token_endpoint_request_internal_failure_error():
 
 @pytest.mark.asyncio
 async def test__token_endpoint_request_internal_failure_and_retry_failure_error():
-    retryable_error = mock.AsyncMock(spec=["transport.Response"])
+    retryable_error = AsyncMock(spec=["transport.Response"])
     retryable_error.status = http_client.BAD_REQUEST
     data = json.dumps({"error_description": "internal_failure"}).encode("utf-8")
-    retryable_error.data = mock.AsyncMock(spec=["__call__", "read"])
-    retryable_error.data.read = mock.AsyncMock(spec=["__call__"], return_value=data)
-    retryable_error.content = mock.AsyncMock(spec=["__call__"], return_value=data)
+    retryable_error.data = AsyncMock(spec=["__call__", "read"])
+    retryable_error.data.read = AsyncMock(spec=["__call__"], return_value=data)
+    retryable_error.content = AsyncMock(spec=["__call__"], return_value=data)
 
-    unretryable_error = mock.AsyncMock(spec=["transport.Response"])
+    unretryable_error = AsyncMock(spec=["transport.Response"])
     unretryable_error.status = http_client.BAD_REQUEST
     data = json.dumps({"error_description": "invalid_scope"}).encode("utf-8")
-    unretryable_error.data = mock.AsyncMock(spec=["__call__", "read"])
-    unretryable_error.data.read = mock.AsyncMock(spec=["__call__"], return_value=data)
-    unretryable_error.content = mock.AsyncMock(spec=["__call__"], return_value=data)
+    unretryable_error.data = AsyncMock(spec=["__call__", "read"])
+    unretryable_error.data.read = AsyncMock(spec=["__call__"], return_value=data)
+    unretryable_error.content = AsyncMock(spec=["__call__"], return_value=data)
 
-    request = mock.AsyncMock(spec=["transport.Request"])
+    request = AsyncMock(spec=["transport.Request"])
     request.side_effect = [retryable_error, retryable_error, unretryable_error]
 
     with pytest.raises(exceptions.RefreshError):
@@ -170,21 +175,21 @@ async def test__token_endpoint_request_internal_failure_and_retry_failure_error(
 
 @pytest.mark.asyncio
 async def test__token_endpoint_request_internal_failure_and_retry_succeeds():
-    retryable_error = mock.AsyncMock(spec=["transport.Response"])
+    retryable_error = AsyncMock(spec=["transport.Response"])
     retryable_error.status = http_client.BAD_REQUEST
     data = json.dumps({"error_description": "internal_failure"}).encode("utf-8")
-    retryable_error.data = mock.AsyncMock(spec=["__call__", "read"])
-    retryable_error.data.read = mock.AsyncMock(spec=["__call__"], return_value=data)
-    retryable_error.content = mock.AsyncMock(spec=["__call__"], return_value=data)
+    retryable_error.data = AsyncMock(spec=["__call__", "read"])
+    retryable_error.data.read = AsyncMock(spec=["__call__"], return_value=data)
+    retryable_error.content = AsyncMock(spec=["__call__"], return_value=data)
 
-    response = mock.AsyncMock(spec=["transport.Response"])
+    response = AsyncMock(spec=["transport.Response"])
     response.status = http_client.OK
     data = json.dumps({"hello": "world"}).encode("utf-8")
-    response.data = mock.AsyncMock(spec=["__call__", "read"])
-    response.data.read = mock.AsyncMock(spec=["__call__"], return_value=data)
-    response.content = mock.AsyncMock(spec=["__call__"], return_value=data)
+    response.data = AsyncMock(spec=["__call__", "read"])
+    response.data.read = AsyncMock(spec=["__call__"], return_value=data)
+    response.content = AsyncMock(spec=["__call__"], return_value=data)
 
-    request = mock.AsyncMock(spec=["transport.Request"])
+    request = AsyncMock(spec=["transport.Request"])
     request.side_effect = [retryable_error, response]
 
     _ = await _client._token_endpoint_request(
@@ -399,7 +404,7 @@ async def test_jwt_grant_retry_with_retry(
     mock_token_endpoint_request, mock_expiry, can_retry
 ):
     _ = await _client.jwt_grant(
-        mock.AsyncMock(), mock.Mock(), mock.Mock(), can_retry=can_retry
+        AsyncMock(), mock.Mock(), mock.Mock(), can_retry=can_retry
     )
     mock_token_endpoint_request.assert_called_with(
         mock.ANY, mock.ANY, mock.ANY, can_retry=can_retry
@@ -426,7 +431,7 @@ async def test_id_token_jwt_grant_retry_with_retry(
     mock_token_endpoint_request, mock_jwt_decode, can_retry
 ):
     _ = await _client.id_token_jwt_grant(
-        mock.AsyncMock(), mock.AsyncMock(), mock.AsyncMock(), can_retry=can_retry
+        AsyncMock(), AsyncMock(), AsyncMock(), can_retry=can_retry
     )
     mock_token_endpoint_request.assert_called_with(
         mock.ANY, mock.ANY, mock.ANY, can_retry=can_retry
@@ -440,11 +445,11 @@ async def test_refresh_grant_retry_default(
     mock_token_endpoint_request, mock_parse_expiry
 ):
     _ = await _client.refresh_grant(
-        mock.AsyncMock(),
-        mock.AsyncMock(),
-        mock.AsyncMock(),
-        mock.AsyncMock(),
-        mock.AsyncMock(),
+        AsyncMock(),
+        AsyncMock(),
+        AsyncMock(),
+        AsyncMock(),
+        AsyncMock(),
     )
     mock_token_endpoint_request.assert_called_with(
         mock.ANY, mock.ANY, mock.ANY, can_retry=True
@@ -459,11 +464,11 @@ async def test_refresh_grant_retry_with_retry(
     mock_token_endpoint_request, mock_parse_expiry, can_retry
 ):
     _ = await _client.refresh_grant(
-        mock.AsyncMock(),
-        mock.AsyncMock(),
-        mock.AsyncMock(),
-        mock.AsyncMock(),
-        mock.AsyncMock(),
+        AsyncMock(),
+        AsyncMock(),
+        AsyncMock(),
+        AsyncMock(),
+        AsyncMock(),
         can_retry=can_retry,
     )
     mock_token_endpoint_request.assert_called_with(
@@ -481,10 +486,10 @@ async def test__token_endpoint_request_no_throw_with_retry(can_retry):
 
     _ = await _client._token_endpoint_request_no_throw(
         mock_request,
-        mock.AsyncMock(),
+        AsyncMock(),
         "body",
-        mock.AsyncMock(),
-        mock.AsyncMock(),
+        AsyncMock(),
+        AsyncMock(),
         can_retry=can_retry,
     )
 

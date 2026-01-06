@@ -14,6 +14,11 @@
 
 import datetime
 from unittest import mock
+try:
+    from unittest.mock import AsyncMock
+except ImportError:
+    # Fallback for Python < 3.8
+    from mock import AsyncMock
 
 import pytest  # type: ignore
 
@@ -331,7 +336,7 @@ class TestIDTokenCredentials(object):
             {},
         )
 
-        request = mock.AsyncMock(spec=["transport.Request"])
+        request = AsyncMock(spec=["transport.Request"])
 
         # Refresh credentials
         await credentials.refresh(request)
@@ -363,7 +368,7 @@ class TestIDTokenCredentials(object):
             _helpers.utcnow() + datetime.timedelta(seconds=500),
             None,
         )
-        request = mock.AsyncMock(spec=["transport.Request"])
+        request = AsyncMock(spec=["transport.Request"])
 
         # Credentials should start as invalid
         assert not credentials.valid

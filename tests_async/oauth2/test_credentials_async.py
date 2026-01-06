@@ -18,6 +18,11 @@ import os
 import pickle
 import sys
 from unittest import mock
+try:
+    from unittest.mock import AsyncMock
+except ImportError:
+    # Fallback for Python < 3.8
+    from mock import AsyncMock
 
 import pytest  # type: ignore
 
@@ -82,7 +87,7 @@ class TestCredentials:
             rapt_token,
         )
 
-        request = mock.AsyncMock(spec=["transport.Request"])
+        request = AsyncMock(spec=["transport.Request"])
         creds = self.make_credentials()
 
         # Refresh credentials
@@ -112,7 +117,7 @@ class TestCredentials:
 
     @pytest.mark.asyncio
     async def test_refresh_no_refresh_token(self):
-        request = mock.AsyncMock(spec=["transport.Request"])
+        request = AsyncMock(spec=["transport.Request"])
         credentials_ = _credentials_async.Credentials(token=None, refresh_token=None)
 
         with pytest.raises(exceptions.RefreshError, match="necessary fields"):
@@ -147,7 +152,7 @@ class TestCredentials:
             rapt_token,
         )
 
-        request = mock.AsyncMock(spec=["transport.Request"])
+        request = AsyncMock(spec=["transport.Request"])
         creds = _credentials_async.Credentials(
             token=None,
             refresh_token=self.REFRESH_TOKEN,
@@ -211,7 +216,7 @@ class TestCredentials:
             rapt_token,
         )
 
-        request = mock.AsyncMock(spec=["transport.Request"])
+        request = AsyncMock(spec=["transport.Request"])
         creds = _credentials_async.Credentials(
             token=None,
             refresh_token=self.REFRESH_TOKEN,
@@ -278,7 +283,7 @@ class TestCredentials:
             rapt_token,
         )
 
-        request = mock.AsyncMock(spec=["transport.Request"])
+        request = AsyncMock(spec=["transport.Request"])
         creds = _credentials_async.Credentials(
             token=None,
             refresh_token=self.REFRESH_TOKEN,

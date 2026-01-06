@@ -15,6 +15,11 @@
 import json
 import os
 from unittest import mock
+try:
+    from unittest.mock import AsyncMock
+except ImportError:
+    # Fallback for Python < 3.8
+    from mock import AsyncMock
 
 import pytest  # type: ignore
 
@@ -28,16 +33,16 @@ from tests.oauth2 import test_id_token
 
 
 def make_request(status, data=None):
-    response = mock.AsyncMock(spec=["transport.Response"])
+    response = AsyncMock(spec=["transport.Response"])
     response.status = status
 
     if data is not None:
-        response.data = mock.AsyncMock(spec=["__call__", "read"])
-        response.content = mock.AsyncMock(
+        response.data = AsyncMock(spec=["__call__", "read"])
+        response.content = AsyncMock(
             spec=["__call__"], return_value=json.dumps(data).encode("utf-8")
         )
 
-    request = mock.AsyncMock(spec=["transport.Request"])
+    request = AsyncMock(spec=["transport.Request"])
     request.return_value = response
     return request
 
@@ -223,7 +228,7 @@ async def test_fetch_id_token_from_metadata_server(monkeypatch):
             __init__=mock_init,
             refresh=mock.Mock(),
         ):
-            request = mock.AsyncMock()
+            request = AsyncMock()
             token = await id_token.fetch_id_token(
                 request, "https://pubsub.googleapis.com"
             )
@@ -240,7 +245,7 @@ async def test_fetch_id_token_from_explicit_cred_json_file(monkeypatch):
     with mock.patch.object(
         _service_account_async.IDTokenCredentials, "refresh", mock_refresh
     ):
-        request = mock.AsyncMock()
+        request = AsyncMock()
         token = await id_token.fetch_id_token(request, "https://pubsub.googleapis.com")
         assert token == "id_token"
 
@@ -254,7 +259,7 @@ async def test_fetch_id_token_no_cred_exists(monkeypatch):
         side_effect=exceptions.TransportError(),
     ):
         with pytest.raises(exceptions.DefaultCredentialsError) as excinfo:
-            request = mock.AsyncMock()
+            request = AsyncMock()
             await id_token.fetch_id_token(request, "https://pubsub.googleapis.com")
         assert excinfo.match(
             r"Neither metadata server or valid service account credentials are found."
@@ -262,7 +267,7 @@ async def test_fetch_id_token_no_cred_exists(monkeypatch):
 
     with mock.patch("google.auth.compute_engine._metadata.ping", return_value=False):
         with pytest.raises(exceptions.DefaultCredentialsError) as excinfo:
-            request = mock.AsyncMock()
+            request = AsyncMock()
             await id_token.fetch_id_token(request, "https://pubsub.googleapis.com")
         assert excinfo.match(
             r"Neither metadata server or valid service account credentials are found."
@@ -277,7 +282,7 @@ async def test_fetch_id_token_invalid_cred_file(monkeypatch):
     monkeypatch.setenv(environment_vars.CREDENTIALS, not_json_file)
 
     with pytest.raises(exceptions.DefaultCredentialsError) as excinfo:
-        request = mock.AsyncMock()
+        request = AsyncMock()
         await id_token.fetch_id_token(request, "https://pubsub.googleapis.com")
     assert excinfo.match(
         r"GOOGLE_APPLICATION_CREDENTIALS is not valid service account credentials."
@@ -293,7 +298,7 @@ async def test_fetch_id_token_invalid_cred_type(monkeypatch):
 
     with mock.patch("google.auth.compute_engine._metadata.ping", return_value=False):
         with pytest.raises(exceptions.DefaultCredentialsError) as excinfo:
-            request = mock.AsyncMock()
+            request = AsyncMock()
             await id_token.fetch_id_token(request, "https://pubsub.googleapis.com")
         assert excinfo.match(
             r"Neither metadata server or valid service account credentials are found."
@@ -308,7 +313,7 @@ async def test_fetch_id_token_invalid_cred_path(monkeypatch):
     monkeypatch.setenv(environment_vars.CREDENTIALS, not_json_file)
 
     with pytest.raises(exceptions.DefaultCredentialsError) as excinfo:
-        request = mock.AsyncMock()
+        request = AsyncMock()
         await id_token.fetch_id_token(request, "https://pubsub.googleapis.com")
     assert excinfo.match(
         r"GOOGLE_APPLICATION_CREDENTIALS path is either not found or invalid."
