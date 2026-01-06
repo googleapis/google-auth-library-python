@@ -42,8 +42,6 @@ nox.options.sessions = [
     "lint",
     "blacken",
     "mypy",
-    "unit-3.7",
-    "unit-3.8",
     "unit-3.9",
     "unit-3.10",
     "unit-3.11",
