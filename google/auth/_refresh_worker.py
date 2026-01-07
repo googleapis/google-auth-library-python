@@ -61,8 +61,8 @@ class RefreshThreadManager:
 
     def clear_error(self):
         """
-      Removes any errors that were stored from previous background refreshes.
-      """
+        Removes any errors that were stored from previous background refreshes.
+        """
         with self._lock:
             if self._worker:
                 self._worker._error_info = None
@@ -75,7 +75,7 @@ class RefreshThreadManager:
 
     def __setstate__(self, state):
         """Pickle helper that deserializes the _lock attribute."""
-        state["_key"] = threading.Lock()
+        state["_lock"] = threading.Lock()
         self.__dict__.update(state)
 
 

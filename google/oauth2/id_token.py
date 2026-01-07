@@ -54,14 +54,17 @@ library like `CacheControl`_ to create a cache-aware
     http://openid.net/specs/openid-connect-core-1_0.html#IDToken
 .. _CacheControl: https://cachecontrol.readthedocs.io
 """
+from __future__ import annotations
 
 import http.client as http_client
 import json
 import os
+from typing import Any, Mapping, Union
 
 from google.auth import environment_vars
 from google.auth import exceptions
 from google.auth import jwt
+from google.auth import transport
 
 
 # The URL that provides public certificates for verifying ID tokens issued
@@ -81,8 +84,9 @@ _GOOGLE_ISSUERS = ["accounts.google.com", "https://accounts.google.com"]
 def _fetch_certs(request, certs_url):
     """Fetches certificates.
 
-    Google-style cerificate endpoints return JSON in the format of
-    ``{'key id': 'x509 certificate'}``.
+    Google-style certificate endpoints return JSON in the format of
+    ``{'key id': 'x509 certificate'}`` or a certificate array according
+    to the JWK spec (see https://tools.ietf.org/html/rfc7517).
 
     Args:
         request (google.auth.transport.Request): The object used to make
@@ -90,8 +94,8 @@ def _fetch_certs(request, certs_url):
         certs_url (str): The certificate endpoint URL.
 
     Returns:
-        Mapping[str, str]: A mapping of public key ID to x.509 certificate
-            data.
+        Mapping[str, str] | Mapping[str, list]: A mapping of public keys
+        in x.509 or JWK spec.
     """
     response = request(certs_url, method="GET")
 
@@ -104,12 +108,12 @@ def _fetch_certs(request, certs_url):
 
 
 def verify_token(
-    id_token,
-    request,
-    audience=None,
-    certs_url=_GOOGLE_OAUTH2_CERTS_URL,
-    clock_skew_in_seconds=0,
-):
+    id_token: Union[str, bytes],
+    request: transport.Request,
+    audience: Union[str, list[str], None] = None,
+    certs_url: str = _GOOGLE_OAUTH2_CERTS_URL,
+    clock_skew_in_seconds: int = 0,
+) -> Mapping[str, Any]:
     """Verifies an ID token and returns the decoded token.
 
     Args:
@@ -120,7 +124,8 @@ def verify_token(
             intended for. If None then the audience is not verified.
         certs_url (str): The URL that specifies the certificates to use to
             verify the token. This URL should return JSON in the format of
-            ``{'key id': 'x509 certificate'}``.
+            ``{'key id': 'x509 certificate'}`` or a certificate array according to
+            the JWK spec (see https://tools.ietf.org/html/rfc7517).
         clock_skew_in_seconds (int): The clock skew used for `iat` and `exp`
             validation.
 
@@ -129,12 +134,28 @@ def verify_token(
     """
     certs = _fetch_certs(request, certs_url)
 
-    return jwt.decode(
-        id_token,
-        certs=certs,
-        audience=audience,
-        clock_skew_in_seconds=clock_skew_in_seconds,
-    )
+    if "keys" in certs:
+        try:
+            import jwt as jwt_lib  # type: ignore
+        except ImportError as caught_exc:  # pragma: NO COVER
+            raise ImportError(
+                "The pyjwt library is not installed, please install the pyjwt package to use the jwk certs format."
+            ) from caught_exc
+        jwks_client = jwt_lib.PyJWKClient(certs_url)
+        signing_key = jwks_client.get_signing_key_from_jwt(id_token)
+        return jwt_lib.decode(
+            id_token,
+            signing_key.key,
+            algorithms=[signing_key.algorithm_name],
+            audience=audience,
+        )
+    else:
+        return jwt.decode(
+            id_token,
+            certs=certs,
+            audience=audience,
+            clock_skew_in_seconds=clock_skew_in_seconds,
+        )
 
 
 def verify_oauth2_token(id_token, request, audience=None, clock_skew_in_seconds=0):
@@ -265,6 +286,18 @@ def fetch_id_token_credentials(audience, request=None):
                 if info.get("type") == "service_account":
                     return service_account.IDTokenCredentials.from_service_account_info(
                         info, target_audience=audience
+                    )
+                elif info.get("type") == "impersonated_service_account":
+                    from google.auth import impersonated_credentials
+
+                    target_credentials = impersonated_credentials.Credentials.from_impersonated_service_account_info(
+                        info
+                    )
+
+                    return impersonated_credentials.IDTokenCredentials(
+                        target_credentials=target_credentials,
+                        target_audience=audience,
+                        include_email=True,
                     )
         except ValueError as caught_exc:
             new_exc = exceptions.DefaultCredentialsError(

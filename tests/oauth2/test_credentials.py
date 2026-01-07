@@ -17,8 +17,8 @@ import json
 import os
 import pickle
 import sys
+from unittest import mock
 
-import mock
 import pytest  # type: ignore
 
 from google.auth import _helpers
@@ -56,6 +56,31 @@ class TestCredentials(object):
             enable_reauth_refresh=True,
         )
 
+    def test_init_with_set_scopes(self):
+        # Regression test for https://github.com/googleapis/google-auth-library-python/issues/1145
+        scopes_set = {"a", "b"}
+        creds = credentials.Credentials(token="token", scopes=scopes_set)
+
+        # Verify scopes are converted to a list
+        assert isinstance(creds.scopes, list)
+        assert set(creds.scopes) == scopes_set
+
+        # Verify internal storage is a list (ensure consistent mutability)
+        assert isinstance(creds._scopes, list)
+
+        # Verify consistency (property returns the same object)
+        assert creds.scopes is creds.scopes
+
+        # Verify modifications persist
+        creds.scopes.append("c")
+        assert "c" in creds.scopes
+        assert len(creds.scopes) == 3
+
+        # Verify to_json works
+        json_output = creds.to_json()
+        data = json.loads(json_output)
+        assert set(data["scopes"]) == {"a", "b", "c"}
+
     def test_default_state(self):
         credentials = self.make_credentials()
         assert not credentials.valid
@@ -71,6 +96,34 @@ class TestCredentials(object):
         assert credentials.client_secret == self.CLIENT_SECRET
         assert credentials.rapt_token == self.RAPT_TOKEN
         assert credentials.refresh_handler is None
+
+    def test_get_cred_info(self):
+        credentials = self.make_credentials()
+        credentials._account = "fake-account"
+        assert not credentials.get_cred_info()
+
+        credentials._cred_file_path = "/path/to/file"
+        assert credentials.get_cred_info() == {
+            "credential_source": "/path/to/file",
+            "credential_type": "user credentials",
+            "principal": "fake-account",
+        }
+
+    def test_get_cred_info_no_account(self):
+        credentials = self.make_credentials()
+        assert not credentials.get_cred_info()
+
+        credentials._cred_file_path = "/path/to/file"
+        assert credentials.get_cred_info() == {
+            "credential_source": "/path/to/file",
+            "credential_type": "user credentials",
+        }
+
+    def test__make_copy_get_cred_info(self):
+        credentials = self.make_credentials()
+        credentials._cred_file_path = "/path/to/file"
+        cred_copy = credentials._make_copy()
+        assert cred_copy._cred_file_path == "/path/to/file"
 
     def test_token_usage_metrics(self):
         credentials = self.make_credentials()

@@ -16,8 +16,8 @@ import pickle
 import random
 import threading
 import time
+from unittest import mock
 
-import mock
 import pytest  # type: ignore
 
 from google.auth import _refresh_worker, credentials, exceptions
@@ -150,7 +150,10 @@ def test_refresh_dead_worker():
 
 def test_pickle():
     w = _refresh_worker.RefreshThreadManager()
+    # For some reason isinstance cannot interpret threading.Lock as a type.
+    assert w._lock is not None
 
     pickled_manager = pickle.dumps(w)
     manager = pickle.loads(pickled_manager)
     assert isinstance(manager, _refresh_worker.RefreshThreadManager)
+    assert manager._lock is not None
