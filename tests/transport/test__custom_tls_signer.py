@@ -14,16 +14,20 @@
 import base64
 import ctypes
 import os
+from unittest import mock
 
-import mock
 import pytest  # type: ignore
 from requests.packages.urllib3.util.ssl_ import create_urllib3_context  # type: ignore
-import urllib3.contrib.pyopenssl  # type: ignore
 
 from google.auth import exceptions
 from google.auth.transport import _custom_tls_signer
 
-urllib3.contrib.pyopenssl.inject_into_urllib3()
+urllib3_pyopenssl = pytest.importorskip(
+    "urllib3.contrib.pyopenssl",
+    reason="urllib3.contrib.pyopenssl not available in this environment",
+)
+
+urllib3_pyopenssl.inject_into_urllib3()
 
 FAKE_ENTERPRISE_CERT_FILE_PATH = "/path/to/enterprise/cert/file"
 ENTERPRISE_CERT_FILE = os.path.join(
@@ -195,6 +199,7 @@ def test_custom_tls_signer():
                     get_cert.assert_called_once()
                     get_sign_callback.assert_called_once()
                     offload_lib.ConfigureSslContext.assert_called_once()
+    assert not signer_object.should_use_provider()
     assert signer_object._enterprise_cert_file_path == ENTERPRISE_CERT_FILE
     assert signer_object._offload_lib == offload_lib
     assert signer_object._signer_lib == signer_lib
@@ -216,6 +221,7 @@ def test_custom_tls_signer_provider():
         signer_object.load_libraries()
         signer_object.attach_to_ssl_context(mock.MagicMock())
 
+    assert signer_object.should_use_provider()
     assert signer_object._enterprise_cert_file_path == ENTERPRISE_CERT_FILE_PROVIDER
     assert signer_object._provider_lib == provider_lib
     load_provider_lib.assert_called_with("/path/to/provider/lib")

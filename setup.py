@@ -20,21 +20,73 @@ from setuptools import setup
 
 
 DEPENDENCIES = (
-    "cachetools>=2.0.0,<6.0",
     "pyasn1-modules>=0.2.1",
     # rsa==4.5 is the last version to support 2.7
     # https://github.com/sybrenstuvel/python-rsa/issues/152#issuecomment-643470233
     "rsa>=3.1.4,<5",
 )
 
+cryptography_base_require = [
+    "cryptography >= 38.0.3",
+]
+
+requests_extra_require = ["requests >= 2.20.0, < 3.0.0"]
+
+aiohttp_extra_require = ["aiohttp >= 3.6.2, < 4.0.0", *requests_extra_require]
+
+pyjwt_extra_require = ["pyjwt>=2.0", *cryptography_base_require]
+
+reauth_extra_require = ["pyu2f>=0.1.5"]
+
+# TODO(https://github.com/googleapis/google-auth-library-python/issues/1738): Add bounds for cryptography and pyopenssl dependencies.
+enterprise_cert_extra_require = ["cryptography", "pyopenssl"]
+
+pyopenssl_extra_require = ["pyopenssl>=20.0.0", cryptography_base_require]
+
+# TODO(https://github.com/googleapis/google-auth-library-python/issues/1739): Add bounds for urllib3 and packaging dependencies.
+urllib3_extra_require = ["urllib3", "packaging"]
+
+# Unit test requirements.
+testing_extra_require = [
+    # TODO(https://github.com/googleapis/google-auth-library-python/issues/1735): Remove `grpcio` from testing requirements once an extra is added for `grpcio` dependency.
+    "grpcio",
+    "flask",
+    "freezegun",
+    # TODO(https://github.com/googleapis/google-auth-library-python/issues/1736): Remove `oauth2client` from testing requirements once an extra is added for `oauth2client` dependency.
+    "oauth2client",
+    *pyjwt_extra_require,
+    "pytest",
+    "pytest-cov",
+    "pytest-localserver",
+    *pyopenssl_extra_require,
+    *reauth_extra_require,
+    "responses",
+    *urllib3_extra_require,
+    # Async Dependencies
+    *aiohttp_extra_require,
+    "aioresponses",
+    "pytest-asyncio",
+    # TODO(https://github.com/googleapis/google-auth-library-python/issues/1665): Remove the pinned version of pyopenssl
+    # once `TestDecryptPrivateKey::test_success` is updated to remove the deprecated `OpenSSL.crypto.sign` and
+    # `OpenSSL.crypto.verify` methods. See: https://www.pyopenssl.org/en/latest/changelog.html#id3.
+    "pyopenssl < 24.3.0",
+    # TODO(https://github.com/googleapis/google-auth-library-python/issues/1722): `test_aiohttp_requests` depend on
+    # aiohttp < 3.10.0 which is a bug. Investigate and remove the pinned aiohttp version.
+    "aiohttp < 3.10.0",
+]
+
 extras = {
-    "aiohttp": ["aiohttp >= 3.6.2, < 4.0.0.dev0", "requests >= 2.20.0, < 3.0.0.dev0"],
-    "pyopenssl": ["pyopenssl>=20.0.0", "cryptography>=38.0.3"],
-    "requests": "requests >= 2.20.0, < 3.0.0.dev0",
-    "reauth": "pyu2f>=0.1.5",
-    # Enterprise cert only works for OpenSSL 1.1.1. Newer versions of these
-    # dependencies are built with OpenSSL 3.0 so we need to fix the version.
-    "enterprise_cert": ["cryptography==36.0.2", "pyopenssl==22.0.0"],
+    "cryptography": cryptography_base_require,
+    "aiohttp": aiohttp_extra_require,
+    "enterprise_cert": enterprise_cert_extra_require,
+    "pyopenssl": pyopenssl_extra_require,
+    "pyjwt": pyjwt_extra_require,
+    "reauth": reauth_extra_require,
+    "requests": requests_extra_require,
+    "testing": testing_extra_require,
+    "urllib3": urllib3_extra_require,
+    # TODO(https://github.com/googleapis/google-auth-library-python/issues/1735): Add an extra for `grpcio` dependency.
+    # TODO(https://github.com/googleapis/google-auth-library-python/issues/1736): Add an extra for `oauth2client` dependency.
 }
 
 with io.open("README.rst", "r") as fh:
@@ -58,19 +110,21 @@ setup(
     packages=find_namespace_packages(
         exclude=("tests*", "system_tests*", "docs*", "samples*")
     ),
+    package_data={"google.auth": ["py.typed"], "google.oauth2": ["py.typed"]},
     install_requires=DEPENDENCIES,
     extras_require=extras,
-    python_requires=">=3.7",
+    python_requires=">=3.8",
     license="Apache 2.0",
     keywords="google auth oauth client",
     classifiers=[
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
         "Programming Language :: Python :: 3.12",
+        "Programming Language :: Python :: 3.13",
+        "Programming Language :: Python :: 3.14",
         "Development Status :: 5 - Production/Stable",
         "Intended Audience :: Developers",
         "License :: OSI Approved :: Apache Software License",

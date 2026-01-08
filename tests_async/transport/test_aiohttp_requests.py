@@ -12,9 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from unittest import mock
+
 import aiohttp  # type: ignore
 from aioresponses import aioresponses, core  # type: ignore
-import mock
 import pytest  # type: ignore
 from tests_async.transport import async_compliance
 
@@ -39,7 +40,6 @@ class TestCombinedResponse:
 
     @pytest.mark.asyncio
     async def test_raw_content(self):
-
         mock_response = mock.AsyncMock()
         mock_response.content.read.return_value = mock.sentinel.read
         combined_response = aiohttp_requests._CombinedResponse(response=mock_response)
@@ -115,10 +115,11 @@ class TestRequestResponse(async_compliance.RequestResponseTests):
         http = aiohttp.ClientSession(auto_decompress=False)
         return aiohttp_requests.Request(http)
 
-    def test_unsupported_session(self):
+    @pytest.mark.asyncio
+    async def test_unsupported_session(self):
         http = aiohttp.ClientSession(auto_decompress=True)
         with pytest.raises(ValueError):
-            aiohttp_requests.Request(http)
+            await aiohttp_requests.Request(http)
 
     def test_timeout(self):
         http = mock.create_autospec(
@@ -144,11 +145,13 @@ class TestAuthorizedSession(object):
     TEST_URL = "http://example.com/"
     method = "GET"
 
-    def test_constructor(self):
+    @pytest.mark.asyncio
+    async def test_constructor(self):
         authed_session = aiohttp_requests.AuthorizedSession(mock.sentinel.credentials)
         assert authed_session.credentials == mock.sentinel.credentials
 
-    def test_constructor_with_auth_request(self):
+    @pytest.mark.asyncio
+    async def test_constructor_with_auth_request(self):
         http = mock.create_autospec(
             aiohttp.ClientSession, instance=True, _auto_decompress=False
         )
