@@ -46,6 +46,7 @@ pyopenssl_extra_require = ["pyopenssl>=20.0.0", cryptography_base_require]
 # TODO(https://github.com/googleapis/google-auth-library-python/issues/1739): Add bounds for urllib3 and packaging dependencies.
 urllib3_extra_require = ["urllib3", "packaging"]
 
+# TODO: rsa is archived. Remove optional dependency in future release
 rsa_extra_require = ["rsa>=3.1.4,<5"]
 
 # Unit test requirements.
