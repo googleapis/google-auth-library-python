@@ -46,6 +46,8 @@ pyopenssl_extra_require = ["pyopenssl>=20.0.0", cryptography_base_require]
 # TODO(https://github.com/googleapis/google-auth-library-python/issues/1739): Add bounds for urllib3 and packaging dependencies.
 urllib3_extra_require = ["urllib3", "packaging"]
 
+rsa_extra_require = ["rsa>=3.1.4,<5"]
+
 # Unit test requirements.
 testing_extra_require = [
     # TODO(https://github.com/googleapis/google-auth-library-python/issues/1735): Remove `grpcio` from testing requirements once an extra is added for `grpcio` dependency.
@@ -85,6 +87,7 @@ extras = {
     "requests": requests_extra_require,
     "testing": testing_extra_require,
     "urllib3": urllib3_extra_require,
+    "rsa": rsa_extra_require,
     # TODO(https://github.com/googleapis/google-auth-library-python/issues/1735): Add an extra for `grpcio` dependency.
     # TODO(https://github.com/googleapis/google-auth-library-python/issues/1736): Add an extra for `oauth2client` dependency.
 }
