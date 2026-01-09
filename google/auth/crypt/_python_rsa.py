@@ -74,6 +74,10 @@ def _bit_list_to_bytes(bit_list):
 class RSAVerifier(base.Verifier):
     """Verifies RSA cryptographic signatures using public keys.
 
+    .. deprecated::
+        The `rsa` library has been archived. Please migrate to
+        `cryptography`.
+
     Args:
         public_key (rsa.key.PublicKey): The public key used to verify
             signatures.
@@ -125,6 +129,10 @@ class RSAVerifier(base.Verifier):
 
 class RSASigner(base.Signer, base.FromServiceAccountMixin):
     """Signs messages with an RSA private key.
+
+    .. deprecated::
+        The `rsa` library has been archived. Please migrate to
+        `cryptography`.
 
     Args:
         private_key (rsa.key.PrivateKey): The private key to sign with.
