@@ -43,8 +43,7 @@ _PKCS8_SPEC = PrivateKeyInfo()
 warnings.warn(
     (
         "The 'rsa' library is deprecated and will be removed in a future release. "
-        "Please migrate to 'cryptography'. To keep using the legacy library, "
-        "install 'google-auth[rsa]'."
+        "Please migrate to 'cryptography'."
     ),
     category=FutureWarning,
     stacklevel=2,
