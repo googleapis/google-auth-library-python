@@ -333,7 +333,8 @@ def _get_explicit_environ_credentials(quota_project_id=None):
     explicit_file = os.environ.get(environment_vars.CREDENTIALS, "")
 
     _LOGGER.debug(
-        "Checking '%s' for explicit credentials as part of auth process...", explicit_file
+        "Checking '%s' for explicit credentials as part of auth process...",
+        explicit_file,
     )
 
     if explicit_file != "" and explicit_file == cloud_sdk_adc_path:
