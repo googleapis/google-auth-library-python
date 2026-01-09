@@ -41,6 +41,7 @@ try:
 except ImportError:  # pragma: NO COVER
     from collections import Mapping  # type: ignore
 import abc
+import base64
 import json
 import os
 from typing import NamedTuple
@@ -82,9 +83,9 @@ class SubjectTokenSupplier(metaclass=abc.ABCMeta):
 
 class _TokenContent(NamedTuple):
     """Models the token content response from file and url internal suppliers.
-        Attributes:
-            content (str): The string content of the file or URL response.
-            location (str): The location the content was retrieved from. This will either be a file location or a URL.
+    Attributes:
+        content (str): The string content of the file or URL response.
+        location (str): The location the content was retrieved from. This will either be a file location or a URL.
     """
 
     content: str
@@ -92,7 +93,7 @@ class _TokenContent(NamedTuple):
 
 
 class _FileSupplier(SubjectTokenSupplier):
-    """ Internal implementation of subject token supplier which supports reading a subject token from a file."""
+    """Internal implementation of subject token supplier which supports reading a subject token from a file."""
 
     def __init__(self, path, format_type, subject_token_field_name):
         self._path = path
@@ -113,7 +114,7 @@ class _FileSupplier(SubjectTokenSupplier):
 
 
 class _UrlSupplier(SubjectTokenSupplier):
-    """ Internal implementation of subject token supplier which supports retrieving a subject token by calling a URL endpoint."""
+    """Internal implementation of subject token supplier which supports retrieving a subject token by calling a URL endpoint."""
 
     def __init__(self, url, format_type, subject_token_field_name, headers):
         self._url = url
@@ -145,9 +146,88 @@ class _UrlSupplier(SubjectTokenSupplier):
 class _X509Supplier(SubjectTokenSupplier):
     """Internal supplier for X509 workload credentials. This class is used internally and always returns an empty string as the subject token."""
 
+    def __init__(self, trust_chain_path, leaf_cert_callback):
+        self._trust_chain_path = trust_chain_path
+        self._leaf_cert_callback = leaf_cert_callback
+
     @_helpers.copy_docstring(SubjectTokenSupplier)
     def get_subject_token(self, context, request):
-        return ""
+        # Import OpennSSL inline because it is an extra import only required by customers
+        # using mTLS.
+        from OpenSSL import crypto
+
+        leaf_cert = crypto.load_certificate(
+            crypto.FILETYPE_PEM, self._leaf_cert_callback()
+        )
+        trust_chain = self._read_trust_chain()
+        cert_chain = []
+
+        cert_chain.append(_X509Supplier._encode_cert(leaf_cert))
+
+        if trust_chain is None or len(trust_chain) == 0:
+            return json.dumps(cert_chain)
+
+        # Append the first cert if it is not the leaf cert.
+        first_cert = _X509Supplier._encode_cert(trust_chain[0])
+        if first_cert != cert_chain[0]:
+            cert_chain.append(first_cert)
+
+        for i in range(1, len(trust_chain)):
+            encoded = _X509Supplier._encode_cert(trust_chain[i])
+            # Check if the current cert is the leaf cert and raise an exception if it is.
+            if encoded == cert_chain[0]:
+                raise exceptions.RefreshError(
+                    "The leaf certificate must be at the top of the trust chain file"
+                )
+            else:
+                cert_chain.append(encoded)
+        return json.dumps(cert_chain)
+
+    def _read_trust_chain(self):
+        # Import OpennSSL inline because it is an extra import only required by customers
+        # using mTLS.
+        from OpenSSL import crypto
+
+        certificate_trust_chain = []
+        # If no trust chain path was provided, return an empty list.
+        if self._trust_chain_path is None or self._trust_chain_path == "":
+            return certificate_trust_chain
+        try:
+            # Open the trust chain file.
+            with open(self._trust_chain_path, "rb") as f:
+                trust_chain_data = f.read()
+                # Split PEM data into individual certificates.
+                cert_blocks = trust_chain_data.split(b"-----BEGIN CERTIFICATE-----")
+                for cert_block in cert_blocks:
+                    # Skip empty blocks.
+                    if cert_block.strip():
+                        cert_data = b"-----BEGIN CERTIFICATE-----" + cert_block
+                        try:
+                            # Load each certificate and add it to the trust chain.
+                            cert = crypto.load_certificate(
+                                crypto.FILETYPE_PEM, cert_data
+                            )
+                            certificate_trust_chain.append(cert)
+                        except Exception as e:
+                            raise exceptions.RefreshError(
+                                "Error loading PEM certificates from the trust chain file '{}'".format(
+                                    self._trust_chain_path
+                                )
+                            ) from e
+                return certificate_trust_chain
+        except FileNotFoundError:
+            raise exceptions.RefreshError(
+                "Trust chain file '{}' was not found.".format(self._trust_chain_path)
+            )
+
+    def _encode_cert(cert):
+        # Import OpennSSL inline because it is an extra import only required by customers
+        # using mTLS.
+        from OpenSSL import crypto
+
+        return base64.b64encode(
+            crypto.dump_certificate(crypto.FILETYPE_ASN1, cert)
+        ).decode("utf-8")
 
 
 def _parse_token_data(token_content, format_type="text", subject_token_field_name=None):
@@ -173,7 +253,16 @@ def _parse_token_data(token_content, format_type="text", subject_token_field_nam
 
 
 class Credentials(external_account.Credentials):
-    """External account credentials sourced from files and URLs."""
+    """External account credentials sourced from files and URLs.
+
+    **IMPORTANT**:
+    This class does not validate the credential configuration. A security
+    risk occurs when a credential configuration configured with malicious urls
+    is used.
+    When the credential configuration is accepted from an
+    untrusted source, you should validate it before using.
+    Refer https://cloud.google.com/docs/authentication/external/externally-sourced-credentials for more details.
+    """
 
     def __init__(
         self,
@@ -296,7 +385,9 @@ class Credentials(external_account.Credentials):
                     self._credential_source_headers,
                 )
             else:  # self._credential_source_certificate
-                self._subject_token_supplier = _X509Supplier()
+                self._subject_token_supplier = _X509Supplier(
+                    self._trust_chain_path, self._get_cert_bytes
+                )
 
     @_helpers.copy_docstring(external_account.Credentials)
     def retrieve_subject_token(self, request):
@@ -313,6 +404,10 @@ class Credentials(external_account.Credentials):
             return _mtls_helper._get_workload_cert_and_key_paths(
                 self._certificate_config_location
             )
+
+    def _get_cert_bytes(self):
+        cert_path, _ = self._get_mtls_cert_and_key_paths()
+        return _mtls_helper._read_cert_file(cert_path)
 
     def _mtls_required(self):
         return self._credential_source_certificate is not None
@@ -349,6 +444,9 @@ class Credentials(external_account.Credentials):
         )
         use_default = self._credential_source_certificate.get(
             "use_default_certificate_config"
+        )
+        self._trust_chain_path = self._credential_source_certificate.get(
+            "trust_chain_path"
         )
         if self._certificate_config_location and use_default:
             raise exceptions.MalformedError(
@@ -408,6 +506,14 @@ class Credentials(external_account.Credentials):
     def from_info(cls, info, **kwargs):
         """Creates an Identity Pool Credentials instance from parsed external account info.
 
+        **IMPORTANT**:
+        This method does not validate the credential configuration. A security
+        risk occurs when a credential configuration configured with malicious urls
+        is used.
+        When the credential configuration is accepted from an
+        untrusted source, you should validate it before using with this method.
+        Refer https://cloud.google.com/docs/authentication/external/externally-sourced-credentials for more details.
+
         Args:
             info (Mapping[str, str]): The Identity Pool external account info in Google
                 format.
@@ -428,6 +534,14 @@ class Credentials(external_account.Credentials):
     def from_file(cls, filename, **kwargs):
         """Creates an IdentityPool Credentials instance from an external account json file.
 
+        **IMPORTANT**:
+        This method does not validate the credential configuration. A security
+        risk occurs when a credential configuration configured with malicious urls
+        is used.
+        When the credential configuration is accepted from an
+        untrusted source, you should validate it before using with this method.
+        Refer https://cloud.google.com/docs/authentication/external/externally-sourced-credentials for more details.
+
         Args:
             filename (str): The path to the IdentityPool external account json file.
             kwargs: Additional arguments to pass to the constructor.
@@ -437,3 +551,25 @@ class Credentials(external_account.Credentials):
                 credentials.
         """
         return super(Credentials, cls).from_file(filename, **kwargs)
+
+    def refresh(self, request):
+        """Refreshes the access token.
+
+        Args:
+            request (google.auth.transport.Request): The object used to make
+                HTTP requests.
+        """
+        from google.auth import _agent_identity_utils
+
+        cert_fingerprint = None
+        # Check if the credential is X.509 based.
+        if self._credential_source_certificate is not None:
+            cert_bytes = self._get_cert_bytes()
+            cert = _agent_identity_utils.parse_certificate(cert_bytes)
+            if _agent_identity_utils.should_request_bound_token(cert):
+                cert_fingerprint = (
+                    _agent_identity_utils.calculate_certificate_fingerprint(cert)
+                )
+
+        self._perform_refresh_token(request, cert_fingerprint=cert_fingerprint)
+        self._handle_trust_boundary(request)
