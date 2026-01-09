@@ -22,6 +22,7 @@ certificates. There is no support for p12 files.
 from __future__ import absolute_import
 
 import io
+import warnings
 
 from pyasn1.codec.der import decoder  # type: ignore
 from pyasn1_modules import pem  # type: ignore
@@ -38,6 +39,16 @@ _CERTIFICATE_MARKER = b"-----BEGIN CERTIFICATE-----"
 _PKCS1_MARKER = ("-----BEGIN RSA PRIVATE KEY-----", "-----END RSA PRIVATE KEY-----")
 _PKCS8_MARKER = ("-----BEGIN PRIVATE KEY-----", "-----END PRIVATE KEY-----")
 _PKCS8_SPEC = PrivateKeyInfo()
+
+warnings.warn(
+    (
+        "The 'rsa' library is deprecated and will be removed in a future release. "
+        "Please migrate to 'cryptography'. To keep using the legacy library, "
+        "install 'google-auth[rsa]'."
+    ),
+    category=FutureWarning,
+    stacklevel=2,
+)
 
 
 def _bit_list_to_bytes(bit_list):
