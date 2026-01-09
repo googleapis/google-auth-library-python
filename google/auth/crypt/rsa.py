@@ -47,6 +47,10 @@ def _missing_impl_error(obj_or_cls):
 class RSAVerifier(base.Verifier):
     """Verifies RSA cryptographic signatures using public keys.
 
+    .. deprecated::
+        The `rsa` library has been archived. Please migrate to
+        `cryptography` for public keys.
+
     Args:
         public_key (Union[rsa.key.PublicKey, cryptography.hazmat.primitives.asymmetric.rsa.RSAPublicKey]):
             The public key used to verify signatures.
@@ -98,6 +102,10 @@ class RSAVerifier(base.Verifier):
 
 class RSASigner(base.Signer, base.FromServiceAccountMixin):
     """Signs messages with an RSA private key.
+
+    .. deprecated::
+        The `rsa` library has been archived. Please migrate to
+        `cryptography` for public keys.
 
     Args:
         private_key (Union[rsa.key.PrivateKey, cryptography.hazmat.primitives.asymmetric.rsa.RSAPrivateKey]):
