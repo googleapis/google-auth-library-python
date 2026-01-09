@@ -45,7 +45,7 @@ warnings.warn(
         "The 'rsa' library is deprecated and will be removed in a future release. "
         "Please migrate to 'cryptography'."
     ),
-    category=FutureWarning,
+    category=DeprecationWarning,
     stacklevel=2,
 )
 
