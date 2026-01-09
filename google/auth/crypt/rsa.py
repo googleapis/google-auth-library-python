@@ -22,9 +22,16 @@ try:
     RSASigner = _cryptography_rsa.RSASigner
     RSAVerifier = _cryptography_rsa.RSAVerifier
 except ImportError:  # pragma: NO COVER
-    # Fallback to pure-python RSA implementation if cryptography is
-    # unavailable.
-    from google.auth.crypt import _python_rsa
+    try:
+        # Try pure-python RSA implementation if cryptography is
+        # unavailable.
+        from google.auth.crypt import _python_rsa
 
-    RSASigner = _python_rsa.RSASigner  # type: ignore
-    RSAVerifier = _python_rsa.RSAVerifier  # type: ignore
+        RSASigner = _python_rsa.RSASigner  # type: ignore
+        RSAVerifier = _python_rsa.RSAVerifier  # type: ignore
+    except ImportError:  # pragma: NO COVER
+        # if rsa is not available, use default implementation (raises ImportError on use)
+        from google.auth.crypt import _default_rsa
+
+        RSASigner = _default_rsa.RSASigner  # type: ignore
+        RSAVerifier = _default_rsa.RSAVerifier  # type: ignore
