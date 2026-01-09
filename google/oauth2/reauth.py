@@ -274,6 +274,7 @@ def get_rapt_token(
 
     # Get rapt token from reauth API.
     rapt_token = _obtain_rapt(request, access_token, requested_scopes=scopes)
+    sys.stderr.write("Reauthentication successful.\n")
 
     return rapt_token
 
@@ -329,7 +330,11 @@ def refresh_grant(
         body["rapt"] = rapt_token
     metrics_header = {metrics.API_CLIENT_HEADER: metrics.token_request_user()}
 
-    response_status_ok, response_data, retryable_error = _client._token_endpoint_request_no_throw(
+    (
+        response_status_ok,
+        response_data,
+        retryable_error,
+    ) = _client._token_endpoint_request_no_throw(
         request, token_uri, body, headers=metrics_header
     )
 

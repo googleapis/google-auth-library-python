@@ -23,12 +23,12 @@ For more information about the token endpoint, see
 .. _Section 3.1 of rfc6749: https://tools.ietf.org/html/rfc6749#section-3.2
 """
 
-import datetime
 import http.client as http_client
 import json
 import urllib
 
 from google.auth import _exponential_backoff
+from google.auth import _helpers
 from google.auth import exceptions
 from google.auth import jwt
 from google.oauth2 import _client as client
@@ -67,7 +67,11 @@ async def _token_endpoint_request_no_throw(
     if access_token:
         headers["Authorization"] = "Bearer {}".format(access_token)
 
-    async def _perform_request():
+    response_data = {}
+    retryable_error = False
+
+    retries = _exponential_backoff.ExponentialBackoff()
+    for _ in retries:
         response = await request(
             method="POST", url=token_uri, headers=headers, body=body
         )
@@ -93,18 +97,8 @@ async def _token_endpoint_request_no_throw(
             status_code=response.status, response_data=response_data
         )
 
-        return False, response_data, retryable_error
-
-    request_succeeded, response_data, retryable_error = await _perform_request()
-
-    if request_succeeded or not retryable_error or not can_retry:
-        return request_succeeded, response_data, retryable_error
-
-    retries = _exponential_backoff.ExponentialBackoff()
-    for _ in retries:
-        request_succeeded, response_data, retryable_error = await _perform_request()
-        if request_succeeded or not retryable_error:
-            return request_succeeded, response_data, retryable_error
+        if not can_retry or not retryable_error:
+            return False, response_data, retryable_error
 
     return False, response_data, retryable_error
 
@@ -133,7 +127,11 @@ async def _token_endpoint_request(
             an error.
     """
 
-    response_status_ok, response_data, retryable_error = await _token_endpoint_request_no_throw(
+    (
+        response_status_ok,
+        response_data,
+        retryable_error,
+    ) = await _token_endpoint_request_no_throw(
         request,
         token_uri,
         body,
@@ -229,7 +227,7 @@ async def id_token_jwt_grant(request, token_uri, assertion, can_retry=True):
         raise new_exc from caught_exc
 
     payload = jwt.decode(id_token, verify=False)
-    expiry = datetime.datetime.utcfromtimestamp(payload["exp"])
+    expiry = _helpers.utcfromtimestamp(payload["exp"])
 
     return id_token, expiry, response_data
 
