@@ -12,26 +12,146 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""RSA cryptography signer and verifier."""
+"""
+RSA cryptography signer and verifier.
 
+This file provides a shared wrapper, that defers to _python_rsa or _cryptography_rsa
+for implmentations using different third party libraries
+"""
 
 try:
-    # Prefer cryptograph-based RSA implementation.
+    # Attempt import of module that requires optional `cryptography` dependency
     from google.auth.crypt import _cryptography_rsa
-
-    RSASigner = _cryptography_rsa.RSASigner
-    RSAVerifier = _cryptography_rsa.RSAVerifier
 except ImportError:  # pragma: NO COVER
-    try:
-        # Try pure-python RSA implementation if cryptography is
-        # unavailable.
-        from google.auth.crypt import _python_rsa
+    _cryptography_rsa = None
 
-        RSASigner = _python_rsa.RSASigner  # type: ignore
-        RSAVerifier = _python_rsa.RSAVerifier  # type: ignore
-    except ImportError:  # pragma: NO COVER
-        # if rsa is not available, use default implementation (raises ImportError on use)
-        from google.auth.crypt import _default_rsa
+try:
+    # Attempt import of module that requires optional (deprecated) `rsa` dependency
+    from google.auth.crypt import _python_rsa
+except ImportError:  # pragma: NO COVER
+    _python_rsa = None
 
-        RSASigner = _default_rsa.RSASigner  # type: ignore
-        RSAVerifier = _default_rsa.RSAVerifier  # type: ignore
+
+def _missing_impl_error(obj_or_cls):
+    """
+    If the user has neither `cryptography` or `rsa` installed, raise an ImportError
+    """
+    cls = obj_or_cls if isinstance(obj_or_cls, type) else type(obj_or_cls)
+    return ImportError(
+        (
+            f"{cls.__name__} requires `cryptography` optional dependency.",
+            "(Note: 'rsa' is also supported for legacy compatibility but is deprecated).",
+        )
+    )
+
+class RSAVerifier(base.Verifier):
+    """Verifies RSA cryptographic signatures using public keys.
+
+    Args:
+        public_key (Union[rsa.key.PublicKey, cryptography.hazmat.primitives.asymmetric.rsa.RSAPublicKey]):
+            The public key used to verify signatures.
+    Raises:
+        ImportError: if neither `cryptograhy` or `rsa` is installed
+        InvalidValue: if an unrecognized public key is provided
+    """
+
+    def __init__(self, public_key):
+        module_str = private_key.__class__.__module__
+        if "rsa.key" in module_str:
+            impl_lib = _python_rsa
+        elif "cryptography." in module_str:
+            impl_lib = _cryptography_rsa
+        else:
+            raise InvalidValue(f"unrecognized public key type: {public_key}")
+        if impl_lib is None:
+            raise _missing_impl_error(self)
+        else:
+            self._impl = impl_lib.RSAVerifier(public_key)
+
+    @_helpers.copy_docstring(base.Verifier)
+    def verify(self, message, signature):
+        return self._impl(message, signature)
+
+    @classmethod
+    def from_string(cls, public_key):
+        """Construct an Verifier instance from a public key or public
+        certificate string.
+
+        Args:
+            public_key (Union[str, bytes]): The public key in PEM format or the
+                x509 public key certificate.
+
+        Returns:
+            google.auth.crypt.RSAVerifier: The constructed verifier.
+
+        Raises:
+            ValueError: If the public_key can't be parsed.
+            ImportError: if neither `cryptograhy` or `rsa` is installe
+        """
+        if _cryptography_rsa:
+            return _cryptography_rsa.RSAVerifier.from_string(public_key)
+        elif _python_rsa:
+            return _python_rsa.RSAVerifier.from_string(public_key)
+        else:
+            raise _missing_impl_error(cls)
+
+
+class RSASigner(base.Signer, base.FromServiceAccountMixin):
+    """Signs messages with an RSA private key.
+
+    Args:
+        private_key (Union[rsa.key.PrivateKey, cryptography.hazmat.primitives.asymmetric.rsa.RSAPrivateKey]):
+            The private key to sign with.
+        key_id (str): Optional key ID used to identify this private key. This
+            can be useful to associate the private key with its associated
+            public key or certificate.
+
+    Raises:
+        ImportError: if neither `cryptograhy` or `rsa` is installed
+        InvalidValue: if an unrecognized public key is provided
+    """
+
+    def __init__(self, private_key, key_id=None):
+        module_str = private_key.__class__.__module__
+        if "rsa.key" in module_str:
+            impl_lib = _python_rsa
+        elif "cryptography." in module_str:
+            impl_lib = _cryptography_rsa
+        else:
+            raise InvalidValue(f"unrecognized public key type: {public_key}")
+        if impl_lib is None:
+            raise _missing_impl_error(self)
+        else:
+            self._impl = impl_lib.RSASigner(private_key, key_id=key_id)
+
+    @property  # type: ignore
+    @_helpers.copy_docstring(base.Signer)
+    def key_id(self):
+        return self._impl.key_id()
+
+    @_helpers.copy_docstring(base.Signer)
+    def sign(self, message):
+        return self._impl.sign(message)
+
+    @classmethod
+    def from_string(cls, key, key_id=None):
+        """Construct an Signer instance from a private key in PEM format.
+
+        Args:
+            key (str): Private key in PEM format.
+            key_id (str): An optional key id used to identify the private key.
+
+        Returns:
+            google.auth.crypt.Signer: The constructed signer.
+
+        Raises:
+            ValueError: If the key cannot be parsed as PKCS#1 or PKCS#8 in
+                PEM format.
+            ImportError: if neither `cryptograhy` or `rsa` is installe
+        """
+        if _cryptography_rsa:
+            return _cryptography_rsa.RSAVerifier.from_string(public_key)
+        elif _python_rsa:
+            return _python_rsa.RSAVerifier.from_string(public_key)
+        else:
+            raise _missing_impl_error(cls)
