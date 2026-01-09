@@ -21,14 +21,14 @@ from setuptools import setup
 
 DEPENDENCIES = (
     "pyasn1-modules>=0.2.1",
-    # rsa==4.5 is the last version to support 2.7
-    # https://github.com/sybrenstuvel/python-rsa/issues/152#issuecomment-643470233
-    "rsa>=3.1.4,<5",
 )
 
 cryptography_base_require = [
     "cryptography >= 38.0.3",
 ]
+
+# TODO: rsa is archived. Remove optional dependency in future release
+rsa_extra_require = ["rsa>=3.1.4,<5"]
 
 requests_extra_require = ["requests >= 2.20.0, < 3.0.0"]
 
@@ -73,10 +73,12 @@ testing_extra_require = [
     # TODO(https://github.com/googleapis/google-auth-library-python/issues/1722): `test_aiohttp_requests` depend on
     # aiohttp < 3.10.0 which is a bug. Investigate and remove the pinned aiohttp version.
     "aiohttp < 3.10.0",
+    *rsa_extra_require,
 ]
 
 extras = {
     "cryptography": cryptography_base_require,
+    "rsa": rsa_extra_require,
     "aiohttp": aiohttp_extra_require,
     "enterprise_cert": enterprise_cert_extra_require,
     "pyopenssl": pyopenssl_extra_require,
