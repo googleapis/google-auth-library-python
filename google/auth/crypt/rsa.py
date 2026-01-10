@@ -52,7 +52,7 @@ class RSAVerifier(base.Verifier):
             The public key used to verify signatures.
     Raises:
         ImportError: if neither `cryptograhy` or `rsa` is installed
-        InvalidValue: if an unrecognized public key is provided
+        ValueError: if an unrecognized public key is provided
     """
 
     def __init__(self, public_key):
@@ -62,7 +62,7 @@ class RSAVerifier(base.Verifier):
         elif "cryptography." in module_str:
             impl_lib = _cryptography_rsa
         else:
-            raise InvalidValue(f"unrecognized public key type: {public_key}")
+            raise ValueError(f"unrecognized public key type: {public_key}")
         if impl_lib is None:
             raise MissingOptionalDependencyError.create(self, "cryptography", RSA_NOTE)
         else:
@@ -114,7 +114,7 @@ class RSASigner(base.Signer, base.FromServiceAccountMixin):
 
     Raises:
         ImportError: if neither `cryptograhy` or `rsa` is installed
-        InvalidValue: if an unrecognized public key is provided
+        ValueError: if an unrecognized public key is provided
     """
 
     def __init__(self, private_key, key_id=None):
@@ -124,7 +124,7 @@ class RSASigner(base.Signer, base.FromServiceAccountMixin):
         elif "cryptography." in module_str:
             impl_lib = _cryptography_rsa
         else:
-            raise InvalidValue(f"unrecognized private key type: {pivate_key}")
+            raise ValueError(f"unrecognized private key type: {pivate_key}")
         if impl_lib is None:
             raise MissingOptionalDependencyError.create(self, "cryptography", RSA_NOTE)
         else:
