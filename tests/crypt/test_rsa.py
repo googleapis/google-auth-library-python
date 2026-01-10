@@ -53,9 +53,6 @@ with open(os.path.join(DATA_DIR, "privatekey.pub"), "rb") as fh:
 
 class TestRSAVerifier:
     def test_init_with_cryptography_key(self):
-        if _cryptography_rsa is None:
-            pytest.skip("Cryptography not installed")
-        
         pub_key = MockCryptographyPublicKey()
         verifier = rsa.RSAVerifier(pub_key)
         assert isinstance(verifier._impl, _cryptography_rsa.RSAVerifier)
@@ -69,22 +66,13 @@ class TestRSAVerifier:
 
     def test_init_with_unknown_key(self):
         pub_key = "not a key"
-        # The code attempts to access __class__.__module__ which str has, 
-        # but it won't match.
-        # However, the current code has a bug (uses private_key instead of public_key)
-        # so this might raise NameError or similar before InvalidValue.
-        # We expect InvalidValue eventually.
-        with pytest.raises((exceptions.InvalidValue, NameError)): 
-             # Allowing NameError temporarily to catch the bug existence if tested
+        with pytest.raises(ValueError): 
              rsa.RSAVerifier(pub_key)
 
     def test_verify_delegates(self):
-        if _cryptography_rsa is None:
-            pytest.skip("Cryptography not installed")
-        
         pub_key = MockCryptographyPublicKey()
         verifier = rsa.RSAVerifier(pub_key)
-        
+
         # Mock the implementation's verify method
         with mock.patch.object(verifier._impl, "verify", return_value=True) as mock_verify:
             result = verifier.verify(b"message", b"signature")
@@ -96,9 +84,9 @@ class TestRSAVerifier:
         # Setup mock to return a dummy verifier
         expected_verifier = mock.Mock()
         mock_crypto.RSAVerifier.from_string.return_value = expected_verifier
-        
+
         result = rsa.RSAVerifier.from_string(PUBLIC_KEY_BYTES)
-        
+
         assert result == expected_verifier
         mock_crypto.RSAVerifier.from_string.assert_called_once_with(PUBLIC_KEY_BYTES)
 
@@ -107,9 +95,9 @@ class TestRSAVerifier:
     def test_from_string_delegates_to_python_rsa(self, mock_python_rsa):
         expected_verifier = mock.Mock()
         mock_python_rsa.RSAVerifier.from_string.return_value = expected_verifier
-        
+
         result = rsa.RSAVerifier.from_string(PUBLIC_KEY_BYTES)
-        
+
         assert result == expected_verifier
         mock_python_rsa.RSAVerifier.from_string.assert_called_once_with(PUBLIC_KEY_BYTES)
 
@@ -122,9 +110,6 @@ class TestRSAVerifier:
 
 class TestRSASigner:
     def test_init_with_cryptography_key(self):
-        if _cryptography_rsa is None:
-            pytest.skip("Cryptography not installed")
-            
         priv_key = MockCryptographyPrivateKey()
         signer = rsa.RSASigner(priv_key, key_id="123")
         assert isinstance(signer._impl, _cryptography_rsa.RSASigner)
@@ -139,37 +124,26 @@ class TestRSASigner:
         assert signer._impl.key_id == "123"
 
     def test_sign_delegates(self):
-        if _cryptography_rsa is None:
-            pytest.skip("Cryptography not installed")
-
         priv_key = MockCryptographyPrivateKey()
         signer = rsa.RSASigner(priv_key)
-        
+
         with mock.patch.object(signer._impl, "sign", return_value=b"signature") as mock_sign:
             result = signer.sign(b"message")
             assert result == b"signature"
             mock_sign.assert_called_once_with(b"message")
 
     def test_key_id_delegates(self):
-        if _cryptography_rsa is None:
-            pytest.skip("Cryptography not installed")
-            
         priv_key = MockCryptographyPrivateKey()
         signer = rsa.RSASigner(priv_key, key_id="my-key-id")
-        
-        # rsa.py has a bug where it calls key_id() instead of property access
-        # We'll test for what it *should* do, or verify the bug exists if we must.
-        # But generally we should fix the bug.
-        # Assuming we will fix the bug, we expect:
         assert signer.key_id == "my-key-id"
 
     @mock.patch("google.auth.crypt.rsa._cryptography_rsa")
     def test_from_string_delegates_to_cryptography(self, mock_crypto):
         expected_signer = mock.Mock()
         mock_crypto.RSASigner.from_string.return_value = expected_signer
-        
+
         result = rsa.RSASigner.from_string(PRIVATE_KEY_BYTES, key_id="123")
-        
+
         assert result == expected_signer
         mock_crypto.RSASigner.from_string.assert_called_once_with(PRIVATE_KEY_BYTES, key_id="123")
 
@@ -178,8 +152,8 @@ class TestRSASigner:
     def test_from_string_delegates_to_python_rsa(self, mock_python_rsa):
         expected_signer = mock.Mock()
         mock_python_rsa.RSASigner.from_string.return_value = expected_signer
-        
+
         result = rsa.RSASigner.from_string(PRIVATE_KEY_BYTES, key_id="123")
-        
+
         assert result == expected_signer
         mock_python_rsa.RSASigner.from_string.assert_called_once_with(PRIVATE_KEY_BYTES, key_id="123")
