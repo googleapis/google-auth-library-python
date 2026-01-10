@@ -16,62 +16,59 @@ import os
 import pytest
 from unittest import mock
 
+import rsa as rsa_lib
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat import backends
+
 from google.auth import exceptions
 from google.auth.crypt import rsa
 from google.auth.crypt import _python_rsa
-try:
-    from google.auth.crypt import _cryptography_rsa
-except ImportError:
-    _cryptography_rsa = None
+from google.auth.crypt import _cryptography_rsa
 
-# Mock objects to simulate keys from different libraries
-class MockRsaPublicKey:
-    pass
-
-class MockCryptographyPublicKey:
-    pass
-
-class MockRsaPrivateKey:
-    pass
-
-class MockCryptographyPrivateKey:
-    pass
-
-# We need to set the module attributes to match what the code expects
-MockRsaPublicKey.__module__ = "rsa.key"
-MockCryptographyPublicKey.__module__ = "cryptography.hazmat.primitives.asymmetric.rsa"
-MockRsaPrivateKey.__module__ = "rsa.key"
-MockCryptographyPrivateKey.__module__ = "cryptography.hazmat.primitives.asymmetric.rsa"
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
 
 with open(os.path.join(DATA_DIR, "privatekey.pem"), "rb") as fh:
     PRIVATE_KEY_BYTES = fh.read()
+    CRYPTOGRAPHY_PRIVATE_KEY = serialization.load_pem_private_key(
+        PRIVATE_KEY_BYTES, password=None, backend=backends.default_backend()
+    )
+    RSA_PRIVATE_KEY = rsa_lib.PrivateKey.load_pkcs1(PRIVATE_KEY_BYTES)
 
 with open(os.path.join(DATA_DIR, "privatekey.pub"), "rb") as fh:
     PUBLIC_KEY_BYTES = fh.read()
+    CRYPTOGRAPHY_PUBLIC_KEY = serialization.load_pem_public_key(
+        PUBLIC_KEY_BYTES, backend=backends.default_backend()
+    )
+    RSA_PUBLIC_KEY = rsa_lib.PublicKey.load_pkcs1(PUBLIC_KEY_BYTES)
 
 class TestRSAVerifier:
     def test_init_with_cryptography_key(self):
-        pub_key = MockCryptographyPublicKey()
-        verifier = rsa.RSAVerifier(pub_key)
+        verifier = rsa.RSAVerifier(CRYPTOGRAPHY_PUBLIC_KEY)
         assert isinstance(verifier._impl, _cryptography_rsa.RSAVerifier)
-        assert verifier._impl._pubkey == pub_key
+        assert verifier._impl._pubkey == CRYPTOGRAPHY_PUBLIC_KEY
 
     def test_init_with_rsa_key(self):
-        pub_key = MockRsaPublicKey()
-        verifier = rsa.RSAVerifier(pub_key)
+        verifier = rsa.RSAVerifier(RSA_PUBLIC_KEY)
         assert isinstance(verifier._impl, _python_rsa.RSAVerifier)
-        assert verifier._impl._pubkey == pub_key
+        assert verifier._impl._pubkey == RSA_PUBLIC_KEY
 
     def test_init_with_unknown_key(self):
-        pub_key = "not a key"
+        unknown_key = object()
+
         with pytest.raises(ValueError): 
-             rsa.RSAVerifier(pub_key)
+             rsa.RSAVerifier(unknown_key)
+
+    @mock.patch("google.auth.crypt.rsa._cryptography_rsa", None)
+    @mock.patch("google.auth.crypt.rsa._python_rsa", None)
+    def test_init_with_missing_dependencies(self):
+        with pytest.raises(exceptions.MissingOptionalDependencyError) as e:
+            rsa.RSAVerifier(RSA_PUBLIC_KEY)
+        assert "RSAVerifier requires `cryptography`" in str(e)
+        assert "`rsa` is also supported for legacy compatibility, but is deprecated" in str(e)
 
     def test_verify_delegates(self):
-        pub_key = MockCryptographyPublicKey()
-        verifier = rsa.RSAVerifier(pub_key)
+        verifier = rsa.RSAVerifier(CRYPTOGRAPHY_PUBLIC_KEY)
 
         # Mock the implementation's verify method
         with mock.patch.object(verifier._impl, "verify", return_value=True) as mock_verify:
@@ -80,8 +77,8 @@ class TestRSAVerifier:
             mock_verify.assert_called_once_with(b"message", b"signature")
 
     @mock.patch("google.auth.crypt.rsa._cryptography_rsa")
-    def test_from_string_delegates_to_cryptography(self, mock_crypto):
-        # Setup mock to return a dummy verifier
+    @mock.patch("google.auth.crypt.rsa._python_rsa", None)
+    def test_from_string_cryptography(self, mock_crypto):
         expected_verifier = mock.Mock()
         mock_crypto.RSAVerifier.from_string.return_value = expected_verifier
 
@@ -92,7 +89,7 @@ class TestRSAVerifier:
 
     @mock.patch("google.auth.crypt.rsa._cryptography_rsa", None)
     @mock.patch("google.auth.crypt.rsa._python_rsa")
-    def test_from_string_delegates_to_python_rsa(self, mock_python_rsa):
+    def test_from_string_python_rsa(self, mock_python_rsa):
         expected_verifier = mock.Mock()
         mock_python_rsa.RSAVerifier.from_string.return_value = expected_verifier
 
@@ -104,40 +101,48 @@ class TestRSAVerifier:
     @mock.patch("google.auth.crypt.rsa._cryptography_rsa", None)
     @mock.patch("google.auth.crypt.rsa._python_rsa", None)
     def test_from_string_missing_deps(self):
-        with pytest.raises(exceptions.MissingOptionalDependencyError):
+        with pytest.raises(exceptions.MissingOptionalDependencyError) as e:
             rsa.RSAVerifier.from_string(PUBLIC_KEY_BYTES)
-
+        assert "RSAVerifier requires `cryptography`" in str(e)
+        assert "`rsa` is also supported for legacy compatibility, but is deprecated" in str(e)
 
 class TestRSASigner:
     def test_init_with_cryptography_key(self):
-        priv_key = MockCryptographyPrivateKey()
-        signer = rsa.RSASigner(priv_key, key_id="123")
+        signer = rsa.RSASigner(CRYPTOGRAPHY_PRIVATE_KEY, key_id="123")
         assert isinstance(signer._impl, _cryptography_rsa.RSASigner)
-        assert signer._impl._key == priv_key
+        assert signer._impl._key == CRYPTOGRAPHY_PRIVATE_KEY
         assert signer._impl.key_id == "123"
 
     def test_init_with_rsa_key(self):
-        priv_key = MockRsaPrivateKey()
-        signer = rsa.RSASigner(priv_key, key_id="123")
+        signer = rsa.RSASigner(RSA_PRIVATE_KEY, key_id="123")
         assert isinstance(signer._impl, _python_rsa.RSASigner)
-        assert signer._impl._key == priv_key
+        assert signer._impl._key == RSA_PRIVATE_KEY
         assert signer._impl.key_id == "123"
 
+    def test_init_with_unknown_key(self):
+        unknown_key = object()
+
+        with pytest.raises(ValueError):
+             rsa.RSASigner(unknown_key)
+
+    @mock.patch("google.auth.crypt.rsa._cryptography_rsa", None)
+    @mock.patch("google.auth.crypt.rsa._python_rsa", None)
+    def test_init_with_missing_dependencies(self):
+        with pytest.raises(exceptions.MissingOptionalDependencyError) as e:
+            rsa.RSASigner(RSA_PRIVATE_KEY)
+        assert "RSASigner requires `cryptography`" in str(e)
+        assert "`rsa` is also supported for legacy compatibility, but is deprecated" in str(e)
+
     def test_sign_delegates(self):
-        priv_key = MockCryptographyPrivateKey()
-        signer = rsa.RSASigner(priv_key)
+        signer = rsa.RSASigner(RSA_PRIVATE_KEY)
 
         with mock.patch.object(signer._impl, "sign", return_value=b"signature") as mock_sign:
             result = signer.sign(b"message")
             assert result == b"signature"
             mock_sign.assert_called_once_with(b"message")
 
-    def test_key_id_delegates(self):
-        priv_key = MockCryptographyPrivateKey()
-        signer = rsa.RSASigner(priv_key, key_id="my-key-id")
-        assert signer.key_id == "my-key-id"
-
     @mock.patch("google.auth.crypt.rsa._cryptography_rsa")
+    @mock.patch("google.auth.crypt.rsa._python_rsa", None)
     def test_from_string_delegates_to_cryptography(self, mock_crypto):
         expected_signer = mock.Mock()
         mock_crypto.RSASigner.from_string.return_value = expected_signer
@@ -157,3 +162,11 @@ class TestRSASigner:
 
         assert result == expected_signer
         mock_python_rsa.RSASigner.from_string.assert_called_once_with(PRIVATE_KEY_BYTES, key_id="123")
+
+    @mock.patch("google.auth.crypt.rsa._cryptography_rsa", None)
+    @mock.patch("google.auth.crypt.rsa._python_rsa", None)
+    def test_from_string_missing_deps(self):
+        with pytest.raises(exceptions.MissingOptionalDependencyError) as e:
+            rsa.RSASigner.from_string(PRIVATE_KEY_BYTES)
+        assert "RSASigner requires `cryptography`" in str(e)
+        assert "`rsa` is also supported for legacy compatibility, but is deprecated" in str(e)

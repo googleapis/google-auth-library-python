@@ -35,7 +35,7 @@ try:
 except ImportError:  # pragma: NO COVER
     _python_rsa = None
 
-RSA_NOTE = "(Note: 'rsa' is also supported for legacy compatibility but is deprecated)"
+RSA_NOTE = "(Note: `rsa` is also supported for legacy compatibility, but is deprecated)"
 
 
 class RSAVerifier(base.Verifier):
@@ -124,7 +124,7 @@ class RSASigner(base.Signer, base.FromServiceAccountMixin):
         elif "cryptography." in module_str:
             impl_lib = _cryptography_rsa
         else:
-            raise ValueError(f"unrecognized private key type: {pivate_key}")
+            raise ValueError(f"unrecognized private key type: {private_key}")
         if impl_lib is None:
             raise MissingOptionalDependencyError.create(self, "cryptography", RSA_NOTE)
         else:
