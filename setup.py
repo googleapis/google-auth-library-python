@@ -19,9 +19,7 @@ from setuptools import find_namespace_packages
 from setuptools import setup
 
 
-DEPENDENCIES = (
-    "pyasn1-modules>=0.2.1",
-)
+DEPENDENCIES = ("pyasn1-modules>=0.2.1",)
 
 cryptography_base_require = [
     "cryptography >= 38.0.3",

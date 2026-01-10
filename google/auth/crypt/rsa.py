@@ -22,6 +22,7 @@ for implmentations using different third party libraries
 from google.auth.crypt import base
 from google.auth import _helpers
 from google.auth.exceptions import MissingOptionalDependencyError
+
 try:
     # Attempt import of module that requires optional `cryptography` dependency
     from google.auth.crypt import _cryptography_rsa
@@ -34,7 +35,7 @@ try:
 except ImportError:  # pragma: NO COVER
     _python_rsa = None
 
-RSA_NOTE = "(Note: 'rsa' is also supported for legacy compatibility but is deprecated)",
+RSA_NOTE = "(Note: 'rsa' is also supported for legacy compatibility but is deprecated)"
 
 
 class RSAVerifier(base.Verifier):

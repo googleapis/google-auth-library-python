@@ -40,10 +40,11 @@ _PKCS1_MARKER = ("-----BEGIN RSA PRIVATE KEY-----", "-----END RSA PRIVATE KEY---
 _PKCS8_MARKER = ("-----BEGIN PRIVATE KEY-----", "-----END PRIVATE KEY-----")
 _PKCS8_SPEC = PrivateKeyInfo()
 
-_warning_msg =  (
+_warning_msg = (
     "The 'rsa' library is deprecated and will be removed in a future release. "
     "Please migrate to 'cryptography'."
 )
+
 
 def _bit_list_to_bytes(bit_list):
     """Converts an iterable of 1s and 0s to bytes.

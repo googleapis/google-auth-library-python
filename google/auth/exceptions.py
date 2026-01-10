@@ -107,6 +107,7 @@ class TimeoutError(GoogleAuthError):
 class ResponseError(GoogleAuthError):
     """Used to indicate an error occurred when reading an HTTP response."""
 
+
 class MissingOptionalDependencyError(ImportError):
     """Raised when a user attempts to use a class that requires an optional dependency"""
 
@@ -114,7 +115,9 @@ class MissingOptionalDependencyError(ImportError):
     def create(cls, caller, dependency_name, suffix_str=None):
         """Creates an instance referencing the required dependency and the triggering class"""
         caller_cls = caller if isinstance(caller, type) else type(caller)
-        msg_str = f"{caller_cls.__name__} requires `{dependency_name}` optional dependency."
+        msg_str = (
+            f"{caller_cls.__name__} requires `{dependency_name}` optional dependency."
+        )
         if suffix_str:
             msg_str = f"{msg_str} {suffix_str}"
         return cls(msg_str)
