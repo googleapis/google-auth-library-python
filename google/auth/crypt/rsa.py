@@ -19,8 +19,8 @@ This file provides a shared wrapper, that defers to _python_rsa or _cryptography
 for implmentations using different third party libraries
 """
 
-from google.auth.crypt import base
 from google.auth import _helpers
+from google.auth.crypt import base
 from google.auth.exceptions import MissingOptionalDependencyError
 
 try:

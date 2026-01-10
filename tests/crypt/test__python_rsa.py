@@ -195,7 +195,6 @@ class TestRSASigner(object):
 
 class TestModule(object):
     def test_import_warning(self):
-        import importlib
         from google.auth.crypt import _python_rsa
 
         with pytest.warns(DeprecationWarning, match="The 'rsa' library is deprecated"):
