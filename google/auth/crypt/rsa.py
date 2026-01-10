@@ -19,6 +19,8 @@ This file provides a shared wrapper, that defers to _python_rsa or _cryptography
 for implmentations using different third party libraries
 """
 
+from google.auth.crypt import base
+from google.auth import _helpers
 try:
     # Attempt import of module that requires optional `cryptography` dependency
     from google.auth.crypt import _cryptography_rsa
@@ -46,6 +48,8 @@ def _missing_impl_error(obj_or_cls):
 
 class RSAVerifier(base.Verifier):
     """Verifies RSA cryptographic signatures using public keys.
+
+    Requires installation of `cryptography` optional dependency.
 
     .. deprecated::
         The `rsa` library has been archived. Please migrate to
@@ -103,6 +107,8 @@ class RSAVerifier(base.Verifier):
 class RSASigner(base.Signer, base.FromServiceAccountMixin):
     """Signs messages with an RSA private key.
 
+    Requires installation of `cryptography` optional dependency.
+
     .. deprecated::
         The `rsa` library has been archived. Please migrate to
         `cryptography` for public keys.
@@ -158,8 +164,8 @@ class RSASigner(base.Signer, base.FromServiceAccountMixin):
             ImportError: if neither `cryptograhy` or `rsa` is installe
         """
         if _cryptography_rsa:
-            return _cryptography_rsa.RSAVerifier.from_string(public_key)
+            return _cryptography_rsa.RSASigner.from_string(key, key_id=key_id)
         elif _python_rsa:
-            return _python_rsa.RSAVerifier.from_string(public_key)
+            return _python_rsa.RSASigner.from_string(key, key_id=key_id)
         else:
             raise _missing_impl_error(cls)
