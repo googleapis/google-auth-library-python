@@ -21,6 +21,7 @@ for implmentations using different third party libraries
 
 from google.auth.crypt import base
 from google.auth import _helpers
+from google.auth.exceptions import MissingOptionalDependencyError
 try:
     # Attempt import of module that requires optional `cryptography` dependency
     from google.auth.crypt import _cryptography_rsa
@@ -33,18 +34,8 @@ try:
 except ImportError:  # pragma: NO COVER
     _python_rsa = None
 
+RSA_NOTE = "(Note: 'rsa' is also supported for legacy compatibility but is deprecated)",
 
-def _missing_impl_error(obj_or_cls):
-    """
-    If the user has neither `cryptography` or `rsa` installed, raise an ImportError
-    """
-    cls = obj_or_cls if isinstance(obj_or_cls, type) else type(obj_or_cls)
-    return ImportError(
-        (
-            f"{cls.__name__} requires `cryptography` optional dependency.",
-            "(Note: 'rsa' is also supported for legacy compatibility but is deprecated).",
-        )
-    )
 
 class RSAVerifier(base.Verifier):
     """Verifies RSA cryptographic signatures using public keys.
@@ -72,7 +63,7 @@ class RSAVerifier(base.Verifier):
         else:
             raise InvalidValue(f"unrecognized public key type: {public_key}")
         if impl_lib is None:
-            raise _missing_impl_error(self)
+            raise MissingOptionalDependencyError.create(self, "cryptography", RSA_NOTE)
         else:
             self._impl = impl_lib.RSAVerifier(public_key)
 
@@ -101,7 +92,7 @@ class RSAVerifier(base.Verifier):
         elif _python_rsa:
             return _python_rsa.RSAVerifier.from_string(public_key)
         else:
-            raise _missing_impl_error(cls)
+            raise MissingOptionalDependencyError.create(cls, "cryptography", RSA_NOTE)
 
 
 class RSASigner(base.Signer, base.FromServiceAccountMixin):
@@ -134,7 +125,7 @@ class RSASigner(base.Signer, base.FromServiceAccountMixin):
         else:
             raise InvalidValue(f"unrecognized public key type: {public_key}")
         if impl_lib is None:
-            raise _missing_impl_error(self)
+            raise MissingOptionalDependencyError.create(self, "cryptography", RSA_NOTE)
         else:
             self._impl = impl_lib.RSASigner(private_key, key_id=key_id)
 
@@ -168,4 +159,4 @@ class RSASigner(base.Signer, base.FromServiceAccountMixin):
         elif _python_rsa:
             return _python_rsa.RSASigner.from_string(key, key_id=key_id)
         else:
-            raise _missing_impl_error(cls)
+            raise MissingOptionalDependencyError.create(cls, "cryptography", RSA_NOTE)
