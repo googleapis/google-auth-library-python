@@ -170,3 +170,27 @@ class TestRSASigner:
             rsa.RSASigner.from_string(PRIVATE_KEY_BYTES)
         assert "RSASigner requires `cryptography`" in str(e)
         assert "`rsa` is also supported for legacy compatibility, but is deprecated" in str(e)
+
+
+    @mock.patch("google.auth.crypt.rsa._python_rsa", None)
+    def test_end_to_end_cryptography_lib(self):
+        signer = rsa.RSASigner.from_string(PRIVATE_KEY_BYTES)
+        message = b"Hello World"
+        sig = signer.sign(message)
+        verifier = rsa.RSAVerifier.from_string(PUBLIC_KEY_BYTES)
+        result = verifier.verify(message, sig)
+        assert result is True
+        assert isinstance(verifier, _cryptography_rsa.RSAVerifier)
+        assert isinstance(signer, _cryptography_rsa.RSASigner)
+
+
+    @mock.patch("google.auth.crypt.rsa._cryptography_rsa", None)
+    def test_end_to_end_rsa_lib(self):
+        signer = rsa.RSASigner.from_string(PRIVATE_KEY_BYTES)
+        message = b"Hello World"
+        sig = signer.sign(message)
+        verifier = rsa.RSAVerifier.from_string(PUBLIC_KEY_BYTES)
+        result = verifier.verify(message, sig)
+        assert bool(result) is True
+        assert isinstance(verifier, _python_rsa.RSAVerifier)
+        assert isinstance(signer, _python_rsa.RSASigner)
