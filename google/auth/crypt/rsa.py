@@ -56,7 +56,7 @@ class RSAVerifier(base.Verifier):
     """
 
     def __init__(self, public_key):
-        module_str = private_key.__class__.__module__
+        module_str = public_key.__class__.__module__
         if "rsa.key" in module_str:
             impl_lib = _python_rsa
         elif "cryptography." in module_str:
@@ -70,7 +70,7 @@ class RSAVerifier(base.Verifier):
 
     @_helpers.copy_docstring(base.Verifier)
     def verify(self, message, signature):
-        return self._impl(message, signature)
+        return self._impl.verify(message, signature)
 
     @classmethod
     def from_string(cls, public_key):
@@ -124,7 +124,7 @@ class RSASigner(base.Signer, base.FromServiceAccountMixin):
         elif "cryptography." in module_str:
             impl_lib = _cryptography_rsa
         else:
-            raise InvalidValue(f"unrecognized public key type: {public_key}")
+            raise InvalidValue(f"unrecognized private key type: {pivate_key}")
         if impl_lib is None:
             raise MissingOptionalDependencyError.create(self, "cryptography", RSA_NOTE)
         else:
@@ -133,7 +133,7 @@ class RSASigner(base.Signer, base.FromServiceAccountMixin):
     @property  # type: ignore
     @_helpers.copy_docstring(base.Signer)
     def key_id(self):
-        return self._impl.key_id()
+        return self._impl.key_id
 
     @_helpers.copy_docstring(base.Signer)
     def sign(self, message):
