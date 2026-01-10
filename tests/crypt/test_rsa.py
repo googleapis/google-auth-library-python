@@ -53,6 +53,10 @@ class TestRSAVerifier:
         assert isinstance(verifier._impl, _python_rsa.RSAVerifier)
         assert verifier._impl._pubkey == RSA_PUBLIC_KEY
 
+    def test_warning_with_rsa(self):
+        with pytest.warns(DeprecationWarning, match="The 'rsa' library is deprecated"):
+            rsa.RSAVerifier(RSA_PUBLIC_KEY)
+
     def test_init_with_unknown_key(self):
         unknown_key = object()
 
@@ -118,6 +122,10 @@ class TestRSASigner:
         assert isinstance(signer._impl, _python_rsa.RSASigner)
         assert signer._impl._key == RSA_PRIVATE_KEY
         assert signer._impl.key_id == "123"
+
+    def test_warning_with_rsa(self):
+        with pytest.warns(DeprecationWarning, match="The 'rsa' library is deprecated"):
+            rsa.RSASigner(RSA_PRIVATE_KEY, key_id="123")
 
     def test_init_with_unknown_key(self):
         unknown_key = object()
