@@ -100,7 +100,7 @@ class RSASigner(base.Signer, base.FromServiceAccountMixin):
         if module_str.startswith(RSA_KEY_MODULE_PREFIX):
             impl_lib = _python_rsa
         elif module_str.startswith(CRYPTOGRAPHY_KEY_MODULE_PREFIX):
-            impl_lib = _cryptography_rs
+            impl_lib = _cryptography_rsa
         else:
             raise ValueError(f"unrecognized private key type: {private_key}")
         self._impl = impl_lib.RSASigner(private_key, key_id=key_id)
