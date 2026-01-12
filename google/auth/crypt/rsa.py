@@ -116,7 +116,7 @@ class RSASigner(base.Signer, base.FromServiceAccountMixin):
 
     @classmethod
     def from_string(cls, key, key_id=None):
-        """Construct an Signer instance from a private key in PEM format.
+        """Construct a Signer instance from a private key in PEM format.
 
         Args:
             key (str): Private key in PEM format.
