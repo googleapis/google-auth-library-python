@@ -21,7 +21,6 @@ for implmentations using different third party libraries
 
 from google.auth import _helpers
 from google.auth.crypt import base
-from google.auth.exceptions import MissingOptionalDependencyError
 from google.auth.crypt import _cryptography_rsa
 from google.auth.crypt import _python_rsa
 
@@ -68,18 +67,12 @@ class RSAVerifier(base.Verifier):
                 x509 public key certificate.
 
         Returns:
-            google.auth.crypt.RSAVerifier: The constructed verifier.
+            google.auth.crypt.Verifier: The constructed verifier.
 
         Raises:
             ValueError: If the public_key can't be parsed.
         """
-        try:
-            instance = cls(None)
-        except ValueError:
-            # ignore exception when creating instnce without associated key
-            pass
-        instance._impl = _cryptography_rsa.RSAVerifier.from_string(public_key)
-        return instance
+        return _cryptography_rsa.RSAVerifier.from_string(public_key)
 
 
 class RSASigner(base.Signer, base.FromServiceAccountMixin):
@@ -136,10 +129,4 @@ class RSASigner(base.Signer, base.FromServiceAccountMixin):
             ValueError: If the key cannot be parsed as PKCS#1 or PKCS#8 in
                 PEM format.
         """
-        try:
-            instance = cls(None)
-        except ValueError:
-            # ignore exception when creating instnce without associated key
-            pass
-        instance._impl = _cryptography_rsa.RSASigner.from_string(key, key_id=key_id)
-        return instance
+        return _cryptography_rsa.RSASigner.from_string(key, key_id=key_id)
