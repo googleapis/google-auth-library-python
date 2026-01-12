@@ -51,7 +51,7 @@ class RSAVerifier(base.Verifier):
         public_key (Union[rsa.key.PublicKey, cryptography.hazmat.primitives.asymmetric.rsa.RSAPublicKey]):
             The public key used to verify signatures.
     Raises:
-        ImportError: if neither `cryptograhy` or `rsa` is installed
+        ImportError: if neither `cryptography` or `rsa` is installed
         ValueError: if an unrecognized public key is provided
     """
 
@@ -74,7 +74,7 @@ class RSAVerifier(base.Verifier):
 
     @classmethod
     def from_string(cls, public_key):
-        """Construct an Verifier instance from a public key or public
+        """Construct a Verifier instance from a public key or public
         certificate string.
 
         Args:
@@ -86,7 +86,7 @@ class RSAVerifier(base.Verifier):
 
         Raises:
             ValueError: If the public_key can't be parsed.
-            ImportError: if neither `cryptograhy` or `rsa` is installe
+            ImportError: if neither `cryptography` or `rsa` is installe
         """
         if _cryptography_rsa:
             return _cryptography_rsa.RSAVerifier.from_string(public_key)
@@ -113,7 +113,7 @@ class RSASigner(base.Signer, base.FromServiceAccountMixin):
             public key or certificate.
 
     Raises:
-        ImportError: if neither `cryptograhy` or `rsa` is installed
+        ImportError: if neither `cryptography` or `rsa` is installed
         ValueError: if an unrecognized public key is provided
     """
 
@@ -153,7 +153,7 @@ class RSASigner(base.Signer, base.FromServiceAccountMixin):
         Raises:
             ValueError: If the key cannot be parsed as PKCS#1 or PKCS#8 in
                 PEM format.
-            ImportError: if neither `cryptograhy` or `rsa` is installe
+            ImportError: if neither `cryptography` or `rsa` is installed
         """
         if _cryptography_rsa:
             return _cryptography_rsa.RSASigner.from_string(key, key_id=key_id)
