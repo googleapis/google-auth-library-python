@@ -22,21 +22,11 @@ for implmentations using different third party libraries
 from google.auth import _helpers
 from google.auth.crypt import base
 from google.auth.exceptions import MissingOptionalDependencyError
+from google.auth.crypt import _cryptography_rsa
+from google.auth.crypt import _python_rsa
 
-try:
-    # Attempt import of module that requires optional `cryptography` dependency
-    from google.auth.crypt import _cryptography_rsa
-except ImportError:  # pragma: NO COVER
-    _cryptography_rsa = None
-
-try:
-    # Attempt import of module that requires optional (deprecated) `rsa` dependency
-    from google.auth.crypt import _python_rsa
-except ImportError:  # pragma: NO COVER
-    _python_rsa = None
-
-RSA_NOTE = "(Note: `rsa` is also supported for legacy compatibility, but is deprecated)"
-
+RSA_KEY_MODULE_PREFIX = "rsa.key"
+CRYPTOGRAPHY_KEY_MODULE_PREFIX = "cryptography."
 
 class RSAVerifier(base.Verifier):
     """Verifies RSA cryptographic signatures using public keys.
@@ -51,22 +41,18 @@ class RSAVerifier(base.Verifier):
         public_key (Union[rsa.key.PublicKey, cryptography.hazmat.primitives.asymmetric.rsa.RSAPublicKey]):
             The public key used to verify signatures.
     Raises:
-        ImportError: if neither `cryptography` or `rsa` is installed
         ValueError: if an unrecognized public key is provided
     """
 
     def __init__(self, public_key):
         module_str = public_key.__class__.__module__
-        if "rsa.key" in module_str:
+        if module_str.startswith(RSA_KEY_MODULE_PREFIX):
             impl_lib = _python_rsa
-        elif "cryptography." in module_str:
+        elif module_str.startswith(CRYPTOGRAPHY_KEY_MODULE_PREFIX):
             impl_lib = _cryptography_rsa
         else:
             raise ValueError(f"unrecognized public key type: {public_key}")
-        if impl_lib is None:
-            raise MissingOptionalDependencyError.create(self, "cryptography", RSA_NOTE)
-        else:
-            self._impl = impl_lib.RSAVerifier(public_key)
+        self._impl = impl_lib.RSAVerifier(public_key)
 
     @_helpers.copy_docstring(base.Verifier)
     def verify(self, message, signature):
@@ -86,14 +72,14 @@ class RSAVerifier(base.Verifier):
 
         Raises:
             ValueError: If the public_key can't be parsed.
-            ImportError: if neither `cryptography` or `rsa` is installe
         """
-        if _cryptography_rsa:
-            return _cryptography_rsa.RSAVerifier.from_string(public_key)
-        elif _python_rsa:
-            return _python_rsa.RSAVerifier.from_string(public_key)
-        else:
-            raise MissingOptionalDependencyError.create(cls, "cryptography", RSA_NOTE)
+        try:
+            instance = cls(None)
+        except ValueError:
+            # ignore exception when creating instnce without associated key
+            pass
+        instance._impl = _cryptography_rsa.RSAVerifier.from_string(public_key)
+        return instance
 
 
 class RSASigner(base.Signer, base.FromServiceAccountMixin):
@@ -113,22 +99,18 @@ class RSASigner(base.Signer, base.FromServiceAccountMixin):
             public key or certificate.
 
     Raises:
-        ImportError: if neither `cryptography` or `rsa` is installed
         ValueError: if an unrecognized public key is provided
     """
 
     def __init__(self, private_key, key_id=None):
         module_str = private_key.__class__.__module__
-        if "rsa.key" in module_str:
+        if module_str.startswith(RSA_KEY_MODULE_PREFIX):
             impl_lib = _python_rsa
-        elif "cryptography." in module_str:
-            impl_lib = _cryptography_rsa
+        elif module_str.startswith(CRYPTOGRAPHY_KEY_MODULE_PREFIX):
+            impl_lib = _cryptography_rs
         else:
             raise ValueError(f"unrecognized private key type: {private_key}")
-        if impl_lib is None:
-            raise MissingOptionalDependencyError.create(self, "cryptography", RSA_NOTE)
-        else:
-            self._impl = impl_lib.RSASigner(private_key, key_id=key_id)
+        self._impl = impl_lib.RSASigner(private_key, key_id=key_id)
 
     @property  # type: ignore
     @_helpers.copy_docstring(base.Signer)
@@ -153,11 +135,11 @@ class RSASigner(base.Signer, base.FromServiceAccountMixin):
         Raises:
             ValueError: If the key cannot be parsed as PKCS#1 or PKCS#8 in
                 PEM format.
-            ImportError: if neither `cryptography` or `rsa` is installed
         """
-        if _cryptography_rsa:
-            return _cryptography_rsa.RSASigner.from_string(key, key_id=key_id)
-        elif _python_rsa:
-            return _python_rsa.RSASigner.from_string(key, key_id=key_id)
-        else:
-            raise MissingOptionalDependencyError.create(cls, "cryptography", RSA_NOTE)
+        try:
+            instance = cls(None)
+        except ValueError:
+            # ignore exception when creating instnce without associated key
+            pass
+        instance._impl = _cryptography_rsa.RSASigner.from_string(key, key_id=key_id)
+        return instance
