@@ -50,7 +50,7 @@ class RSAVerifier(base.Verifier):
         elif module_str.startswith(CRYPTOGRAPHY_KEY_MODULE_PREFIX):
             impl_lib = _cryptography_rsa
         else:
-            raise ValueError(f"unrecognized public key type: {public_key}")
+            raise ValueError(f"unrecognized public key type: {type(public_key)}")
         self._impl = impl_lib.RSAVerifier(public_key)
 
     @_helpers.copy_docstring(base.Verifier)
