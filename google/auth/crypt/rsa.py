@@ -75,7 +75,9 @@ class RSAVerifier(base.Verifier):
         Raises:
             ValueError: If the public_key can't be parsed.
         """
-        return _cryptography_rsa.RSAVerifier.from_string(public_key)
+        instance = cls.__new__(cls)
+        instance._impl = _cryptography_rsa.RSAVerifier.from_string(public_key)
+        return instance
 
 
 class RSASigner(base.Signer, base.FromServiceAccountMixin):
@@ -132,4 +134,6 @@ class RSASigner(base.Signer, base.FromServiceAccountMixin):
             ValueError: If the key cannot be parsed as PKCS#1 or PKCS#8 in
                 PEM format.
         """
-        return _cryptography_rsa.RSASigner.from_string(key, key_id=key_id)
+        instance = cls.__new__(cls)
+        instance._impl = _cryptography_rsa.RSASigner.from_string(key, key_id=key_id)
+        return instance

@@ -81,7 +81,7 @@ class TestRSAVerifier:
 
         result = rsa.RSAVerifier.from_string(PUBLIC_KEY_BYTES)
 
-        assert result == expected_verifier
+        assert result._impl == expected_verifier
         mock_crypto.RSAVerifier.from_string.assert_called_once_with(PUBLIC_KEY_BYTES)
 
 
@@ -125,7 +125,7 @@ class TestRSASigner:
 
         result = rsa.RSASigner.from_string(PRIVATE_KEY_BYTES, key_id="123")
 
-        assert result == expected_signer
+        assert result._impl == expected_signer
         mock_crypto.RSASigner.from_string.assert_called_once_with(
             PRIVATE_KEY_BYTES, key_id="123"
         )
@@ -137,8 +137,8 @@ class TestRSASigner:
         verifier = rsa.RSAVerifier.from_string(PUBLIC_KEY_BYTES)
         result = verifier.verify(message, sig)
         assert result is True
-        assert isinstance(verifier, _cryptography_rsa.RSAVerifier)
-        assert isinstance(signer, _cryptography_rsa.RSASigner)
+        assert isinstance(verifier._impl, _cryptography_rsa.RSAVerifier)
+        assert isinstance(signer._impl, _cryptography_rsa.RSASigner)
 
     def test_end_to_end_rsa_lib(self):
         signer = rsa.RSASigner(RSA_PRIVATE_KEY)
