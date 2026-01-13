@@ -22,8 +22,6 @@ from setuptools import setup
 DEPENDENCIES = (
     "pyasn1-modules>=0.2.1",
     "cryptography >= 38.0.3",
-    # TODO: remove rsa from dependencies in next release (replaced with cryptography)
-    "rsa>=3.1.4,<5",
 )
 
 # Note: cryptography was made into a required dependency. Extra is kept for backwards compatibility
@@ -74,6 +72,9 @@ testing_extra_require = [
     # TODO(https://github.com/googleapis/google-auth-library-python/issues/1722): `test_aiohttp_requests` depend on
     # aiohttp < 3.10.0 which is a bug. Investigate and remove the pinned aiohttp version.
     "aiohttp < 3.10.0",
+    # rsa library was removed as a dependency, but we still have some code paths that support it
+    # TODO: remove dependency when google.auth.crypt._python_rsa is removed
+    "rsa>=3.1.4,<5",
 ]
 
 extras = {
