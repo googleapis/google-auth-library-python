@@ -19,13 +19,15 @@ This file provides a shared wrapper, that defers to _python_rsa or _cryptography
 for implmentations using different third party libraries
 """
 
+from cryptography.hazmat.primitives.asymmetric.rsa import RSAPrivateKey
+from cryptography.hazmat.primitives.asymmetric.rsa import RSAPublicKey
 from google.auth import _helpers
 from google.auth.crypt import base
 from google.auth.crypt import _cryptography_rsa
 from google.auth.crypt import _python_rsa
 
 RSA_KEY_MODULE_PREFIX = "rsa.key"
-CRYPTOGRAPHY_KEY_MODULE_PREFIX = "cryptography."
+
 
 class RSAVerifier(base.Verifier):
     """Verifies RSA cryptographic signatures using public keys.
@@ -45,10 +47,10 @@ class RSAVerifier(base.Verifier):
 
     def __init__(self, public_key):
         module_str = public_key.__class__.__module__
-        if module_str.startswith(RSA_KEY_MODULE_PREFIX):
-            impl_lib = _python_rsa
-        elif module_str.startswith(CRYPTOGRAPHY_KEY_MODULE_PREFIX):
+        if isinstance(public_key, RSAPublicKey):
             impl_lib = _cryptography_rsa
+        elif module_str.startswith(RSA_KEY_MODULE_PREFIX):
+            impl_lib = _python_rsa
         else:
             raise ValueError(f"unrecognized public key type: {type(public_key)}")
         self._impl = impl_lib.RSAVerifier(public_key)
@@ -97,10 +99,10 @@ class RSASigner(base.Signer, base.FromServiceAccountMixin):
 
     def __init__(self, private_key, key_id=None):
         module_str = private_key.__class__.__module__
-        if module_str.startswith(RSA_KEY_MODULE_PREFIX):
-            impl_lib = _python_rsa
-        elif module_str.startswith(CRYPTOGRAPHY_KEY_MODULE_PREFIX):
+        if isinstance(private_key, RSAPrivateKey):
             impl_lib = _cryptography_rsa
+        elif module_str.startswith(RSA_KEY_MODULE_PREFIX):
+            impl_lib = _python_rsa
         else:
             raise ValueError(f"unrecognized private key type: {type(private_key)}")
         self._impl = impl_lib.RSASigner(private_key, key_id=key_id)
