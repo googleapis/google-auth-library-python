@@ -38,10 +38,9 @@ version is at least 1.4.0.
 """
 
 from google.auth.crypt import base
-from google.auth.crypt import rsa
-
 from google.auth.crypt import es
 from google.auth.crypt import es256
+from google.auth.crypt import rsa
 
 EsSigner = es.EsSigner
 EsVerifier = es.EsVerifier
