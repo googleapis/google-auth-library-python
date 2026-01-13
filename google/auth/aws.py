@@ -532,7 +532,7 @@ class _DefaultAwsSecurityCredentialsSupplier(AwsSecurityCredentialsSupplier):
         """
         headers = None
         if imdsv2_session_token is not None:
-            headers["X-aws-ec2-metadata-token"] = imdsv2_session_token
+            headers = {"X-aws-ec2-metadata-token": imdsv2_session_token}
 
         response = request(
             url="{}/{}".format(self._security_credentials_url, role_name),
