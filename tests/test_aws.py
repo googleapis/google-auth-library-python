@@ -1430,7 +1430,6 @@ class TestCredentials(object):
             new_request.call_args_list[2][1],
             "{}/{}".format(SECURITY_CREDS_URL, self.AWS_ROLE),
             {
-                "Content-Type": "application/json",
                 "X-aws-ec2-metadata-token": self.AWS_IMDSV2_SESSION_TOKEN,
             },
         )
@@ -1487,7 +1486,6 @@ class TestCredentials(object):
             request.call_args_list[2][1],
             "{}/{}".format(SECURITY_CREDS_URL, self.AWS_ROLE),
             {
-                "Content-Type": "application/json",
                 "X-aws-ec2-metadata-token": self.AWS_IMDSV2_SESSION_TOKEN,
             },
         )
@@ -1544,7 +1542,6 @@ class TestCredentials(object):
             request.call_args_list[2][1],
             "{}/{}".format(SECURITY_CREDS_URL, self.AWS_ROLE),
             {
-                "Content-Type": "application/json",
                 "X-aws-ec2-metadata-token": self.AWS_IMDSV2_SESSION_TOKEN,
             },
         )
@@ -1595,7 +1592,6 @@ class TestCredentials(object):
             request.call_args_list[2][1],
             "{}/{}".format(SECURITY_CREDS_URL, self.AWS_ROLE),
             {
-                "Content-Type": "application/json",
                 "X-aws-ec2-metadata-token": self.AWS_IMDSV2_SESSION_TOKEN,
             },
         )
