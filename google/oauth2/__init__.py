@@ -17,16 +17,6 @@
 import sys
 import warnings
 
-
-class Python37DeprecationWarning(DeprecationWarning):  # pragma: NO COVER
-    """
-    Deprecation warning raised when Python 3.7 runtime is detected.
-    Python 3.7 support will be dropped after January 1, 2024.
-    """
-
-    pass
-
-
 # Raise warnings for deprecated versions
 eol_message = """
     You are using a Python version {} past its end of life. Google will update
