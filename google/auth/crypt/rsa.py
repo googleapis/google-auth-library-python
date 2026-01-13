@@ -21,10 +21,11 @@ for implmentations using different third party libraries
 
 from cryptography.hazmat.primitives.asymmetric.rsa import RSAPrivateKey
 from cryptography.hazmat.primitives.asymmetric.rsa import RSAPublicKey
+
 from google.auth import _helpers
-from google.auth.crypt import base
 from google.auth.crypt import _cryptography_rsa
 from google.auth.crypt import _python_rsa
+from google.auth.crypt import base
 
 RSA_KEY_MODULE_PREFIX = "rsa.key"
 
