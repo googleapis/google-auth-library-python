@@ -1,0 +1,46 @@
+
+<<<<<<< SEARCH
+# Timeout in seconds to wait for the GCE metadata server when detecting the
+# GCE environment.
+try:
+    _METADATA_DEFAULT_TIMEOUT = int(os.getenv(environment_vars.GCE_METADATA_TIMEOUT, 3))
+except ValueError:  # pragma: NO COVER
+    _METADATA_DEFAULT_TIMEOUT = 3
+
+# The number of tries to perform when waiting for the GCE metadata server
+=======
+# Timeout in seconds to wait for the GCE metadata server when detecting the
+# GCE environment.
+_METADATA_PING_DEFAULT_TIMEOUT = 3
+
+# The number of tries to perform when waiting for the GCE metadata server
+>>>>>>> REPLACE
+<<<<<<< SEARCH
+    # NOTE: The explicit ``timeout`` is a workaround. The underlying
+    #       issue is that resolving an unknown host on some networks will take
+    #       20-30 seconds; making this timeout short fixes the issue, but
+    #       could lead to false negatives in the event that we are on GCE, but
+    #       the metadata resolution was particularly slow. The latter case is
+    #       "unlikely".
+    headers = _METADATA_HEADERS.copy()
+    headers[metrics.API_CLIENT_HEADER] = metrics.mds_ping()
+=======
+    # NOTE: The explicit ``timeout`` is a workaround. The underlying
+    #       issue is that resolving an unknown host on some networks will take
+    #       20-30 seconds; making this timeout short fixes the issue, but
+    #       could lead to false negatives in the event that we are on GCE, but
+    #       the metadata resolution was particularly slow. The latter case is
+    #       "unlikely".
+
+    if timeout is None:
+        try:
+            timeout = float(os.getenv(
+                environment_vars.GCE_METADATA_TIMEOUT,
+                str(_METADATA_PING_DEFAULT_TIMEOUT)))
+        except ValueError:
+            timeout = _METADATA_PING_DEFAULT_TIMEOUT
+
+    retries = 0
+    headers = _METADATA_HEADERS.copy()
+    headers[metrics.API_CLIENT_HEADER] = metrics.mds_ping()
+>>>>>>> REPLACE
