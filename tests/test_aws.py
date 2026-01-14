@@ -16,9 +16,9 @@ import datetime
 import http.client as http_client
 import json
 import os
+from unittest import mock
 import urllib.parse
 
-import mock
 import pytest  # type: ignore
 
 from google.auth import _helpers, external_account
@@ -42,8 +42,10 @@ SERVICE_ACCOUNT_EMAIL = "service-1234@service-name.iam.gserviceaccount.com"
 SERVICE_ACCOUNT_IMPERSONATION_URL_BASE = (
     "https://us-east1-iamcredentials.googleapis.com"
 )
-SERVICE_ACCOUNT_IMPERSONATION_URL_ROUTE = "/v1/projects/-/serviceAccounts/{}:generateAccessToken".format(
-    SERVICE_ACCOUNT_EMAIL
+SERVICE_ACCOUNT_IMPERSONATION_URL_ROUTE = (
+    "/v1/projects/-/serviceAccounts/{}:generateAccessToken".format(
+        SERVICE_ACCOUNT_EMAIL
+    )
 )
 SERVICE_ACCOUNT_IMPERSONATION_URL = (
     SERVICE_ACCOUNT_IMPERSONATION_URL_BASE + SERVICE_ACCOUNT_IMPERSONATION_URL_ROUTE
@@ -920,7 +922,7 @@ class TestCredentials(object):
         assert request_kwargs["body"] is not None
         body_tuples = urllib.parse.parse_qsl(request_kwargs["body"])
         assert len(body_tuples) == len(request_data.keys())
-        for (k, v) in body_tuples:
+        for k, v in body_tuples:
             assert v.decode("utf-8") == request_data[k.decode("utf-8")]
 
     @classmethod
@@ -971,6 +973,7 @@ class TestCredentials(object):
             quota_project_id=QUOTA_PROJECT_ID,
             workforce_pool_user_project=None,
             universe_domain=DEFAULT_UNIVERSE_DOMAIN,
+            trust_boundary=None,
         )
 
     @mock.patch.object(aws.Credentials, "__init__", return_value=None)
@@ -1000,6 +1003,7 @@ class TestCredentials(object):
             quota_project_id=None,
             workforce_pool_user_project=None,
             universe_domain=DEFAULT_UNIVERSE_DOMAIN,
+            trust_boundary=None,
         )
 
     @mock.patch.object(aws.Credentials, "__init__", return_value=None)
@@ -1031,6 +1035,7 @@ class TestCredentials(object):
             quota_project_id=None,
             workforce_pool_user_project=None,
             universe_domain=DEFAULT_UNIVERSE_DOMAIN,
+            trust_boundary=None,
         )
 
     @mock.patch.object(aws.Credentials, "__init__", return_value=None)
@@ -1068,6 +1073,7 @@ class TestCredentials(object):
             quota_project_id=QUOTA_PROJECT_ID,
             workforce_pool_user_project=None,
             universe_domain=DEFAULT_UNIVERSE_DOMAIN,
+            trust_boundary=None,
         )
 
     @mock.patch.object(aws.Credentials, "__init__", return_value=None)
@@ -1098,6 +1104,7 @@ class TestCredentials(object):
             quota_project_id=None,
             workforce_pool_user_project=None,
             universe_domain=DEFAULT_UNIVERSE_DOMAIN,
+            trust_boundary=None,
         )
 
     def test_constructor_invalid_credential_source(self):
@@ -1299,7 +1306,7 @@ class TestCredentials(object):
         self.assert_aws_metadata_request_kwargs(
             request.call_args_list[2][1],
             "{}/{}".format(SECURITY_CREDS_URL, self.AWS_ROLE),
-            {"Content-Type": "application/json"},
+            None,
         )
 
         # Retrieve subject_token again. Region should not be queried again.
@@ -1322,7 +1329,7 @@ class TestCredentials(object):
         self.assert_aws_metadata_request_kwargs(
             new_request.call_args_list[1][1],
             "{}/{}".format(SECURITY_CREDS_URL, self.AWS_ROLE),
-            {"Content-Type": "application/json"},
+            None,
         )
 
     @mock.patch("google.auth._helpers.utcnow")
@@ -1387,7 +1394,6 @@ class TestCredentials(object):
             request.call_args_list[4][1],
             "{}/{}".format(SECURITY_CREDS_URL, self.AWS_ROLE),
             {
-                "Content-Type": "application/json",
                 "X-aws-ec2-metadata-token": self.AWS_IMDSV2_SESSION_TOKEN,
             },
         )
@@ -1424,7 +1430,6 @@ class TestCredentials(object):
             new_request.call_args_list[2][1],
             "{}/{}".format(SECURITY_CREDS_URL, self.AWS_ROLE),
             {
-                "Content-Type": "application/json",
                 "X-aws-ec2-metadata-token": self.AWS_IMDSV2_SESSION_TOKEN,
             },
         )
@@ -1481,7 +1486,6 @@ class TestCredentials(object):
             request.call_args_list[2][1],
             "{}/{}".format(SECURITY_CREDS_URL, self.AWS_ROLE),
             {
-                "Content-Type": "application/json",
                 "X-aws-ec2-metadata-token": self.AWS_IMDSV2_SESSION_TOKEN,
             },
         )
@@ -1538,7 +1542,6 @@ class TestCredentials(object):
             request.call_args_list[2][1],
             "{}/{}".format(SECURITY_CREDS_URL, self.AWS_ROLE),
             {
-                "Content-Type": "application/json",
                 "X-aws-ec2-metadata-token": self.AWS_IMDSV2_SESSION_TOKEN,
             },
         )
@@ -1589,7 +1592,6 @@ class TestCredentials(object):
             request.call_args_list[2][1],
             "{}/{}".format(SECURITY_CREDS_URL, self.AWS_ROLE),
             {
-                "Content-Type": "application/json",
                 "X-aws-ec2-metadata-token": self.AWS_IMDSV2_SESSION_TOKEN,
             },
         )
@@ -1677,7 +1679,6 @@ class TestCredentials(object):
             request.call_args_list[4][1],
             "{}/{}".format(SECURITY_CREDS_URL_IPV6, self.AWS_ROLE),
             {
-                "Content-Type": "application/json",
                 "X-aws-ec2-metadata-token": self.AWS_IMDSV2_SESSION_TOKEN,
             },
         )
@@ -2057,7 +2058,9 @@ class TestCredentials(object):
             "authorization": "Bearer {}".format(self.SUCCESS_RESPONSE["access_token"]),
             "x-goog-user-project": QUOTA_PROJECT_ID,
             "x-goog-api-client": IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
-            "x-allowed-locations": "0x0",
+            # TODO(negarb): Uncomment and update when trust boundary is supported
+            # for external account credentials.
+            # "x-allowed-locations": "0x0",
         }
         impersonation_request_data = {
             "delegates": None,
@@ -2150,7 +2153,7 @@ class TestCredentials(object):
             "authorization": "Bearer {}".format(self.SUCCESS_RESPONSE["access_token"]),
             "x-goog-user-project": QUOTA_PROJECT_ID,
             "x-goog-api-client": IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
-            "x-allowed-locations": "0x0",
+            # "x-allowed-locations": "0x0",
         }
         impersonation_request_data = {
             "delegates": None,
@@ -2345,7 +2348,7 @@ class TestCredentials(object):
             "authorization": "Bearer {}".format(self.SUCCESS_RESPONSE["access_token"]),
             "x-goog-user-project": QUOTA_PROJECT_ID,
             "x-goog-api-client": IMPERSONATE_ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE,
-            "x-allowed-locations": "0x0",
+            # "x-allowed-locations": "0x0",
         }
         impersonation_request_data = {
             "delegates": None,
