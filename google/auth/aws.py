@@ -535,7 +535,6 @@ class _DefaultAwsSecurityCredentialsSupplier(AwsSecurityCredentialsSupplier):
         else:
             headers = None
 
-
         response = request(
             url="{}/{}".format(self._security_credentials_url, role_name),
             method="GET",
