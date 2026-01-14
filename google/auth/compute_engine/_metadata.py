@@ -97,6 +97,20 @@ _METADATA_HEADERS = {_METADATA_FLAVOR_HEADER: _METADATA_FLAVOR_VALUE}
 # Timeout in seconds to wait for the GCE metadata server when detecting the
 # GCE environment.
 _METADATA_PING_DEFAULT_TIMEOUT = 3
+
+# The number of tries to perform when waiting for the GCE metadata server
+# when detecting the GCE environment.
+try:
+    _METADATA_DETECT_RETRIES = int(
+        os.getenv(environment_vars.GCE_METADATA_DETECT_RETRIES, 3)
+    )
+except ValueError:  # pragma: NO COVER
+    _METADATA_DETECT_RETRIES = 3
+
+# This is used to disable checking for the GCE metadata server and directly
+# assuming it's not available.
+_NO_GCE_CHECK = os.getenv(environment_vars.NO_GCE_CHECK) == "true"
+
 # Detect GCE Residency
 _GOOGLE = "Google"
 _GCE_PRODUCT_NAME_FILE = "/sys/class/dmi/id/product_name"
@@ -112,6 +126,9 @@ def is_on_gce(request):
     Returns:
         bool: True if the code runs on Google Compute Engine, False otherwise.
     """
+    if _NO_GCE_CHECK:
+        return False
+
     if ping(request):
         return True
 
@@ -166,7 +183,9 @@ def _prepare_request_for_mds(request, use_mtls=False) -> None:
             request.session.mount(f"https://{host}/", adapter)
 
 
-def ping(request, timeout=_METADATA_DEFAULT_TIMEOUT, retry_count=3):
+def ping(
+    request, timeout=_METADATA_DEFAULT_TIMEOUT, retry_count=_METADATA_DETECT_RETRIES
+):
     """Checks to see if the metadata server is available.
 
     Args:

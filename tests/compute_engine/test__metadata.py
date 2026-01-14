@@ -108,6 +108,20 @@ def test_is_on_gce_ping_success():
     assert _metadata.is_on_gce(request)
 
 
+def test_is_on_gce_no_gce_check():
+    request = make_request("", headers=_metadata._METADATA_HEADERS)
+
+    os.environ[environment_vars.NO_GCE_CHECK] = "true"
+    importlib.reload(_metadata)
+
+    try:
+        assert not _metadata.is_on_gce(request)
+        assert request.call_count == 0
+    finally:
+        del os.environ[environment_vars.NO_GCE_CHECK]
+        importlib.reload(_metadata)
+
+
 @mock.patch("os.name", new="nt")
 def test_is_on_gce_windows_success():
     request = make_request("", headers={_metadata._METADATA_FLAVOR_HEADER: "meep"})
@@ -222,6 +236,23 @@ def test_ping_success_custom_root(mock_metrics_header_value):
         headers=MDS_PING_REQUEST_HEADER,
         timeout=_metadata._METADATA_PING_DEFAULT_TIMEOUT,
     )
+
+
+@mock.patch("google.auth.metrics.mds_ping", return_value=MDS_PING_METRICS_HEADER_VALUE)
+def test_ping_failure_custom_retry(mock_metrics_header_value):
+    request = make_request("")
+    request.side_effect = exceptions.TransportError()
+
+    os.environ[environment_vars.GCE_METADATA_DETECT_RETRIES] = "10"
+    importlib.reload(_metadata)
+
+    try:
+        _metadata.ping(request)
+    finally:
+        del os.environ[environment_vars.GCE_METADATA_DETECT_RETRIES]
+        importlib.reload(_metadata)
+
+    assert request.call_count == 10
 
 
 def test_get_success_json():
