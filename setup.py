@@ -38,8 +38,8 @@ pyjwt_extra_require = ["pyjwt>=2.0"]
 
 reauth_extra_require = ["pyu2f>=0.1.5"]
 
-# TODO(https://github.com/googleapis/google-auth-library-python/issues/1738): Add bounds for cryptography and pyopenssl dependencies.
-enterprise_cert_extra_require = ["cryptography", "pyopenssl"]
+# TODO(https://github.com/googleapis/google-auth-library-python/issues/1738): Add bounds for pyopenssl dependency.
+enterprise_cert_extra_require = ["pyopenssl"]
 
 pyopenssl_extra_require = ["pyopenssl>=20.0.0"]
 
