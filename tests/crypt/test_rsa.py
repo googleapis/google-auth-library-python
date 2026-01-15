@@ -27,15 +27,18 @@ from google.auth.crypt import rsa
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
 
+
 @pytest.fixture
 def private_key_bytes():
     with open(os.path.join(DATA_DIR, "privatekey.pem"), "rb") as fh:
         return fh.read()
 
+
 @pytest.fixture
 def public_key_bytes():
     with open(os.path.join(DATA_DIR, "privatekey.pub"), "rb") as fh:
         return fh.read()
+
 
 @pytest.fixture
 def cryptography_private_key(private_key_bytes):
@@ -43,15 +46,18 @@ def cryptography_private_key(private_key_bytes):
         private_key_bytes, password=None, backend=backends.default_backend()
     )
 
+
 @pytest.fixture
 def rsa_private_key(private_key_bytes):
     return rsa_lib.PrivateKey.load_pkcs1(private_key_bytes)
+
 
 @pytest.fixture
 def cryptography_public_key(public_key_bytes):
     return serialization.load_pem_public_key(
         public_key_bytes, backend=backends.default_backend()
     )
+
 
 @pytest.fixture
 def rsa_public_key(public_key_bytes):
@@ -135,7 +141,9 @@ class TestRSASigner:
             mock_sign.assert_called_once_with(b"message")
 
     @mock.patch("google.auth.crypt.rsa._cryptography_rsa")
-    def test_from_string_delegates_to_cryptography(self, mock_crypto, private_key_bytes):
+    def test_from_string_delegates_to_cryptography(
+        self, mock_crypto, private_key_bytes
+    ):
         expected_signer = mock.Mock()
         mock_crypto.RSASigner.from_string.return_value = expected_signer
 
