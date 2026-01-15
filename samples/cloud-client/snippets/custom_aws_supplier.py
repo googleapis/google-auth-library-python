@@ -11,36 +11,55 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# [START auth_cloud_aws_supplier]
+
 import json
 import os
 import sys
+from typing import Optional
 
 import boto3
 from dotenv import load_dotenv
-from google.auth.aws import Credentials as AwsCredentials
-from google.auth.aws import AwsSecurityCredentials, AwsSecurityCredentialsSupplier
-from google.auth.exceptions import GoogleAuthError
-from google.auth.transport.requests import AuthorizedSession
+
+from google.auth import aws
+from google.auth import exceptions
+from google.cloud import storage
 
 load_dotenv()
 
 
-class CustomAwsSupplier(AwsSecurityCredentialsSupplier):
+class CustomAwsSupplier(aws.AwsSecurityCredentialsSupplier):
     """Custom AWS Security Credentials Supplier."""
 
-    def __init__(self):
-        """Initializes the Boto3 session, prioritizing environment variables for region."""
+    def __init__(self, region=None):
+        """Initializes the Boto3 session, prioritizing environment variables for region.
+
+        Args:
+            region Optional[str]: The AWS region name. If None, it will be
+                sourced from environment variables or Boto3's default discovery.
+        """
+
         # Explicitly read the region from the environment first. This ensures that
         # a value from a .env file is picked up reliably for local testing.
-        region = os.getenv("AWS_REGION") or os.getenv("AWS_DEFAULT_REGION")
+        self._region = region or os.getenv("AWS_REGION") or os.getenv("AWS_DEFAULT_REGION")
 
         # If region is None, Boto3's discovery chain will be used when needed.
-        self.session = boto3.Session(region_name=region)
+        self.session = boto3.Session(region_name=self._region)
         self._cached_region = None
-        print(f"[INFO] CustomAwsSupplier initialized. Region from env: {region}")
+
+        print(f"[INFO] CustomAwsSupplier initialized. Region: {self._region}")
 
     def get_aws_region(self, context, request) -> str:
-        """Returns the AWS region using Boto3's default provider chain."""
+        """Returns the AWS region using Boto3's default provider chain.
+   
+        Args:
+            context (google.auth.transport.requests.Request): The context.
+            request Optional[google.auth.transport.Request]: The request.
+    
+        Returns:
+            str: The AWS region name.
+        """
+
         if self._cached_region:
             return self._cached_region
 
@@ -50,68 +69,63 @@ class CustomAwsSupplier(AwsSecurityCredentialsSupplier):
 
         if not self._cached_region:
             print("[ERROR] Boto3 was unable to resolve an AWS region.", file=sys.stderr)
-            raise GoogleAuthError("Boto3 was unable to resolve an AWS region.")
+            raise exceptions.GoogleAuthError("Boto3 was unable to resolve an AWS region.")
 
         print(f"[INFO] Boto3 resolved AWS Region: {self._cached_region}")
         return self._cached_region
 
-    def get_aws_security_credentials(self, context, request=None) -> AwsSecurityCredentials:
-        """Retrieves AWS security credentials using Boto3's default provider chain."""
+    def get_aws_security_credentials(self, context, request=None) -> aws.AwsSecurityCredentials:
+        """Retrieves AWS security credentials using Boto3's default provider chain.
+    
+        Args:
+            context (google.auth.transport.requests.Request): The context.
+            request Optional[google.auth.transport.Request]: The request.
+    
+        Returns:
+            aws.AwsSecurityCredentials: The AWS security credentials.
+        """
+
         aws_credentials = self.session.get_credentials()
         if not aws_credentials:
             print("[ERROR] Unable to resolve AWS credentials.", file=sys.stderr)
-            raise GoogleAuthError("Unable to resolve AWS credentials from the provider chain.")
+            raise exceptions.GoogleAuthError("Unable to resolve AWS credentials from the provider chain.")
 
         print(f"[INFO] Resolved AWS Access Key ID: {aws_credentials.access_key}")
 
-        return AwsSecurityCredentials(
+        return aws.AwsSecurityCredentials(
             access_key_id=aws_credentials.access_key,
             secret_access_key=aws_credentials.secret_key,
             session_token=aws_credentials.token,
         )
 
 
-def main():
-    """Main function to demonstrate the custom AWS supplier."""
-    print("--- Starting Script ---")
+def authenticate_with_aws_supplier(project_id, aws_region, audience, service_account_impersonation_url=None):
+    """
+    List storage buckets by authenticating with a custom AWS supplier.
+   
+    Args:
+        project_id (str): The Google Cloud project ID.
+        aws_region Optional[str]: The AWS region name.
+        audience (str): The audience for the OIDC token.
+            service_account_impersonation_url Optional[str]: The URL for service account
+            impersonation.
+    """
 
-    gcp_audience = os.getenv("GCP_WORKLOAD_AUDIENCE")
-    sa_impersonation_url = os.getenv("GCP_SERVICE_ACCOUNT_IMPERSONATION_URL")
-    gcs_bucket_name = os.getenv("GCS_BUCKET_NAME")
+    custom_supplier = CustomAwsSupplier(region=aws_region)
 
-    print(f"GCP_WORKLOAD_AUDIENCE: {gcp_audience}")
-    print(f"GCS_BUCKET_NAME: {gcs_bucket_name}")
-
-    if not all([gcp_audience, sa_impersonation_url, gcs_bucket_name]):
-        print("[ERROR] Missing required environment variables.", file=sys.stderr)
-        raise GoogleAuthError("Missing required environment variables.")
-
-    custom_supplier = CustomAwsSupplier()
-
-    credentials = AwsCredentials(
-        audience=gcp_audience,
+    credentials = aws.Credentials(
+        audience=audience,
         subject_token_type="urn:ietf:params:aws:token-type:aws4_request",
-        service_account_impersonation_url=sa_impersonation_url,
+        service_account_impersonation_url=service_account_impersonation_url,
         aws_security_credentials_supplier=custom_supplier,
-        scopes=['https://www.googleapis.com/auth/devstorage.read_write'],
+        scopes=['https://www.googleapis.com/auth/cloud-platform'],
     )
 
-    bucket_url = f"https://storage.googleapis.com/storage/v1/b/{gcs_bucket_name}"
-    print(f"Request URL: {bucket_url}")
-
-    authed_session = AuthorizedSession(credentials)
-    try:
-        print("Attempting to make authenticated request to Google Cloud Storage...")
-        res = authed_session.get(bucket_url)
-        res.raise_for_status()
-        print("\n--- SUCCESS! ---")
-        print("Successfully authenticated and retrieved bucket data:")
-        print(json.dumps(res.json(), indent=2))
-    except Exception as e:
-        print("--- FAILED --- ", file=sys.stderr)
-        print(e, file=sys.stderr)
-        exit(1)
-
-
-if __name__ == "__main__":
-    main()
+    # Construct the Storage client.
+    storage_client = storage.Client(credentials=credentials, project=project_id)
+    buckets = storage_client.list_buckets()
+    print("Buckets:")
+    for bucket in buckets:
+        print(bucket.name)
+    print("Listed all storage buckets.")
+# [END auth_cloud_aws_supplier]
