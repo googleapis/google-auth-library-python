@@ -28,6 +28,7 @@ from google.auth import _helpers
 from google.auth import credentials
 from google.auth import crypt
 from google.auth import exceptions
+from google.auth.transport import _mtls_helper
 
 IAM_RETRY_CODES = {
     http_client.INTERNAL_SERVER_ERROR,
@@ -38,26 +39,20 @@ IAM_RETRY_CODES = {
 
 _IAM_SCOPE = ["https://www.googleapis.com/auth/iam"]
 
-_IAM_ENDPOINT = (
-    "https://iamcredentials.googleapis.com/v1/projects/-"
-    + "/serviceAccounts/{}:generateAccessToken"
-)
+# 1. Determine if the IAM mTLS domain should be used
+if hasattr(_mtls_helper, "check_use_client_cert") and _mtls_helper.check_use_client_cert():
+    domain = "iamcredentials.mtls.googleapis.com"
+else:
+    domain = "iamcredentials.googleapis.com"
 
-_IAM_SIGN_ENDPOINT = (
-    "https://iamcredentials.googleapis.com/v1/projects/-"
-    + "/serviceAccounts/{}:signBlob"
-)
+# 2. Create the common base URL
+base_url = f"https://{domain}/v1/projects/-/serviceAccounts/{{}}"
 
-_IAM_SIGNJWT_ENDPOINT = (
-    "https://iamcredentials.googleapis.com/v1/projects/-"
-    + "/serviceAccounts/{}:signJwt"
-)
-
-_IAM_IDTOKEN_ENDPOINT = (
-    "https://iamcredentials.googleapis.com/v1/"
-    + "projects/-/serviceAccounts/{}:generateIdToken"
-)
-
+# 3. Define the endpoints
+_IAM_ENDPOINT         = base_url + ":generateAccessToken"
+_IAM_SIGN_ENDPOINT    = base_url + ":signBlob"
+_IAM_SIGNJWT_ENDPOINT = base_url + ":signJwt"
+_IAM_IDTOKEN_ENDPOINT = base_url + ":generateIdToken"
 
 class Signer(crypt.Signer):
     """Signs messages using the IAM `signBlob API`_.
