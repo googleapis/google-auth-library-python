@@ -49,8 +49,8 @@ else:
 base_url = f"https://{domain}/v1/projects/-/serviceAccounts/{{}}"
 
 # 3. Define the endpoints
-_IAM_ENDPOINT         = base_url + ":generateAccessToken"
-_IAM_SIGN_ENDPOINT    = base_url + ":signBlob"
+_IAM_ENDPOINT = base_url + ":generateAccessToken"
+_IAM_SIGN_ENDPOINT = base_url + ":signBlob"
 _IAM_SIGNJWT_ENDPOINT = base_url + ":signJwt"
 _IAM_IDTOKEN_ENDPOINT = base_url + ":generateIdToken"
 
