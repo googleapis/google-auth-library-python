@@ -203,7 +203,7 @@ def test_ping_success_custom_root(mock_metrics_header_value):
 
 @mock.patch("time.sleep", return_value=None)
 @mock.patch("google.auth.metrics.mds_ping", return_value=MDS_PING_METRICS_HEADER_VALUE)
-def test_ping_failure_custom_retry(mock_metrics_header_value, mock_sleep):
+def test_ping_failure_custom_retry(mock_metrics_header_value, _mock_sleep):
     request = make_request("")
     request.side_effect = exceptions.TransportError()
 
@@ -452,7 +452,7 @@ def test_get_failure_connection_failed(mock_sleep):
 
 
 @mock.patch("time.sleep", return_value=None)
-def test_get_too_many_requests_retryable_error_failure(mock_sleep):
+def test_get_too_many_requests_retryable_error_failure(_mock_sleep):
     request = make_request("too many requests", status=http_client.TOO_MANY_REQUESTS)
 
     with pytest.raises(exceptions.TransportError) as excinfo:
@@ -549,7 +549,7 @@ def test_get_universe_domain_not_found():
 
 
 @mock.patch("time.sleep", return_value=None)
-def test_get_universe_domain_retryable_error_failure(mock_sleep):
+def test_get_universe_domain_retryable_error_failure(_mock_sleep):
     # Test that if the universe domain endpoint returns a retryable error
     # we should retry.
     #
