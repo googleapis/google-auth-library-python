@@ -688,7 +688,7 @@ class TestAuthorizedSession(object):
         authed_session._is_mtls = True
 
         with mock.patch.object(
-            google.auth.transport._mtls_helper._agent_identity_utils,
+            google.auth.transport._mtls_helper,
             "call_client_cert_callback",
             return_value=(new_cert, new_key),
         ):
