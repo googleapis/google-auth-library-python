@@ -548,7 +548,8 @@ def test_get_universe_domain_not_found():
     assert universe_domain == "googleapis.com"
 
 
-def test_get_universe_domain_retryable_error_failure():
+@mock.patch("time.sleep", return_value=None)
+def test_get_universe_domain_retryable_error_failure(mock_sleep):
     # Test that if the universe domain endpoint returns a retryable error
     # we should retry.
     #
