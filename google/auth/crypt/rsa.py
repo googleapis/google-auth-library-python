@@ -32,14 +32,8 @@ RSA_KEY_MODULE_PREFIX = "rsa.key"
 class RSAVerifier(base.Verifier):
     """Verifies RSA cryptographic signatures using public keys.
 
-    Requires installation of `cryptography` optional dependency.
-
-    .. deprecated::
-        The `rsa` library has been archived. Please migrate to
-        `cryptography` for public keys.
-
     Args:
-        public_key (Union[rsa.key.PublicKey, cryptography.hazmat.primitives.asymmetric.rsa.RSAPublicKey]):
+        public_key (Union["rsa.key.PublicKey", cryptography.hazmat.primitives.asymmetric.rsa.RSAPublicKey]):
             The public key used to verify signatures.
     Raises:
         ImportError: if called with an rsa.key.PublicKey, when the rsa library is not installed
@@ -84,14 +78,8 @@ class RSAVerifier(base.Verifier):
 class RSASigner(base.Signer, base.FromServiceAccountMixin):
     """Signs messages with an RSA private key.
 
-    Requires installation of `cryptography` optional dependency.
-
-    .. deprecated::
-        The `rsa` library has been archived. Please migrate to
-        `cryptography` for public keys.
-
     Args:
-        private_key (Union[rsa.key.PrivateKey, cryptography.hazmat.primitives.asymmetric.rsa.RSAPrivateKey]):
+        private_key (Union["rsa.key.PrivateKey", cryptography.hazmat.primitives.asymmetric.rsa.RSAPrivateKey]):
             The private key to sign with.
         key_id (str): Optional key ID used to identify this private key. This
             can be useful to associate the private key with its associated

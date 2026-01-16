@@ -18,16 +18,14 @@ import os
 from setuptools import find_namespace_packages
 from setuptools import setup
 
+cryptography_base_require = [
+    "cryptography >= 38.0.3",
+]
 
 DEPENDENCIES = (
     "pyasn1-modules>=0.2.1",
-    "cryptography >= 38.0.3",
+    cryptography_base_require,
 )
-
-# Note: cryptography was made into a required dependency. Extra is kept for backwards compatibility
-cryptography_extra_require = [
-    "cryptography >= 38.0.3",
-]
 
 requests_extra_require = ["requests >= 2.20.0, < 3.0.0"]
 
@@ -37,8 +35,8 @@ pyjwt_extra_require = ["pyjwt>=2.0"]
 
 reauth_extra_require = ["pyu2f>=0.1.5"]
 
-# TODO(https://github.com/googleapis/google-auth-library-python/issues/1738): Add bounds for cryptography and pyopenssl dependencies.
-enterprise_cert_extra_require = ["cryptography", "pyopenssl"]
+# TODO(https://github.com/googleapis/google-auth-library-python/issues/1738): Add bounds for pyopenssl dependency.
+enterprise_cert_extra_require = ["pyopenssl"]
 
 pyopenssl_extra_require = ["pyopenssl>=20.0.0"]
 
@@ -78,7 +76,8 @@ testing_extra_require = [
 ]
 
 extras = {
-    "cryptography": cryptography_extra_require,
+    # Note: cryptography was made into a required dependency. Extra is kept for backwards compatibility
+    "cryptography": cryptography_base_require,
     "aiohttp": aiohttp_extra_require,
     "enterprise_cert": enterprise_cert_extra_require,
     "pyopenssl": pyopenssl_extra_require,
