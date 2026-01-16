@@ -98,7 +98,7 @@ class RSASigner(base.Signer, base.FromServiceAccountMixin):
             public key or certificate.
 
     Raises:
-        ImportError: if called with an rsa.key.PublicKey, when the rsa library is not installed
+        ImportError: if called with an rsa.key.PrivateKey, when the rsa library is not installed
         ValueError: if an unrecognized public key is provided
     """
 
