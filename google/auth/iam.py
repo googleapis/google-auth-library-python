@@ -28,7 +28,7 @@ from google.auth import _helpers
 from google.auth import credentials
 from google.auth import crypt
 from google.auth import exceptions
-from google.auth.transport import _mtls_helper
+from google.auth.transport import mtls
 
 IAM_RETRY_CODES = {
     http_client.INTERNAL_SERVER_ERROR,
@@ -39,20 +39,31 @@ IAM_RETRY_CODES = {
 
 _IAM_SCOPE = ["https://www.googleapis.com/auth/iam"]
 
-# 1. Determine if the IAM mTLS domain should be used
-if hasattr(_mtls_helper, "check_use_client_cert") and _mtls_helper.check_use_client_cert():
-    domain = "iamcredentials.mtls.googleapis.com"
+# 1. Determine if we should use mTLS. 
+# Note: We only support automatic mTLS on the default googleapis.com universe.
+if hasattr(mtls, "should_use_client_cert"):
+    use_client_cert = mtls.should_use_client_cert()
+else:  # pragma: NO COVER
+    # if unsupported, fallback to reading from env var
+    use_client_cert = os.getenv("GOOGLE_API_USE_CLIENT_CERTIFICATE", "false").lower() == "true"
+
+# 2. Construct the template domain using the library's DEFAULT_UNIVERSE_DOMAIN constant.
+# This ensures that the .replace() calls in the classes will work correctly.
+if use_client_cert:
+    # We use the .mtls. prefix only for the default universe template
+    _IAM_DOMAIN = f"iamcredentials.mtls.{credentials.DEFAULT_UNIVERSE_DOMAIN}"
 else:
-    domain = "iamcredentials.googleapis.com"
+    _IAM_DOMAIN = f"iamcredentials.{credentials.DEFAULT_UNIVERSE_DOMAIN}"
 
-# 2. Create the common base URL
-base_url = f"https://{domain}/v1/projects/-/serviceAccounts/{{}}"
+# 3. Create the common base URL template
+# We use double brackets {{}} so .format() can be called later for the email.
+_IAM_BASE_URL = f"https://{_IAM_DOMAIN}/v1/projects/-/serviceAccounts/{{}}"
 
-# 3. Define the endpoints
-_IAM_ENDPOINT = base_url + ":generateAccessToken"
-_IAM_SIGN_ENDPOINT = base_url + ":signBlob"
-_IAM_SIGNJWT_ENDPOINT = base_url + ":signJwt"
-_IAM_IDTOKEN_ENDPOINT = base_url + ":generateIdToken"
+# 4. Define the endpoints as templates
+_IAM_ENDPOINT = _IAM_BASE_URL + ":generateAccessToken"
+_IAM_SIGN_ENDPOINT = _IAM_BASE_URL + ":signBlob"
+_IAM_SIGNJWT_ENDPOINT = _IAM_BASE_URL + ":signJwt"
+_IAM_IDTOKEN_ENDPOINT = _IAM_BASE_URL + ":generateIdToken"
 
 class Signer(crypt.Signer):
     """Signs messages using the IAM `signBlob API`_.
