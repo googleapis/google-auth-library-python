@@ -46,6 +46,7 @@ class RSAVerifier(base.Verifier):
             impl_lib = _cryptography_rsa
         elif module_str.startswith(RSA_KEY_MODULE_PREFIX):
             from google.auth.crypt import _python_rsa
+
             impl_lib = _python_rsa
         else:
             raise ValueError(f"unrecognized public key type: {type(public_key)}")
@@ -96,6 +97,7 @@ class RSASigner(base.Signer, base.FromServiceAccountMixin):
             impl_lib = _cryptography_rsa
         elif module_str.startswith(RSA_KEY_MODULE_PREFIX):
             from google.auth.crypt import _python_rsa
+
             impl_lib = _python_rsa
         else:
             raise ValueError(f"unrecognized private key type: {type(private_key)}")
