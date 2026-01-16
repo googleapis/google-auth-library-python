@@ -22,6 +22,7 @@ API`_'s auth-related functionality.
 import base64
 import http.client as http_client
 import json
+import os
 
 from google.auth import _exponential_backoff
 from google.auth import _helpers
@@ -39,13 +40,15 @@ IAM_RETRY_CODES = {
 
 _IAM_SCOPE = ["https://www.googleapis.com/auth/iam"]
 
-# 1. Determine if we should use mTLS. 
+# 1. Determine if we should use mTLS.
 # Note: We only support automatic mTLS on the default googleapis.com universe.
 if hasattr(mtls, "should_use_client_cert"):
     use_client_cert = mtls.should_use_client_cert()
 else:  # pragma: NO COVER
     # if unsupported, fallback to reading from env var
-    use_client_cert = os.getenv("GOOGLE_API_USE_CLIENT_CERTIFICATE", "false").lower() == "true"
+    use_client_cert = (
+        os.getenv("GOOGLE_API_USE_CLIENT_CERTIFICATE", "false").lower() == "true"
+    )
 
 # 2. Construct the template domain using the library's DEFAULT_UNIVERSE_DOMAIN constant.
 # This ensures that the .replace() calls in the classes will work correctly.
@@ -64,6 +67,7 @@ _IAM_ENDPOINT = _IAM_BASE_URL + ":generateAccessToken"
 _IAM_SIGN_ENDPOINT = _IAM_BASE_URL + ":signBlob"
 _IAM_SIGNJWT_ENDPOINT = _IAM_BASE_URL + ":signJwt"
 _IAM_IDTOKEN_ENDPOINT = _IAM_BASE_URL + ":generateIdToken"
+
 
 class Signer(crypt.Signer):
     """Signs messages using the IAM `signBlob API`_.
