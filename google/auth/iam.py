@@ -46,9 +46,12 @@ if hasattr(mtls, "should_use_client_cert"):
     use_client_cert = mtls.should_use_client_cert()
 else:  # pragma: NO COVER
     # if unsupported, fallback to reading from env var
-    use_client_cert = (
-        os.getenv("GOOGLE_API_USE_CLIENT_CERTIFICATE", "false").lower() == "true"
-        or os.getenv("CLOUDSDK_CONTEXT_AWARE_USE_CLIENT_CERTIFICATE", "false").lower() == "true"
+    use_client_cert = any(
+        os.getenv(var, "false").lower() == "true"
+        for var in (
+            "GOOGLE_API_USE_CLIENT_CERTIFICATE",
+            "CLOUDSDK_CONTEXT_AWARE_USE_CLIENT_CERTIFICATE",
+        )
     )
 
 # 2. Construct the template domain using the library's DEFAULT_UNIVERSE_DOMAIN constant.
