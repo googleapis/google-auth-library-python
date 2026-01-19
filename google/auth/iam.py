@@ -48,6 +48,7 @@ else:  # pragma: NO COVER
     # if unsupported, fallback to reading from env var
     use_client_cert = (
         os.getenv("GOOGLE_API_USE_CLIENT_CERTIFICATE", "false").lower() == "true"
+        or os.getenv("CLOUDSDK_CONTEXT_AWARE_USE_CLIENT_CERTIFICATE", "false").lower() == "true"
     )
 
 # 2. Construct the template domain using the library's DEFAULT_UNIVERSE_DOMAIN constant.
