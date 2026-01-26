@@ -4,6 +4,13 @@
 
 [1]: https://pypi.org/project/google-auth/#history
 
+## [2.49.0-dev0](https://github.com/googleapis/google-auth-library-python/compare/v2.48.0...v2.49.0-dev0) (2026-01-26)
+
+
+### Bug Fixes
+
+* remove deprecated rsa dependency ([e98cf69284d3620619a70b54fb0b9533caf11878](https://github.com/googleapis/google-auth-library-python/commit/e98cf69284d3620619a70b54fb0b9533caf11878))
+
 ## [2.48.0](https://github.com/googleapis/google-auth-library-python/compare/v2.47.0...v2.48.0) (2026-01-22)
 
 
