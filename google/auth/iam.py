@@ -40,7 +40,10 @@ IAM_RETRY_CODES = {
 _IAM_SCOPE = ["https://www.googleapis.com/auth/iam"]
 
 # Determine if we should use mTLS.
-if hasattr(_mtls_helper, "check_use_client_cert") and _mtls_helper.check_use_client_cert():
+if (
+    hasattr(_mtls_helper, "check_use_client_cert")
+    and _mtls_helper.check_use_client_cert()
+):
     # Construct the template domain using the library's DEFAULT_UNIVERSE_DOMAIN constant.
     _IAM_DOMAIN = f"iamcredentials.mtls.{credentials.DEFAULT_UNIVERSE_DOMAIN}"
 else:

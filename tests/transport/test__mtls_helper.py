@@ -19,7 +19,7 @@ from unittest import mock
 from OpenSSL import crypto
 import pytest  # type: ignore
 
-from google.auth import exceptions, environment_vars
+from google.auth import environment_vars, exceptions
 from google.auth.transport import _mtls_helper
 
 CERT_MOCK_VAL = b"cert"
@@ -686,10 +686,13 @@ class TestGetCertConfigPath(object):
         google_path = "/path/to/google/config"
         cloudsdk_path = "/path/to/cloudsdk/config"
 
-        with mock.patch.dict(os.environ, {
-            environment_vars.GOOGLE_API_CERTIFICATE_CONFIG: google_path,
-            environment_vars.CLOUDSDK_CONTEXT_AWARE_CERTIFICATE_CONFIG_FILE_PATH: cloudsdk_path
-        }):
+        with mock.patch.dict(
+            os.environ,
+            {
+                environment_vars.GOOGLE_API_CERTIFICATE_CONFIG: google_path,
+                environment_vars.CLOUDSDK_CONTEXT_AWARE_CERTIFICATE_CONFIG_FILE_PATH: cloudsdk_path,
+            },
+        ):
             with mock.patch("os.path.exists", return_value=True):
                 assert _mtls_helper._get_cert_config_path() == google_path
 
@@ -697,9 +700,12 @@ class TestGetCertConfigPath(object):
         # Fallback to CLOUDSDK_CONTEXT_AWARE_CERTIFICATE_CONFIG_FILE_PATH if GOOGLE_API_CERTIFICATE_CONFIG is unset
         cloudsdk_path = "/path/to/cloudsdk/config"
 
-        with mock.patch.dict(os.environ, {
-            environment_vars.CLOUDSDK_CONTEXT_AWARE_CERTIFICATE_CONFIG_FILE_PATH: cloudsdk_path
-        }):
+        with mock.patch.dict(
+            os.environ,
+            {
+                environment_vars.CLOUDSDK_CONTEXT_AWARE_CERTIFICATE_CONFIG_FILE_PATH: cloudsdk_path
+            },
+        ):
             if environment_vars.GOOGLE_API_CERTIFICATE_CONFIG in os.environ:
                 del os.environ[environment_vars.GOOGLE_API_CERTIFICATE_CONFIG]
 
@@ -838,31 +844,39 @@ class TestCheckUseClientCert(object):
 
     def test_use_client_cert_precedence(self):
         # GOOGLE_API_USE_CLIENT_CERTIFICATE takes precedence
-        with mock.patch.dict(os.environ, {
-            environment_vars.GOOGLE_API_USE_CLIENT_CERTIFICATE: "true",
-            environment_vars.CLOUDSDK_CONTEXT_AWARE_USE_CLIENT_CERTIFICATE: "false"
-        }):
+        with mock.patch.dict(
+            os.environ,
+            {
+                environment_vars.GOOGLE_API_USE_CLIENT_CERTIFICATE: "true",
+                environment_vars.CLOUDSDK_CONTEXT_AWARE_USE_CLIENT_CERTIFICATE: "false",
+            },
+        ):
             assert _mtls_helper.check_use_client_cert() is True
 
-        with mock.patch.dict(os.environ, {
-            environment_vars.GOOGLE_API_USE_CLIENT_CERTIFICATE: "false",
-            environment_vars.CLOUDSDK_CONTEXT_AWARE_USE_CLIENT_CERTIFICATE: "true"
-        }):
+        with mock.patch.dict(
+            os.environ,
+            {
+                environment_vars.GOOGLE_API_USE_CLIENT_CERTIFICATE: "false",
+                environment_vars.CLOUDSDK_CONTEXT_AWARE_USE_CLIENT_CERTIFICATE: "true",
+            },
+        ):
             assert _mtls_helper.check_use_client_cert() is False
 
     def test_use_client_cert_fallback(self):
         # Fallback to CLOUDSDK_CONTEXT_AWARE_USE_CLIENT_CERTIFICATE if GOOGLE_API_USE_CLIENT_CERTIFICATE is unset
-        with mock.patch.dict(os.environ, {
-            environment_vars.CLOUDSDK_CONTEXT_AWARE_USE_CLIENT_CERTIFICATE: "true"
-        }):
+        with mock.patch.dict(
+            os.environ,
+            {environment_vars.CLOUDSDK_CONTEXT_AWARE_USE_CLIENT_CERTIFICATE: "true"},
+        ):
             # Ensure GOOGLE_API_USE_CLIENT_CERTIFICATE is not set
             if environment_vars.GOOGLE_API_USE_CLIENT_CERTIFICATE in os.environ:
                 del os.environ[environment_vars.GOOGLE_API_USE_CLIENT_CERTIFICATE]
             assert _mtls_helper.check_use_client_cert() is True
 
-        with mock.patch.dict(os.environ, {
-            environment_vars.CLOUDSDK_CONTEXT_AWARE_USE_CLIENT_CERTIFICATE: "false"
-        }):
+        with mock.patch.dict(
+            os.environ,
+            {environment_vars.CLOUDSDK_CONTEXT_AWARE_USE_CLIENT_CERTIFICATE: "false"},
+        ):
             if environment_vars.GOOGLE_API_USE_CLIENT_CERTIFICATE in os.environ:
                 del os.environ[environment_vars.GOOGLE_API_USE_CLIENT_CERTIFICATE]
             assert _mtls_helper.check_use_client_cert() is False
@@ -876,15 +890,23 @@ class TestCheckUseClientCert(object):
             read_data='{"cert_configs": {"workload": "exists"}}'
         )
 
-        with mock.patch.dict(os.environ, {
-            environment_vars.CLOUDSDK_CONTEXT_AWARE_CERTIFICATE_CONFIG_FILE_PATH: cloudsdk_path
-        }):
+        with mock.patch.dict(
+            os.environ,
+            {
+                environment_vars.CLOUDSDK_CONTEXT_AWARE_CERTIFICATE_CONFIG_FILE_PATH: cloudsdk_path
+            },
+        ):
             if environment_vars.GOOGLE_API_CERTIFICATE_CONFIG in os.environ:
                 del os.environ[environment_vars.GOOGLE_API_CERTIFICATE_CONFIG]
             if environment_vars.GOOGLE_API_USE_CLIENT_CERTIFICATE in os.environ:
                 del os.environ[environment_vars.GOOGLE_API_USE_CLIENT_CERTIFICATE]
-            if environment_vars.CLOUDSDK_CONTEXT_AWARE_USE_CLIENT_CERTIFICATE in os.environ:
-                del os.environ[environment_vars.CLOUDSDK_CONTEXT_AWARE_USE_CLIENT_CERTIFICATE]
+            if (
+                environment_vars.CLOUDSDK_CONTEXT_AWARE_USE_CLIENT_CERTIFICATE
+                in os.environ
+            ):
+                del os.environ[
+                    environment_vars.CLOUDSDK_CONTEXT_AWARE_USE_CLIENT_CERTIFICATE
+                ]
 
             assert _mtls_helper.check_use_client_cert() is True
 
