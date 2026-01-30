@@ -460,7 +460,7 @@ def check_use_client_cert():
         bool: Whether the client certificate should be used for mTLS connection.
     """
     use_client_cert = getenv(environment_vars.GOOGLE_API_USE_CLIENT_CERTIFICATE)
-    if use_client_cert is None:
+    if use_client_cert is None or use_client_cert == "":
         use_client_cert = getenv(
             environment_vars.CLOUDSDK_CONTEXT_AWARE_USE_CLIENT_CERTIFICATE
         )
