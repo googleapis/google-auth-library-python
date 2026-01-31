@@ -417,6 +417,7 @@ class AuthorizedSession(requests.Session):
         # Request instance used by internal methods (for example,
         # credentials.refresh).
         self._auth_request = auth_request
+        _LOGGER.info("Initialised authorized session")
 
         # https://google.aip.dev/auth/4111
         # Attempt to use self-signed JWTs when a service account is used.
@@ -445,6 +446,7 @@ class AuthorizedSession(requests.Session):
             google.auth.exceptions.MutualTLSChannelError: If mutual TLS channel
                 creation failed for any reason.
         """
+        _LOGGER.info("In configure_mtls_channel")
         use_client_cert = google.auth.transport._mtls_helper.check_use_client_cert()
         if not use_client_cert:
             self._is_mtls = False
