@@ -26,6 +26,7 @@ def has_default_client_cert_source():
     Returns:
         bool: indicating if the default client cert source exists.
     """
+    print("[patch-log]In has_default_client_cert_source")
     if (
         _mtls_helper._check_config_path(_mtls_helper.CONTEXT_AWARE_METADATA_PATH)
         is not None
@@ -43,7 +44,9 @@ def has_default_client_cert_source():
         cert_config_path
         and _mtls_helper._check_config_path(cert_config_path) is not None
     ):
+        print("[patch-log] has_default_client_cert_source found cert_config_path")
         return True
+    print("[patch-log] has_default_client_cert_source returns False")
     return False
 
 
@@ -69,7 +72,7 @@ def default_client_cert_source():
         except (OSError, RuntimeError, ValueError) as caught_exc:
             new_exc = exceptions.MutualTLSChannelError(caught_exc)
             raise new_exc from caught_exc
-
+        print("[patch-log] default_client_cert_source has no exception")
         return cert_bytes, key_bytes
 
     return callback
@@ -114,7 +117,7 @@ def default_client_encrypted_cert_source(cert_path, key_path):
         except (exceptions.ClientCertError, OSError) as caught_exc:
             new_exc = exceptions.MutualTLSChannelError(caught_exc)
             raise new_exc from caught_exc
-
+        print("[patch-log] default_client_encrypted_cert_source has no exception")
         return cert_path, key_path, passphrase_bytes
 
     return callback
