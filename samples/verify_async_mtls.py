@@ -1,6 +1,7 @@
 
 import asyncio
 import os
+import json
 import logging
 import google.auth
 import google.auth.transport.requests
@@ -77,7 +78,8 @@ async def main():
         
         print(f"Response Status: {response.status_code}")
         if response.status_code == 200:
-            response_data = await response.json()
+            body_bytes = await response.read()
+            response_data = json.loads(body_bytes)
             print("Success! Topics found.")
             # print("Response Body (first 200 chars):", str(response_data)[:200])
         else:
