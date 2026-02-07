@@ -16,20 +16,23 @@
 """Interfaces for credentials."""
 
 import abc
+import datetime
 from enum import Enum
 import logging
 import os
-from typing import List
+import threading
+from urllib.parse import urlparse
+import warnings
 
+from google.auth import _exponential_backoff
 from google.auth import _helpers, environment_vars
 from google.auth import exceptions
 from google.auth import metrics
 from google.auth._credentials_base import _BaseCredentials
 from google.auth._refresh_worker import RefreshThreadManager
+from google.auth import _regional_access_boundary_utils
 
 DEFAULT_UNIVERSE_DOMAIN = "googleapis.com"
-NO_OP_TRUST_BOUNDARY_LOCATIONS: List[str] = []
-NO_OP_TRUST_BOUNDARY_ENCODED_LOCATIONS = "0x0"
 
 _LOGGER = logging.getLogger("google.auth._default")
 
@@ -290,8 +293,21 @@ class CredentialsWithUniverseDomain(Credentials):
         )
 
 
-class CredentialsWithTrustBoundary(Credentials):
-    """Abstract base for credentials supporting ``with_trust_boundary`` factory"""
+class CredentialsWithRegionalAccessBoundary(Credentials):
+    """Abstract base for credentials supporting ``with_regional_access_boundary`` factory"""
+
+    def __init__(self, *args, **kwargs):
+        super(CredentialsWithRegionalAccessBoundary, self).__init__(*args, **kwargs)
+        self._regional_access_boundary = None
+        self._regional_access_boundary_expiry = None
+        self._regional_access_boundary_cooldown_expiry = None
+        self._regional_access_boundary_refresh_manager = (
+            _regional_access_boundary_utils._RegionalAccessBoundaryRefreshManager()
+        )
+        self._current_rab_cooldown_duration = (
+            _regional_access_boundary_utils.DEFAULT_REGIONAL_ACCESS_BOUNDARY_COOLDOWN
+        )
+        self._stale_boundary_lock = threading.Lock()
 
     @abc.abstractmethod
     def _perform_refresh_token(self, request):
@@ -307,29 +323,137 @@ class CredentialsWithTrustBoundary(Credentials):
         """
         raise NotImplementedError("_perform_refresh_token must be implemented")
 
-    def with_trust_boundary(self, trust_boundary):
-        """Returns a copy of these credentials with a modified trust boundary.
+    def with_regional_access_boundary(self, regional_access_boundary):
+        """Returns a copy of these credentials with a modified Regional Access Boundary.
+
+        This method allows for manually providing the Regional Access Boundary
+        information, which will be cached with a 6-hour lifetime. This bypasses
+        the initial asynchronous lookup. After the cache expires, the library
+        will trigger a background refresh on the next request.
 
         Args:
-            trust_boundary Mapping[str, str]: The trust boundary to use for the
-            credential. This should be a map with a "locations" key that maps to
-            a list of GCP regions, and a "encodedLocations" key that maps to a
-            hex string.
+            regional_access_boundary (Mapping[str, str]): The Regional Access Boundary
+                to use for the credential. This should be a map with an
+                "encodedLocations" key that maps to a hex string. Optionally,
+                it can also contain a "locations" key with a list of GCP regions.
+                Example: `{"locations": ["us-central1"], "encodedLocations": "0xA30"}`
 
         Returns:
-            google.auth.credentials.Credentials: A new credentials instance.
-        """
-        raise NotImplementedError("This credential does not support trust boundaries.")
+            google.auth.credentials.Credentials: A new credentials instance
+                with the specified Regional Access Boundary.
 
-    def _is_trust_boundary_lookup_required(self):
-        """Checks if a trust boundary lookup is required.
+        Raises:
+            google.auth.exceptions.InvalidValue: If `regional_access_boundary`
+                is not a dictionary or does not contain the "encodedLocations" key.
+        """
+        if (
+            not isinstance(regional_access_boundary, dict)
+            or "encodedLocations" not in regional_access_boundary
+        ):
+            raise exceptions.InvalidValue(
+                "regional_access_boundary must be a dictionary with an 'encodedLocations' key."
+            )
+
+        new_creds = self._make_copy()
+        new_creds._regional_access_boundary = regional_access_boundary
+
+        new_creds._regional_access_boundary_expiry = (
+            _helpers.utcnow()
+            + _regional_access_boundary_utils.DEFAULT_REGIONAL_ACCESS_BOUNDARY_TTL
+        )
+
+        new_creds._regional_access_boundary_cooldown_expiry = None
+
+        return new_creds
+
+    def _copy_regional_access_boundary_state(self, target):
+        """Copies the regional access boundary state to another instance."""
+        target._regional_access_boundary = self._regional_access_boundary
+        target._regional_access_boundary_expiry = self._regional_access_boundary_expiry
+        target._regional_access_boundary_cooldown_expiry = (
+            self._regional_access_boundary_cooldown_expiry
+        )
+        target._current_rab_cooldown_duration = self._current_rab_cooldown_duration
+        # Create a new lock for the target instance to ensure independent thread-safety.
+        target._stale_boundary_lock = threading.Lock()
+
+    def handle_stale_regional_access_boundary(self, request):
+        """Handles a stale regional access boundary error.
+        This method is thread-safe and will only initiate a single refresh
+        even if called concurrently.
+        Args:
+            request (google.auth.transport.Request): The object used to make
+                HTTP requests.
+        """
+        with self._stale_boundary_lock:
+            # Another thread might have already handled the stale boundary.
+            if self._regional_access_boundary is None:
+                return
+
+            _LOGGER.info("Stale regional access boundary detected. Refreshing.")
+
+            # Clear the cached boundary.
+            self._regional_access_boundary = None
+            self._regional_access_boundary_expiry = None
+
+            # Start the background refresh.
+            self._regional_access_boundary_refresh_manager.start_refresh(self, request)
+
+    def _maybe_start_regional_access_boundary_refresh(self, request, url):
+        """
+        Starts a background thread to refresh the Regional Access Boundary if needed.
+
+        This method checks if a refresh is necessary and if one is not already
+        in progress or in a cooldown period. If so, it starts a background
+        thread to perform the lookup.
+
+        Args:
+            request (google.auth.transport.Request): The object used to make
+                HTTP requests.
+            url (str): The URL of the request.
+        """
+        try:
+            # Do not perform a lookup if the request is for a regional endpoint.
+            hostname = urlparse(url).hostname
+            if hostname and (
+                hostname.endswith(".rep.googleapis.com")
+                or hostname.endswith(".rep.sandbox.googleapis.com")
+            ):
+                return
+        except (ValueError, TypeError):
+            # If the URL is malformed, proceed with the default lookup behavior.
+            pass
+
+        # A refresh is only needed if the feature is enabled.
+        if not self._is_regional_access_boundary_lookup_required():
+            return
+
+        # Don't start a new refresh if the Regional Access Boundary info is still valid.
+        if (
+            self._regional_access_boundary
+            and self._regional_access_boundary_expiry
+            and _helpers.utcnow() < self._regional_access_boundary_expiry
+        ):
+            return
+
+        # Don't start a new refresh if the cooldown is still in effect.
+        if (
+            self._regional_access_boundary_cooldown_expiry
+            and _helpers.utcnow() < self._regional_access_boundary_cooldown_expiry
+        ):
+            return
+
+        # If all checks pass, start the background refresh.
+        self._regional_access_boundary_refresh_manager.start_refresh(self, request)
+
+    def _is_regional_access_boundary_lookup_required(self):
+        """Checks if a Regional Access Boundary lookup is required.
 
         A lookup is required if the feature is enabled via an environment
-        variable, the universe domain is supported, and a no-op boundary
-        is not already cached.
+        variable and the universe domain is supported.
 
         Returns:
-            bool: True if a trust boundary lookup is required, False otherwise.
+            bool: True if a Regional Access Boundary lookup is required, False otherwise.
         """
         # 1. Check if the feature is enabled via environment variable.
         if not _helpers.get_bool_from_env(
@@ -337,112 +461,92 @@ class CredentialsWithTrustBoundary(Credentials):
         ):
             return False
 
-        # 2. Skip trust boundary flow for non-default universe domains.
+        # 2. Skip for non-default universe domains.
         if self.universe_domain != DEFAULT_UNIVERSE_DOMAIN:
             return False
 
-        # 3. Do not trigger refresh if credential has a cached no-op trust boundary.
-        return not self._has_no_op_trust_boundary()
+        return True
 
-    def _get_trust_boundary_header(self):
-        if self._trust_boundary is not None:
-            if self._has_no_op_trust_boundary():
-                # STS expects an empty string if the trust boundary value is no-op.
-                return {"x-allowed-locations": ""}
-            else:
-                return {"x-allowed-locations": self._trust_boundary["encodedLocations"]}
+    def _get_regional_access_boundary_header(self):
+        if self._regional_access_boundary is not None:
+            return {
+                "x-allowed-locations": self._regional_access_boundary[
+                    "encodedLocations"
+                ]
+            }
         return {}
 
     def apply(self, headers, token=None):
         """Apply the token to the authentication header."""
         super().apply(headers, token)
-        headers.update(self._get_trust_boundary_header())
+
+        boundary_header = self._get_regional_access_boundary_header()
+        if boundary_header:
+            headers.update(boundary_header)
+        else:
+            # If we have no boundary to add, ensure the header is not present
+            # from a previous, stale state. We use pop() with a default to
+            # avoid a KeyError if the header was never there.
+            headers.pop("x-allowed-locations", None)
+
+    def before_request(self, request, method, url, headers):
+        """Refreshes the access token and triggers the Regional Access Boundary
+        lookup if necessary.
+        """
+        super(CredentialsWithRegionalAccessBoundary, self).before_request(
+            request, method, url, headers
+        )
+        self._maybe_start_regional_access_boundary_refresh(request, url)
 
     def refresh(self, request):
-        """Refreshes the access token and the trust boundary.
+        """Refreshes the access token.
 
-        This method calls the subclass's token refresh logic and then
-        refreshes the trust boundary if applicable.
+        This method calls the subclass's token refresh logic. The Regional
+        Access Boundary is refreshed separately in a non-blocking way.
         """
         self._perform_refresh_token(request)
-        self._refresh_trust_boundary(request)
 
-    def _refresh_trust_boundary(self, request):
-        """Triggers a refresh of the trust boundary and updates the cache if necessary.
-
-        Args:
-            request (google.auth.transport.Request): The object used to make
-                HTTP requests.
-
-        Raises:
-            google.auth.exceptions.RefreshError: If the trust boundary could
-                not be refreshed and no cached value is available.
-        """
-        if not self._is_trust_boundary_lookup_required():
-            return
-        try:
-            self._trust_boundary = self._lookup_trust_boundary(request)
-        except exceptions.RefreshError as error:
-            # If the call to the lookup API failed, check if there is a trust boundary
-            # already cached. If there is, do nothing. If not, then throw the error.
-            if self._trust_boundary is None:
-                raise error
-            if _helpers.is_logging_enabled(_LOGGER):
-                _LOGGER.debug(
-                    "Using cached trust boundary due to refresh error: %s", error
-                )
-            return
-
-    def _lookup_trust_boundary(self, request):
-        """Calls the trust boundary lookup API to refresh the trust boundary cache.
+    def _lookup_regional_access_boundary(self, request):
+        """Calls the Regional Access Boundary lookup API to retrieve the Regional Access Boundary information.
 
         Args:
             request (google.auth.transport.Request): The object used to make
                 HTTP requests.
 
         Returns:
-            trust_boundary (dict): The trust boundary object returned by the lookup API.
-
-        Raises:
-            google.auth.exceptions.RefreshError: If the trust boundary could not be
-                retrieved.
+            Optional[dict]: The Regional Access Boundary information returned by the lookup API, or None if the lookup failed.
         """
         from google.oauth2 import _client
 
-        url = self._build_trust_boundary_lookup_url()
+        url = self._build_regional_access_boundary_lookup_url()
         if not url:
-            raise exceptions.InvalidValue("Failed to build trust boundary lookup URL.")
+            _LOGGER.error("Failed to build Regional Access Boundary lookup URL.")
+            return None
 
         headers = {}
         self._apply(headers)
-        headers.update(self._get_trust_boundary_header())
-        return _client._lookup_trust_boundary(request, url, headers=headers)
+        headers.update(self._get_regional_access_boundary_header())
+        return _client._lookup_regional_access_boundary(request, url, headers=headers)
 
     @abc.abstractmethod
-    def _build_trust_boundary_lookup_url(self):
+    def _build_regional_access_boundary_lookup_url(self):
         """
-        Builds and returns the URL for the trust boundary lookup API.
+        Builds and returns the URL for the Regional Access Boundary lookup API.
 
         This method should be implemented by subclasses to provide the
         specific URL based on the credential type and its properties.
 
         Returns:
-            str: The URL for the trust boundary lookup endpoint, or None
+            str: The URL for the Regional Access Boundary lookup endpoint, or None
                  if lookup should be skipped (e.g., for non-applicable universe domains).
         """
         raise NotImplementedError(
-            "_build_trust_boundary_lookup_url must be implemented"
+            "_build_regional_access_boundary_lookup_url must be implemented"
         )
 
-    def _has_no_op_trust_boundary(self):
-        # A no-op trust boundary is indicated by encodedLocations being "0x0".
-        # The "locations" list may or may not be present as an empty list.
-        if self._trust_boundary is None:
-            return False
-        return (
-            self._trust_boundary.get("encodedLocations")
-            == NO_OP_TRUST_BOUNDARY_ENCODED_LOCATIONS
-        )
+
+# For backward compatibility.
+CredentialsWithTrustBoundary = CredentialsWithRegionalAccessBoundary
 
 
 class AnonymousCredentials(Credentials):

@@ -35,6 +35,11 @@ import functools
 import io
 import json
 import re
+import warnings
+
+import logging
+
+_LOGGER = logging.getLogger(__name__)
 
 from google.auth import _constants
 from google.auth import _helpers
@@ -82,7 +87,7 @@ class Credentials(
     credentials.Scoped,
     credentials.CredentialsWithQuotaProject,
     credentials.CredentialsWithTokenUri,
-    credentials.CredentialsWithTrustBoundary,
+    credentials.CredentialsWithRegionalAccessBoundary,
     metaclass=abc.ABCMeta,
 ):
     """Base class for all external account credentials.
@@ -117,7 +122,6 @@ class Credentials(
         default_scopes=None,
         workforce_pool_user_project=None,
         universe_domain=credentials.DEFAULT_UNIVERSE_DOMAIN,
-        trust_boundary=None,
     ):
         """Instantiates an external account credentials object.
 
@@ -150,7 +154,6 @@ class Credentials(
                 billing/quota.
             universe_domain (str): The universe domain. The default universe
                 domain is googleapis.com.
-            trust_boundary (str): String representation of trust boundary meta.
         Raises:
             google.auth.exceptions.RefreshError: If the generateAccessToken
                 endpoint returned an error.
@@ -176,7 +179,6 @@ class Credentials(
         self._scopes = scopes
         self._default_scopes = default_scopes
         self._workforce_pool_user_project = workforce_pool_user_project
-        self._trust_boundary = trust_boundary
 
         if self._client_id:
             self._client_auth = utils.ClientAuthentication(
@@ -242,7 +244,6 @@ class Credentials(
             "scopes": self._scopes,
             "default_scopes": self._default_scopes,
             "universe_domain": self._universe_domain,
-            "trust_boundary": self._trust_boundary,
         }
         if not self.is_workforce_pool:
             args.pop("workforce_pool_user_project")
@@ -417,20 +418,9 @@ class Credentials(
         """Refreshes the access token.
 
         For impersonated credentials, this method will refresh the underlying
-        source credentials and the impersonated credentials. For non-impersonated
-        credentials, it will refresh the access token and the trust boundary.
+        source credentials and the impersonated credentials.
         """
         self._perform_refresh_token(request)
-        self._handle_trust_boundary(request)
-
-    def _handle_trust_boundary(self, request):
-        # If we are impersonating, the trust boundary is handled by the
-        # impersonated credentials object. We need to get it from there.
-        if self._service_account_impersonation_url:
-            self._trust_boundary = self._impersonated_credentials._trust_boundary
-        else:
-            # Otherwise, refresh the trust boundary for the external account.
-            self._refresh_trust_boundary(request)
 
     def _perform_refresh_token(self, request, cert_fingerprint=None):
         scopes = self._scopes if self._scopes is not None else self._default_scopes
@@ -486,8 +476,8 @@ class Credentials(
 
             self.expiry = now + lifetime
 
-    def _build_trust_boundary_lookup_url(self):
-        """Builds and returns the URL for the trust boundary lookup API."""
+    def _build_regional_access_boundary_lookup_url(self):
+        """Builds and returns the URL for the Regional Access Boundary lookup API."""
         url = None
         # Try to parse as a workload identity pool.
         # Audience format: //iam.googleapis.com/projects/PROJECT_NUMBER/locations/global/workloadIdentityPools/POOL_ID/providers/PROVIDER_ID
@@ -497,8 +487,7 @@ class Credentials(
         )
         if workload_match:
             project_number, pool_id = workload_match.groups()
-            url = _constants._WORKLOAD_IDENTITY_POOL_TRUST_BOUNDARY_LOOKUP_ENDPOINT.format(
-                universe_domain=self._universe_domain,
+            url = _constants._WORKLOAD_IDENTITY_POOL_REGIONAL_ACCESS_BOUNDARY_LOOKUP_ENDPOINT.format(
                 project_number=project_number,
                 pool_id=pool_id,
             )
@@ -510,8 +499,8 @@ class Credentials(
             )
             if workforce_match:
                 pool_id = workforce_match.groups()[0]
-                url = _constants._WORKFORCE_POOL_TRUST_BOUNDARY_LOOKUP_ENDPOINT.format(
-                    universe_domain=self._universe_domain, pool_id=pool_id
+                url = _constants._WORKFORCE_POOL_REGIONAL_ACCESS_BOUNDARY_LOOKUP_ENDPOINT.format(
+                    pool_id=pool_id
                 )
 
         if url:
@@ -525,6 +514,7 @@ class Credentials(
         new_cred = self.__class__(**kwargs)
         new_cred._cred_file_path = self._cred_file_path
         new_cred._metrics_options = self._metrics_options
+        self._copy_regional_access_boundary_state(new_cred)
         return new_cred
 
     @_helpers.copy_docstring(credentials.CredentialsWithQuotaProject)
@@ -544,12 +534,6 @@ class Credentials(
     def with_universe_domain(self, universe_domain):
         cred = self._make_copy()
         cred._universe_domain = universe_domain
-        return cred
-
-    @_helpers.copy_docstring(credentials.CredentialsWithTrustBoundary)
-    def with_trust_boundary(self, trust_boundary):
-        cred = self._make_copy()
-        cred._trust_boundary = trust_boundary
         return cred
 
     def _should_initialize_impersonated_credentials(self):
@@ -600,7 +584,6 @@ class Credentials(
             lifetime=self._service_account_impersonation_options.get(
                 "token_lifetime_seconds"
             ),
-            trust_boundary=self._trust_boundary,
         )
 
     def _create_default_metrics_options(self):
@@ -667,7 +650,7 @@ class Credentials(
         Raises:
             InvalidValue: For invalid parameters.
         """
-        return cls(
+        initial_creds = cls(
             audience=info.get("audience"),
             subject_token_type=info.get("subject_token_type"),
             token_url=info.get("token_url"),
@@ -687,9 +670,16 @@ class Credentials(
             universe_domain=info.get(
                 "universe_domain", credentials.DEFAULT_UNIVERSE_DOMAIN
             ),
-            trust_boundary=info.get("trust_boundary"),
             **kwargs
         )
+
+        regional_access_boundary = info.get("regional_access_boundary")
+        if regional_access_boundary:
+            initial_creds = initial_creds.with_regional_access_boundary(
+                regional_access_boundary
+            )
+
+        return initial_creds
 
     @classmethod
     def from_file(cls, filename, **kwargs):

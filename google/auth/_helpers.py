@@ -314,8 +314,7 @@ def get_bool_from_env(variable_name, default=False):
     The environment variable is interpreted as a boolean with the following
     (case-insensitive) rules:
     - "true", "1" are considered true.
-    - "false", "0" are considered false.
-    Any other values will raise an exception.
+    - Any other value (or unset) is considered false.
 
     Args:
         variable_name (str): The name of the environment variable.
@@ -324,10 +323,6 @@ def get_bool_from_env(variable_name, default=False):
 
     Returns:
         bool: The boolean value of the environment variable.
-
-    Raises:
-        google.auth.exceptions.InvalidValue: If the environment variable is
-            set to a value that can not be interpreted as a boolean.
     """
     value = os.environ.get(variable_name)
 
@@ -338,14 +333,8 @@ def get_bool_from_env(variable_name, default=False):
 
     if value in ("true", "1"):
         return True
-    elif value in ("false", "0"):
-        return False
     else:
-        raise exceptions.InvalidValue(
-            'Environment variable "{}" must be one of "true", "false", "1", or "0".'.format(
-                variable_name
-            )
-        )
+        return False
 
 
 def is_python_3():

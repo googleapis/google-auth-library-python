@@ -20,7 +20,11 @@ Compute Engine using the Compute Engine metadata server.
 """
 
 import datetime
+import logging
 
+_LOGGER = logging.getLogger(__name__)
+
+from google.auth import _constants
 from google.auth import _helpers
 from google.auth import credentials
 from google.auth import exceptions
@@ -30,16 +34,12 @@ from google.auth import metrics
 from google.auth.compute_engine import _metadata
 from google.oauth2 import _client
 
-_TRUST_BOUNDARY_LOOKUP_ENDPOINT = (
-    "https://iamcredentials.{}/v1/projects/-/serviceAccounts/{}/allowedLocations"
-)
-
 
 class Credentials(
     credentials.Scoped,
     credentials.CredentialsWithQuotaProject,
     credentials.CredentialsWithUniverseDomain,
-    credentials.CredentialsWithTrustBoundary,
+    credentials.CredentialsWithRegionalAccessBoundary,
 ):
     """Compute Engine Credentials.
 
@@ -66,7 +66,6 @@ class Credentials(
         scopes=None,
         default_scopes=None,
         universe_domain=None,
-        trust_boundary=None,
     ):
         """
         Args:
@@ -82,7 +81,6 @@ class Credentials(
                 provided or None, credential will attempt to fetch the value
                 from metadata server. If metadata server doesn't have universe
                 domain endpoint, then the default googleapis.com will be used.
-            trust_boundary (Mapping[str,str]): A credential trust boundary.
         """
         super(Credentials, self).__init__()
         self._service_account_email = service_account_email
@@ -93,7 +91,6 @@ class Credentials(
         if universe_domain:
             self._universe_domain = universe_domain
             self._universe_domain_cached = True
-        self._trust_boundary = trust_boundary
 
     def _retrieve_info(self, request):
         """Retrieve information about the service account.
@@ -146,8 +143,8 @@ class Credentials(
             new_exc = exceptions.RefreshError(caught_exc)
             raise new_exc from caught_exc
 
-    def _build_trust_boundary_lookup_url(self):
-        """Builds and returns the URL for the trust boundary lookup API for GCE."""
+    def _build_regional_access_boundary_lookup_url(self):
+        """Builds and returns the URL for the regional access boundary lookup API for GCE."""
         # If the service account email is 'default', we need to get the
         # actual email address from the metadata server.
         if self._service_account_email == "default":
@@ -157,24 +154,26 @@ class Credentials(
             try:
                 info = _metadata.get_service_account_info(request, "default")
                 if not info or "email" not in info:
-                    raise exceptions.RefreshError(
+                    _LOGGER.error(
                         "Unexpected response from metadata server: "
-                        "service account info is missing 'email' field."
+                        "service account info is missing 'email' field. Cannot build Regional Access Boundary lookup URL."
                     )
+                    return None
                 self._service_account_email = info["email"]
 
             except exceptions.TransportError as e:
                 # If fetching the service account email fails due to a transport error,
-                # it means we cannot build the trust boundary lookup URL.
-                # Wrap this in a RefreshError so it's caught by _refresh_trust_boundary.
-                raise exceptions.RefreshError(
-                    "Failed to get service account email for trust boundary lookup: {}".format(
-                        e
-                    )
-                ) from e
+                # it means we cannot build the regional access boundary lookup URL.
+                _LOGGER.error(
+                    "Failed to get service account email to build Regional Access Boundary lookup URL: %s",
+                    e,
+                )
+                return None
 
-        return _TRUST_BOUNDARY_LOOKUP_ENDPOINT.format(
-            self.universe_domain, self.service_account_email
+        return (
+            _constants._SERVICE_ACCOUNT_REGIONAL_ACCESS_BOUNDARY_LOOKUP_ENDPOINT.format(
+                self.service_account_email
+            )
         )
 
     @property
@@ -211,17 +210,22 @@ class Credentials(
             "principal": self.service_account_email,
         }
 
-    @_helpers.copy_docstring(credentials.CredentialsWithQuotaProject)
-    def with_quota_project(self, quota_project_id):
+    def _make_copy(self):
         creds = self.__class__(
             service_account_email=self._service_account_email,
-            quota_project_id=quota_project_id,
+            quota_project_id=self._quota_project_id,
             scopes=self._scopes,
             default_scopes=self._default_scopes,
             universe_domain=self._universe_domain,
-            trust_boundary=self._trust_boundary,
         )
         creds._universe_domain_cached = self._universe_domain_cached
+        self._copy_regional_access_boundary_state(creds)
+        return creds
+
+    @_helpers.copy_docstring(credentials.CredentialsWithQuotaProject)
+    def with_quota_project(self, quota_project_id):
+        creds = self._make_copy()
+        creds._quota_project_id = quota_project_id
         return creds
 
     @_helpers.copy_docstring(credentials.Scoped)
@@ -229,39 +233,15 @@ class Credentials(
         # Compute Engine credentials can not be scoped (the metadata service
         # ignores the scopes parameter). App Engine, Cloud Run and Flex support
         # requesting scopes.
-        creds = self.__class__(
-            scopes=scopes,
-            default_scopes=default_scopes,
-            service_account_email=self._service_account_email,
-            quota_project_id=self._quota_project_id,
-            universe_domain=self._universe_domain,
-            trust_boundary=self._trust_boundary,
-        )
-        creds._universe_domain_cached = self._universe_domain_cached
+        creds = self._make_copy()
+        creds._scopes = scopes
+        creds._default_scopes = default_scopes
         return creds
 
     @_helpers.copy_docstring(credentials.CredentialsWithUniverseDomain)
     def with_universe_domain(self, universe_domain):
-        return self.__class__(
-            scopes=self._scopes,
-            default_scopes=self._default_scopes,
-            service_account_email=self._service_account_email,
-            quota_project_id=self._quota_project_id,
-            trust_boundary=self._trust_boundary,
-            universe_domain=universe_domain,
-        )
-
-    @_helpers.copy_docstring(credentials.CredentialsWithTrustBoundary)
-    def with_trust_boundary(self, trust_boundary):
-        creds = self.__class__(
-            service_account_email=self._service_account_email,
-            quota_project_id=self._quota_project_id,
-            scopes=self._scopes,
-            default_scopes=self._default_scopes,
-            universe_domain=self._universe_domain,
-            trust_boundary=trust_boundary,
-        )
-        creds._universe_domain_cached = self._universe_domain_cached
+        creds = self._make_copy()
+        creds._universe_domain = universe_domain
         return creds
 
 
