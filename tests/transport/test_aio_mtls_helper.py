@@ -1,5 +1,16 @@
-# Copyright 2024 Google LLC
-# Licensed under the Apache License, Version 2.0...
+# Copyright 2020 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 from unittest import mock
 
@@ -41,42 +52,46 @@ class TestMTLS:
 
         assert mtls.has_default_client_cert_source() is True
 
+    @pytest.mark.asyncio
     @mock.patch("google.auth.transport._mtls_helper._get_workload_cert_and_key")
-    def test_get_client_ssl_credentials_success(self, mock_workload):
+    async def test_get_client_ssl_credentials_success(self, mock_workload):
         mock_workload.return_value = (CERT_DATA, KEY_DATA)
 
-        success, cert, key, passphrase = mtls.get_client_ssl_credentials()
+        success, cert, key, passphrase = await mtls.get_client_ssl_credentials()
 
         assert success is True
         assert cert == CERT_DATA
         assert key == KEY_DATA
         assert passphrase is None
 
-    def test_get_client_cert_and_key_callback(self):
+    @pytest.mark.asyncio
+    async def test_get_client_cert_and_key_callback(self):
         # The callback should be tried first and return immediately
         callback = mock.Mock(return_value=(CERT_DATA, KEY_DATA))
 
-        success, cert, key = mtls.get_client_cert_and_key(callback)
+        success, cert, key = await mtls.get_client_cert_and_key(callback)
 
         assert success is True
         assert cert == CERT_DATA
         assert key == KEY_DATA
         callback.assert_called_once()
 
+    @pytest.mark.asyncio
     @mock.patch("google.auth.aio.transport.mtls.get_client_ssl_credentials")
-    def test_get_client_cert_and_key_default(self, mock_get_ssl):
+    async def test_get_client_cert_and_key_default(self, mock_get_ssl):
         # If no callback, it should call get_client_ssl_credentials
         mock_get_ssl.return_value = (True, CERT_DATA, KEY_DATA, None)
 
-        success, cert, key = mtls.get_client_cert_and_key(None)
+        success, cert, key = await mtls.get_client_cert_and_key(None)
 
         assert success is True
         assert cert == CERT_DATA
         assert key == KEY_DATA
         mock_get_ssl.assert_called_with(generate_encrypted_key=False)
 
+    @pytest.mark.asyncio
     @mock.patch("google.auth.transport._mtls_helper._get_workload_cert_and_key")
-    def test_get_client_ssl_credentials_error(self, mock_workload):
+    async def test_get_client_ssl_credentials_error(self, mock_workload):
         """Tests that ClientCertError is propagated correctly."""
         # Setup the mock to raise the specific google-auth exception
         mock_workload.side_effect = exceptions.ClientCertError(
@@ -85,10 +100,11 @@ class TestMTLS:
 
         # Verify that calling our function raises the same exception
         with pytest.raises(exceptions.ClientCertError, match="Failed to read metadata"):
-            mtls.get_client_ssl_credentials()
+            await mtls.get_client_ssl_credentials()
 
+    @pytest.mark.asyncio
     @mock.patch("google.auth.aio.transport.mtls.get_client_ssl_credentials")
-    def test_get_client_cert_and_key_exception_propagation(self, mock_get_ssl):
+    async def test_get_client_cert_and_key_exception_propagation(self, mock_get_ssl):
         """Tests that get_client_cert_and_key propagates errors from its internal calls."""
         mock_get_ssl.side_effect = exceptions.ClientCertError(
             "Underlying credentials failed"
@@ -98,4 +114,4 @@ class TestMTLS:
             exceptions.ClientCertError, match="Underlying credentials failed"
         ):
             # Pass None for callback so it attempts to call get_client_ssl_credentials
-            mtls.get_client_cert_and_key(client_cert_callback=None)
+            await mtls.get_client_cert_and_key(client_cert_callback=None)

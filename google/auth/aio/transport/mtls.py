@@ -13,9 +13,10 @@
 # limitations under the License.
 
 """
-Helper functions for mTLS in async.
+Helper functions for mTLS in async for discovery of certs.
 """
 
+import asyncio
 import logging
 from os import getenv, path
 
@@ -42,6 +43,20 @@ def _check_config_path(config_path):
     return config_path
 
 
+async def _run_in_executor(func, *args):
+    """Run a blocking function in an executor to avoid blocking the event loop.
+
+    This implements the non-blocking execution strategy for disk I/O operations.
+    """
+    try:
+        # For python versions 3.9 and newer versions
+        return await asyncio.to_thread(func, *args)
+    except AttributeError:
+        # Fallback for older Python versions
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, func, *args)
+
+
 def has_default_client_cert_source():
     """Check if default client SSL credentials exists on the device.
 
@@ -56,7 +71,7 @@ def has_default_client_cert_source():
     return False
 
 
-def get_client_ssl_credentials(
+async def get_client_ssl_credentials(
     generate_encrypted_key=False,
     certificate_config_path=None,
 ):
@@ -84,16 +99,18 @@ def get_client_ssl_credentials(
     """
 
     # Attempt to retrieve X.509 Workload cert and key.
-    cert, key = google.auth.transport._mtls_helper._get_workload_cert_and_key(
-        certificate_config_path
+    cert, key = await _run_in_executor(
+        google.auth.transport._mtls_helper._get_workload_cert_and_key,
+        certificate_config_path,
     )
+
     if cert and key:
         return True, cert, key, None
 
     return False, None, None, None
 
 
-def get_client_cert_and_key(client_cert_callback=None):
+async def get_client_cert_and_key(client_cert_callback=None):
     """Returns the client side certificate and private key. The function first
     tries to get certificate and key from client_cert_callback; if the callback
     is None or doesn't provide certificate and key, the function tries application
@@ -117,5 +134,7 @@ def get_client_cert_and_key(client_cert_callback=None):
         cert, key = client_cert_callback()
         return True, cert, key
 
-    has_cert, cert, key, _ = get_client_ssl_credentials(generate_encrypted_key=False)
+    has_cert, cert, key, _ = await get_client_ssl_credentials(
+        generate_encrypted_key=False
+    )
     return has_cert, cert, key
