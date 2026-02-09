@@ -13,22 +13,17 @@
 # limitations under the License.
 
 """
-Helper functions for mTLS in asyncio.
+Helper functions for mTLS in async.
 """
 
-import asyncio
-import contextlib
 import logging
-import os
-from os import environ, getenv, path
-import ssl
-import tempfile
-from typing import Optional
+from os import getenv, path
 
-from google.auth import exceptions
+import google.auth.transport._mtls_helper
 
 CERTIFICATE_CONFIGURATION_DEFAULT_PATH = "~/.config/gcloud/certificate_config.json"
 _LOGGER = logging.getLogger(__name__)
+
 
 def _check_config_path(config_path):
     """Checks for config file path. If it exists, returns the absolute path with user expansion;
@@ -53,16 +48,10 @@ def has_default_client_cert_source():
     Returns:
         bool: indicating if the default client cert source exists.
     """
-    if (
-	_check_config_path(CERTIFICATE_CONFIGURATION_DEFAULT_PATH)
-        is not None
-    ):
+    if _check_config_path(CERTIFICATE_CONFIGURATION_DEFAULT_PATH) is not None:
         return True
     cert_config_path = getenv("GOOGLE_API_CERTIFICATE_CONFIG")
-    if (
-        cert_config_path
-        and _check_config_path(cert_config_path) is not None
-    ):
+    if cert_config_path and _check_config_path(cert_config_path) is not None:
         return True
     return False
 
@@ -95,7 +84,9 @@ def get_client_ssl_credentials(
     """
 
     # Attempt to retrieve X.509 Workload cert and key.
-    cert, key =  google.auth.transport._mtls_helper._get_workload_cert_and_key(certificate_config_path)
+    cert, key = google.auth.transport._mtls_helper._get_workload_cert_and_key(
+        certificate_config_path
+    )
     if cert and key:
         return True, cert, key, None
 
@@ -128,4 +119,3 @@ def get_client_cert_and_key(client_cert_callback=None):
 
     has_cert, cert, key, _ = get_client_ssl_credentials(generate_encrypted_key=False)
     return has_cert, cert, key
-
