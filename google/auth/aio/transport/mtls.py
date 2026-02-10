@@ -17,9 +17,11 @@ Helper functions for mTLS in async for discovery of certs.
 """
 
 import asyncio
+import inspect
 import logging
 from os import getenv, path
 
+from google.auth import exceptions
 import google.auth.transport._mtls_helper
 
 CERTIFICATE_CONFIGURATION_DEFAULT_PATH = "~/.config/gcloud/certificate_config.json"
@@ -71,8 +73,35 @@ def has_default_client_cert_source():
     return False
 
 
+async def default_client_cert_source():
+    """Get a callback which returns the default client SSL credentials.
+
+    Returns:
+        Callable[[], [bytes, bytes]]: A callback which returns the default
+            client certificate bytes and private key bytes, both in PEM format.
+
+    Raises:
+        google.auth.exceptions.DefaultClientCertSourceError: If the default
+            client SSL credentials don't exist or are malformed.
+    """
+    if not has_default_client_cert_source():
+        raise exceptions.MutualTLSChannelError(
+            "Default client cert source doesn't exist"
+        )
+
+    async def callback():
+        try:
+            _, cert_bytes, key_bytes = await get_client_cert_and_key()
+        except (OSError, RuntimeError, ValueError) as caught_exc:
+            new_exc = exceptions.MutualTLSChannelError(caught_exc)
+            raise new_exc from caught_exc
+
+        return cert_bytes, key_bytes
+
+    return callback
+
+
 async def get_client_ssl_credentials(
-    generate_encrypted_key=False,
     certificate_config_path=None,
 ):
     """Returns the client side certificate, private key and passphrase.
@@ -82,10 +111,6 @@ async def get_client_ssl_credentials(
                Currently, only X.509 workload certificates are supported.
 
     Args:
-        generate_encrypted_key (bool): If set to True, encrypted private key
-            and passphrase will be generated; otherwise, unencrypted private key
-            will be generated and passphrase will be None. This option only
-            affects keys obtained via context_aware_metadata.json.
         certificate_config_path (str): The certificate_config.json file path.
 
     Returns:
@@ -131,10 +156,12 @@ async def get_client_cert_and_key(client_cert_callback=None):
             the cert and key.
     """
     if client_cert_callback:
-        cert, key = client_cert_callback()
+        result = client_cert_callback()
+        if inspect.isawaitable(result):
+            cert, key = await result
+        else:
+            cert, key = result
         return True, cert, key
 
-    has_cert, cert, key, _ = await get_client_ssl_credentials(
-        generate_encrypted_key=False
-    )
+    has_cert, cert, key, _ = await get_client_ssl_credentials()
     return has_cert, cert, key
