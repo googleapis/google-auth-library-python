@@ -360,8 +360,10 @@ class Credentials(
                 "Service account email is required to build the Regional Access Boundary lookup URL for impersonated credentials."
             )
             return None
-        return _constants._SERVICE_ACCOUNT_REGIONAL_ACCESS_BOUNDARY_LOOKUP_ENDPOINT.format(
-            service_account_email=self.service_account_email
+        return (
+            _constants._SERVICE_ACCOUNT_REGIONAL_ACCESS_BOUNDARY_LOOKUP_ENDPOINT.format(
+                service_account_email=self.service_account_email
+            )
         )
 
     def sign_bytes(self, message):
@@ -530,7 +532,7 @@ class Credentials(
 
         regional_access_boundary = info.get("regional_access_boundary")
         if regional_access_boundary:
-            initial_creds = initial_creds.with_regional_access_boundary(
+            initial_creds = initial_creds._with_regional_access_boundary(
                 regional_access_boundary
             )
 

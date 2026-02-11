@@ -294,7 +294,7 @@ class CredentialsWithUniverseDomain(Credentials):
 
 
 class CredentialsWithRegionalAccessBoundary(Credentials):
-    """Abstract base for credentials supporting ``with_regional_access_boundary`` factory"""
+    """Abstract base for credentials supporting regional access boundary configuration."""
 
     def __init__(self, *args, **kwargs):
         super(CredentialsWithRegionalAccessBoundary, self).__init__(*args, **kwargs)
@@ -323,28 +323,16 @@ class CredentialsWithRegionalAccessBoundary(Credentials):
         """
         raise NotImplementedError("_perform_refresh_token must be implemented")
 
-    def with_regional_access_boundary(self, regional_access_boundary):
+    def _with_regional_access_boundary(self, regional_access_boundary):
         """Returns a copy of these credentials with a modified Regional Access Boundary.
-
-        This method allows for manually providing the Regional Access Boundary
-        information, which will be cached with a 6-hour lifetime. This bypasses
-        the initial asynchronous lookup. After the cache expires, the library
-        will trigger a background refresh on the next request.
-
+        This is an internal method used by credential factory methods (e.g., from_info)
+        to seed the RAB cache. The provided value is cached with the default TTL.
         Args:
-            regional_access_boundary (Mapping[str, str]): The Regional Access Boundary
-                to use for the credential. This should be a map with an
-                "encodedLocations" key that maps to a hex string. Optionally,
-                it can also contain a "locations" key with a list of GCP regions.
-                Example: `{"locations": ["us-central1"], "encodedLocations": "0xA30"}`
-
+            regional_access_boundary (dict): Must contain an "encodedLocations" key.
         Returns:
-            google.auth.credentials.Credentials: A new credentials instance
-                with the specified Regional Access Boundary.
-
+            google.auth.credentials.Credentials: A new credentials instance.
         Raises:
-            google.auth.exceptions.InvalidValue: If `regional_access_boundary`
-                is not a dictionary or does not contain the "encodedLocations" key.
+            google.auth.exceptions.InvalidValue: If the input is malformed.
         """
         if (
             not isinstance(regional_access_boundary, dict)
@@ -376,28 +364,6 @@ class CredentialsWithRegionalAccessBoundary(Credentials):
         target._current_rab_cooldown_duration = self._current_rab_cooldown_duration
         # Create a new lock for the target instance to ensure independent thread-safety.
         target._stale_boundary_lock = threading.Lock()
-
-    def handle_stale_regional_access_boundary(self, request):
-        """Handles a stale regional access boundary error.
-        This method is thread-safe and will only initiate a single refresh
-        even if called concurrently.
-        Args:
-            request (google.auth.transport.Request): The object used to make
-                HTTP requests.
-        """
-        with self._stale_boundary_lock:
-            # Another thread might have already handled the stale boundary.
-            if self._regional_access_boundary is None:
-                return
-
-            _LOGGER.info("Stale regional access boundary detected. Refreshing.")
-
-            # Clear the cached boundary.
-            self._regional_access_boundary = None
-            self._regional_access_boundary_expiry = None
-
-            # Start the background refresh.
-            self._regional_access_boundary_refresh_manager.start_refresh(self, request)
 
     def _maybe_start_regional_access_boundary_refresh(self, request, url):
         """

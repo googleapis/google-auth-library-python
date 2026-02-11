@@ -227,7 +227,7 @@ class Credentials(
         )
         regional_access_boundary = info.get("regional_access_boundary")
         if regional_access_boundary:
-            initial_creds = initial_creds.with_regional_access_boundary(
+            initial_creds = initial_creds._with_regional_access_boundary(
                 regional_access_boundary
             )
         return initial_creds
