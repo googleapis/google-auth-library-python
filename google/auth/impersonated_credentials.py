@@ -39,6 +39,7 @@ from google.auth import exceptions
 from google.auth import iam
 from google.auth import jwt
 from google.auth import metrics
+from google.auth import _constants
 from google.oauth2 import _client
 
 import logging
@@ -50,9 +51,7 @@ _REFRESH_ERROR = "Unable to acquire impersonated credentials"
 _DEFAULT_TOKEN_LIFETIME_SECS = 3600  # 1 hour in seconds
 
 _GOOGLE_OAUTH2_TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token"
-_REGIONAL_ACCESS_BOUNDARY_LOOKUP_ENDPOINT = (
-    "https://iamcredentials.{}/v1/projects/-/serviceAccounts/{}/allowedLocations"
-)
+
 
 _SOURCE_CREDENTIAL_AUTHORIZED_USER_TYPE = "authorized_user"
 _SOURCE_CREDENTIAL_SERVICE_ACCOUNT_TYPE = "service_account"
@@ -361,8 +360,8 @@ class Credentials(
                 "Service account email is required to build the Regional Access Boundary lookup URL for impersonated credentials."
             )
             return None
-        return _REGIONAL_ACCESS_BOUNDARY_LOOKUP_ENDPOINT.format(
-            self.universe_domain, self.service_account_email
+        return _constants._SERVICE_ACCOUNT_REGIONAL_ACCESS_BOUNDARY_LOOKUP_ENDPOINT.format(
+            service_account_email=self.service_account_email
         )
 
     def sign_bytes(self, message):

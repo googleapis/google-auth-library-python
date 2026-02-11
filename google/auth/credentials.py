@@ -545,10 +545,6 @@ class CredentialsWithRegionalAccessBoundary(Credentials):
         )
 
 
-# For backward compatibility.
-CredentialsWithTrustBoundary = CredentialsWithRegionalAccessBoundary
-
-
 class AnonymousCredentials(Credentials):
     """Credentials that do not provide any authentication information.
 

@@ -172,7 +172,7 @@ class Credentials(
 
         return (
             _constants._SERVICE_ACCOUNT_REGIONAL_ACCESS_BOUNDARY_LOOKUP_ENDPOINT.format(
-                self.service_account_email
+                service_account_email=self.service_account_email
             )
         )
 

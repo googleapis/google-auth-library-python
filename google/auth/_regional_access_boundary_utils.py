@@ -22,6 +22,7 @@ class _RegionalAccessBoundaryRefreshThread(threading.Thread):
 
     def __init__(self, credentials, request):
         super(_RegionalAccessBoundaryRefreshThread, self).__init__()
+        self.daemon = True
         self._credentials = credentials
         self._request = request
 
@@ -63,14 +64,15 @@ class _RegionalAccessBoundaryRefreshThread(threading.Thread):
                     _LOGGER.warning(
                         "Asynchronous Regional Access Boundary lookup failed. Entering cooldown."
                     )
+                self._credentials._regional_access_boundary_cooldown_expiry = (
+                    _helpers.utcnow()
+                    + self._credentials._current_rab_cooldown_duration
+                )
                 new_cooldown_duration = (
                     self._credentials._current_rab_cooldown_duration * 2
                 )
                 self._credentials._current_rab_cooldown_duration = min(
                     new_cooldown_duration, MAX_REGIONAL_ACCESS_BOUNDARY_COOLDOWN
-                )
-                self._credentials._regional_access_boundary_cooldown_expiry = (
-                    _helpers.utcnow() + self._credentials._current_rab_cooldown_duration
                 )
                 # If the proactive refresh failed, clear any existing expired RAB data.
                 # This ensures we don't continue using stale data.
