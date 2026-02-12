@@ -73,18 +73,10 @@ async def main():
         # 5. Make a request to Pub/Sub API
         url = f"https://pubsub.googleapis.com/v1/projects/{project_id}/topics"
         print(f"Making request to: {url}")
-        
+        # Make a GET request to the Pub/Sub API endpoint
         response = await session.get(url)
-        
-        print(f"Response Status: {response.status_code}")
-        if response.status_code == 200:
-            body_bytes = await response.read()
-            response_data = json.loads(body_bytes)
-            print("Success! Topics found.")
-            # print("Response Body (first 200 chars):", str(response_data)[:200])
-        else:
-            print("Request failed.")
-            print(await response.text())
+        print(f"Response Status: {response.status_code}") # Note: status_code, not status
+        print(await response.read()) # Note: read() returns bytes
 
     finally:
         await session.close()

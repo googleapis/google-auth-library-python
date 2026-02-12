@@ -180,10 +180,7 @@ class AsyncAuthorizedSession:
                 self._is_mtls,
                 cert,
                 key,
-            ) = await _run_in_executor(
-                google.auth.transport._mtls_helper.get_client_cert_and_key,
-                client_cert_callback,
-            )
+            ) = await mtls.get_client_cert_and_key(client_cert_callback)
 
             if self._is_mtls:
                 self._cached_cert = cert

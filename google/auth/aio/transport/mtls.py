@@ -23,9 +23,15 @@ import os
 import ssl
 import tempfile
 from typing import Optional
+import asyncio
+import inspect
+from os import getenv, path
 
 from google.auth import exceptions
+import google.auth.transport._mtls_helper
 
+CERTIFICATE_CONFIGURATION_DEFAULT_PATH = "~/.config/gcloud/certificate_config.json"
+_LOGGER = logging.getLogger(__name__)
 
 
 @contextlib.contextmanager
@@ -86,3 +92,141 @@ def make_client_cert_ssl_context(
         raise exceptions.TransportError(
             "Failed to load client certificate and key for mTLS."
         ) from exc
+
+def _check_config_path(config_path):
+    """Checks for config file path. If it exists, returns the absolute path with user expansion;
+    otherwise returns None.
+
+    Args:
+        config_path (str): The config file path for certificate_config.json for example
+
+    Returns:
+        str: absolute path if exists and None otherwise.
+    """
+    config_path = path.expanduser(config_path)
+    if not path.exists(config_path):
+        _LOGGER.debug("%s is not found.", config_path)
+        return None
+    return config_path
+
+
+async def _run_in_executor(func, *args):
+    """Run a blocking function in an executor to avoid blocking the event loop.
+
+    This implements the non-blocking execution strategy for disk I/O operations.
+    """
+    try:
+        # For python versions 3.9 and newer versions
+        return await asyncio.to_thread(func, *args)
+    except AttributeError:
+        # Fallback for older Python versions
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, func, *args)
+
+
+def has_default_client_cert_source():
+    """Check if default client SSL credentials exists on the device.
+
+    Returns:
+        bool: indicating if the default client cert source exists.
+    """
+    if _check_config_path(CERTIFICATE_CONFIGURATION_DEFAULT_PATH) is not None:
+        return True
+    cert_config_path = getenv("GOOGLE_API_CERTIFICATE_CONFIG")
+    if cert_config_path and _check_config_path(cert_config_path) is not None:
+        return True
+    return False
+
+
+async def default_client_cert_source():
+    """Get a callback which returns the default client SSL credentials.
+
+    Returns:
+        Callable[[], [bytes, bytes]]: A callback which returns the default
+            client certificate bytes and private key bytes, both in PEM format.
+
+    Raises:
+        google.auth.exceptions.DefaultClientCertSourceError: If the default
+            client SSL credentials don't exist or are malformed.
+    """
+    if not has_default_client_cert_source():
+        raise exceptions.MutualTLSChannelError(
+            "Default client cert source doesn't exist"
+        )
+
+    async def callback():
+        try:
+            _, cert_bytes, key_bytes = await get_client_cert_and_key()
+        except (OSError, RuntimeError, ValueError) as caught_exc:
+            new_exc = exceptions.MutualTLSChannelError(caught_exc)
+            raise new_exc from caught_exc
+
+        return cert_bytes, key_bytes
+
+    return callback
+
+
+async def get_client_ssl_credentials(
+    certificate_config_path=None,
+):
+    """Returns the client side certificate, private key and passphrase.
+
+    We look for certificates and keys with the following order of priority:
+        1. Certificate and key specified by certificate_config.json.
+               Currently, only X.509 workload certificates are supported.
+
+    Args:
+        certificate_config_path (str): The certificate_config.json file path.
+
+    Returns:
+        Tuple[bool, bytes, bytes, bytes]:
+            A boolean indicating if cert, key and passphrase are obtained, the
+            cert bytes and key bytes both in PEM format, and passphrase bytes.
+
+    Raises:
+        google.auth.exceptions.ClientCertError: if problems occurs when getting
+            the cert, key and passphrase.
+    """
+
+    # Attempt to retrieve X.509 Workload cert and key.
+    cert, key = await _run_in_executor(
+        google.auth.transport._mtls_helper._get_workload_cert_and_key,
+        certificate_config_path,
+    )
+
+    if cert and key:
+        return True, cert, key, None
+
+    return False, None, None, None
+
+
+async def get_client_cert_and_key(client_cert_callback=None):
+    """Returns the client side certificate and private key. The function first
+    tries to get certificate and key from client_cert_callback; if the callback
+    is None or doesn't provide certificate and key, the function tries application
+    default SSL credentials.
+
+    Args:
+        client_cert_callback (Optional[Callable[[], (bytes, bytes)]]): An
+            optional callback which returns client certificate bytes and private
+            key bytes both in PEM format.
+
+    Returns:
+        Tuple[bool, bytes, bytes]:
+            A boolean indicating if cert and key are obtained, the cert bytes
+            and key bytes both in PEM format.
+
+    Raises:
+        google.auth.exceptions.ClientCertError: if problems occurs when getting
+            the cert and key.
+    """
+    if client_cert_callback:
+        result = client_cert_callback()
+        if inspect.isawaitable(result):
+            cert, key = await result
+        else:
+            cert, key = result
+        return True, cert, key
+
+    has_cert, cert, key, _ = await get_client_ssl_credentials()
+    return has_cert, cert, key
