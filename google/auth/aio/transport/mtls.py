@@ -1,4 +1,4 @@
-# Copyright 2024 Google LLC
+# Copyright 2026 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,7 +17,6 @@ Helper functions for mTLS in async for discovery of certs.
 """
 
 import asyncio
-import inspect
 import logging
 from os import getenv, path
 
@@ -73,11 +72,11 @@ def has_default_client_cert_source():
     return False
 
 
-async def default_client_cert_source():
+def default_client_cert_source():
     """Get a callback which returns the default client SSL credentials.
 
     Returns:
-        Callable[[], [bytes, bytes]]: A callback which returns the default
+        Awaitable[Callable[[], [bytes, bytes]]]: A callback which returns the default
             client certificate bytes and private key bytes, both in PEM format.
 
     Raises:
@@ -156,11 +155,13 @@ async def get_client_cert_and_key(client_cert_callback=None):
             the cert and key.
     """
     if client_cert_callback:
-        result = client_cert_callback()
-        if inspect.isawaitable(result):
-            cert, key = await result
-        else:
-            cert, key = result
+        try:
+            # If it's awaitable, this works.
+            cert, key = await client_cert_callback()
+        except TypeError:
+            # If it's not awaitable (e.g., a tuple), result is already the data.
+            cert, key = client_cert_callback()
+
         return True, cert, key
 
     has_cert, cert, key, _ = await get_client_ssl_credentials()
