@@ -16,21 +16,18 @@
 """Interfaces for credentials."""
 
 import abc
-import datetime
 from enum import Enum
 import logging
 import os
 import threading
 from urllib.parse import urlparse
-import warnings
 
-from google.auth import _exponential_backoff
 from google.auth import _helpers, environment_vars
+from google.auth import _regional_access_boundary_utils
 from google.auth import exceptions
 from google.auth import metrics
 from google.auth._credentials_base import _BaseCredentials
 from google.auth._refresh_worker import RefreshThreadManager
-from google.auth import _regional_access_boundary_utils
 
 DEFAULT_UNIVERSE_DOMAIN = "googleapis.com"
 
@@ -326,7 +323,10 @@ class CredentialsWithRegionalAccessBoundary(Credentials):
     def _with_regional_access_boundary(self, regional_access_boundary):
         """Returns a copy of these credentials with a modified Regional Access Boundary.
         This is an internal method used by credential factory methods (e.g., from_info)
-        to seed the RAB cache. The provided value is cached with the default TTL.
+        to seed the RAB cache when a new boundary is fetched or explicitly provided.
+        Because this represents a newly acquired boundary, it is granted a fresh
+        default TTL and any previous cooldowns are cleared. To copy an existing boundary's
+        state (including its remaining TTL and cooldowns), use `_copy_regional_access_boundary_state`.
         Args:
             regional_access_boundary (dict): Must contain an "encodedLocations" key.
         Returns:

@@ -36,12 +36,8 @@ Example credential:
 import datetime
 import io
 import json
-import re
-import warnings
-
 import logging
-
-_LOGGER = logging.getLogger(__name__)
+import re
 
 from google.auth import _constants
 from google.auth import _helpers
@@ -49,6 +45,8 @@ from google.auth import credentials
 from google.auth import exceptions
 from google.oauth2 import sts
 from google.oauth2 import utils
+
+_LOGGER = logging.getLogger(__name__)
 
 _EXTERNAL_ACCOUNT_AUTHORIZED_USER_JSON_TYPE = "external_account_authorized_user"
 

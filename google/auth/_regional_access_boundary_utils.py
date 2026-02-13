@@ -65,8 +65,7 @@ class _RegionalAccessBoundaryRefreshThread(threading.Thread):
                         "Asynchronous Regional Access Boundary lookup failed. Entering cooldown."
                     )
                 self._credentials._regional_access_boundary_cooldown_expiry = (
-                    _helpers.utcnow()
-                    + self._credentials._current_rab_cooldown_duration
+                    _helpers.utcnow() + self._credentials._current_rab_cooldown_duration
                 )
                 new_cooldown_duration = (
                     self._credentials._current_rab_cooldown_duration * 2

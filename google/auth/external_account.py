@@ -34,12 +34,8 @@ import datetime
 import functools
 import io
 import json
-import re
-import warnings
-
 import logging
-
-_LOGGER = logging.getLogger(__name__)
+import re
 
 from google.auth import _constants
 from google.auth import _helpers
@@ -49,6 +45,8 @@ from google.auth import impersonated_credentials
 from google.auth import metrics
 from google.oauth2 import sts
 from google.oauth2 import utils
+
+_LOGGER = logging.getLogger(__name__)
 
 # External account JSON type identifier.
 _EXTERNAL_ACCOUNT_JSON_TYPE = "external_account"

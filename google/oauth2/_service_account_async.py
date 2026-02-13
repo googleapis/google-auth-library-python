@@ -75,6 +75,13 @@ class Credentials(
         self.token = access_token
         self.expiry = expiry
 
+    @_helpers.copy_docstring(credentials_async.Credentials)
+    async def before_request(self, request, method, url, headers):
+        await credentials_async.Credentials.before_request(
+            self, request, method, url, headers
+        )
+        self._maybe_start_regional_access_boundary_refresh(request, url)
+
 
 class IDTokenCredentials(
     service_account.IDTokenCredentials,

@@ -72,6 +72,7 @@ specific subject using :meth:`~Credentials.with_subject`.
 
 import copy
 import datetime
+import logging
 
 from google.auth import _constants
 from google.auth import _helpers
@@ -82,8 +83,6 @@ from google.auth import iam
 from google.auth import jwt
 from google.auth import metrics
 from google.oauth2 import _client
-
-import logging
 
 _LOGGER = logging.getLogger(__name__)
 

@@ -26,9 +26,8 @@ For more information about the token endpoint, see
 import datetime
 import http.client as http_client
 import json
-import urllib
-
 import logging
+import urllib
 
 from google.auth import _exponential_backoff
 from google.auth import _helpers

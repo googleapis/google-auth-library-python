@@ -22,8 +22,6 @@ Compute Engine using the Compute Engine metadata server.
 import datetime
 import logging
 
-_LOGGER = logging.getLogger(__name__)
-
 from google.auth import _constants
 from google.auth import _helpers
 from google.auth import credentials
@@ -33,6 +31,8 @@ from google.auth import jwt
 from google.auth import metrics
 from google.auth.compute_engine import _metadata
 from google.oauth2 import _client
+
+_LOGGER = logging.getLogger(__name__)
 
 
 class Credentials(

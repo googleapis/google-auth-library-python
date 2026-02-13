@@ -30,8 +30,9 @@ import copy
 from datetime import datetime
 import http.client as http_client
 import json
-import warnings
+import logging
 
+from google.auth import _constants
 from google.auth import _exponential_backoff
 from google.auth import _helpers
 from google.auth import credentials
@@ -39,10 +40,7 @@ from google.auth import exceptions
 from google.auth import iam
 from google.auth import jwt
 from google.auth import metrics
-from google.auth import _constants
 from google.oauth2 import _client
-
-import logging
 
 _LOGGER = logging.getLogger(__name__)
 
