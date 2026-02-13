@@ -618,7 +618,7 @@ class TestCredentials(object):
 
     def test_build_regional_access_boundary_lookup_url(self):
         credentials = self.make_credentials()
-        expected_url = "https://iamcredentials.googleapis.com/v1/workforcePools/POOL_ID/locations/global/allowedLocations"
+        expected_url = "https://iamcredentials.googleapis.com/v1/locations/global/workforcePools/POOL_ID/allowedLocations"
         assert credentials._build_regional_access_boundary_lookup_url() == expected_url
 
     @pytest.mark.parametrize(
