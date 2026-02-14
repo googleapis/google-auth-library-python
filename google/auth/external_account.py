@@ -348,6 +348,7 @@ class Credentials(
         scoped = self.__class__(**kwargs)
         scoped._cred_file_path = self._cred_file_path
         scoped._metrics_options = self._metrics_options
+        self._copy_regional_access_boundary_state(scoped)
         return scoped
 
     @abc.abstractmethod
@@ -505,7 +506,11 @@ class Credentials(
             return url
         else:
             # If both fail, the audience format is invalid.
-            raise exceptions.InvalidValue("Invalid audience format.")
+            _LOGGER.error(
+                "Invalid audience format for Regional Access Boundary lookup: %s",
+                self._audience,
+            )
+            return None
 
     def _make_copy(self):
         kwargs = self._constructor_args()

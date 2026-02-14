@@ -242,7 +242,9 @@ class TestCredentials(object):
         credentials = self.make_credentials()
         expected_url = (
             "https://iamcredentials.googleapis.com/v1/projects/-/"
-            "serviceAccounts/{}/allowedLocations".format(credentials.service_account_email)
+            "serviceAccounts/{}/allowedLocations".format(
+                credentials.service_account_email
+            )
         )
         assert credentials._build_regional_access_boundary_lookup_url() == expected_url
 

@@ -3,8 +3,11 @@
 import datetime
 import threading
 
+import logging
+
 from google.auth import _helpers
-from google.auth._default import _LOGGER
+
+_LOGGER = logging.getLogger(__name__)
 
 
 # The default lifetime for a cached Regional Access Boundary.

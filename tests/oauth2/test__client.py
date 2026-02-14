@@ -699,6 +699,7 @@ def test_lookup_regional_access_boundary_non_retryable_error(status_code):
     # Non-retryable errors should only be called once.
     mock_request.assert_called_once_with(method="GET", url=url, headers=headers)
 
+
 def test_lookup_regional_access_boundary_internal_failure_and_retry_failure_error():
     retryable_error = mock.create_autospec(transport.Response, instance=True)
     retryable_error.status = http_client.BAD_REQUEST

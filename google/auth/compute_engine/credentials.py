@@ -242,6 +242,7 @@ class Credentials(
     def with_universe_domain(self, universe_domain):
         creds = self._make_copy()
         creds._universe_domain = universe_domain
+        creds._universe_domain_cached = True
         return creds
 
 

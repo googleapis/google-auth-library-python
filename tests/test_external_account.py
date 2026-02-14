@@ -351,6 +351,16 @@ class TestCredentials(object):
         assert scoped_credentials.has_scopes(["email"])
         assert not scoped_credentials.requires_scopes
 
+    def test_with_scopes_copies_regional_access_boundary(self):
+        credentials = self.make_credentials()
+        credentials = credentials._with_regional_access_boundary(
+            self.VALID_TRUST_BOUNDARY
+        )
+        scoped_credentials = credentials.with_scopes(["email"])
+
+        assert scoped_credentials.has_scopes(["email"])
+        assert scoped_credentials._regional_access_boundary == self.VALID_TRUST_BOUNDARY
+
     def test_with_scopes_workforce_pool(self):
         credentials = self.make_workforce_pool_credentials(
             workforce_pool_user_project=self.WORKFORCE_POOL_USER_PROJECT
@@ -1750,8 +1760,7 @@ class TestCredentials(object):
     def test_build_regional_access_boundary_lookup_url_invalid_audience(self, audience):
         credentials = self.make_credentials()
         credentials._audience = audience
-        with pytest.raises(exceptions.InvalidValue, match="Invalid audience format."):
-            credentials._build_regional_access_boundary_lookup_url()
+        assert credentials._build_regional_access_boundary_lookup_url() is None
 
     def test_with_regional_access_boundary(self):
         credentials = self.make_credentials()
