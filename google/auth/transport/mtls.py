@@ -20,7 +20,7 @@ from google.auth import exceptions
 from google.auth.transport import _mtls_helper
 
 
-def has_default_client_cert_source(include_context_aware):
+def has_default_client_cert_source(include_context_aware=True):
     """Check if default client SSL credentials exists on the device.
 
     Args:

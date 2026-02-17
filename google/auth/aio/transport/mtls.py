@@ -20,7 +20,6 @@ import asyncio
 import contextlib
 import logging
 import os
-from os import getenv, path
 import ssl
 import tempfile
 from typing import Optional
@@ -29,6 +28,7 @@ from google.auth import exceptions
 import google.auth.transport._mtls_helper
 
 _LOGGER = logging.getLogger(__name__)
+
 
 @contextlib.contextmanager
 def _create_temp_file(content: bytes):
@@ -83,6 +83,7 @@ def make_client_cert_ssl_context(
         raise exceptions.TransportError(
             "Failed to load client certificate and key for mTLS."
         ) from exc
+
 
 async def _run_in_executor(func, *args):
     """Run a blocking function in an executor to avoid blocking the event loop.

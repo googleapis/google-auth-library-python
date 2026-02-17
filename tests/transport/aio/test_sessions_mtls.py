@@ -99,7 +99,7 @@ class TestSessionsMtls:
     @pytest.mark.asyncio
     @mock.patch.dict(os.environ, {"GOOGLE_API_USE_CLIENT_CERTIFICATE": "true"})
     @mock.patch(
-        "google.auth.aio.transport.mtls.has_default_client_cert_source",
+        "google.auth.transport.mtls.has_default_client_cert_source",
         return_value=True,
     )
     async def test_configure_mtls_channel_mock_callback(self, mock_has_cert):
