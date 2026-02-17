@@ -63,7 +63,14 @@ async def timeout_guard(timeout):
 
     async def with_timeout(coro):
         try:
-            remaining = _remaining_time()
+            try:
+                remaining = _remaining_time()
+            except TimeoutError:
+                # If we timeout before starting the call, 
+                # we must close the coroutine to avoid leaks.
+                if hasattr(coro, "close"):
+                    coro.close()
+                raise
             response = await asyncio.wait_for(coro, remaining)
             return response
         except (asyncio.TimeoutError, TimeoutError) as e:
