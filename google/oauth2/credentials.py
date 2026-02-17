@@ -87,7 +87,6 @@ class Credentials(credentials.ReadOnlyScoped, credentials.CredentialsWithQuotaPr
         refresh_handler=None,
         enable_reauth_refresh=False,
         granted_scopes=None,
-        trust_boundary=None,
         universe_domain=credentials.DEFAULT_UNIVERSE_DOMAIN,
         account=None,
     ):
@@ -131,7 +130,6 @@ class Credentials(credentials.ReadOnlyScoped, credentials.CredentialsWithQuotaPr
             granted_scopes (Optional[Sequence[str]]): The scopes that were consented/granted by the user.
                 This could be different from the requested scopes and it could be empty if granted
                 and requested scopes were same.
-            trust_boundary (str): String representation of trust boundary meta.
             universe_domain (Optional[str]): The universe domain. The default
                 universe domain is googleapis.com.
             account (Optional[str]): The account associated with the credential.
@@ -154,7 +152,6 @@ class Credentials(credentials.ReadOnlyScoped, credentials.CredentialsWithQuotaPr
         self._rapt_token = rapt_token
         self.refresh_handler = refresh_handler
         self._enable_reauth_refresh = enable_reauth_refresh
-        self._trust_boundary = trust_boundary
         self._universe_domain = universe_domain or credentials.DEFAULT_UNIVERSE_DOMAIN
         self._account = account or ""
         self._cred_file_path = None
@@ -192,7 +189,6 @@ class Credentials(credentials.ReadOnlyScoped, credentials.CredentialsWithQuotaPr
         self._quota_project_id = d.get("_quota_project_id")
         self._rapt_token = d.get("_rapt_token")
         self._enable_reauth_refresh = d.get("_enable_reauth_refresh")
-        self._trust_boundary = d.get("_trust_boundary")
         self._universe_domain = (
             d.get("_universe_domain") or credentials.DEFAULT_UNIVERSE_DOMAIN
         )
@@ -300,7 +296,6 @@ class Credentials(credentials.ReadOnlyScoped, credentials.CredentialsWithQuotaPr
             quota_project_id=self.quota_project_id,
             rapt_token=self.rapt_token,
             enable_reauth_refresh=self._enable_reauth_refresh,
-            trust_boundary=self._trust_boundary,
             universe_domain=self._universe_domain,
             account=self._account,
         )
@@ -494,7 +489,6 @@ class Credentials(credentials.ReadOnlyScoped, credentials.CredentialsWithQuotaPr
             quota_project_id=info.get("quota_project_id"),  # may not exist
             expiry=expiry,
             rapt_token=info.get("rapt_token"),  # may not exist
-            trust_boundary=info.get("trust_boundary"),  # may not exist
             universe_domain=info.get("universe_domain"),  # may not exist
             account=info.get("account", ""),  # may not exist
         )

@@ -324,8 +324,8 @@ class TestImpersonatedCredentials(object):
             == ACCESS_TOKEN_REQUEST_METRICS_HEADER_VALUE
         )
 
-    def test_refresh_source_creds_no_trust_boundary(self):
-        # Use a source credential that does not support trust boundaries.
+    def test_refresh_source_creds_no_regional_access_boundary(self):
+        # Use a source credential that does not support regional access boundaries.
         source_credentials = credentials.Credentials(token="source_token")
         creds = self.make_credentials(source_credentials=source_credentials)
         token = "impersonated_token"

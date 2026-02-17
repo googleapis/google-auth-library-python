@@ -385,9 +385,6 @@ class TestCredentials(object):
                 "Content-Type": "application/json",
                 "authorization": "Bearer {}".format(token_response["access_token"]),
                 "x-goog-api-client": metrics_header_value,
-                # TODO(negarb): Uncomment and update when trust boundary is supported
-                # for external account credentials.
-                # "x-allowed-locations": "0x0",
             }
             impersonation_request_data = {
                 "delegates": None,

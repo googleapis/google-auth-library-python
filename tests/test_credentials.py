@@ -533,20 +533,14 @@ class TestCredentialsWithRegionalAccessBoundary(object):
     @mock.patch(
         "google.auth._regional_access_boundary_utils._RegionalAccessBoundaryRefreshManager.start_refresh"
     )
-    @mock.patch("urllib.parse.urlparse")
-    def test_maybe_start_refresh_handles_url_parse_errors(
-        self, mock_urlparse, mock_start_refresh
-    ):
-        mock_urlparse.side_effect = ValueError("Malformed URL")
+    def test_maybe_start_refresh_handles_url_parse_errors(self, mock_start_refresh):
         creds = CredentialsImpl()
         request = mock.Mock()
         with mock.patch.dict(
             os.environ,
             {environment_vars.GOOGLE_AUTH_TRUST_BOUNDARY_ENABLED: "true"},
         ):
-            creds._maybe_start_regional_access_boundary_refresh(
-                request, "http://malformed-url"
-            )
+            creds._maybe_start_regional_access_boundary_refresh(request, "http://[")
         mock_start_refresh.assert_called_once_with(creds, request)
 
     @mock.patch("google.oauth2._client._lookup_regional_access_boundary")

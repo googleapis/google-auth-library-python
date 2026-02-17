@@ -529,10 +529,6 @@ class TestCredentials(object):
         # Check that the credentials are valid (have a token and are not expired).
         assert credentials.valid
 
-        # Trust boundary should be None since env var is not set and no initial
-        # boundary was provided.
-        assert credentials._trust_boundary is None
-
     @mock.patch("google.oauth2._client.jwt_grant", autospec=True)
     def test_before_request_refreshes(self, jwt_grant):
         credentials = self.make_credentials()
