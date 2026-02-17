@@ -128,7 +128,7 @@ class AsyncAuthorizedSession:
         if not _auth_request and AIOHTTP_INSTALLED:
             _auth_request = AiohttpRequest()
         self._is_mtls = False
-        self._cached_Cert = None
+        self._cached_cert = None
         if _auth_request is None:
             raise exceptions.TransportError(
                 "`auth_request` must either be configured or the external package `aiohttp` must be installed to use the default value."
@@ -177,7 +177,7 @@ class AsyncAuthorizedSession:
                 )
 
                 # Re-create the auth request with the new SSL context
-                if isinstance(self._auth_request, AiohttpRequest):
+                if AIOHTTP_INSTALLED and isinstance(self._auth_request, AiohttpRequest):
                     connector = aiohttp.TCPConnector(ssl=ssl_context)
                     new_session = aiohttp.ClientSession(connector=connector)
                     await self._auth_request.close()

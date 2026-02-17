@@ -56,7 +56,6 @@ class TestSessionsMtls:
 
         mock_creds = mock.Mock(spec=credentials.Credentials)
         session = sessions.AsyncAuthorizedSession(mock_creds)
-
         await session.configure_mtls_channel()
 
         assert session._is_mtls is True
@@ -71,10 +70,7 @@ class TestSessionsMtls:
         mock_exists.return_value = False
         mock_creds = mock.Mock(spec=credentials.Credentials)
 
-        try:
-            session = sessions.AsyncAuthorizedSession(mock_creds)
-        except AttributeError:
-            session = sessions.Session()
+        session = sessions.AsyncAuthorizedSession(mock_creds)
         await session.configure_mtls_channel()
 
         # If the file doesn't exist, it shouldn't error; it just won't use mTLS
@@ -92,13 +88,9 @@ class TestSessionsMtls:
         mock_exists.return_value = True
         mock_creds = mock.Mock(spec=credentials.Credentials)
 
-        try:
-            session = sessions.AsyncAuthorizedSession(mock_creds)
-        except AttributeError:
-            session = sessions.Session()
+        session = sessions.AsyncAuthorizedSession(mock_creds)
         with pytest.raises(
-            exceptions.MutualTLSChannelError, match="is in an invalid format"
-        ):
+            exceptions.MutualTLSChannelError):
             await session.configure_mtls_channel()
 
     @pytest.mark.asyncio

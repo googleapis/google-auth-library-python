@@ -43,15 +43,15 @@ def _create_temp_file(content: bytes):
         str: The path to the temporary file.
     """
     # Create a temporary file that is readable only by the owner.
-    fd, path = tempfile.mkstemp()
+    fd, file_path = tempfile.mkstemp()
     try:
         with os.fdopen(fd, "wb") as f:
             f.write(content)
-        yield path
+        yield file_path
     finally:
         # Securely delete the file after use.
-        if os.path.exists(path):
-            os.remove(path)
+        if os.path.exists(file_path):
+            os.remove(file_path)
 
 
 def make_client_cert_ssl_context(
@@ -140,7 +140,7 @@ def default_client_cert_source():
             client certificate bytes and private key bytes, both in PEM format.
 
     Raises:
-        google.auth.exceptions.DefaultClientCertSourceError: If the default
+        google.auth.exceptions.MutualTLSChannelError: If the default
             client SSL credentials don't exist or are malformed.
     """
     if not has_default_client_cert_source():
@@ -215,13 +215,11 @@ async def get_client_cert_and_key(client_cert_callback=None):
             the cert and key.
     """
     if client_cert_callback:
-        try:
-            # If it's awaitable, this works.
-            cert, key = await client_cert_callback()
-        except TypeError:
-            # If it's not awaitable (e.g., a tuple), result is already the data.
-            cert, key = client_cert_callback()
-
+        result = client_cert_callback()
+        if asyncio.iscoroutine(result):
+            cert, key = await result
+        else:
+            cert, key = result        
         return True, cert, key
 
     has_cert, cert, key, _ = await get_client_ssl_credentials()
