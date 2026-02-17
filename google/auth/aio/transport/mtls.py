@@ -18,30 +18,12 @@ Helper functions for mTLS in async for discovery of certs.
 
 import asyncio
 import logging
-from os import getenv, path
 
 from google.auth import exceptions
 import google.auth.transport._mtls_helper
+import google.auth.transport.mtls
 
-CERTIFICATE_CONFIGURATION_DEFAULT_PATH = "~/.config/gcloud/certificate_config.json"
 _LOGGER = logging.getLogger(__name__)
-
-
-def _check_config_path(config_path):
-    """Checks for config file path. If it exists, returns the absolute path with user expansion;
-    otherwise returns None.
-
-    Args:
-        config_path (str): The config file path for certificate_config.json for example
-
-    Returns:
-        str: absolute path if exists and None otherwise.
-    """
-    config_path = path.expanduser(config_path)
-    if not path.exists(config_path):
-        _LOGGER.debug("%s is not found.", config_path)
-        return None
-    return config_path
 
 
 async def _run_in_executor(func, *args):
@@ -58,20 +40,6 @@ async def _run_in_executor(func, *args):
         return await loop.run_in_executor(None, func, *args)
 
 
-def has_default_client_cert_source():
-    """Check if default client SSL credentials exists on the device.
-
-    Returns:
-        bool: indicating if the default client cert source exists.
-    """
-    if _check_config_path(CERTIFICATE_CONFIGURATION_DEFAULT_PATH) is not None:
-        return True
-    cert_config_path = getenv("GOOGLE_API_CERTIFICATE_CONFIG")
-    if cert_config_path and _check_config_path(cert_config_path) is not None:
-        return True
-    return False
-
-
 def default_client_cert_source():
     """Get a callback which returns the default client SSL credentials.
 
@@ -83,7 +51,9 @@ def default_client_cert_source():
         google.auth.exceptions.DefaultClientCertSourceError: If the default
             client SSL credentials don't exist or are malformed.
     """
-    if not has_default_client_cert_source():
+    if not google.auth.transport.mtls.has_default_client_cert_source(
+        include_context_aware=False
+    ):
         raise exceptions.MutualTLSChannelError(
             "Default client cert source doesn't exist"
         )
@@ -126,6 +96,7 @@ async def get_client_ssl_credentials(
     cert, key = await _run_in_executor(
         google.auth.transport._mtls_helper._get_workload_cert_and_key,
         certificate_config_path,
+        False,
     )
 
     if cert and key:
@@ -155,13 +126,11 @@ async def get_client_cert_and_key(client_cert_callback=None):
             the cert and key.
     """
     if client_cert_callback:
+        result = client_cert_callback()
         try:
-            # If it's awaitable, this works.
-            cert, key = await client_cert_callback()
+            cert, key = await result
         except TypeError:
-            # If it's not awaitable (e.g., a tuple), result is already the data.
-            cert, key = client_cert_callback()
-
+            cert, key = result
         return True, cert, key
 
     has_cert, cert, key, _ = await get_client_ssl_credentials()
