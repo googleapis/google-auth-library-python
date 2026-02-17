@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import json
+import os
 import ssl
 from unittest import mock
 
@@ -32,13 +33,14 @@ VALID_WORKLOAD_CONFIG = {
 
 
 class TestSessionsMtls:
+    @mock.patch.dict(os.environ, {"GOOGLE_API_USE_CLIENT_CERTIFICATE": "true"})
     @mock.patch("os.path.exists")
     @mock.patch(
         "builtins.open",
         new_callable=mock.mock_open,
         read_data=json.dumps(VALID_WORKLOAD_CONFIG),
     )
-    @mock.patch("google.auth.transport._mtls_helper._get_workload_cert_and_key")
+    @mock.patch("google.auth.aio.transport.mtls.get_client_cert_and_key")
     @mock.patch("ssl.create_default_context")
     @pytest.mark.asyncio
     async def test_configure_mtls_channel(
@@ -49,7 +51,7 @@ class TestSessionsMtls:
         valid workload config is mocked.
         """
         mock_exists.return_value = True
-        mock_helper.return_value = (b"fake_cert_data", b"fake_key_data")
+        mock_helper.return_value = (True, b"fake_cert_data", b"fake_key_data")
 
         mock_context = mock.Mock(spec=ssl.SSLContext)
         mock_ssl.return_value = mock_context
@@ -61,6 +63,7 @@ class TestSessionsMtls:
         assert session._is_mtls is True
         assert mock_context.load_cert_chain.called
 
+    @mock.patch.dict(os.environ, {"GOOGLE_API_USE_CLIENT_CERTIFICATE": "true"})
     @mock.patch("os.path.exists")
     @pytest.mark.asyncio
     async def test_configure_mtls_channel_disabled(self, mock_exists):
@@ -89,10 +92,10 @@ class TestSessionsMtls:
         mock_creds = mock.Mock(spec=credentials.Credentials)
 
         session = sessions.AsyncAuthorizedSession(mock_creds)
-        with pytest.raises(
-            exceptions.MutualTLSChannelError):
+        with pytest.raises(exceptions.MutualTLSChannelError):
             await session.configure_mtls_channel()
 
+    @mock.patch.dict(os.environ, {"GOOGLE_API_USE_CLIENT_CERTIFICATE": "true"})
     @pytest.mark.asyncio
     @mock.patch(
         "google.auth.aio.transport.mtls.has_default_client_cert_source",

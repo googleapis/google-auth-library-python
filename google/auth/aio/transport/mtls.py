@@ -219,7 +219,7 @@ async def get_client_cert_and_key(client_cert_callback=None):
         if asyncio.iscoroutine(result):
             cert, key = await result
         else:
-            cert, key = result        
+            cert, key = result
         return True, cert, key
 
     has_cert, cert, key, _ = await get_client_ssl_credentials()
