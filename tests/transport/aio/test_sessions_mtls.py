@@ -34,75 +34,71 @@ VALID_WORKLOAD_CONFIG = {
 
 class TestSessionsMtls:
     @pytest.mark.asyncio
-    @mock.patch.dict(os.environ, {"GOOGLE_API_USE_CLIENT_CERTIFICATE": "true"})
-    @mock.patch("os.path.exists")
-    @mock.patch(
-        "builtins.open",
-        new_callable=mock.mock_open,
-        read_data=json.dumps(VALID_WORKLOAD_CONFIG),
-    )
-    @mock.patch("google.auth.aio.transport.mtls.get_client_cert_and_key")
-    @mock.patch("ssl.create_default_context")
-    async def test_configure_mtls_channel(
-        self, mock_ssl, mock_helper, mock_file, mock_exists
-    ):
+    async def test_configure_mtls_channel(self):
         """
         Tests that the mTLS channel configures correctly when a
         valid workload config is mocked.
         """
-        mock_exists.return_value = True
-        mock_helper.return_value = (True, b"fake_cert_data", b"fake_key_data")
+        with mock.patch.dict(
+            os.environ, {"GOOGLE_API_USE_CLIENT_CERTIFICATE": "true"}
+        ), mock.patch("os.path.exists") as mock_exists, mock.patch(
+            "builtins.open", mock.mock_open(read_data=json.dumps(VALID_WORKLOAD_CONFIG))
+        ), mock.patch(
+            "google.auth.aio.transport.mtls.get_client_cert_and_key"
+        ) as mock_helper, mock.patch(
+            "ssl.create_default_context"
+        ) as mock_ssl:
+            mock_exists.return_value = True
+            mock_helper.return_value = (True, b"fake_cert_data", b"fake_key_data")
 
-        mock_context = mock.Mock(spec=ssl.SSLContext)
-        mock_ssl.return_value = mock_context
+            mock_context = mock.Mock(spec=ssl.SSLContext)
+            mock_ssl.return_value = mock_context
 
-        mock_creds = mock.Mock(spec=credentials.Credentials)
-        session = sessions.AsyncAuthorizedSession(mock_creds)
-        await session.configure_mtls_channel()
+            # Use AsyncMock for credentials to avoid "coroutine never awaited" warnings
+            mock_creds = mock.AsyncMock(spec=credentials.Credentials)
+            session = sessions.AsyncAuthorizedSession(mock_creds)
 
-        assert session._is_mtls is True
-        assert mock_context.load_cert_chain.called
+            await session.configure_mtls_channel()
+
+            assert session._is_mtls is True
+            assert mock_context.load_cert_chain.called
 
     @pytest.mark.asyncio
-    @mock.patch.dict(os.environ, {"GOOGLE_API_USE_CLIENT_CERTIFICATE": "true"})
-    @mock.patch("os.path.exists")
-    async def test_configure_mtls_channel_disabled(self, mock_exists):
+    async def test_configure_mtls_channel_disabled(self):
         """
         Tests behavior when the config file does not exist.
         """
-        mock_exists.return_value = False
-        mock_creds = mock.Mock(spec=credentials.Credentials)
+        with mock.patch.dict(
+            os.environ, {"GOOGLE_API_USE_CLIENT_CERTIFICATE": "true"}
+        ), mock.patch("os.path.exists") as mock_exists:
+            mock_exists.return_value = False
+            mock_creds = mock.AsyncMock(spec=credentials.Credentials)
+            session = sessions.AsyncAuthorizedSession(mock_creds)
 
-        session = sessions.AsyncAuthorizedSession(mock_creds)
-        await session.configure_mtls_channel()
+            await session.configure_mtls_channel()
 
-        # If the file doesn't exist, it shouldn't error; it just won't use mTLS
-        assert session._is_mtls is False
+            # If the file doesn't exist, it shouldn't error; it just won't use mTLS
+            assert session._is_mtls is False
 
     @pytest.mark.asyncio
-    @mock.patch.dict(os.environ, {"GOOGLE_API_USE_CLIENT_CERTIFICATE": "true"})
-    @mock.patch("os.path.exists")
-    @mock.patch(
-        "builtins.open", new_callable=mock.mock_open, read_data='{"invalid": "format"}'
-    )
-    async def test_configure_mtls_channel_invalid_format(self, mock_file, mock_exists):
+    async def test_configure_mtls_channel_invalid_format(self):
         """
         Verifies that the MutualTLSChannelError is raised for bad formats.
         """
-        mock_exists.return_value = True
-        mock_creds = mock.Mock(spec=credentials.Credentials)
+        with mock.patch.dict(
+            os.environ, {"GOOGLE_API_USE_CLIENT_CERTIFICATE": "true"}
+        ), mock.patch("os.path.exists") as mock_exists, mock.patch(
+            "builtins.open", mock.mock_open(read_data='{"invalid": "format"}')
+        ):
+            mock_exists.return_value = True
+            mock_creds = mock.AsyncMock(spec=credentials.Credentials)
+            session = sessions.AsyncAuthorizedSession(mock_creds)
 
-        session = sessions.AsyncAuthorizedSession(mock_creds)
-        with pytest.raises(exceptions.MutualTLSChannelError):
-            await session.configure_mtls_channel()
+            with pytest.raises(exceptions.MutualTLSChannelError):
+                await session.configure_mtls_channel()
 
     @pytest.mark.asyncio
-    @mock.patch.dict(os.environ, {"GOOGLE_API_USE_CLIENT_CERTIFICATE": "true"})
-    @mock.patch(
-        "google.auth.transport.mtls.has_default_client_cert_source",
-        return_value=True,
-    )
-    async def test_configure_mtls_channel_mock_callback(self, mock_has_cert):
+    async def test_configure_mtls_channel_mock_callback(self):
         """
         Tests mTLS configuration using bytes-returning callback.
         """
@@ -110,10 +106,17 @@ class TestSessionsMtls:
         def mock_callback():
             return (b"fake_cert_bytes", b"fake_key_bytes")
 
-        mock_creds = mock.Mock(spec=credentials.Credentials)
-
-        with mock.patch("ssl.SSLContext.load_cert_chain"):
+        with mock.patch.dict(
+            os.environ, {"GOOGLE_API_USE_CLIENT_CERTIFICATE": "true"}
+        ), mock.patch(
+            "google.auth.transport.mtls.has_default_client_cert_source",
+            return_value=True,
+        ), mock.patch(
+            "ssl.SSLContext.load_cert_chain"
+        ):
+            mock_creds = mock.AsyncMock(spec=credentials.Credentials)
             session = sessions.AsyncAuthorizedSession(mock_creds)
+
             await session.configure_mtls_channel(client_cert_callback=mock_callback)
 
             assert session._is_mtls is True
