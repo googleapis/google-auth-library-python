@@ -33,6 +33,7 @@ VALID_WORKLOAD_CONFIG = {
 
 
 class TestSessionsMtls:
+    @pytest.mark.asyncio
     @mock.patch.dict(os.environ, {"GOOGLE_API_USE_CLIENT_CERTIFICATE": "true"})
     @mock.patch("os.path.exists")
     @mock.patch(
@@ -42,7 +43,6 @@ class TestSessionsMtls:
     )
     @mock.patch("google.auth.aio.transport.mtls.get_client_cert_and_key")
     @mock.patch("ssl.create_default_context")
-    @pytest.mark.asyncio
     async def test_configure_mtls_channel(
         self, mock_ssl, mock_helper, mock_file, mock_exists
     ):
@@ -63,9 +63,9 @@ class TestSessionsMtls:
         assert session._is_mtls is True
         assert mock_context.load_cert_chain.called
 
+    @pytest.mark.asyncio
     @mock.patch.dict(os.environ, {"GOOGLE_API_USE_CLIENT_CERTIFICATE": "true"})
     @mock.patch("os.path.exists")
-    @pytest.mark.asyncio
     async def test_configure_mtls_channel_disabled(self, mock_exists):
         """
         Tests behavior when the config file does not exist.
@@ -79,12 +79,12 @@ class TestSessionsMtls:
         # If the file doesn't exist, it shouldn't error; it just won't use mTLS
         assert session._is_mtls is False
 
+    @pytest.mark.asyncio
     @mock.patch.dict(os.environ, {"GOOGLE_API_USE_CLIENT_CERTIFICATE": "true"})
     @mock.patch("os.path.exists")
     @mock.patch(
         "builtins.open", new_callable=mock.mock_open, read_data='{"invalid": "format"}'
     )
-    @pytest.mark.asyncio
     async def test_configure_mtls_channel_invalid_format(self, mock_file, mock_exists):
         """
         Verifies that the MutualTLSChannelError is raised for bad formats.
@@ -96,8 +96,8 @@ class TestSessionsMtls:
         with pytest.raises(exceptions.MutualTLSChannelError):
             await session.configure_mtls_channel()
 
-    @mock.patch.dict(os.environ, {"GOOGLE_API_USE_CLIENT_CERTIFICATE": "true"})
     @pytest.mark.asyncio
+    @mock.patch.dict(os.environ, {"GOOGLE_API_USE_CLIENT_CERTIFICATE": "true"})
     @mock.patch(
         "google.auth.aio.transport.mtls.has_default_client_cert_source",
         return_value=True,
