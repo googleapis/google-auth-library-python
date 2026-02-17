@@ -79,6 +79,7 @@ class TestSessionsMtls:
         # If the file doesn't exist, it shouldn't error; it just won't use mTLS
         assert session._is_mtls is False
 
+    @mock.patch.dict(os.environ, {"GOOGLE_API_USE_CLIENT_CERTIFICATE": "true"})
     @mock.patch("os.path.exists")
     @mock.patch(
         "builtins.open", new_callable=mock.mock_open, read_data='{"invalid": "format"}'
