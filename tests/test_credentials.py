@@ -425,7 +425,9 @@ class TestCredentialsWithRegionalAccessBoundary(object):
             os.environ,
             {environment_vars.GOOGLE_AUTH_TRUST_BOUNDARY_ENABLED: "true"},
         ):
-            creds._maybe_start_regional_access_boundary_refresh(request, "http://example.com")
+            creds._maybe_start_regional_access_boundary_refresh(
+                request, "http://example.com"
+            )
         mock_start_refresh.assert_called_once_with(creds, request)
 
     @mock.patch(
