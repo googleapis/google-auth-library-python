@@ -215,7 +215,7 @@ class AsyncAuthorizedSession:
         **kwargs,
     ) -> transport.Response:
         return await self.request(
-            "GET", url, data, headers, max_allowed_time, timeout, **kwargs
+            "GET", url, data, headers, max_allowed_time, timeout, total_attempts, **kwargs
         )
 
     @functools.wraps(request)
@@ -230,7 +230,7 @@ class AsyncAuthorizedSession:
         **kwargs,
     ) -> transport.Response:
         return await self.request(
-            "POST", url, data, headers, max_allowed_time, timeout, **kwargs
+            "POST", url, data, headers, max_allowed_time, timeout, total_attempts, **kwargs
         )
 
     @functools.wraps(request)
@@ -245,7 +245,7 @@ class AsyncAuthorizedSession:
         **kwargs,
     ) -> transport.Response:
         return await self.request(
-            "PUT", url, data, headers, max_allowed_time, timeout, **kwargs
+            "PUT", url, data, headers, max_allowed_time, timeout, total_attempts, **kwargs
         )
 
     @functools.wraps(request)
@@ -260,7 +260,7 @@ class AsyncAuthorizedSession:
         **kwargs,
     ) -> transport.Response:
         return await self.request(
-            "PATCH", url, data, headers, max_allowed_time, timeout, **kwargs
+            "PATCH", url, data, headers, max_allowed_time, timeout, total_attempts, **kwargs
         )
 
     @functools.wraps(request)
@@ -275,7 +275,7 @@ class AsyncAuthorizedSession:
         **kwargs,
     ) -> transport.Response:
         return await self.request(
-            "DELETE", url, data, headers, max_allowed_time, timeout, **kwargs
+            "DELETE", url, data, headers, max_allowed_time, timeout, total_attempts, **kwargs
         )
 
     async def close(self) -> None:
