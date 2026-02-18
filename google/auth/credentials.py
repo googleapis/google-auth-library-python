@@ -390,11 +390,15 @@ class CredentialsWithRegionalAccessBoundary(Credentials):
         if not self._is_regional_access_boundary_lookup_required():
             return
 
-        # Don't start a new refresh if the Regional Access Boundary info is still valid.
+        # Don't start a new refresh if the Regional Access Boundary info is still fresh.
+        refresh_threshold = (
+            _regional_access_boundary_utils.REGIONAL_ACCESS_BOUNDARY_REFRESH_THRESHOLD
+        )
         if (
             self._regional_access_boundary
             and self._regional_access_boundary_expiry
-            and _helpers.utcnow() < self._regional_access_boundary_expiry
+            and _helpers.utcnow()
+            < (self._regional_access_boundary_expiry - refresh_threshold)
         ):
             return
 

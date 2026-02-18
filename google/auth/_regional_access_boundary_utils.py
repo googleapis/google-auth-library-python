@@ -13,6 +13,10 @@ _LOGGER = logging.getLogger(__name__)
 # The default lifetime for a cached Regional Access Boundary.
 DEFAULT_REGIONAL_ACCESS_BOUNDARY_TTL = datetime.timedelta(hours=6)
 
+# The period of time prior to the boundary's expiration when a background refresh
+# is proactively triggered.
+REGIONAL_ACCESS_BOUNDARY_REFRESH_THRESHOLD = datetime.timedelta(hours=1)
+
 # The initial cooldown period for a failed Regional Access Boundary lookup.
 DEFAULT_REGIONAL_ACCESS_BOUNDARY_COOLDOWN = datetime.timedelta(minutes=15)
 

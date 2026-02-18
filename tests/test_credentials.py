@@ -397,9 +397,9 @@ class TestCredentialsWithRegionalAccessBoundary(object):
     )
     def test_maybe_start_refresh_is_skipped_if_not_expired(self, mock_start_refresh):
         creds = CredentialsImpl()
-        creds._regional_access_boundary = {"encodedLocations": "test"}
+        creds._regional_access_boundary = {"encodedLocations": "0xABC"}
         creds._regional_access_boundary_expiry = _helpers.utcnow() + datetime.timedelta(
-            minutes=5
+            hours=2
         )
         with mock.patch.dict(
             os.environ,
@@ -409,6 +409,24 @@ class TestCredentialsWithRegionalAccessBoundary(object):
                 mock.Mock(), "http://example.com"
             )
         mock_start_refresh.assert_not_called()
+
+    @mock.patch(
+        "google.auth._regional_access_boundary_utils._RegionalAccessBoundaryRefreshManager.start_refresh"
+    )
+    def test_maybe_start_refresh_triggered_if_soft_expired(self, mock_start_refresh):
+        creds = CredentialsImpl()
+        creds._regional_access_boundary = {"encodedLocations": "0xABC"}
+
+        creds._regional_access_boundary_expiry = _helpers.utcnow() + datetime.timedelta(
+            minutes=30
+        )
+        request = mock.Mock()
+        with mock.patch.dict(
+            os.environ,
+            {environment_vars.GOOGLE_AUTH_TRUST_BOUNDARY_ENABLED: "true"},
+        ):
+            creds._maybe_start_regional_access_boundary_refresh(request, "http://example.com")
+        mock_start_refresh.assert_called_once_with(creds, request)
 
     @mock.patch(
         "google.auth._regional_access_boundary_utils._RegionalAccessBoundaryRefreshManager.start_refresh"
