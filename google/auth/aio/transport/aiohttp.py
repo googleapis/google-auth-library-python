@@ -12,8 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Transport adapter for Asynchronous HTTP Requests based on aiohttp.
-"""
+"""Transport adapter for Asynchronous HTTP Requests based on aiohttp."""
 
 import asyncio
 import logging
@@ -29,8 +28,9 @@ except ImportError as caught_exc:  # pragma: NO COVER
 
 if typing.TYPE_CHECKING:
     from aiohttp import ClientTimeout
+
 else:
-    ClientTimeout: typing.Type = Any
+    ClientTimeout = Any
     try:
         from aiohttp import ClientTimeout
     except ImportError:
@@ -189,8 +189,12 @@ class Request(transport.Request):
             raise client_exc from caught_exc
 
         except asyncio.TimeoutError as caught_exc:
+            if isinstance(timeout, aiohttp.ClientTimeout):
+                timeout_seconds = timeout.total
+            else:
+                timeout_seconds = timeout
             timeout_exc = exceptions.TimeoutError(
-                f"Request timed out after {timeout} seconds."
+                f"Request timed out after {timeout_seconds} seconds."
             )
             raise timeout_exc from caught_exc
 

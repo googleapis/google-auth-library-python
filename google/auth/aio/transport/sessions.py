@@ -33,12 +33,14 @@ except ImportError:  # pragma: NO COVER
 
 if typing.TYPE_CHECKING:
     from aiohttp import ClientTimeout
+
 else:
-    ClientTimeout: typing.Type = Any
+    ClientTimeout = Any
     try:
         from aiohttp import ClientTimeout
     except ImportError:
         ClientTimeout = None
+
 
 @asynccontextmanager
 async def timeout_guard(timeout):
@@ -214,8 +216,46 @@ class AsyncAuthorizedSession:
         total_attempts: Optional[int] = transport.DEFAULT_MAX_RETRY_ATTEMPTS,
         **kwargs,
     ) -> transport.Response:
+        """
+        Args:
+                url (str): The URI to be requested.
+                data (Optional[bytes]): The payload or body in HTTP request.
+                headers (Optional[Mapping[str, str]]): Request headers.
+                timeout (float, aiohttp.ClientTimeout):
+                The amount of time in seconds to wait for the server response
+                with each individual request.
+                max_allowed_time (float):
+                If the method runs longer than this, a ``Timeout`` exception is
+                automatically raised. Unlike the ``timeout`` parameter, this
+                value applies to the total method execution time, even if
+                multiple requests are made under the hood.
+                total_attempts (int):
+                The total number of retry attempts.
+
+                Mind that it is not guaranteed that the timeout error is raised
+                at ``max_allowed_time``. It might take longer, for example, if
+                an underlying request takes a lot of time, but the request
+                itself does not timeout, e.g. if a large file is being
+                transmitted. The timeout error will be raised after such
+                request completes.
+
+        Returns:
+                google.auth.aio.transport.Response: The HTTP response.
+
+        Raises:
+                google.auth.exceptions.TimeoutError: If the method does not complete within
+                the configured `max_allowed_time` or the request exceeds the configured
+                `timeout`.
+        """
         return await self.request(
-            "GET", url, data, headers, max_allowed_time, timeout, total_attempts, **kwargs
+            "GET",
+            url,
+            data,
+            headers,
+            max_allowed_time,
+            timeout,
+            total_attempts,
+            **kwargs,
         )
 
     @functools.wraps(request)
@@ -229,8 +269,46 @@ class AsyncAuthorizedSession:
         total_attempts: Optional[int] = transport.DEFAULT_MAX_RETRY_ATTEMPTS,
         **kwargs,
     ) -> transport.Response:
+        """
+        Args:
+                url (str): The URI to be requested.
+                data (Optional[bytes]): The payload or body in HTTP request.
+                headers (Optional[Mapping[str, str]]): Request headers.
+                timeout (float, aiohttp.ClientTimeout):
+                The amount of time in seconds to wait for the server response
+                with each individual request.
+                max_allowed_time (float):
+                If the method runs longer than this, a ``Timeout`` exception is
+                automatically raised. Unlike the ``timeout`` parameter, this
+                value applies to the total method execution time, even if
+                multiple requests are made under the hood.
+                total_attempts (int):
+                The total number of retry attempts.
+
+                Mind that it is not guaranteed that the timeout error is raised
+                at ``max_allowed_time``. It might take longer, for example, if
+                an underlying request takes a lot of time, but the request
+                itself does not timeout, e.g. if a large file is being
+                transmitted. The timeout error will be raised after such
+                request completes.
+
+        Returns:
+                google.auth.aio.transport.Response: The HTTP response.
+
+        Raises:
+                google.auth.exceptions.TimeoutError: If the method does not complete within
+                the configured `max_allowed_time` or the request exceeds the configured
+                `timeout`.
+        """
         return await self.request(
-            "POST", url, data, headers, max_allowed_time, timeout, total_attempts, **kwargs
+            "POST",
+            url,
+            data,
+            headers,
+            max_allowed_time,
+            timeout,
+            total_attempts,
+            **kwargs,
         )
 
     @functools.wraps(request)
@@ -244,8 +322,46 @@ class AsyncAuthorizedSession:
         total_attempts: Optional[int] = transport.DEFAULT_MAX_RETRY_ATTEMPTS,
         **kwargs,
     ) -> transport.Response:
+        """
+        Args:
+                url (str): The URI to be requested.
+                data (Optional[bytes]): The payload or body in HTTP request.
+                headers (Optional[Mapping[str, str]]): Request headers.
+                timeout (float, aiohttp.ClientTimeout):
+                The amount of time in seconds to wait for the server response
+                with each individual request.
+                max_allowed_time (float):
+                If the method runs longer than this, a ``Timeout`` exception is
+                automatically raised. Unlike the ``timeout`` parameter, this
+                value applies to the total method execution time, even if
+                multiple requests are made under the hood.
+                total_attempts (int):
+                The total number of retry attempts.
+
+                Mind that it is not guaranteed that the timeout error is raised
+                at ``max_allowed_time``. It might take longer, for example, if
+                an underlying request takes a lot of time, but the request
+                itself does not timeout, e.g. if a large file is being
+                transmitted. The timeout error will be raised after such
+                request completes.
+
+        Returns:
+                google.auth.aio.transport.Response: The HTTP response.
+
+        Raises:
+                google.auth.exceptions.TimeoutError: If the method does not complete within
+                the configured `max_allowed_time` or the request exceeds the configured
+                `timeout`.
+        """
         return await self.request(
-            "PUT", url, data, headers, max_allowed_time, timeout, total_attempts, **kwargs
+            "PUT",
+            url,
+            data,
+            headers,
+            max_allowed_time,
+            timeout,
+            total_attempts,
+            **kwargs,
         )
 
     @functools.wraps(request)
@@ -259,8 +375,46 @@ class AsyncAuthorizedSession:
         total_attempts: Optional[int] = transport.DEFAULT_MAX_RETRY_ATTEMPTS,
         **kwargs,
     ) -> transport.Response:
+        """
+        Args:
+                url (str): The URI to be requested.
+                data (Optional[bytes]): The payload or body in HTTP request.
+                headers (Optional[Mapping[str, str]]): Request headers.
+                timeout (float, aiohttp.ClientTimeout):
+                The amount of time in seconds to wait for the server response
+                with each individual request.
+                max_allowed_time (float):
+                If the method runs longer than this, a ``Timeout`` exception is
+                automatically raised. Unlike the ``timeout`` parameter, this
+                value applies to the total method execution time, even if
+                multiple requests are made under the hood.
+                total_attempts (int):
+                The total number of retry attempts.
+
+                Mind that it is not guaranteed that the timeout error is raised
+                at ``max_allowed_time``. It might take longer, for example, if
+                an underlying request takes a lot of time, but the request
+                itself does not timeout, e.g. if a large file is being
+                transmitted. The timeout error will be raised after such
+                request completes.
+
+        Returns:
+                google.auth.aio.transport.Response: The HTTP response.
+
+        Raises:
+                google.auth.exceptions.TimeoutError: If the method does not complete within
+                the configured `max_allowed_time` or the request exceeds the configured
+                `timeout`.
+        """
         return await self.request(
-            "PATCH", url, data, headers, max_allowed_time, timeout, total_attempts, **kwargs
+            "PATCH",
+            url,
+            data,
+            headers,
+            max_allowed_time,
+            timeout,
+            total_attempts,
+            **kwargs,
         )
 
     @functools.wraps(request)
@@ -270,12 +424,50 @@ class AsyncAuthorizedSession:
         data: Optional[bytes] = None,
         headers: Optional[Mapping[str, str]] = None,
         max_allowed_time: float = transport._DEFAULT_TIMEOUT_SECONDS,
-        timeout: float = transport._DEFAULT_TIMEOUT_SECONDS,
+        timeout: Union[float, ClientTimeout] = transport._DEFAULT_TIMEOUT_SECONDS,
         total_attempts: Optional[int] = transport.DEFAULT_MAX_RETRY_ATTEMPTS,
         **kwargs,
     ) -> transport.Response:
+        """
+        Args:
+                url (str): The URI to be requested.
+                data (Optional[bytes]): The payload or body in HTTP request.
+                headers (Optional[Mapping[str, str]]): Request headers.
+                timeout (float, aiohttp.ClientTimeout):
+                The amount of time in seconds to wait for the server response
+                with each individual request.
+                max_allowed_time (float):
+                If the method runs longer than this, a ``Timeout`` exception is
+                automatically raised. Unlike the ``timeout`` parameter, this
+                value applies to the total method execution time, even if
+                multiple requests are made under the hood.
+                total_attempts (int):
+                The total number of retry attempts.
+
+                Mind that it is not guaranteed that the timeout error is raised
+                at ``max_allowed_time``. It might take longer, for example, if
+                an underlying request takes a lot of time, but the request
+                itself does not timeout, e.g. if a large file is being
+                transmitted. The timeout error will be raised after such
+                request completes.
+
+        Returns:
+                google.auth.aio.transport.Response: The HTTP response.
+
+        Raises:
+                google.auth.exceptions.TimeoutError: If the method does not complete within
+                the configured `max_allowed_time` or the request exceeds the configured
+                `timeout`.
+        """
         return await self.request(
-            "DELETE", url, data, headers, max_allowed_time, timeout, total_attempts, **kwargs
+            "DELETE",
+            url,
+            data,
+            headers,
+            max_allowed_time,
+            timeout,
+            total_attempts,
+            **kwargs,
         )
 
     async def close(self) -> None:
