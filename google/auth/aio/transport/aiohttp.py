@@ -17,7 +17,8 @@
 
 import asyncio
 import logging
-from typing import AsyncGenerator, Mapping, Optional
+import typing
+from typing import Any, AsyncGenerator, Mapping, Optional, Union
 
 try:
     import aiohttp  # type: ignore
@@ -25,6 +26,15 @@ except ImportError as caught_exc:  # pragma: NO COVER
     raise ImportError(
         "The aiohttp library is not installed from please install the aiohttp package to use the aiohttp transport."
     ) from caught_exc
+
+if typing.TYPE_CHECKING:
+    from aiohttp import ClientTimeout
+else:
+    ClientTimeout: typing.Type = Any
+    try:
+        from aiohttp import ClientTimeout
+    except ImportError:
+        ClientTimeout = None
 
 from google.auth import _helpers
 from google.auth import exceptions
@@ -123,7 +133,7 @@ class Request(transport.Request):
         method: str = "GET",
         body: Optional[bytes] = None,
         headers: Optional[Mapping[str, str]] = None,
-        timeout: float = transport._DEFAULT_TIMEOUT_SECONDS,
+        timeout: Union[float, ClientTimeout] = transport._DEFAULT_TIMEOUT_SECONDS,
         **kwargs,
     ) -> transport.Response:
         """
@@ -158,7 +168,10 @@ class Request(transport.Request):
             if not self._session:
                 self._session = aiohttp.ClientSession()
 
-            client_timeout = aiohttp.ClientTimeout(total=timeout)
+            if isinstance(timeout, aiohttp.ClientTimeout):
+                client_timeout = timeout
+            else:
+              client_timeout = aiohttp.ClientTimeout(total=timeout)
             _helpers.request_log(_LOGGER, method, url, body, headers)
             response = await self._session.request(
                 method,
