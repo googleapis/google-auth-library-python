@@ -27,7 +27,7 @@ except ImportError as caught_exc:  # pragma: NO COVER
     ) from caught_exc
 
 if typing.TYPE_CHECKING:
-    from aiohttp import ClientTimeout
+    from aiohttp import ClientTimeout  # type: ignore
 
 else:
     ClientTimeout = Any

@@ -32,7 +32,7 @@ except ImportError:  # pragma: NO COVER
     AIOHTTP_INSTALLED = False
 
 if typing.TYPE_CHECKING:
-    from aiohttp import ClientTimeout
+    from aiohttp import ClientTimeout  # type: ignore
 
 else:
     ClientTimeout = Any
