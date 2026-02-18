@@ -26,6 +26,7 @@ from typing import Optional
 
 from google.auth import exceptions
 import google.auth.transport._mtls_helper
+import google.auth.transport.mtls
 
 _LOGGER = logging.getLogger(__name__)
 
