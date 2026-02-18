@@ -39,8 +39,7 @@ else:
         from aiohttp import ClientTimeout
     except ImportError:
         ClientTimeout = None
-        
-    
+
 @asynccontextmanager
 async def timeout_guard(timeout):
     """
@@ -212,6 +211,7 @@ class AsyncAuthorizedSession:
         headers: Optional[Mapping[str, str]] = None,
         max_allowed_time: float = transport._DEFAULT_TIMEOUT_SECONDS,
         timeout: Union[float, ClientTimeout] = transport._DEFAULT_TIMEOUT_SECONDS,
+        total_attempts: Optional[int] = transport.DEFAULT_MAX_RETRY_ATTEMPTS,
         **kwargs,
     ) -> transport.Response:
         return await self.request(
@@ -226,6 +226,7 @@ class AsyncAuthorizedSession:
         headers: Optional[Mapping[str, str]] = None,
         max_allowed_time: float = transport._DEFAULT_TIMEOUT_SECONDS,
         timeout: Union[float, ClientTimeout] = transport._DEFAULT_TIMEOUT_SECONDS,
+        total_attempts: Optional[int] = transport.DEFAULT_MAX_RETRY_ATTEMPTS,
         **kwargs,
     ) -> transport.Response:
         return await self.request(
@@ -240,6 +241,7 @@ class AsyncAuthorizedSession:
         headers: Optional[Mapping[str, str]] = None,
         max_allowed_time: float = transport._DEFAULT_TIMEOUT_SECONDS,
         timeout: Union[float, ClientTimeout] = transport._DEFAULT_TIMEOUT_SECONDS,
+        total_attempts: Optional[int] = transport.DEFAULT_MAX_RETRY_ATTEMPTS,
         **kwargs,
     ) -> transport.Response:
         return await self.request(
@@ -254,6 +256,7 @@ class AsyncAuthorizedSession:
         headers: Optional[Mapping[str, str]] = None,
         max_allowed_time: float = transport._DEFAULT_TIMEOUT_SECONDS,
         timeout: Union[float, ClientTimeout] = transport._DEFAULT_TIMEOUT_SECONDS,
+        total_attempts: Optional[int] = transport.DEFAULT_MAX_RETRY_ATTEMPTS,
         **kwargs,
     ) -> transport.Response:
         return await self.request(
@@ -268,6 +271,7 @@ class AsyncAuthorizedSession:
         headers: Optional[Mapping[str, str]] = None,
         max_allowed_time: float = transport._DEFAULT_TIMEOUT_SECONDS,
         timeout: float = transport._DEFAULT_TIMEOUT_SECONDS,
+        total_attempts: Optional[int] = transport.DEFAULT_MAX_RETRY_ATTEMPTS,
         **kwargs,
     ) -> transport.Response:
         return await self.request(

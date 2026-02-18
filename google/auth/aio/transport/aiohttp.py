@@ -171,7 +171,7 @@ class Request(transport.Request):
             if isinstance(timeout, aiohttp.ClientTimeout):
                 client_timeout = timeout
             else:
-              client_timeout = aiohttp.ClientTimeout(total=timeout)
+                client_timeout = aiohttp.ClientTimeout(total=timeout)
             _helpers.request_log(_LOGGER, method, url, body, headers)
             response = await self._session.request(
                 method,
