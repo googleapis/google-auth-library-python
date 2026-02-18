@@ -16,7 +16,8 @@ import asyncio
 from contextlib import asynccontextmanager
 import functools
 import time
-from typing import Mapping, Optional
+import typing
+from typing import Any, Mapping, Optional, Union
 
 from google.auth import _exponential_backoff, exceptions
 from google.auth.aio import transport
@@ -30,7 +31,16 @@ try:
 except ImportError:  # pragma: NO COVER
     AIOHTTP_INSTALLED = False
 
-
+if typing.TYPE_CHECKING:
+    from aiohttp import ClientTimeout
+else:
+    ClientTimeout: typing.Type = Any
+    try:
+        from aiohttp import ClientTimeout
+    except ImportError:
+        ClientTimeout = None
+        
+    
 @asynccontextmanager
 async def timeout_guard(timeout):
     """
@@ -137,7 +147,8 @@ class AsyncAuthorizedSession:
         data: Optional[bytes] = None,
         headers: Optional[Mapping[str, str]] = None,
         max_allowed_time: float = transport._DEFAULT_TIMEOUT_SECONDS,
-        timeout: float = transport._DEFAULT_TIMEOUT_SECONDS,
+        timeout: Union[float, ClientTimeout] = transport._DEFAULT_TIMEOUT_SECONDS,
+        total_attempts: Optional[int] = transport.DEFAULT_MAX_RETRY_ATTEMPTS,
         **kwargs,
     ) -> transport.Response:
         """
@@ -146,7 +157,7 @@ class AsyncAuthorizedSession:
                 url (str): The URI to be requested.
                 data (Optional[bytes]): The payload or body in HTTP request.
                 headers (Optional[Mapping[str, str]]): Request headers.
-                timeout (float):
+                timeout (float, aiohttp.ClientTimeout):
                 The amount of time in seconds to wait for the server response
                 with each individual request.
                 max_allowed_time (float):
@@ -154,6 +165,8 @@ class AsyncAuthorizedSession:
                 automatically raised. Unlike the ``timeout`` parameter, this
                 value applies to the total method execution time, even if
                 multiple requests are made under the hood.
+                total_attempts (int):
+                The total number of retry attempts.
 
                 Mind that it is not guaranteed that the timeout error is raised
                 at ``max_allowed_time``. It might take longer, for example, if
@@ -172,7 +185,7 @@ class AsyncAuthorizedSession:
         """
 
         retries = _exponential_backoff.AsyncExponentialBackoff(
-            total_attempts=transport.DEFAULT_MAX_RETRY_ATTEMPTS
+            total_attempts=total_attempts,
         )
         async with timeout_guard(max_allowed_time) as with_timeout:
             await with_timeout(
@@ -198,7 +211,7 @@ class AsyncAuthorizedSession:
         data: Optional[bytes] = None,
         headers: Optional[Mapping[str, str]] = None,
         max_allowed_time: float = transport._DEFAULT_TIMEOUT_SECONDS,
-        timeout: float = transport._DEFAULT_TIMEOUT_SECONDS,
+        timeout: Union[float, ClientTimeout] = transport._DEFAULT_TIMEOUT_SECONDS,
         **kwargs,
     ) -> transport.Response:
         return await self.request(
@@ -212,7 +225,7 @@ class AsyncAuthorizedSession:
         data: Optional[bytes] = None,
         headers: Optional[Mapping[str, str]] = None,
         max_allowed_time: float = transport._DEFAULT_TIMEOUT_SECONDS,
-        timeout: float = transport._DEFAULT_TIMEOUT_SECONDS,
+        timeout: Union[float, ClientTimeout] = transport._DEFAULT_TIMEOUT_SECONDS,
         **kwargs,
     ) -> transport.Response:
         return await self.request(
@@ -226,7 +239,7 @@ class AsyncAuthorizedSession:
         data: Optional[bytes] = None,
         headers: Optional[Mapping[str, str]] = None,
         max_allowed_time: float = transport._DEFAULT_TIMEOUT_SECONDS,
-        timeout: float = transport._DEFAULT_TIMEOUT_SECONDS,
+        timeout: Union[float, ClientTimeout] = transport._DEFAULT_TIMEOUT_SECONDS,
         **kwargs,
     ) -> transport.Response:
         return await self.request(
@@ -240,7 +253,7 @@ class AsyncAuthorizedSession:
         data: Optional[bytes] = None,
         headers: Optional[Mapping[str, str]] = None,
         max_allowed_time: float = transport._DEFAULT_TIMEOUT_SECONDS,
-        timeout: float = transport._DEFAULT_TIMEOUT_SECONDS,
+        timeout: Union[float, ClientTimeout] = transport._DEFAULT_TIMEOUT_SECONDS,
         **kwargs,
     ) -> transport.Response:
         return await self.request(
