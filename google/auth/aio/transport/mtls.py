@@ -70,20 +70,19 @@ def make_client_cert_ssl_context(
     Raises:
         google.auth.exceptions.TransportError: If there is an error loading the certificate.
     """
-    try:
-        context = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
-
-        # Write cert and key to temp files because ssl.load_cert_chain requires paths
-        with _create_temp_file(cert_bytes) as cert_path:
-            with _create_temp_file(key_bytes) as key_path:
-                context.load_cert_chain(
-                    certfile=cert_path, keyfile=key_path, password=passphrase
-                )
-        return context
-    except (ssl.SSLError, OSError) as exc:
-        raise exceptions.TransportError(
-            "Failed to load client certificate and key for mTLS."
-        ) from exc
+    with _create_temp_file(cert_bytes) as cert_path, _create_temp_file(
+        key_bytes
+    ) as key_path:
+        try:
+            context = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
+            context.load_cert_chain(
+                certfile=cert_path, keyfile=key_path, password=passphrase
+            )
+            return context
+        except (ssl.SSLError, OSError, IOError, ValueError, RuntimeError) as exc:
+            raise exceptions.TransportError(
+                "Failed to load client certificate and key for mTLS."
+            ) from exc
 
 
 async def _run_in_executor(func, *args):
@@ -104,7 +103,7 @@ def default_client_cert_source():
     """Get a callback which returns the default client SSL credentials.
 
     Returns:
-        Awaitable[Callable[[], [bytes, bytes]]]: A callback which returns the default
+        Awaitable[Callable[[], Tuple[bytes, bytes]]]: A callback which returns the default
             client certificate bytes and private key bytes, both in PEM format.
 
     Raises:

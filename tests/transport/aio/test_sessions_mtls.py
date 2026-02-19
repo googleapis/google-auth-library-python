@@ -46,22 +46,23 @@ class TestSessionsMtls:
         ), mock.patch(
             "google.auth.aio.transport.mtls.get_client_cert_and_key"
         ) as mock_helper, mock.patch(
-            "ssl.create_default_context"
-        ) as mock_ssl:
+            "google.auth.aio.transport.mtls.make_client_cert_ssl_context"
+        ) as mock_make_context:
             mock_exists.return_value = True
             mock_helper.return_value = (True, b"fake_cert_data", b"fake_key_data")
 
             mock_context = mock.Mock(spec=ssl.SSLContext)
-            mock_ssl.return_value = mock_context
+            mock_make_context.return_value = mock_context
 
-            # Use AsyncMock for credentials to avoid "coroutine never awaited" warnings
             mock_creds = mock.AsyncMock(spec=credentials.Credentials)
             session = sessions.AsyncAuthorizedSession(mock_creds)
 
             await session.configure_mtls_channel()
 
             assert session._is_mtls is True
-            assert mock_context.load_cert_chain.called
+            mock_make_context.assert_called_once_with(
+                b"fake_cert_data", b"fake_key_data"
+            )
 
     @pytest.mark.asyncio
     async def test_configure_mtls_channel_disabled(self):

@@ -143,6 +143,8 @@ class AsyncAuthorizedSession:
         successfully obtained (from the given client_cert_callback or from application
         default SSL credentials), the underlying transport will be reconfigured
         to use mTLS.
+        Note: This function does nothing if the `aiohttp` library is not
+        installed.
 
         Args:
             client_cert_callback (Optional[Callable[[], (bytes, bytes)]]):
@@ -180,8 +182,9 @@ class AsyncAuthorizedSession:
                 if AIOHTTP_INSTALLED and isinstance(self._auth_request, AiohttpRequest):
                     connector = aiohttp.TCPConnector(ssl=ssl_context)
                     new_session = aiohttp.ClientSession(connector=connector)
-                    await self._auth_request.close()
+                    old_auth_request = self._auth_request
                     self._auth_request = AiohttpRequest(session=new_session)
+                    await old_auth_request.close()
 
         except (
             exceptions.ClientCertError,
