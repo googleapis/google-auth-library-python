@@ -284,7 +284,7 @@ def compute_engine(session):
 def grpc(session):
     session.install(LIBRARY_DIR)
     session.install("six")
-    session.install(*TEST_DEPENDENCIES_SYNC, "google-cloud-pubsub==1.7.2")
+    session.install(*TEST_DEPENDENCIES_SYNC, "setuptools", "google-cloud-pubsub==1.7.2")
     session.env[EXPLICIT_CREDENTIALS_ENV] = SERVICE_ACCOUNT_FILE
     default(
         session,
