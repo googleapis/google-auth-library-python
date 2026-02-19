@@ -16,22 +16,14 @@ import asyncio
 from contextlib import asynccontextmanager
 import functools
 import time
-import typing
-from typing import Any, Mapping, Optional, Union
+from typing import Any, Mapping, Optional, TYPE_CHECKING, Union
 
 from google.auth import _exponential_backoff, exceptions
 from google.auth.aio import transport
 from google.auth.aio.credentials import Credentials
 from google.auth.exceptions import TimeoutError
 
-try:
-    from google.auth.aio.transport.aiohttp import Request as AiohttpRequest
-
-    AIOHTTP_INSTALLED = True
-except ImportError:  # pragma: NO COVER
-    AIOHTTP_INSTALLED = False
-
-if typing.TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: NO COVER
     from aiohttp import ClientTimeout  # type: ignore
 
 else:
@@ -40,6 +32,13 @@ else:
         from aiohttp import ClientTimeout
     except ImportError:
         ClientTimeout = None
+
+try:
+    from google.auth.aio.transport.aiohttp import Request as AiohttpRequest
+
+    AIOHTTP_INSTALLED = True
+except ImportError:  # pragma: NO COVER
+    AIOHTTP_INSTALLED = False
 
 
 @asynccontextmanager
@@ -221,14 +220,14 @@ class AsyncAuthorizedSession:
                 url (str): The URI to be requested.
                 data (Optional[bytes]): The payload or body in HTTP request.
                 headers (Optional[Mapping[str, str]]): Request headers.
-                timeout (float, aiohttp.ClientTimeout):
-                The amount of time in seconds to wait for the server response
-                with each individual request.
                 max_allowed_time (float):
                 If the method runs longer than this, a ``Timeout`` exception is
                 automatically raised. Unlike the ``timeout`` parameter, this
                 value applies to the total method execution time, even if
                 multiple requests are made under the hood.
+                timeout (float, aiohttp.ClientTimeout):
+                The amount of time in seconds to wait for the server response
+                with each individual request.
                 total_attempts (int):
                 The total number of retry attempts.
 
@@ -274,14 +273,14 @@ class AsyncAuthorizedSession:
                 url (str): The URI to be requested.
                 data (Optional[bytes]): The payload or body in HTTP request.
                 headers (Optional[Mapping[str, str]]): Request headers.
-                timeout (float, aiohttp.ClientTimeout):
-                The amount of time in seconds to wait for the server response
-                with each individual request.
                 max_allowed_time (float):
                 If the method runs longer than this, a ``Timeout`` exception is
                 automatically raised. Unlike the ``timeout`` parameter, this
                 value applies to the total method execution time, even if
                 multiple requests are made under the hood.
+                timeout (float, aiohttp.ClientTimeout):
+                The amount of time in seconds to wait for the server response
+                with each individual request.
                 total_attempts (int):
                 The total number of retry attempts.
 
@@ -327,14 +326,14 @@ class AsyncAuthorizedSession:
                 url (str): The URI to be requested.
                 data (Optional[bytes]): The payload or body in HTTP request.
                 headers (Optional[Mapping[str, str]]): Request headers.
-                timeout (float, aiohttp.ClientTimeout):
-                The amount of time in seconds to wait for the server response
-                with each individual request.
                 max_allowed_time (float):
                 If the method runs longer than this, a ``Timeout`` exception is
                 automatically raised. Unlike the ``timeout`` parameter, this
                 value applies to the total method execution time, even if
                 multiple requests are made under the hood.
+                timeout (float, aiohttp.ClientTimeout):
+                The amount of time in seconds to wait for the server response
+                with each individual request.
                 total_attempts (int):
                 The total number of retry attempts.
 
@@ -380,14 +379,14 @@ class AsyncAuthorizedSession:
                 url (str): The URI to be requested.
                 data (Optional[bytes]): The payload or body in HTTP request.
                 headers (Optional[Mapping[str, str]]): Request headers.
-                timeout (float, aiohttp.ClientTimeout):
-                The amount of time in seconds to wait for the server response
-                with each individual request.
                 max_allowed_time (float):
                 If the method runs longer than this, a ``Timeout`` exception is
                 automatically raised. Unlike the ``timeout`` parameter, this
                 value applies to the total method execution time, even if
                 multiple requests are made under the hood.
+                timeout (float, aiohttp.ClientTimeout):
+                The amount of time in seconds to wait for the server response
+                with each individual request.
                 total_attempts (int):
                 The total number of retry attempts.
 
@@ -433,14 +432,14 @@ class AsyncAuthorizedSession:
                 url (str): The URI to be requested.
                 data (Optional[bytes]): The payload or body in HTTP request.
                 headers (Optional[Mapping[str, str]]): Request headers.
-                timeout (float, aiohttp.ClientTimeout):
-                The amount of time in seconds to wait for the server response
-                with each individual request.
                 max_allowed_time (float):
                 If the method runs longer than this, a ``Timeout`` exception is
                 automatically raised. Unlike the ``timeout`` parameter, this
                 value applies to the total method execution time, even if
                 multiple requests are made under the hood.
+                timeout (float, aiohttp.ClientTimeout):
+                The amount of time in seconds to wait for the server response
+                with each individual request.
                 total_attempts (int):
                 The total number of retry attempts.
 

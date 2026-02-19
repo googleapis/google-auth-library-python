@@ -16,8 +16,7 @@
 
 import asyncio
 import logging
-import typing
-from typing import Any, AsyncGenerator, Mapping, Optional, Union
+from typing import Any, AsyncGenerator, Mapping, Optional, TYPE_CHECKING, Union
 
 try:
     import aiohttp  # type: ignore
@@ -26,7 +25,12 @@ except ImportError as caught_exc:  # pragma: NO COVER
         "The aiohttp library is not installed from please install the aiohttp package to use the aiohttp transport."
     ) from caught_exc
 
-if typing.TYPE_CHECKING:
+from google.auth import _helpers
+from google.auth import exceptions
+from google.auth.aio import _helpers as _helpers_async
+from google.auth.aio import transport
+
+if TYPE_CHECKING:  # pragma: NO COVER
     from aiohttp import ClientTimeout  # type: ignore
 
 else:
@@ -35,11 +39,6 @@ else:
         from aiohttp import ClientTimeout
     except ImportError:
         ClientTimeout = None
-
-from google.auth import _helpers
-from google.auth import exceptions
-from google.auth.aio import _helpers as _helpers_async
-from google.auth.aio import transport
 
 _LOGGER = logging.getLogger(__name__)
 
