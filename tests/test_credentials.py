@@ -23,10 +23,14 @@ from google.auth import _helpers
 from google.auth import credentials
 from google.auth import environment_vars
 from google.auth import exceptions
-from google.oauth2 import _client
 
 
-class CredentialsImpl(credentials.CredentialsWithTrustBoundary):
+class CredentialsImpl(credentials.CredentialsWithRegionalAccessBoundary):
+    def __init__(self, universe_domain=None):
+        super(CredentialsImpl, self).__init__()
+        if universe_domain:
+            self._universe_domain = universe_domain
+
     def _perform_refresh_token(self, request):
         self.token = "refreshed-token"
         self.expiry = (
@@ -38,9 +42,14 @@ class CredentialsImpl(credentials.CredentialsWithTrustBoundary):
     def with_quota_project(self, quota_project_id):
         raise NotImplementedError()
 
-    def _build_trust_boundary_lookup_url(self):
+    def _build_regional_access_boundary_lookup_url(self):
         # Using self.token here to make the URL dynamic for testing purposes
         return "http://mock.url/lookup_for_{}".format(self.token)
+
+    def _make_copy(self):
+        new_credentials = self.__class__()
+        self._copy_regional_access_boundary_state(new_credentials)
+        return new_credentials
 
 
 class CredentialsImplWithMetrics(credentials.Credentials):
@@ -119,10 +128,13 @@ def test_before_request():
     assert "x-allowed-locations" not in headers
 
 
-def test_before_request_with_trust_boundary():
+def test_before_request_with_regional_access_boundary():
     DUMMY_BOUNDARY = "0xA30"
     credentials = CredentialsImpl()
-    credentials._trust_boundary = {"locations": [], "encodedLocations": DUMMY_BOUNDARY}
+    credentials._regional_access_boundary = {
+        "locations": [],
+        "encodedLocations": DUMMY_BOUNDARY,
+    }
     request = mock.Mock()
     headers = {}
 
@@ -366,113 +378,251 @@ def test_token_state_no_expiry():
     c.before_request(request, "http://example.com", "GET", {})
 
 
-class TestCredentialsWithTrustBoundary(object):
-    @mock.patch.object(_client, "_lookup_trust_boundary")
-    def test_lookup_trust_boundary_env_var_not_true(self, mock_lookup_tb):
-        creds = CredentialsImpl()
-        request = mock.Mock()
-
-        # Ensure env var is not "true"
-        with mock.patch.dict(
-            os.environ, {environment_vars.GOOGLE_AUTH_TRUST_BOUNDARY_ENABLED: "false"}
-        ):
-            result = creds._refresh_trust_boundary(request)
-
-        assert result is None
-        mock_lookup_tb.assert_not_called()
-
-    @mock.patch.object(_client, "_lookup_trust_boundary")
-    def test_lookup_trust_boundary_env_var_missing(self, mock_lookup_tb):
-        creds = CredentialsImpl()
-        request = mock.Mock()
-
-        # Ensure env var is missing
-        with mock.patch.dict(os.environ, clear=True):
-            result = creds._refresh_trust_boundary(request)
-
-        assert result is None
-        mock_lookup_tb.assert_not_called()
-
-    @mock.patch.object(_client, "_lookup_trust_boundary")
-    def test_lookup_trust_boundary_non_default_universe(self, mock_lookup_tb):
-        creds = CredentialsImpl()
-        creds._universe_domain = "my.universe.com"  # Non-GDU
-        request = mock.Mock()
-
-        with mock.patch.dict(
-            os.environ, {environment_vars.GOOGLE_AUTH_TRUST_BOUNDARY_ENABLED: "true"}
-        ):
-            result = creds._refresh_trust_boundary(request)
-
-        assert result is None
-        mock_lookup_tb.assert_not_called()
-
-    @mock.patch.object(_client, "_lookup_trust_boundary")
-    def test_lookup_trust_boundary_calls_client_and_build_url(self, mock_lookup_tb):
-        creds = CredentialsImpl()
-        creds.token = "test_token"  # For _build_trust_boundary_lookup_url
-        request = mock.Mock()
-        expected_url = "http://mock.url/lookup_for_test_token"
-        expected_boundary_info = {"encodedLocations": "0xABC"}
-        mock_lookup_tb.return_value = expected_boundary_info
-
-        # Mock _build_trust_boundary_lookup_url to ensure it's called.
-        mock_build_url = mock.Mock(return_value=expected_url)
-        creds._build_trust_boundary_lookup_url = mock_build_url
-
-        with mock.patch.dict(
-            os.environ, {environment_vars.GOOGLE_AUTH_TRUST_BOUNDARY_ENABLED: "true"}
-        ):
-            result = creds._lookup_trust_boundary(request)
-
-        assert result == expected_boundary_info
-        mock_build_url.assert_called_once()
-        expected_headers = {"authorization": "Bearer test_token"}
-        mock_lookup_tb.assert_called_once_with(
-            request, expected_url, headers=expected_headers
-        )
-
-    @mock.patch.object(_client, "_lookup_trust_boundary")
-    def test_lookup_trust_boundary_build_url_returns_none(self, mock_lookup_tb):
-        creds = CredentialsImpl()
-        request = mock.Mock()
-
-        # Mock _build_trust_boundary_lookup_url to return None
-        mock_build_url = mock.Mock(return_value=None)
-        creds._build_trust_boundary_lookup_url = mock_build_url
-
-        with mock.patch.dict(
-            os.environ, {environment_vars.GOOGLE_AUTH_TRUST_BOUNDARY_ENABLED: "true"}
-        ):
-            with pytest.raises(
-                exceptions.InvalidValue,
-                match="Failed to build trust boundary lookup URL.",
-            ):
-                creds._lookup_trust_boundary(request)
-
-        mock_build_url.assert_called_once()  # Ensure _build_trust_boundary_lookup_url was called
-        mock_lookup_tb.assert_not_called()  # Ensure _client.lookup_trust_boundary was not called
-
-    @mock.patch("google.auth.credentials._LOGGER")
-    @mock.patch("google.auth._helpers.is_logging_enabled", return_value=True)
-    @mock.patch.object(_client, "_lookup_trust_boundary")
-    def test_refresh_trust_boundary_fails_with_cached_data_and_logging(
-        self, mock_lookup_tb, mock_is_logging_enabled, mock_logger
+class TestCredentialsWithRegionalAccessBoundary(object):
+    @mock.patch(
+        "google.auth._regional_access_boundary_utils._RegionalAccessBoundaryRefreshManager.start_refresh"
+    )
+    def test_maybe_start_refresh_is_skipped_if_env_var_not_set(
+        self, mock_start_refresh
     ):
         creds = CredentialsImpl()
-        creds._trust_boundary = {"encodedLocations": "0xABC"}
-        request = mock.Mock()
+        with mock.patch.dict(os.environ, clear=True):
+            creds._maybe_start_regional_access_boundary_refresh(
+                mock.Mock(), "http://example.com"
+            )
+        mock_start_refresh.assert_not_called()
 
-        refresh_error = exceptions.RefreshError("Lookup failed")
-        mock_lookup_tb.side_effect = refresh_error
-
-        with mock.patch.dict(
-            os.environ, {environment_vars.GOOGLE_AUTH_TRUST_BOUNDARY_ENABLED: "true"}
-        ):
-            creds.refresh(request)
-
-        mock_lookup_tb.assert_called_once()
-        mock_is_logging_enabled.assert_called_once_with(mock_logger)
-        mock_logger.debug.assert_called_once_with(
-            "Using cached trust boundary due to refresh error: %s", refresh_error
+    @mock.patch(
+        "google.auth._regional_access_boundary_utils._RegionalAccessBoundaryRefreshManager.start_refresh"
+    )
+    def test_maybe_start_refresh_is_skipped_if_not_expired(self, mock_start_refresh):
+        creds = CredentialsImpl()
+        creds._regional_access_boundary = {"encodedLocations": "0xABC"}
+        creds._regional_access_boundary_expiry = _helpers.utcnow() + datetime.timedelta(
+            hours=2
         )
+        with mock.patch.dict(
+            os.environ,
+            {environment_vars.GOOGLE_AUTH_TRUST_BOUNDARY_ENABLED: "true"},
+        ):
+            creds._maybe_start_regional_access_boundary_refresh(
+                mock.Mock(), "http://example.com"
+            )
+        mock_start_refresh.assert_not_called()
+
+    @mock.patch(
+        "google.auth._regional_access_boundary_utils._RegionalAccessBoundaryRefreshManager.start_refresh"
+    )
+    def test_maybe_start_refresh_triggered_if_soft_expired(self, mock_start_refresh):
+        creds = CredentialsImpl()
+        creds._regional_access_boundary = {"encodedLocations": "0xABC"}
+
+        creds._regional_access_boundary_expiry = _helpers.utcnow() + datetime.timedelta(
+            minutes=30
+        )
+        request = mock.Mock()
+        with mock.patch.dict(
+            os.environ,
+            {environment_vars.GOOGLE_AUTH_TRUST_BOUNDARY_ENABLED: "true"},
+        ):
+            creds._maybe_start_regional_access_boundary_refresh(
+                request, "http://example.com"
+            )
+        mock_start_refresh.assert_called_once_with(creds, request)
+
+    @mock.patch(
+        "google.auth._regional_access_boundary_utils._RegionalAccessBoundaryRefreshManager.start_refresh"
+    )
+    def test_maybe_start_refresh_is_skipped_if_cooldown_active(
+        self, mock_start_refresh
+    ):
+        creds = CredentialsImpl()
+        creds._regional_access_boundary_cooldown_expiry = (
+            _helpers.utcnow() + datetime.timedelta(minutes=5)
+        )
+        with mock.patch.dict(
+            os.environ,
+            {environment_vars.GOOGLE_AUTH_TRUST_BOUNDARY_ENABLED: "true"},
+        ):
+            creds._maybe_start_regional_access_boundary_refresh(
+                mock.Mock(), "http://example.com"
+            )
+        mock_start_refresh.assert_not_called()
+
+    @mock.patch(
+        "google.auth._regional_access_boundary_utils._RegionalAccessBoundaryRefreshManager.start_refresh"
+    )
+    def test_maybe_start_refresh_is_skipped_for_regional_endpoint(
+        self, mock_start_refresh
+    ):
+        creds = CredentialsImpl()
+        with mock.patch.dict(
+            os.environ,
+            {environment_vars.GOOGLE_AUTH_TRUST_BOUNDARY_ENABLED: "true"},
+        ):
+            creds._maybe_start_regional_access_boundary_refresh(
+                mock.Mock(), "https://my-service.us-east1.rep.googleapis.com"
+            )
+        mock_start_refresh.assert_not_called()
+
+    @mock.patch(
+        "google.auth._regional_access_boundary_utils._RegionalAccessBoundaryRefreshManager.start_refresh"
+    )
+    def test_maybe_start_refresh_is_triggered(self, mock_start_refresh):
+        creds = CredentialsImpl()
+        request = mock.Mock()
+        with mock.patch.dict(
+            os.environ,
+            {environment_vars.GOOGLE_AUTH_TRUST_BOUNDARY_ENABLED: "true"},
+        ):
+            creds._maybe_start_regional_access_boundary_refresh(
+                request, "http://example.com"
+            )
+        mock_start_refresh.assert_called_once_with(creds, request)
+
+    def test_get_regional_access_boundary_header(self):
+        creds = CredentialsImpl()
+        creds._regional_access_boundary = {"encodedLocations": "0xABC"}
+        headers = creds._get_regional_access_boundary_header()
+        assert headers == {"x-allowed-locations": "0xABC"}
+
+        creds._regional_access_boundary = None
+        headers = creds._get_regional_access_boundary_header()
+        assert headers == {}
+
+    def test_copy_regional_access_boundary_state(self):
+        source_creds = CredentialsImpl()
+        source_creds._regional_access_boundary = {"encodedLocations": "0xABC"}
+        source_creds._regional_access_boundary_expiry = _helpers.utcnow()
+        source_creds._regional_access_boundary_cooldown_expiry = _helpers.utcnow()
+
+        target_creds = CredentialsImpl()
+        source_creds._copy_regional_access_boundary_state(target_creds)
+
+        assert (
+            target_creds._regional_access_boundary
+            == source_creds._regional_access_boundary
+        )
+        assert (
+            target_creds._regional_access_boundary_expiry
+            == source_creds._regional_access_boundary_expiry
+        )
+        assert (
+            target_creds._regional_access_boundary_cooldown_expiry
+            == source_creds._regional_access_boundary_cooldown_expiry
+        )
+
+    def test_with_regional_access_boundary_valid_input(self):
+        creds = CredentialsImpl()
+        rab_info = {"encodedLocations": "new_location"}
+        new_creds = creds._with_regional_access_boundary(rab_info)
+
+        assert new_creds._regional_access_boundary == rab_info
+        assert new_creds._regional_access_boundary_expiry is not None
+        assert new_creds._regional_access_boundary_cooldown_expiry is None
+
+    def test_with_regional_access_boundary_malformed_input(self):
+        creds = CredentialsImpl()
+        with pytest.raises(
+            exceptions.InvalidValue,
+            match="regional_access_boundary must be a dictionary with an 'encodedLocations' key.",
+        ):
+            creds._with_regional_access_boundary({"bad_key": "bad_value"})
+        with pytest.raises(
+            exceptions.InvalidValue,
+            match="regional_access_boundary must be a dictionary with an 'encodedLocations' key.",
+        ):
+            creds._with_regional_access_boundary("not_a_dict")
+
+    @mock.patch(
+        "google.auth._regional_access_boundary_utils._RegionalAccessBoundaryRefreshManager.start_refresh"
+    )
+    def test_maybe_start_refresh_is_skipped_if_non_default_universe_domain(
+        self, mock_start_refresh
+    ):
+        creds = CredentialsImpl(universe_domain="not.googleapis.com")
+        with mock.patch.dict(
+            os.environ,
+            {environment_vars.GOOGLE_AUTH_TRUST_BOUNDARY_ENABLED: "true"},
+        ):
+            creds._maybe_start_regional_access_boundary_refresh(
+                mock.Mock(), "http://example.com"
+            )
+        mock_start_refresh.assert_not_called()
+
+    @mock.patch(
+        "google.auth._regional_access_boundary_utils._RegionalAccessBoundaryRefreshManager.start_refresh"
+    )
+    def test_maybe_start_refresh_handles_url_parse_errors(self, mock_start_refresh):
+        creds = CredentialsImpl()
+        request = mock.Mock()
+        with mock.patch.dict(
+            os.environ,
+            {environment_vars.GOOGLE_AUTH_TRUST_BOUNDARY_ENABLED: "true"},
+        ):
+            creds._maybe_start_regional_access_boundary_refresh(request, "http://[")
+        mock_start_refresh.assert_called_once_with(creds, request)
+
+    @mock.patch("google.oauth2._client._lookup_regional_access_boundary")
+    @mock.patch.object(CredentialsImpl, "_build_regional_access_boundary_lookup_url")
+    def test_lookup_regional_access_boundary_success(
+        self, mock_build_url, mock_lookup_rab
+    ):
+        creds = CredentialsImpl()
+        creds.token = "token"
+        request = mock.Mock()
+        mock_build_url.return_value = "http://rab.example.com"
+        mock_lookup_rab.return_value = {"encodedLocations": "success"}
+
+        result = creds._lookup_regional_access_boundary(request)
+
+        mock_build_url.assert_called_once()
+        mock_lookup_rab.assert_called_once_with(
+            request, "http://rab.example.com", headers={"authorization": "Bearer token"}
+        )
+        assert result == {"encodedLocations": "success"}
+
+    @mock.patch("google.oauth2._client._lookup_regional_access_boundary")
+    @mock.patch.object(CredentialsImpl, "_build_regional_access_boundary_lookup_url")
+    def test_lookup_regional_access_boundary_failure(
+        self, mock_build_url, mock_lookup_rab
+    ):
+        creds = CredentialsImpl()
+        creds.token = "token"
+        request = mock.Mock()
+        mock_build_url.return_value = "http://rab.example.com"
+        mock_lookup_rab.return_value = None
+
+        result = creds._lookup_regional_access_boundary(request)
+
+        mock_build_url.assert_called_once()
+        mock_lookup_rab.assert_called_once_with(
+            request, "http://rab.example.com", headers={"authorization": "Bearer token"}
+        )
+        assert result is None
+
+    @mock.patch("google.oauth2._client._lookup_regional_access_boundary")
+    @mock.patch.object(CredentialsImpl, "_build_regional_access_boundary_lookup_url")
+    def test_lookup_regional_access_boundary_null_url(
+        self, mock_build_url, mock_lookup_rab
+    ):
+        creds = CredentialsImpl()
+        creds.token = "token"
+        request = mock.Mock()
+        mock_build_url.return_value = None
+
+        result = creds._lookup_regional_access_boundary(request)
+
+        mock_build_url.assert_called_once()
+        mock_lookup_rab.assert_not_called()
+        assert result is None
+
+    def test_credentials_with_regional_access_boundary_initialization(self):
+        creds = CredentialsImpl()
+        assert creds._regional_access_boundary is None
+        assert creds._regional_access_boundary_expiry is None
+        assert creds._regional_access_boundary_cooldown_expiry is None
+        assert creds._current_rab_cooldown_duration == (
+            credentials._regional_access_boundary_utils.DEFAULT_REGIONAL_ACCESS_BOUNDARY_COOLDOWN
+        )
+        assert creds._stale_boundary_lock is not None

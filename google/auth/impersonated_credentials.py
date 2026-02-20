@@ -30,7 +30,9 @@ import copy
 from datetime import datetime
 import http.client as http_client
 import json
+import logging
 
+from google.auth import _constants
 from google.auth import _exponential_backoff
 from google.auth import _helpers
 from google.auth import credentials
@@ -40,15 +42,14 @@ from google.auth import jwt
 from google.auth import metrics
 from google.oauth2 import _client
 
+_LOGGER = logging.getLogger(__name__)
 
 _REFRESH_ERROR = "Unable to acquire impersonated credentials"
 
 _DEFAULT_TOKEN_LIFETIME_SECS = 3600  # 1 hour in seconds
 
 _GOOGLE_OAUTH2_TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token"
-_TRUST_BOUNDARY_LOOKUP_ENDPOINT = (
-    "https://iamcredentials.{}/v1/projects/-/serviceAccounts/{}/allowedLocations"
-)
+
 
 _SOURCE_CREDENTIAL_AUTHORIZED_USER_TYPE = "authorized_user"
 _SOURCE_CREDENTIAL_SERVICE_ACCOUNT_TYPE = "service_account"
@@ -123,7 +124,7 @@ class Credentials(
     credentials.Scoped,
     credentials.CredentialsWithQuotaProject,
     credentials.Signing,
-    credentials.CredentialsWithTrustBoundary,
+    credentials.CredentialsWithRegionalAccessBoundary,
 ):
     """This module defines impersonated credentials which are essentially
     impersonated identities.
@@ -204,7 +205,6 @@ class Credentials(
         lifetime=_DEFAULT_TOKEN_LIFETIME_SECS,
         quota_project_id=None,
         iam_endpoint_override=None,
-        trust_boundary=None,
     ):
         """
         Args:
@@ -235,7 +235,6 @@ class Credentials(
             subject (Optional[str]): sub field of a JWT. This field should only be set
                 if you wish to impersonate as a user. This feature is useful when
                 using domain wide delegation.
-            trust_boundary (Mapping[str,str]): A credential trust boundary.
         """
 
         super(Credentials, self).__init__()
@@ -267,7 +266,6 @@ class Credentials(
         self._quota_project_id = quota_project_id
         self._iam_endpoint_override = iam_endpoint_override
         self._cred_file_path = None
-        self._trust_boundary = trust_boundary
 
     def _metric_header_for_usage(self):
         return metrics.CRED_TYPE_SA_IMPERSONATE
@@ -344,26 +342,26 @@ class Credentials(
             iam_endpoint_override=self._iam_endpoint_override,
         )
 
-    def _build_trust_boundary_lookup_url(self):
-        """Builds and returns the URL for the trust boundary lookup API.
+    def _build_regional_access_boundary_lookup_url(self):
+        """Builds and returns the URL for the Regional Access Boundary lookup API.
 
         This method constructs the specific URL for the IAM Credentials API's
         `allowedLocations` endpoint, using the credential's universe domain
         and service account email.
 
-        Raises:
-            ValueError: If `self.service_account_email` is None or an empty
-                string, as it's required to form the URL.
-
         Returns:
-            str: The URL for the trust boundary lookup endpoint.
+            Optional[str]: The URL for the Regional Access Boundary lookup endpoint, or None
+                 if the service account email is missing.
         """
         if not self.service_account_email:
-            raise ValueError(
-                "Service account email is required to build the trust boundary lookup URL."
+            _LOGGER.error(
+                "Service account email is required to build the Regional Access Boundary lookup URL for impersonated credentials."
             )
-        return _TRUST_BOUNDARY_LOOKUP_ENDPOINT.format(
-            self.universe_domain, self.service_account_email
+            return None
+        return (
+            _constants._SERVICE_ACCOUNT_REGIONAL_ACCESS_BOUNDARY_LOOKUP_ENDPOINT.format(
+                service_account_email=self.service_account_email
+            )
         )
 
     def sign_bytes(self, message):
@@ -435,15 +433,9 @@ class Credentials(
             lifetime=self._lifetime,
             quota_project_id=self._quota_project_id,
             iam_endpoint_override=self._iam_endpoint_override,
-            trust_boundary=self._trust_boundary,
         )
         cred._cred_file_path = self._cred_file_path
-        return cred
-
-    @_helpers.copy_docstring(credentials.CredentialsWithTrustBoundary)
-    def with_trust_boundary(self, trust_boundary):
-        cred = self._make_copy()
-        cred._trust_boundary = trust_boundary
+        self._copy_regional_access_boundary_state(cred)
         return cred
 
     @_helpers.copy_docstring(credentials.CredentialsWithQuotaProject)
@@ -527,16 +519,22 @@ class Credentials(
         delegates = info.get("delegates")
         quota_project_id = info.get("quota_project_id")
         scopes = scopes or info.get("scopes")
-        trust_boundary = info.get("trust_boundary")
 
-        return cls(
+        initial_creds = cls(
             source_credentials,
             target_principal,
             scopes,
             delegates,
             quota_project_id=quota_project_id,
-            trust_boundary=trust_boundary,
         )
+
+        regional_access_boundary = info.get("regional_access_boundary")
+        if regional_access_boundary:
+            initial_creds = initial_creds._with_regional_access_boundary(
+                regional_access_boundary
+            )
+
+        return initial_creds
 
 
 class IDTokenCredentials(credentials.CredentialsWithQuotaProject):

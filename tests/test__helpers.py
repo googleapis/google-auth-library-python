@@ -20,7 +20,7 @@ import urllib
 
 import pytest  # type: ignore
 
-from google.auth import _helpers, exceptions
+from google.auth import _helpers
 
 # _MOCK_BASE_LOGGER_NAME is the base logger namespace used for testing.
 _MOCK_BASE_LOGGER_NAME = "foogle"
@@ -251,14 +251,11 @@ def test_get_bool_from_env(monkeypatch):
 
     # Test invalid value
     monkeypatch.setenv("TEST_VAR", "invalid_value")
-    with pytest.raises(exceptions.InvalidValue) as excinfo:
-        _helpers.get_bool_from_env("TEST_VAR")
-    assert 'must be one of "true", "false", "1", or "0"' in str(excinfo.value)
+    assert _helpers.get_bool_from_env("TEST_VAR") is False
 
     # Test empty string value
     monkeypatch.setenv("TEST_VAR", "")
-    with pytest.raises(exceptions.InvalidValue):
-        _helpers.get_bool_from_env("TEST_VAR")
+    assert _helpers.get_bool_from_env("TEST_VAR") is False
 
 
 def test_hash_sensitive_info_basic():
