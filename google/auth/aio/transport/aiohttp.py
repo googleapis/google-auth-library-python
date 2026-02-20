@@ -34,10 +34,9 @@ if TYPE_CHECKING:  # pragma: NO COVER
     from aiohttp import ClientTimeout  # type: ignore
 
 else:
-    ClientTimeout = Any
     try:
         from aiohttp import ClientTimeout
-    except ImportError:
+    except (ImportError, AttributeError):
         ClientTimeout = None
 
 _LOGGER = logging.getLogger(__name__)
