@@ -16,7 +16,7 @@ import asyncio
 from contextlib import asynccontextmanager
 import functools
 import time
-from typing import Any, Mapping, Optional, TYPE_CHECKING, Union
+from typing import Mapping, Optional, TYPE_CHECKING, Union
 
 from google.auth import _exponential_backoff, exceptions
 from google.auth.aio import transport

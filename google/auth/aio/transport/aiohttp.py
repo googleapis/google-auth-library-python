@@ -16,7 +16,7 @@
 
 import asyncio
 import logging
-from typing import Any, AsyncGenerator, Mapping, Optional, TYPE_CHECKING, Union
+from typing import AsyncGenerator, Mapping, Optional, TYPE_CHECKING, Union
 
 try:
     import aiohttp  # type: ignore
