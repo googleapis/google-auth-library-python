@@ -16,6 +16,7 @@ import asyncio
 from contextlib import asynccontextmanager
 import functools
 import time
+import typing
 from typing import Mapping, Optional, TYPE_CHECKING, Union
 
 from google.auth import _exponential_backoff, exceptions
@@ -260,11 +261,12 @@ class AsyncAuthorizedSession:
                 )
             )
             if AIOHTTP_INSTALLED and hasattr(timeout, "total"):
-                actual_timeout = float(timeout.total)  # type: ignore
+                # If it's a ClientTimeout, extract the total float
+                actual_timeout = typing.cast(float, timeout.total)
             elif timeout is None:
                 actual_timeout = 0.0
             else:
-                actual_timeout = timeout
+                actual_timeout = typing.cast(float, timeout)
             # Workaround issue in python 3.9 related to code coverage by adding `# pragma: no branch`
             # See https://github.com/googleapis/gapic-generator-python/pull/1174#issuecomment-1025132372
             async for _ in retries:  # pragma: no branch
