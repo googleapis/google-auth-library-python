@@ -238,7 +238,6 @@ class AsyncAuthorizedSession:
         retries = _exponential_backoff.AsyncExponentialBackoff(
             total_attempts=transport.DEFAULT_MAX_RETRY_ATTEMPTS
         )
-        timeout_float: float
         if headers is None:
             headers = {}
         async with timeout_guard(max_allowed_time) as with_timeout:
@@ -248,19 +247,18 @@ class AsyncAuthorizedSession:
                     self._auth_request, method, url, headers
                 )
             )
-            if timeout is None:
-                timeout_float = 0.0
-            # Use isinstance for better type narrowing if aiohttp is available
-            elif AIOHTTP_INSTALLED and isinstance(timeout, aiohttp.ClientTimeout):
-                timeout_float = float(timeout.total)
+            if AIOHTTP_INSTALLED and hasattr(timeout, "total"):
+                actual_timeout = float(timeout.total)  # type: ignore
+            elif timeout is None:
+                actual_timeout = 0.0
             else:
-                timeout_float = float(timeout)
+                actual_timeout = timeout
             # Workaround issue in python 3.9 related to code coverage by adding `# pragma: no branch`
             # See https://github.com/googleapis/gapic-generator-python/pull/1174#issuecomment-1025132372
             async for _ in retries:  # pragma: no branch
                 response = await with_timeout(
                     self._auth_request(
-                        url, method, data, headers, timeout_float, **kwargs
+                        url, method, data, headers, actual_timeout, **kwargs
                     )
                 )
                 if response.status_code not in transport.DEFAULT_RETRYABLE_STATUS_CODES:
