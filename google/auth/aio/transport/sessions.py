@@ -247,11 +247,15 @@ class AsyncAuthorizedSession:
                     self._auth_request, method, url, headers
                 )
             )
+            # Narrow the type: if it's an aiohttp.ClientTimeout, extract the float 'total'
+            timeout_float = timeout.total if hasattr(timeout, "total") else timeout
             # Workaround issue in python 3.9 related to code coverage by adding `# pragma: no branch`
             # See https://github.com/googleapis/gapic-generator-python/pull/1174#issuecomment-1025132372
             async for _ in retries:  # pragma: no branch
                 response = await with_timeout(
-                    self._auth_request(url, method, data, headers, timeout, **kwargs)
+                    self._auth_request(
+                        url, method, data, headers, timeout_float, **kwargs
+                    )
                 )
                 if response.status_code not in transport.DEFAULT_RETRYABLE_STATUS_CODES:
                     break
