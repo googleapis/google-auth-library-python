@@ -266,12 +266,10 @@ class AsyncAuthorizedSession:
         if self._mtls_init_task:
             try:
                 await self._mtls_init_task
-            except exceptions.MutualTLSChannelError:
-                # Re-raise the already-wrapped mTLS error
-                raise
-            except Exception as caught_exc:
-                # Wrap any other unexpected exceptions from the task
-                raise exceptions.MutualTLSChannelError(caught_exc) from caught_exc
+            except Exception:
+                # Suppress all exceptions from the background mTLS initialization task,
+                # allowing the request to fail naturally elsewhere.
+                pass
         retries = _exponential_backoff.AsyncExponentialBackoff(
             total_attempts=total_attempts,
         )
