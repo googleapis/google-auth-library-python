@@ -16,7 +16,6 @@ import asyncio
 from contextlib import asynccontextmanager
 import functools
 import time
-import typing
 from typing import Mapping, Optional, TYPE_CHECKING, Union
 
 from google.auth import _exponential_backoff, exceptions
@@ -27,16 +26,17 @@ from google.auth.exceptions import TimeoutError
 import google.auth.transport._mtls_helper
 
 if TYPE_CHECKING:  # pragma: NO COVER
+    import aiohttp
     from aiohttp import ClientTimeout  # type: ignore
 
 else:
     try:
+        import aiohttp
         from aiohttp import ClientTimeout
     except (ImportError, AttributeError):
         ClientTimeout = None
 
 try:
-    import aiohttp
     from google.auth.aio.transport.aiohttp import Request as AiohttpRequest
 
     AIOHTTP_INSTALLED = True
@@ -154,7 +154,7 @@ class AsyncAuthorizedSession:
         default SSL credentials), the underlying transport will be reconfigured
         to use mTLS.
         Note: This function does nothing if the `aiohttp` library is not
-        installed.
+        installed. Plus, will close any ongoing API requests.
 
         Args:
             client_cert_callback (Optional[Callable[[], (bytes, bytes)]]):
@@ -260,13 +260,13 @@ class AsyncAuthorizedSession:
                     self._auth_request, method, url, headers
                 )
             )
-            if AIOHTTP_INSTALLED and hasattr(timeout, "total"):
-                # If it's a ClientTimeout, extract the total float
-                actual_timeout = typing.cast(float, timeout.total)
-            elif timeout is None:
-                actual_timeout = 0.0
+            actual_timeout: float = 0.0
+            if AIOHTTP_INSTALLED and isinstance(timeout, aiohttp.ClientTimeout):
+                actual_timeout = timeout.total if timeout.total is not None else 0.0
+            elif isinstance(timeout, (int, float)):
+                actual_timeout = float(timeout)
             else:
-                actual_timeout = typing.cast(float, timeout)
+                actual_timeout = 0.0
             # Workaround issue in python 3.9 related to code coverage by adding `# pragma: no branch`
             # See https://github.com/googleapis/gapic-generator-python/pull/1174#issuecomment-1025132372
             async for _ in retries:  # pragma: no branch

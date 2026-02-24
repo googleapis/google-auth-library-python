@@ -59,7 +59,8 @@ def make_client_cert_ssl_context(
     """Creates an SSLContext with the given client certificate and key.
     This function writes the certificate and key to temporary files so that
     ssl.create_default_context can load them, as the ssl module requires
-    file paths for client certificates.
+    file paths for client certificates. These temporary files are deleted
+    immediately after the SSL context is created.
     Args:
         cert_bytes (bytes): The client certificate content in PEM format.
         key_bytes (bytes): The client private key content in PEM format.
