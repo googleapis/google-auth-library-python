@@ -283,7 +283,7 @@ class AsyncAuthorizedSession:
                 )
             )
             actual_timeout: float = 0.0
-            if ClientTimeout is not None and isinstance(timeout, aiohttp.ClientTimeout):
+            if ClientTimeout is not None and isinstance(timeout, ClientTimeout):
                 actual_timeout = timeout.total if timeout.total is not None else 0.0
             elif isinstance(timeout, (int, float)):
                 actual_timeout = float(timeout)
