@@ -264,7 +264,14 @@ class AsyncAuthorizedSession:
                 `timeout`.
         """
         if self._mtls_init_task:
-            await self._mtls_init_task
+            try:
+                await self._mtls_init_task
+            except exceptions.MutualTLSChannelError:
+                # Re-raise the already-wrapped mTLS error
+                raise
+            except Exception as caught_exc:
+                # Wrap any other unexpected exceptions from the task
+                raise exceptions.MutualTLSChannelError(caught_exc) from caught_exc
         retries = _exponential_backoff.AsyncExponentialBackoff(
             total_attempts=total_attempts,
         )
@@ -278,7 +285,7 @@ class AsyncAuthorizedSession:
                 )
             )
             actual_timeout: float = 0.0
-            if isinstance(timeout, aiohttp.ClientTimeout):
+            if ClientTimeout is not None and isinstance(timeout, aiohttp.ClientTimeout):
                 actual_timeout = timeout.total if timeout.total is not None else 0.0
             elif isinstance(timeout, (int, float)):
                 actual_timeout = float(timeout)
