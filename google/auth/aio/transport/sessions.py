@@ -36,6 +36,7 @@ else:
     except (ImportError, AttributeError):
         ClientTimeout = None
 
+# Tracks the internal aiohttp installation and usage
 try:
     from google.auth.aio.transport.aiohttp import Request as AiohttpRequest
 
@@ -138,6 +139,7 @@ class AsyncAuthorizedSession:
         if not _auth_request and AIOHTTP_INSTALLED:
             _auth_request = AiohttpRequest()
         self._is_mtls = False
+        self._mtls_init_task = None
         self._cached_cert = None
         if _auth_request is None:
             raise exceptions.TransportError(
@@ -154,7 +156,10 @@ class AsyncAuthorizedSession:
         default SSL credentials), the underlying transport will be reconfigured
         to use mTLS.
         Note: This function does nothing if the `aiohttp` library is not
-        installed. Plus, will close any ongoing API requests.
+        installed.
+        Important: Calling this method will close any ongoing API requests associated
+        with the current session. To ensure a smooth transition, it is recommended
+        to call this during session initialization.
 
         Args:
             client_cert_callback (Optional[Callable[[], (bytes, bytes)]]):
@@ -167,42 +172,53 @@ class AsyncAuthorizedSession:
             google.auth.exceptions.MutualTLSChannelError: If mutual TLS channel
                 creation failed for any reason.
         """
-        # Run the blocking check in an executor
-        use_client_cert = await mtls._run_in_executor(
-            google.auth.transport._mtls_helper.check_use_client_cert
-        )
-        if not use_client_cert:
-            self._is_mtls = False
-            return
+        if self._mtls_init_task is None:
 
-        try:
-            (
-                self._is_mtls,
-                cert,
-                key,
-            ) = await mtls.get_client_cert_and_key(client_cert_callback)
-
-            if self._is_mtls:
-                self._cached_cert = cert
-                ssl_context = await mtls._run_in_executor(
-                    mtls.make_client_cert_ssl_context, cert, key
+            async def _do_configure():
+                # Run the blocking check in an executor
+                use_client_cert = await mtls._run_in_executor(
+                    google.auth.transport._mtls_helper.check_use_client_cert
                 )
+                if not use_client_cert:
+                    self._is_mtls = False
+                    return
 
-                # Re-create the auth request with the new SSL context
-                if AIOHTTP_INSTALLED and isinstance(self._auth_request, AiohttpRequest):
-                    connector = aiohttp.TCPConnector(ssl=ssl_context)
-                    new_session = aiohttp.ClientSession(connector=connector)
-                    old_auth_request = self._auth_request
-                    self._auth_request = AiohttpRequest(session=new_session)
-                    await old_auth_request.close()
+                try:
+                    (
+                        self._is_mtls,
+                        cert,
+                        key,
+                    ) = await mtls.get_client_cert_and_key(client_cert_callback)
 
-        except (
-            exceptions.ClientCertError,
-            ImportError,
-            OSError,
-        ) as caught_exc:
-            new_exc = exceptions.MutualTLSChannelError(caught_exc)
-            raise new_exc from caught_exc
+                    if self._is_mtls:
+                        self._cached_cert = cert
+                        ssl_context = await mtls._run_in_executor(
+                            mtls.make_client_cert_ssl_context, cert, key
+                        )
+
+                        # Re-create the auth request with the new SSL context
+                        if AIOHTTP_INSTALLED and isinstance(
+                            self._auth_request, AiohttpRequest
+                        ):
+                            connector = aiohttp.TCPConnector(ssl=ssl_context)
+                            new_session = aiohttp.ClientSession(connector=connector)
+
+                            old_auth_request = self._auth_request
+                            self._auth_request = AiohttpRequest(session=new_session)
+
+                            await old_auth_request.close()
+
+                except (
+                    exceptions.ClientCertError,
+                    ImportError,
+                    OSError,
+                ) as caught_exc:
+                    new_exc = exceptions.MutualTLSChannelError(caught_exc)
+                    raise new_exc from caught_exc
+
+            self._mtls_init_task = asyncio.create_task(_do_configure())
+
+        return await self._mtls_init_task
 
     async def request(
         self,
@@ -247,7 +263,8 @@ class AsyncAuthorizedSession:
                 the configured `max_allowed_time` or the request exceeds the configured
                 `timeout`.
         """
-
+        if self._mtls_init_task:
+            await self._mtls_init_task
         retries = _exponential_backoff.AsyncExponentialBackoff(
             total_attempts=total_attempts,
         )
@@ -261,12 +278,10 @@ class AsyncAuthorizedSession:
                 )
             )
             actual_timeout: float = 0.0
-            if AIOHTTP_INSTALLED and isinstance(timeout, aiohttp.ClientTimeout):
+            if isinstance(timeout, aiohttp.ClientTimeout):
                 actual_timeout = timeout.total if timeout.total is not None else 0.0
             elif isinstance(timeout, (int, float)):
                 actual_timeout = float(timeout)
-            else:
-                actual_timeout = 0.0
             # Workaround issue in python 3.9 related to code coverage by adding `# pragma: no branch`
             # See https://github.com/googleapis/gapic-generator-python/pull/1174#issuecomment-1025132372
             async for _ in retries:  # pragma: no branch
