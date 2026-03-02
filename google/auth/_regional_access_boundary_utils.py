@@ -42,9 +42,21 @@ class _RegionalAccessBoundaryRefreshThread(threading.Thread):
         it updates the credential's cached Regional Access Boundary information,
         its expiry, its cooldown expiry, and its exponential cooldown duration.
         """
-        regional_access_boundary_info = (
-            self._credentials._lookup_regional_access_boundary(self._request)
-        )
+        # Catch exceptions (e.g., from the underlying transport) to prevent the
+        # background thread from crashing. This ensures we can gracefully enter
+        # an exponential cooldown state on failure.
+        try:
+            regional_access_boundary_info = (
+                self._credentials._lookup_regional_access_boundary(self._request)
+            )
+        except Exception as e:
+            if _helpers.is_logging_enabled(_LOGGER):
+                _LOGGER.warning(
+                    "Asynchronous Regional Access Boundary lookup raised an exception: %s",
+                    e,
+                    exc_info=True,
+                )
+            regional_access_boundary_info = None
 
         with self._credentials._stale_boundary_lock:  # Acquire the lock
             if regional_access_boundary_info:
