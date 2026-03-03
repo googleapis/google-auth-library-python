@@ -354,6 +354,31 @@ class CredentialsWithRegionalAccessBoundary(Credentials):
 
         return new_creds
 
+    def with_trust_boundary(self, trust_boundary):
+        """Returns a copy of these credentials with a modified trust boundary.
+
+        .. deprecated::
+            Use Regional Access Boundaries instead. This method is maintained for
+            backwards compatibility.
+
+        Args:
+            trust_boundary (Mapping[str, str]): The trust boundary to use for the
+            credential. This should be a map with a "locations" key that maps to
+            a list of GCP regions, and a "encodedLocations" key that maps to a
+            hex string.
+
+        Returns:
+            google.auth.credentials.Credentials: A new credentials instance.
+        """
+        import warnings
+
+        warnings.warn(
+            "with_trust_boundary is deprecated. Please use Regional Access Boundaries.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self._with_regional_access_boundary(trust_boundary)
+
     def _copy_regional_access_boundary_state(self, target):
         """Copies the regional access boundary state to another instance."""
         target._regional_access_boundary = self._regional_access_boundary
@@ -735,3 +760,7 @@ class TokenState(Enum):
     FRESH = 1
     STALE = 2
     INVALID = 3
+
+# For backwards compatibility with the previus feature name.
+# Use CredentialsWithRegionalAccessBoundary instead.
+CredentialsWithTrustBoundary = CredentialsWithRegionalAccessBoundary

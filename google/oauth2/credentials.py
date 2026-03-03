@@ -154,6 +154,12 @@ class Credentials(credentials.ReadOnlyScoped, credentials.CredentialsWithQuotaPr
         self._rapt_token = rapt_token
         self.refresh_handler = refresh_handler
         self._enable_reauth_refresh = enable_reauth_refresh
+        if trust_boundary is not None:
+            warnings.warn(
+                "The trust_boundary parameter is deprecated. Please use Regional Access Boundaries instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
         self._trust_boundary = trust_boundary
         self._universe_domain = universe_domain or credentials.DEFAULT_UNIVERSE_DOMAIN
         self._account = account or ""
